@@ -5,6 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+
 // Initialize Sequelize with your database credentials
 const sequelize = new Sequelize(
     'GIZ', // Database name
@@ -57,6 +58,8 @@ const upload = multer({ storage: storage });
 
 // Serve static image files
 app.use('/Incidentimage', express.static(uploadDirectory));
+
+
 
 // Test route
 app.get('/', (req, res) => {
@@ -244,6 +247,8 @@ app.get('/api/patrols-by-user', async (req, res) => {
         res.status(500).json({ error: 'Error retrieving patrols' });
     }
 });
+
+
 
 
 // Start server and connect to DB
