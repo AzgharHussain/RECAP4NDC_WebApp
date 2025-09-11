@@ -1,0 +1,172 @@
+:root {
+  --green: #27c468;
+  --blue: #339af0;
+  --yellow: #ff922b;
+  --white: #ffffff; /* Added white color variable */
+  --glass-bg: rgba(255, 255, 255, 0.2);
+  --border-radius: 12px;
+  --shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --heading-color: #004d00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", sans-serif;
+  background: linear-gradient(to right, rgba(210, 240, 220, 0.8), rgba(190, 235, 210, 0.8));
+  color: var(--white); /* Set default text color to white */
+}
+
+
+.heading-container {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.main-heading {
+  /* font-size: 23px; */
+  font-weight: 700;
+  color: #009245;
+}
+
+.content-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.left-section {
+  flex: 1;
+  padding: 20px;
+  border-radius: var(--border-radius);
+  color: var(--white); /* Set text color to white for this section */
+  margin-top: -30px;
+}
+
+.left-section ul {
+  padding-left: 20px;
+}
+
+.right-section {
+  flex: 1;
+  padding: 20px;
+  border-radius: var(--border-radius);
+  color: var(--white); /* Set text color to white for this section */
+  margin-top: -30px;
+}
+
+.right-section ul {
+  padding-left: 20px;
+}
+
+
+.under-section {
+  flex: 1;
+  background: var(--glass-bg);
+  padding: 30px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  color: var(--white); /* Set text color to white for this section */
+  height: 80%;
+  opacity: 1.0;
+}
+
+.under-section h2 {
+  text-align: center;
+  color: var(--heading-color); /* Title color in right section remains green */
+  margin-bottom: 20px;
+}
+
+.file-upload {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 80%;
+}
+
+.upload-area {
+  display: flex;
+  align-items: center; /* Vertically center the items */
+  justify-content: center; /* Align to the left */
+  /* border: 2px dashed var(--green); */
+  border-radius: var(--border-radius);
+  padding: 40px;
+  width: 100%;
+  text-align: center;
+}
+
+
+.upload-area p {
+  font-size: 18px;
+  color: var(--white); /* Text inside the upload area is now white */
+}
+
+.choose-file-btn {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background-color: var(--green);
+  color: var(--white); /* Button text color is white */
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+.choose-file-btn:hover {
+  background-color: var(--blue);
+}
+
+
+
+/* Style for the new heading outside right-section */
+.upload-heading {
+  font-size: 30px; /* Adjust size as needed */
+  font-weight: bold;
+  color: var(--heading-color);
+  text-align: left;
+  margin-bottom: 20px;
+  padding-left: 20px;
+}
+
+@media (max-width: 1023px) {
+  .content-container {
+    flex-direction: column;
+  }
+
+  .left-section, .right-section {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .filters button {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .content-container {
+    flex-direction: column;
+  }
+
+  .left-section, .right-section {
+    max-width: 100%;
+    padding: 20px;
+  }
+
+  .choose-file-btn {
+    width: 100%;
+    padding: 12px;
+  }
+}
+
+

@@ -1,0 +1,189 @@
+General Setup
+:root {
+  --white: #ffffff;
+  --muted: rgba(0, 0, 0, 0.65);
+  --green1: #59ea8c;
+  --green2: #27c468;
+  --glass: rgba(255, 255, 255, 0.15); /* Semi-transparent glass color */
+  --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for cards */
+}
+
+/* Global Reset */
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: "Spline Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+body {
+  background: linear-gradient(to bottom, rgba(210, 240, 220, 0.9) 0%, rgba(190, 235, 210, 0.7) 100%);
+  overflow-x: hidden;
+}
+
+.heading-container {
+  display: flex;              /* makes heading & filters one line */
+  align-items: center;        /* vertically center */
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.main-heading {
+  font-weight: 700;
+  color: #009245;
+  margin-right: 20px;         /* space between heading & filters */
+}
+
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  color: #004d00;
+}
+
+.filters {
+  display: flex; /* Align items in a row */
+  gap: 10px; /* Space between items */
+  margin-bottom: -8px;
+ justify-content: flex-end;
+  padding: 10px;
+  border-radius: 8px;
+  flex-wrap: wrap; /* Allow wrapping in case of smaller screen sizes */
+}
+
+.filter-item {
+  display: flex;
+  align-items: center; /* Vertically center the items */
+}
+
+button {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.FilterIcon {
+  width: 32px; /* Adjust the size of the icon */
+  height: 32px;
+}
+
+/* Card Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Two columns */
+  grid-template-rows: auto auto; /* Two rows */
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* Card Styling */
+.chart-card {
+  background: var(--glass);
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  border: 1.949px solid rgba(255, 255, 255, 0.23);
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 12.064px 12.064px 6.786px -13.572px #FFF inset;
+  height: 350px; /* Adjust card height */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+ .chart-cardPatrolling {
+  background: var(--glass);
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  border: 1.949px solid rgba(255, 255, 255, 0.23);
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 12.064px 12.064px 6.786px -13.572px #FFF inset;
+}
+.chart-card {
+  height: 60%;
+}
+/* Card Content */
+.chart-card h3 {
+  font-size: 20px;
+  color: #4CAF50;  /* Custom green color */
+  margin-bottom: 10px;
+}
+
+/* For Chart Containers */
+.chart-container {
+  height: 250px;
+}
+.chart-cardPatrolling {
+  height: 60%;
+}
+
+/* Container for chart-card and chart-cardPatrolling */
+.card-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Create two columns */
+  gap: 20px;
+}
+
+.chart-cardCoupe {
+  background: var(--glass);
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  border: 1.949px solid rgba(255, 255, 255, 0.23);
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 12.064px 12.064px 6.786px -13.572px #FFF inset;
+  grid-column: span 2; /* Span across both columns */
+  height: 60%; /* Adjust the height */
+}
+
+.chart-card .title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #004d00;
+  margin-bottom: 16px;
+}
+
+.card-body {
+  font-size: 14px;
+  color: #004d00;
+}
+
+/* Graph/Chart Containers */
+.chart-container {
+  height: 250px;
+}
+
+/* Specific Card Adjustments */
+.card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #004d00;
+}
+
+.card-footer button {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #27c468;
+  color: white;
+  cursor: pointer;
+}
+
+.card-footer button:hover {
+  background-color: #59ea8c;
+}
+
+:where(.css-dev-only-do-not-override-xepvsj).ant-select-outlined:not(.ant-select-customize-input) .ant-select-selector {
+  border: 2.21px solid rgba(255, 255, 255, 0.23);
+  
+  background: rgba(255, 255, 255, 0.02);
+box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset;
+}
