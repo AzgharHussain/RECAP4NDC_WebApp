@@ -1,5 +1,6 @@
 import React from "react";
 import { Table, Button, Input, Select, DatePicker } from "antd";
+import { SearchOutlined } from '@ant-design/icons'; // Import the Search icon
 import "./CoupeObservation.css";
 import exportIcon from '../assets/excel.png';
 
@@ -29,7 +30,7 @@ const CoupeObservation = () => {
   ];
 
   return (
-    <div style={{ margin: '20px', borderRadius: '10px', padding: '-8px' }}>
+    <div style={{ borderRadius: '10px', padding: '-8px' }}>
       <div className="heading-container">
         <h3 className="main-heading">Working Plan Areas (Coupe Observation Log)</h3>
 
@@ -41,8 +42,9 @@ const CoupeObservation = () => {
               width: "200px",
               background: 'rgba(255, 255, 255, 0.2)',
               color: '#fff',
-              border: 'none'
+              border: 'none',
             }}
+            suffix={<SearchOutlined style={{ color: 'rgba(0, 0, 0, 0.25)', fontSize: '16px' }} />} // Light black (dark grey)
           />
 
           <Select
@@ -51,7 +53,7 @@ const CoupeObservation = () => {
               width: "200px",
               background: 'rgba(255, 255, 255, 0.2)',
               color: '#fff',
-              border: 'none'
+              border: 'none',
             }}
           >
             <Option value="All">All Issue Types</Option>
@@ -60,18 +62,17 @@ const CoupeObservation = () => {
             <Option value="Tree Disease">Tree Disease</Option>
           </Select>
 
-         <DatePicker
-          placeholder="Select To Date"
-          style={{
-            width: "200px",
-            color: '#fff',
-            border: '2.21px solid rgba(255, 255, 255, 0.23)',
-            background: 'rgba(255, 255, 255, 0.02)',
-            boxShadow:
-              '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset'
-          }}
-        />
-
+          <DatePicker
+            placeholder="Select To Date"
+            style={{
+              width: "200px",
+              color: '#fff',
+              border: '2.21px solid rgba(255, 255, 255, 0.23)',
+              background: 'rgba(255, 255, 255, 0.02)',
+              boxShadow:
+                '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset',
+            }}
+          />
 
           <Button className="btn-Export">
             Export
