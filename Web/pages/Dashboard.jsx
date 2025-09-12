@@ -109,7 +109,7 @@ export default function Dashboard() {
 
 <div className="charts-grid">
     {/* Forest Cover Change */}
-    <div className="chart-card">
+    <div className="chart-card" style={{ width: "71%" }}>
         <h3>Forest Cover Change</h3>
         <ResponsiveContainer width="100%" height={250}>
             <PieChart>
@@ -131,9 +131,9 @@ export default function Dashboard() {
     </div>
 
     {/* Patrolling and Incidents */}
-    <div className="chart-card">
+   <div className="chart-card" style={{ width: "128%" , marginLeft:"-28%"}}>
         <h3>Patrolling and Incidents</h3>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="50%" height={250}>
             <BarChart data={patrolData}>
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -142,7 +142,7 @@ export default function Dashboard() {
             </BarChart>
         </ResponsiveContainer>
 
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="50%" height={250}>
             <PieChart>
                 <Pie
                     data={incidentsData}

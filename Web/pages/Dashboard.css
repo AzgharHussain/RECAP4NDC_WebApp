@@ -7,7 +7,11 @@ General Setup
   --glass: rgba(255, 255, 255, 0.15); /* Semi-transparent glass color */
   --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for cards */
 }
+.layout {
+  
+  overflow-y:hidden;
 
+}
 /* Global Reset */
 * {
   box-sizing: border-box;
@@ -42,7 +46,6 @@ body {
 .dashboard-container {
   display: flex;
   flex-direction: column;
-  padding: 5px;
   color: #004d00;
 }
 
@@ -76,13 +79,13 @@ button {
 /* Card Grid */
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* Two columns */
-  grid-template-rows: auto auto; /* Two rows */
+  grid-template-columns: 1fr 1fr; /* First column for one chart, second column for two charts */
+  grid-template-rows: auto; /* Allow the rows to adjust dynamically */
   gap: 20px;
   margin-top: 20px;
 }
 
-/* Card Styling */
+/* First column chart (occupying the first row) */
 .chart-card {
   background: var(--glass);
   padding: 16px;
@@ -91,12 +94,32 @@ button {
   border: 1.949px solid rgba(255, 255, 255, 0.23);
   background: rgba(255, 255, 255, 0.13);
   box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 12.064px 12.064px 6.786px -13.572px #FFF inset;
-  height: 350px; /* Adjust card height */
+  height: 350px; /* Adjust height for chart cards */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
 }
+
+/* Second column (two charts side by side) */
+.chart-card .second-column {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two charts side by side */
+  gap: 20px;
+}
+
+/* Styling for individual charts within the second column */
+.chart-card .second-column .chart {
+  background: var(--glass);
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  border: 1.949px solid rgba(255, 255, 255, 0.23);
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 12.064px 12.064px 6.786px -13.572px #FFF inset;
+  height: 250px; /* Adjust height for individual charts */
+}
+
 
  .chart-cardPatrolling {
   background: var(--glass);
@@ -186,4 +209,16 @@ button {
   
   background: rgba(255, 255, 255, 0.02);
 box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset;
+}
+.ant-picker-panel {
+    background: rgba(0, 0, 0, 0.8) !important;
+}
+
+.ant-picker-panel * {
+    color: #fff !important;
+}
+
+/* Add this to your CSS file */
+.ant-picker-input input::placeholder {
+  color: #fff !important; /* White placeholder text */
 }

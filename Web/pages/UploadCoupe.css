@@ -25,7 +25,7 @@ html, body {
 
 .heading-container {
   text-align: left;
-  margin-bottom: 30px;
+  margin-bottom: 5px;
 }
 
 .main-heading {
@@ -67,13 +67,14 @@ html, body {
 
 .under-section {
   flex: 1;
-  background: var(--glass-bg);
   padding: 30px;
   border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
   color: var(--white); /* Set text color to white for this section */
   height: 80%;
   opacity: 1.0;
+border: 3.37px solid rgba(255, 255, 255, 0.23);
+background: rgba(255, 255, 255, 0.02);
+box-shadow: -15.645px -15.645px 7.823px -18.253px #B3B3B3 inset, -15.645px -15.645px 7.823px -18.253px #B3B3B3 inset, -15.645px -15.645px 7.823px -18.253px #B3B3B3 inset, 20.86px 20.86px 11.734px -23.468px #FFF inset;
 }
 
 .under-section h2 {
