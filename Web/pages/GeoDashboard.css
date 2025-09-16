@@ -1,0 +1,218 @@
+
+  .map-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  .map-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-image: url("./images/dfgfcvvcnghgf.png");
+    
+    background-size: contain; /* Ensure the entire image fits inside the container */
+    background-repeat: no-repeat;
+    background-position: right center; /* Center the image */
+    padding: 10px 15px;
+    background-color: #3C8936;
+    border-bottom: 1px solid #ccc;
+  }
+  
+
+ 
+  .map-header .logo2 {
+    height: 40px;
+    margin-right: 15px;
+  }
+  
+  .heading_one1 {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+  }
+  
+  .heading_one {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+  }
+  
+  .heading_one img {
+    height: 40px;
+    margin-right: 15px;
+  }
+  
+  .map-header h1 {
+    margin-left: 20px;
+    font-weight: 500;
+    font-size: 30px;
+    line-height: 100%;
+    color: white;
+  }
+  
+  .map-layout {
+    display: flex;
+    flex: 1;
+    position: relative;
+  }
+  
+  .map-top-left {
+    position: absolute;
+    top: 30px;
+    left: 10px;
+    display: flex;
+    z-index: 1000;
+    gap: 15px;
+  }
+  
+  .left-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .zoom-controls {
+    background: #2e7d32;
+    padding: 5px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .tool-button {
+    background: #2e7d32;
+    padding: 3px;
+    border-radius: 3px;
+  }
+  
+  .left-sidebar button {
+    background-color: #2e7d32;
+    border: none;
+    padding: 2px;
+    font-size: 1.3rem;
+    border-radius: 4px;
+    cursor: pointer;
+    color: white;
+  }
+  
+  .material-icons-outlined {
+    font-size: 20px;
+    color: #2e7d32;
+  }
+  
+  .search-bar {
+    display: flex;
+    height: fit-content;
+    align-items: center;
+    background: #2e7d32;
+    padding: 3px 5px;
+    border-radius: 6px;
+  }
+  
+  .search-bar input {
+    border: none;
+    padding: 3px 5px;
+    font-size: 14px;
+    outline: none;
+    border-radius: 4px 0 0 4px;
+  }
+  
+  .search-btn {
+    background: #2e7d32;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    padding-left: 5px;
+    cursor: pointer;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .leaflet-control-container {
+    display: none !important;
+  }
+  
+  .sidebar-icon-set {
+    display: flex;
+    flex-direction: column;
+    border-top-right-radius: 56px;
+    border-bottom-right-radius: 56px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  
+  .sidebar-icon-set.sidebar-icon-left {
+    position: absolute;
+    top: 60%;
+    transform: translateY(-50%);
+    z-index: 1000;
+  }
+  
+  .sidebar-icon-set button {
+    background: #2e7d32;
+    border: none;
+    color: white;
+    padding: 20px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    margin: 0;
+  }
+  
+  .basegallery {
+    background: #2e7d32;
+    border: none;
+    color: white;
+    border-top-right-radius: 56px;
+    border-bottom-right-radius: 0;
+    padding: 20px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    margin: 0;
+  }
+  
+  .listcss {
+    background: #2e7d32;
+    border: none;
+    color: white;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 56px;
+    padding: 20px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    margin: 0;
+  }
+  
+  .sidebar-icon-set button.active-btn {
+    background-color: white;
+    color: #2e7d32;
+  }
+  
+  .sidebar-icon-set button.active-btn .material-icons-outlined {
+    color: #2e7d32;
+  }
+  
+  .sidebar-icon-set .material-icons-outlined {
+    font-size: 24px;
+    color: white;
+  }
+  
+
+  .right-sidebar {
+    position: absolute;
+    top: 70px; /* below the header */
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border-radius: 12px;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+    z-index: 800;
+  }
+  

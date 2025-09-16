@@ -155,3 +155,40 @@
               -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
               13.681px 13.681px 7.696px -15.391px #FFF inset;
 }
+/* Tablet + Mobile adjustments */
+@media (max-width: 1024px) {
+  .filters-section {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .filters-section input,
+  .filters-section .ant-select,
+  .filters-section .ant-picker,
+  .filters-section .btn-Export {
+    flex: 1 1 45%;  /* two per row on tablets */
+  }
+}
+
+@media (max-width: 768px) {
+  .filters-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters-section input,
+  .filters-section .ant-select,
+  .filters-section .ant-picker,
+  .filters-section .btn-Export {
+    width: 100%; /* full width on mobile */
+  }
+}
+
+/* Make table scrollable horizontally */
+.transparent-table {
+  overflow-x: auto;
+}
+
+.transparent-table .ant-table {
+  min-width: 900px; /* ensures readability */
+}
