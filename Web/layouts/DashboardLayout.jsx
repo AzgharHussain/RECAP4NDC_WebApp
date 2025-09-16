@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { FaThLarge, FaGlobe, FaClipboardList, FaUpload, FaEye } from "react-icons/fa";
+import { FaThLarge, FaGlobe, FaClipboardList, FaBars,FaUpload, FaTimes,FaEye } from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
 import brand from "../assets/logogiz.png";
@@ -8,10 +8,12 @@ import "./DashboardLayout.css";
 
 export default function DashboardLayout() {
   const [openDropdown, setOpenDropdown] = useState(false);
-  const [activeLink, setActiveLink] = useState(""); // Track active link
+  const [activeLink, setActiveLink] = useState("");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // NEW STATE
 
   const handleLinkClick = (link) => {
     setActiveLink(link);
+    setIsSidebarOpen(false); // close sidebar after click (mobile UX)
   };
 
   return (
@@ -19,6 +21,13 @@ export default function DashboardLayout() {
       {/* Header */}
       <header className="header">
         <div className="header-left">
+          {/* Hamburger for mobile */}
+          <button 
+            className="hamburger-btn" 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          >
+            {isSidebarOpen ? <FaTimes /> : <FaBars />}
+          </button>
           <img src={brand} alt="RECAP4NDC" className="header-logo" />
         </div>
         <div className="header-right">
@@ -30,7 +39,7 @@ export default function DashboardLayout() {
       {/* Body */}
       <div className="layout-body">
         {/* Sidebar */}
-        <aside className="sidebar">
+        <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
           <ul>
             <li>
               <NavLink
@@ -66,8 +75,7 @@ export default function DashboardLayout() {
                 className={`dropdown-toggle ${openDropdown ? "active" : ""}`}
                 onClick={() => setOpenDropdown(!openDropdown)}
               >
-                <FaClipboardList className="icon" /> Working Plan Areas{" "}
-                {/* <span className="arrow">{openDropdown ? "▲" : "▼"}</span> */}
+                <FaClipboardList className="icon" /> Working Plan Areas
               </button>
               {openDropdown && (
                 <ul className="dropdown-menus">
@@ -77,7 +85,7 @@ export default function DashboardLayout() {
                       className={`menu-item ${activeLink === "/working-plan/upload" ? "active" : ""}`}
                       onClick={() => handleLinkClick("/working-plan/upload")}
                     >
-                      <FaUpload className="icon" /> Upload Coupe Boundaries
+                     <FaUpload className="icon" /> Upload Coupe Boundaries
                     </NavLink>
                   </li>
                   <li>
@@ -86,7 +94,7 @@ export default function DashboardLayout() {
                       className={`menu-item ${activeLink === "/working-plan/view" ? "active" : ""}`}
                       onClick={() => handleLinkClick("/working-plan/view")}
                     >
-                      <FaEye className="icon" /> View Coupe Boundaries
+                     <FaEye className="icon" /> View Coupe Boundaries
                     </NavLink>
                   </li>
                   <li>
@@ -95,7 +103,7 @@ export default function DashboardLayout() {
                       className={`menu-item ${activeLink === "/working-plan/log" ? "active" : ""}`}
                       onClick={() => handleLinkClick("/working-plan/log")}
                     >
-                      <GiNotebook className="icon" /> Coupe Observation Log
+                      <GiNotebook className="icon" />Coupe Observation Log
                     </NavLink>
                   </li>
                 </ul>
@@ -106,7 +114,7 @@ export default function DashboardLayout() {
 
         {/* Page content */}
         <main className="content">
-          <Outlet /> {/* Renders child routes here */}
+          <Outlet />
         </main>
       </div>
     </div>
