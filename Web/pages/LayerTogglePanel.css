@@ -1,0 +1,224 @@
+.layer-toggle-panel {
+    position: absolute;
+    top: 35%;
+    left: 90px;
+    z-index: 1000;
+    max-height: 85vh;
+    overflow-y: auto;
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    padding: 18px;
+    width: 340px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: all 0.3s ease-in-out;
+    height: 300px;
+  }
+  
+  .layer-toggle-panel h4 {
+    margin-top: 0;
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 16px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 8px;
+  }
+  
+  .layer-group {
+    margin-bottom: 12px;
+  }
+  
+  .group-title {
+    font-size: 16px;
+    color: #1a1a1a;
+    padding: 6px 10px;
+    background-color: #f6f6f6;
+    border-radius: 6px;
+    transition: background 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .group-title:hover {
+    background-color: #eaeaea;
+  }
+  
+  .layer-item {
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    font-size: 14px;
+  }
+  
+  .layer-item input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+    cursor: pointer;
+  }
+  
+  .layer-item span {
+    flex: 1;
+    word-break: break-word;
+  }
+  
+  /* Legend Container (moved outside the layer-toggle-panel) */
+ 
+  
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .panel-header h4 {
+    font-size: 20px;
+    color: #333;
+    margin: 0;
+    text-align: left;
+  }
+  
+  .close-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 24px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  
+  .close-btn:hover {
+    color: #f44336; /* Red on hover */
+  }
+  
+
+
+  .legend-container {
+    position: absolute;
+    bottom: 10px; /* Adjusted position */
+    right: 20px;  /* Align to the right with a smaller offset */
+    z-index: 999;
+    background-color: rgba(255, 255, 255, 0.97);
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    max-height: 300px; /* Increased height for better display */
+    overflow-y: auto;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    width: 200px;  /* Same width as layer panel */
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .legend-container h1 {
+    font-size: 20px;
+    color: #333;
+    margin: 0;
+    text-align: center;
+    font-weight: bold;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .legend-item {
+    margin-bottom: 16px; /* Increased margin for spacing */
+    text-align: center;
+  }
+  
+  .legend-item img {
+    max-width: 90%; /* Restrict image width for better control */
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin: 0 auto;
+    display: block;
+    transition: transform 0.3s ease-in-out;
+  }
+  
+ 
+  
+  .arrow-icon {
+    font-size: 18px;
+    color: #555;
+    margin-left: 8px;
+  }
+  
+  .layer-list-wrapper {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease-in-out;
+  }
+  
+  .layer-list-wrapper.expanded {
+    max-height: 1000px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; 
+  }
+
+
+  .view-attributes-btn {
+    margin-top: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+  }
+  
+  .attribute-table-container {
+    position: fixed;
+    bottom: 0; /* Stick to the bottom of the page */
+    left: 0; /* Align to the left of the page */
+    width: 50%; /* Full width of the screen, you can change this if you need a custom width */
+     /* Ensure it doesn't overflow horizontally */
+    height: 300px; /* Fixed height, adjust as necessary */
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto; /* Enable vertical scrolling when content overflows */
+    padding: 10px;
+    z-index: 9999;
+    overflow-x: auto; /* Ensure it's above other content */
+  }
+  
+  .attribute-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Prevents table from expanding beyond its container */
+  }
+  
+  .attribute-table-container th, .attribute-table-container td {
+    padding: 2px;
+    width: 100px;
+    text-align: left;
+    border: 1px solid #ddd;
+    word-wrap: break-word; /* Ensures long words break properly inside the table cells */
+  }
+  
+  .attribute-table-container th {
+    background-color: #f2f2f2;
+    position: sticky;
+    top: 0; /* Keeps header sticky at the top */
+    z-index: 1; /* Ensures header is above the table content */
+  }
+  .green-loader {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid green;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
