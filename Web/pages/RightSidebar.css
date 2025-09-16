@@ -1,0 +1,181 @@
+.tool-sidebar {
+    position: absolute;
+    top: 70px; /* below the header */
+    right: 80px;
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border-radius: 12px;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+    z-index: 700;
+  }
+  
+  .right-sidebar-button {
+    width: 45px;
+    height: 45px;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: grey 1px solid;
+    background-color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    transition: all 0.2s ease-in-out;
+    
+  }
+  
+
+  
+  .right-sidebar .material-icons-outlined {
+    font-size: 24px;
+    color: green;
+  }
+  
+/* Enhanced Styling for the Drawing List */
+.drawing-list {
+    position: fixed;
+    bottom: 20px; /* Positioned at the bottom */
+    right: 480px;
+    width: 320px; /* Slightly increased width for more space */
+    max-height: 30vh; /* Increased max-height for more flexibility */
+    overflow-y: auto; /* Enables scrolling when content overflows */
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* Spacing between items */
+    background: rgba(255, 255, 255, 0.9); /* Transparent background */
+    padding: 16px;
+    border-radius: 16px; /* Rounded corners */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Subtle shadow for separation */
+    z-index: 9999; /* Ensure it's above other content */
+    transition: transform 0.3s ease, opacity 0.3s ease; /* Smooth transitions */
+    backdrop-filter: blur(8px); /* Optional: Blur effect for a modern look */
+    overflow-x: auto;
+    border: 2px solid #4caf50; /* Green border for visual distinction */
+    background-color: #f9f9f9; /* Light background */
+}
+
+/* Styling for Items in the Drawing List */
+.drawing-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Spacing between items */
+    overflow: hidden; /* Prevent overflow */
+}
+
+/* Individual Drawing Item Styling */
+.drawing-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #fff; /* White background for the items */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); /* Soft shadow for depth */
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    cursor: pointer;
+    border: 1px solid #e0e0e0; /* Light border around items */
+    margin: 2px 0; /* Margin between items */
+}
+
+.drawing-item:hover {
+    background-color: #f1f1f1; /* Subtle hover effect for better interaction */
+    transform: scale(1.02); /* Slightly enlarge on hover */
+}
+
+.drawing-item:focus {
+    outline: none;
+    background-color: #f1f1f1; /* Focus state */
+    border: 1px solid #4caf50; /* Green border for focus */
+}
+
+/* Buttons within Drawing Items */
+.layer-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    margin: 0 5px; /* Spacing between buttons */
+}
+
+.layer-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+    transform: scale(1.05); /* Slightly enlarge on hover */
+}
+
+.layer-btn:active {
+    transform: scale(1); /* Reset to original size when clicked */
+}
+
+.layer-btn:focus {
+    outline: none;
+    border: 2px solid #2e7d32; /* Green focus border */
+}
+
+/* Edit Button Styling */
+.edit-btn {
+    background-color: #4caf50;
+    color: white;
+}
+
+.edit-btn:hover {
+    background-color: #45a049;
+}
+
+/* Hide Button Styling */
+.hide-btn {
+    background-color: #2196F3;
+    color: white;
+}
+
+.hide-btn:hover {
+    background-color: #1976d2; /* Darker blue on hover */
+}
+
+/* Delete Button Styling */
+.delete-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.delete-btn:hover {
+    background-color: #e53935; /* Darker red on hover */
+}
+
+/* Added focus effects and better button spacing */
+.delete-btn {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+
+
+
+.action-buttons {
+    display: flex;
+    gap: 12px; /* Increased spacing for better separation */
+    justify-content: space-between;
+    padding-top: 10px; /* Space above the buttons */
+}
+
+.action-buttons button {
+    background-color: #4caf50;
+    color: white;
+    padding: 12px 24px; /* Slightly larger buttons for emphasis */
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    border: none; /* Ensures no border is present */
+}
+
+
+

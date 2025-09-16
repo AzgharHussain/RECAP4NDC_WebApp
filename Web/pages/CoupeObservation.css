@@ -1,0 +1,194 @@
+/* === Transparent Table Header === */
+.transparent-table .ant-table {
+  background: transparent !important;
+  border: 1.949px solid rgba(255, 255, 255, 0.23);
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              12.064px 12.064px 6.786px -13.572px #FFF inset;
+}
+
+.transparent-table .ant-table-thead > tr > th {
+  background: rgba(255, 255, 255, 0.1) !important;
+  font-weight: bold;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1.949px solid rgba(255, 255, 255, 0.23);
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              12.064px 12.064px 6.786px -13.572px #FFF inset;
+}
+
+/* === Transparent Table Body Cells === */
+.transparent-table .ant-table-tbody > tr > td {
+  background: transparent !important;
+  color: #fff;
+  border: 1.949px solid rgba(255, 255, 255, 0.23);
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              12.064px 12.064px 6.786px -13.572px #FFF inset;
+}
+
+/* Hover row effect */
+.transparent-table .ant-table-tbody > tr:hover > td {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1.949px solid rgba(255, 255, 255, 0.23);
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+              12.064px 12.064px 6.786px -13.572px #FFF inset;
+}
+
+/* No Data placeholder */
+.transparent-table .ant-table-placeholder,
+.transparent-table .ant-table-placeholder .ant-table-cell {
+  color: #fff !important;
+}
+
+/* === Filters Section === */
+.filters-section {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 10px;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  margin-bottom: -8px;
+}
+
+.filters-section .ant-input::placeholder {
+  color: #fff !important;
+  opacity: 1;
+}
+
+.filters-section .filter-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filters-section input,
+.filters-section select,
+.filters-section .ant-picker {
+  width: 200px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 6px;
+}
+
+/* === Inputs / Select / DatePicker styling === */
+.ant-input,
+.ant-select-selector,
+.ant-picker-input > input {
+  border: 2.21px solid rgba(255, 255, 255, 0.23);
+  background: rgba(255, 255, 255, 0.02);
+  color: #fff !important;
+  box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              13.681px 13.681px 7.696px -15.391px #FFF inset;
+}
+
+.filters-section .ant-select-selection-item {
+  color: #fff !important;
+}
+
+.filters-section .ant-picker-input > input::placeholder {
+  color: #fff !important;
+  opacity: 1;
+}
+
+/* === Dropdown menu background + text color === */
+.ant-select-dropdown {
+  background: rgba(0, 0, 0, 0.8) !important;
+  color: #fff !important;
+}
+
+.ant-select-item {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.ant-select-item-option-active,
+.ant-select-item-option-selected {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+}
+
+/* === Calendar popup background and text === */
+.ant-picker-panel {
+  background: rgba(0, 0, 0, 0.8) !important;
+  color: #fff !important;
+}
+
+/* === Export Button === */
+.btn-Export {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  border: 2.21px solid rgba(255, 255, 255, 0.23);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 6px 12px;
+  box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              13.681px 13.681px 7.696px -15.391px #FFF inset;
+}
+
+.btn-Export .btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* === Placeholder row for empty table === */
+:where(.css-dev-only-do-not-override-xepvsj).ant-table-wrapper .ant-table-tbody > tr.ant-table-placeholder {
+  border: 2.21px solid rgba(255, 255, 255, 0.23);
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              13.681px 13.681px 7.696px -15.391px #FFF inset;
+}
+/* Tablet + Mobile adjustments */
+@media (max-width: 1024px) {
+  .filters-section {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .filters-section input,
+  .filters-section .ant-select,
+  .filters-section .ant-picker,
+  .filters-section .btn-Export {
+    flex: 1 1 45%;  /* two per row on tablets */
+  }
+}
+
+@media (max-width: 768px) {
+  .filters-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters-section input,
+  .filters-section .ant-select,
+  .filters-section .ant-picker,
+  .filters-section .btn-Export {
+    width: 100%; /* full width on mobile */
+  }
+}
+
+/* Make table scrollable horizontally */
+.transparent-table {
+  overflow-x: auto;
+}
+
+.transparent-table .ant-table {
+  min-width: 900px; /* ensures readability */
+}
