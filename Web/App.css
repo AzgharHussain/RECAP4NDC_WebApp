@@ -1,0 +1,372 @@
+:root {
+  --white: #ffffff;
+  --muted: rgba(0, 0, 0, 0.65);
+  --green1: #59ea8c;
+  --green2: #27c468;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: "Spline Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  overflow: hidden;
+}
+
+.screen {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.left-panel {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  position: relative;
+  
+}
+
+
+.left-panel-glass {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* Add gradient over image */
+  background: linear-gradient(
+      to bottom,
+      rgba(255, 240, 220, 0.95) 0%, /* warm/beige top */
+      rgba(240, 220, 200, 0.8) 40%, /* transition */
+      rgba(150, 210, 230, 0.85) 100% /* light blue bottom */
+    );
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+.left-image {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  z-index: 2;
+}
+
+/* ===== Right Panel ===== */
+.right-panel {
+  flex: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  height: 100%;
+  padding: 50px;
+
+  /* Add gradient + background image */
+  background: linear-gradient(
+      to bottom,
+      rgba(210, 240, 220, 0.9) 0%, /* soft green top */
+      rgba(190, 235, 210, 0.7) 40%, /* transition */
+      rgba(150, 210, 230, 0.85) 100% /* light blue bottom */
+    ),
+    url("./assets/Background.png") no-repeat center center;
+  background-size: cover;
+}
+
+
+
+.form-card {
+  width: min(460px, 90%);
+  border-radius: 16px;
+  padding: 32px 28px;
+  text-align: center;
+  background: transparent;
+}
+
+.brand {
+  height: 250px;
+  object-fit: contain;
+  margin-top: -500px;
+}
+
+.login-heading {
+  font-size: 32px;
+  color: #fff;
+  text-align: center;
+  font-feature-settings: 'dlig' on;
+  font-family: "Spline Sans";
+  font-style: normal;
+  font-weight: 700;
+}
+
+.input-label {
+
+  text-align: left;
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 19px;
+  color: #fff;
+  font-feature-settings: 'dlig' on;
+  font-family: "Spline Sans";
+  font-style: normal;
+  font-weight: 700;
+}
+
+
+.field {
+  display: flex;
+  align-items: center;
+  opacity: 1.0;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  height: 52px;
+  padding: 0 14px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+border: 2.726px solid rgba(255, 255, 255, 0.10);
+background: rgba(255, 255, 255, 0.23);
+box-shadow: -12.655px -12.655px 6.327px -14.764px #B3B3B3 inset, -12.655px -12.655px 6.327px -14.764px #B3B3B3 inset, -12.655px -12.655px 6.327px -14.764px #B3B3B3 inset, 16.873px 16.873px 9.491px -18.982px #FFF inset;
+}
+
+
+.field input {
+  border: none;
+  outline: none;
+  background: transparent;
+  flex: 1;
+  height: 100%;
+  font-size: 16px;
+  color: #fff; /* pure white text */
+  font-weight: 500;
+}
+
+.field input::placeholder {
+  color: rgba(255, 255, 255, 0.8); /* frosted placeholder */
+}
+
+
+.eye {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;          /* remove border */
+  outline: none;         /* remove focus outline */
+  background: transparent;   /* remove white background */
+  cursor: pointer;
+  padding: 0;          /* remove default padding */
+}
+.eye svg {
+  fill: rgba(0, 0, 0, 0.85);/* make icon match glass style */
+  width: 20px;
+  height: 20px;
+}
+
+.icon,
+.eye {
+  font-size: 18px;
+  cursor: pointer;
+  
+}
+
+.btn-login {
+  font-family: "Spline Sans", sans-serif;
+  margin-top: 16px;
+  opacity: 1.0;
+  height: 52px;
+  width: 100%;
+  color: var(--white);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  border-radius: 121.758px;
+border: 2.726px solid rgba(255, 255, 255, 0.10);
+background: rgba(56, 224, 122, 0.70);
+box-shadow: -12.655px -12.655px 6.327px -14.764px #B3B3B3 inset, -12.655px -12.655px 6.327px -14.764px #B3B3B3 inset, -12.655px -12.655px 6.327px -14.764px #B3B3B3 inset, 16.873px 16.873px 9.491px -18.982px #FFF inset;
+}
+
+/* Hover and Active states for the button should also be adjusted for consistency */
+.btn-login:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(89, 234, 140, 0.9), /* Slightly more opaque on hover */
+    rgba(39, 196, 104, 0.8)
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(39, 196, 104, 0.4), /* Stronger but still soft shadow */
+              inset 0 1px 2px rgba(255, 255, 255, 0.35);
+}
+
+.btn-login:active {
+  transform: translateY(1px);
+  background: linear-gradient(
+    180deg,
+    rgba(89, 234, 140, 0.7),
+    rgba(39, 196, 104, 0.6)
+  );
+  box-shadow: 0 2px 8px rgba(39, 196, 104, 0.2), /* Less prominent shadow on active */
+              inset 0 1px 2px rgba(255, 255, 255, 0.25);
+}
+
+/* Footer bar wrapper */
+.footer-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between; /* split into 3 zones */
+  align-items: center;
+  padding: 0 20px;
+}
+
+/* Zones */
+.footer-left,
+.footer-center,
+.footer-right {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Align left and right buttons properly */
+.footer-left {
+  justify-content: flex-start;
+}
+.footer-center {
+  justify-content: center;
+}
+.footer-right {
+  justify-content: flex-end;
+}
+
+/* Footer text */
+.footer-note {
+  font-size: 12px;
+  font-weight: 500;
+  color: #383838;
+  text-align: justify;
+  font-family: Inter;
+  font-style: normal;
+  line-height: 219%; /* 71.725px */
+  letter-spacing: -0.721px;
+  text-transform: capitalize;
+}
+
+.lang-chip {
+  height: 48px;
+  width: 48px;
+  font-weight: 700;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-feature-settings: 'dlig' on;
+  font-family: "Spline Sans";
+  font-style: normal;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #000; /* default black */
+  border-radius: 68.072px;
+  border: 2.199px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.10);
+  box-shadow: -10.211px -10.211px 5.105px -11.913px #B3B3B3 inset, -10.211px -10.211px 5.105px -11.913px #B3B3B3 inset, -10.211px -10.211px 5.105px -11.913px #B3B3B3 inset, 13.614px 13.614px 7.658px -15.316px #FFF inset;
+}
+
+/* Active language */
+.lang-chip.active {
+  color: #04FF29;
+  border: 2.199px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.10);
+  box-shadow: -10.211px -10.211px 5.105px -11.913px #B3B3B3 inset, -10.211px -10.211px 5.105px -11.913px #B3B3B3 inset, -10.211px -10.211px 5.105px -11.913px #B3B3B3 inset, 13.614px 13.614px 7.658px -15.316px #FFF inset;
+}
+
+
+.lang-left {
+  left: 16px;
+}
+.lang-right {
+  right: 16px;
+}
+
+/* RESPONSIVE DESIGN */
+
+/* Tablets */
+@media (max-width: 1024px) {
+  .screen {
+    flex-direction: column;
+  }
+  .left-panel {
+    display: none;
+  }
+  .form-card {
+    width: 80%;
+  }
+}
+
+/* Mobiles */
+@media (max-width: 768px) {
+  .screen {
+    flex-direction: column;
+  }
+  .left-panel {
+    display: none;
+  }
+  .right-panel {
+    padding: 20px;
+  }
+  .form-card {
+    width: 100%;
+    max-width: 350px;
+    padding: 15px;
+  }
+  .brand {
+    height: 100px;
+  }
+  .login-heading {
+    font-size: 20px;
+  }
+  .btn-login {
+    height: 46px;
+    font-size: 14px;
+  }
+  .footer-bar {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+}
+/* Desktop only (≥1280px) */
+@media (min-width: 1280px) {
+  .screen {
+    flex-direction: row;  /* keep panels side by side */
+  }
+
+  .right-panel {
+    flex: 1.6;           /* slightly larger than left */
+    padding: 60px;       /* more breathing room */
+  }
+ 
+  .form-card {
+    max-width: 420px;    /* tighter width for big screens */
+  }
+
+  .brand {
+    max-height: 150px;   /* scale logo nicely */
+  }
+}
+
+

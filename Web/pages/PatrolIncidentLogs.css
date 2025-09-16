@@ -1,0 +1,123 @@
+/* === Transparent Table === */
+.transparent-table .ant-table {
+  background: transparent !important; /* Set the table background to transparent */
+  backdrop-filter: blur(6px);  /* Apply slight blur effect */
+  border-radius: 12px;  /* Rounded corners */
+  border: 1.949px solid rgba(255, 255, 255, 0.23);  /* Transparent border with slight opacity */
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 
+              12.064px 12.064px 6.786px -13.572px #FFF inset;
+}
+
+/* === Transparent Table Header === */
+.transparent-table .ant-table-thead > tr > th {
+  background: rgba(255, 255, 255, 0.1) !important;  /* Transparent background for header */
+  color: #fff;  /* White text for contrast */
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);  /* Border for header */
+  border: 1.949px solid rgba(255, 255, 255, 0.23);  /* Transparent border */
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 
+              12.064px 12.064px 6.786px -13.572px #FFF inset;
+  backdrop-filter: blur(6px); /* Keep the blur effect on headers */
+}
+
+/* === Transparent Table Body Cells === */
+.transparent-table .ant-table-tbody > tr > td {
+  background: transparent !important;  /* Transparent background for table rows */
+  color: #fff;  /* White text */
+  border: 1.949px solid rgba(255, 255, 255, 0.23);  /* Transparent border with slight opacity */
+  box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 
+              -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 
+              12.064px 12.064px 6.786px -13.572px #FFF inset;
+}
+
+/* Hover row effect */
+.transparent-table .ant-table-tbody > tr:hover > td {
+  background: rgba(255, 255, 255, 0.05) !important;  /* Slight highlight on hover */
+}
+
+/* === Filters Section === */
+.filters-section {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.15);  /* Transparent background */
+  padding: 10px;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  margin-bottom: 20px;
+}
+
+/* Inputs, Select, DatePicker */
+.ant-input, .ant-select-selector, .ant-picker-input > input {
+  background: rgba(255, 255, 255, 0.15); /* Transparent background for inputs */
+  color: #fff;  /* White text in input */
+  border: 1px solid rgba(255, 255, 255, 0.23);
+  border-radius: 6px;
+  box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              13.681px 13.681px 7.696px -15.391px #FFF inset;
+}
+
+.ant-select-dropdown {
+  background: rgba(0, 0, 0, 0.8) !important; /* Transparent background for dropdown */
+  color: #fff !important;  /* White text */
+}
+
+/* === Export Button === */
+.btn-Export {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  border: 2.21px solid rgba(255, 255, 255, 0.23);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 6px 12px;
+  box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              13.681px 13.681px 7.696px -15.391px #FFF inset;
+}
+
+.btn-Export .btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+
+.filters-section .ant-input::placeholder {
+  color: #fff !important;
+  opacity: 1;
+}
+/* === Placeholder row for empty table === */
+:where(.css-dev-only-do-not-override-xepvsj).ant-table-wrapper .ant-table-tbody > tr.ant-table-placeholder {
+  border: 2.21px solid rgba(255, 255, 255, 0.23);
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              13.681px 13.681px 7.696px -15.391px #FFF inset;
+}
+
+
+:where(.css-dev-only-do-not-override-xepvsj).ant-btn-variant-outlined:not(:disabled):not(.ant-btn-disabled):hover, :where(.css-dev-only-do-not-override-xepvsj).ant-btn-variant-dashed:not(:disabled):not(.ant-btn-disabled):hover {
+     border: 2.21px solid rgba(255, 255, 255, 0.23);
+     color: #FFF;
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
+              13.681px 13.681px 7.696px -15.391px #FFF inset;
+          
+}
+
+/* For Ant Design Input placeholder text */
+.filters .ant-input::placeholder {
+  color: #fff !important;      /* white placeholder */
+  opacity: 1;                  /* ensure opacity so white shows */
+}
