@@ -21,14 +21,14 @@ const PatrolIncidentLogs = () => {
                      style={{
                        width: "200px",
                        background: 'rgba(255, 255, 255, 0.2)',
-                       color: '#fff',
+                       
                        border: 'none',
                      }}
                      suffix={<SearchOutlined style={{ color: 'rgba(0, 0, 0, 0.25)', fontSize: '16px' }} />} // Light black (dark grey)
                    />
           <DatePicker placeholder="Search by Start Date & Time" style={{
               width: "200px",
-              color: '#fff',
+              
               border: '2.21px solid rgba(255, 255, 255, 0.23)',
               background: 'rgba(255, 255, 255, 0.02)',
               boxShadow:
@@ -80,7 +80,7 @@ const PatrolIncidentLogs = () => {
                       style={{
                         width: "200px",
                         background: 'rgba(255, 255, 255, 0.2)',
-                        color: '#fff',
+                     
                         border: 'none',
                       }}
                       suffix={<SearchOutlined style={{ color: 'rgba(0, 0, 0, 0.25)', fontSize: '16px' }} />} // Light black (dark grey)
@@ -93,7 +93,7 @@ const PatrolIncidentLogs = () => {
           </Select>
           <DatePicker placeholder="Search by Incident Date & Time" style={{
               width: "200px",
-              color: '#fff',
+             
               border: '2.21px solid rgba(255, 255, 255, 0.23)',
               background: 'rgba(255, 255, 255, 0.02)',
               boxShadow:

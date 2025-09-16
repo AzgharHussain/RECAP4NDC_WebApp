@@ -1,224 +1,207 @@
-.layer-toggle-panel {
-    position: absolute;
-    top: 35%;
-    left: 90px;
-    z-index: 1000;
-    max-height: 85vh;
-    overflow-y: auto;
-    background-color: #ffffff;
-    border-radius: 12px;
-    border: 1px solid #e0e0e0;
-    padding: 18px;
-    width: 340px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    transition: all 0.3s ease-in-out;
-    height: 300px;
-  }
+.leftpanel {
+  width: 280px;
+  height: 100vh;
   
-  .layer-toggle-panel h4 {
-    margin-top: 0;
-    font-size: 20px;
-    color: #333;
-    margin-bottom: 16px;
-    text-align: center;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 8px;
-  }
+  font-family: "Arial", sans-serif;
+}
+
+.sidebar-title {
+  color: #009245;
+}
+
+.sidebar-section {
+  margin-top: -2px;
+  border-bottom: 1px solid #e6f2e6;
+  padding-bottom: 15px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 600;
   
-  .layer-group {
-    margin-bottom: 12px;
-  }
-  
-  .group-title {
-    font-size: 16px;
-    color: #1a1a1a;
-    padding: 6px 10px;
-    background-color: #f6f6f6;
-    border-radius: 6px;
-    transition: background 0.2s;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .group-title:hover {
-    background-color: #eaeaea;
-  }
-  
-  .layer-item {
-    padding: 6px 10px;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    font-size: 14px;
-  }
-  
-  .layer-item input[type="checkbox"] {
-    margin-right: 10px;
-    transform: scale(1.2);
-    cursor: pointer;
-  }
-  
-  .layer-item span {
-    flex: 1;
-    word-break: break-word;
-  }
-  
-  /* Legend Container (moved outside the layer-toggle-panel) */
+  color: #009245;
  
-  
-  .panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-  
-  .panel-header h4 {
-    font-size: 20px;
-    color: #333;
-    margin: 0;
-    text-align: left;
-  }
-  
-  .close-btn {
-    background: none;
-    border: none;
-    color: #888;
-    font-size: 24px;
-    cursor: pointer;
-    transition: color 0.2s;
-  }
-  
-  .close-btn:hover {
-    color: #f44336; /* Red on hover */
-  }
-  
+}
 
+.section-content {
+  margin-top: 12px;
+  padding-left: 10px;
+  font-size: 16px;
+}
 
-  .legend-container {
-    position: absolute;
-    bottom: 10px; /* Adjusted position */
-    right: 20px;  /* Align to the right with a smaller offset */
-    z-index: 999;
-    background-color: rgba(255, 255, 255, 0.97);
-    padding: 18px;
-    border-radius: 12px;
-    border: 1px solid #e0e0e0;
-    max-height: 300px; /* Increased height for better display */
-    overflow-y: auto;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    width: 200px;  /* Same width as layer panel */
-    transition: all 0.3s ease-in-out;
-  }
-  
-  .legend-container h1 {
-    font-size: 20px;
-    color: #333;
-    margin: 0;
-    text-align: center;
-    font-weight: bold;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .legend-item {
-    margin-bottom: 16px; /* Increased margin for spacing */
-    text-align: center;
-  }
-  
-  .legend-item img {
-    max-width: 90%; /* Restrict image width for better control */
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    margin: 0 auto;
-    display: block;
-    transition: transform 0.3s ease-in-out;
-  }
-  
+.date-input-container {
+  display: flex;
+  align-items: center; /* Align items vertically in the center */
+  gap: 10px; /* Space between the date inputs and filter icon */
  
-  
-  .arrow-icon {
-    font-size: 18px;
-    color: #555;
-    margin-left: 8px;
-  }
-  
-  .layer-list-wrapper {
-    overflow: hidden;
-    max-height: 0;
-    transition: max-height 0.3s ease-in-out;
-  }
-  
-  .layer-list-wrapper.expanded {
-    max-height: 1000px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; 
-  }
+}
+
+.input-field {
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 16px;
+  box-sizing: border-box;
+  flex: 1; /* Make the input fields fill the available space */
+}
+
+.input-field:focus {
+  border-color: #009245;
+  outline: none;
+}
+
+.filter-icon img {
+  width: 20px;
+  height: auto;
+  margin-top: 15px; /* Align the icon vertically with the inputs */
+}
+
+/* Placeholder styling for better visibility */
+.input-field::placeholder {
+  color: #888;
+  font-style: italic;
+}
 
 
-  .view-attributes-btn {
-    margin-top: 5px;
-    padding: 5px 10px;
-    cursor: pointer;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-  }
+
+.date-input-container .input-field {
+  flex: 1;
+   color: #1B75BA;
+}
+
+.date-input-container .input-field:last-child {
+  margin-right: 10px;
+}
+
+
+input[type="checkbox"] {
+  margin-right: 8px;
+  border-radius: 9.026px;
+border: 1.005px solid rgba(255, 255, 255, 0.23);
+background: rgba(255, 255, 255, 0.02);
+box-shadow: -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, 6.22px 6.22px 3.499px -6.998px #FFF inset;
+}
+
+select {
+  font-size: 16px;
+  padding: 10px; /* Ensure padding is consistent */
+}
+
+input[type="date"] {
+  font-size: 11px;
+  padding: 10px; /* Ensure padding is consistent */
+ border-radius: 5.602px;
+border: 1.514px solid rgba(255, 255, 255, 0.23);
+background: rgba(255, 255, 255, 0.02);
+box-shadow: -7.03px -7.03px 3.515px -8.201px #B3B3B3 inset, -7.03px -7.03px 3.515px -8.201px #B3B3B3 inset, -7.03px -7.03px 3.515px -8.201px #B3B3B3 inset, 9.373px 9.373px 5.272px -10.545px #FFF inset;
+}
+
+.section-header svg {
+  font-size: 20px; /* Larger chevron icons */
+  color: #009245;
+  margin-right: 24px;
+}
+.green-label {
+ color: #1B75BA;
+font-family: Inter;
+font-size: 11px;
+font-style: normal;
+font-weight: 600;
+line-height: 140%; /* 34.16px */
+margin-bottom: 10px; /* Space between label and checkbox */
+
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column; /* Stack the checkboxes vertically */
+  gap: 10px; /* Space between each checkbox */
+}
+
+.checkbox-group label {
+ color: #1B75BA;
+font-family: Inter;
+font-size: 11px;
+font-style: normal;
+font-weight: 500;
+line-height: 140%; /* 34.16px */
+}
+
+
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 12px 0;
+  color: #009245;
+  font-size: 18px;
+}
+
+.section-content {
+  margin-top: 12px;
+  padding-left: 10px;
+  font-size: 16px;
+}
+
+
+.section-content label {
+  display: block;
+  margin-bottom: 8px; /* Space between checkboxes */
+  display: flex;
+  align-items: center; /* Align checkbox and text horizontally */
   
-  .attribute-table-container {
-    position: fixed;
-    bottom: 0; /* Stick to the bottom of the page */
-    left: 0; /* Align to the left of the page */
-    width: 50%; /* Full width of the screen, you can change this if you need a custom width */
-     /* Ensure it doesn't overflow horizontally */
-    height: 300px; /* Fixed height, adjust as necessary */
-    background-color: #f9f9f9;
-    border-radius: 5px;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-    overflow-y: auto; /* Enable vertical scrolling when content overflows */
-    padding: 10px;
-    z-index: 9999;
-    overflow-x: auto; /* Ensure it's above other content */
-  }
+}
+
+input[type="checkbox"] {
+  appearance: none; /* Remove default checkbox appearance */
+  width: 18px; /* Adjust the size */
+  height: 18px; /* Adjust the size */
+  border-radius: 9.026px;
+border: 1.005px solid rgba(255, 255, 255, 0.23);
+background: rgba(255, 255, 255, 0.02);
+box-shadow: -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, 6.22px 6.22px 3.499px -6.998px #FFF inset;
   
-  .attribute-table-container table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed; /* Prevents table from expanding beyond its container */
-  }
+  position: relative;
+  cursor: pointer; /* Pointer on hover */
+}
+
+/* Styling when checkbox is checked */
+input[type="checkbox"]:checked {
+  background-color: #388e3c; /* Green background for checked state */
+  border-color: #388e3c; /* Border color on checked */
+}
+
+/* Create a custom check mark inside the checkbox */
+input[type="checkbox"]:checked::after {
+  content: '\2713'; /* Unicode check mark character */
+  position: absolute;
+  top: 0;
+  left: 4px; /* Adjust position of check mark */
+  font-size: 14px;
+  color: white; /* Color of the check mark */
+}
+
+/* When the checkbox is hovered over */
+input[type="checkbox"]:hover {
+  background-color: rgba(255, 255, 255, 0.1); /* Hover effect */
+}
+
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column; /* Ensure checkboxes are stacked vertically */
+  gap: 10px; /* Space between each checkbox */
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center; /* Align checkbox and text horizontally */
   
-  .attribute-table-container th, .attribute-table-container td {
-    padding: 2px;
-    width: 100px;
-    text-align: left;
-    border: 1px solid #ddd;
-    word-wrap: break-word; /* Ensures long words break properly inside the table cells */
-  }
-  
-  .attribute-table-container th {
-    background-color: #f2f2f2;
-    position: sticky;
-    top: 0; /* Keeps header sticky at the top */
-    z-index: 1; /* Ensures header is above the table content */
-  }
-  .green-loader {
-    width: 50px;
-    height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid green;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
+}
+
+
+/* Styling when checkbox is checked */
