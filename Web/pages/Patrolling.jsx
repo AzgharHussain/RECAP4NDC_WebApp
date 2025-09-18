@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState ,useEffect} from "react";
 import { Table, Button, Input, Select, DatePicker } from "antd";
 import { SearchOutlined } from '@ant-design/icons';
 import './PatrolIncidentLogs.css';  // Import the CSS for styling
@@ -7,6 +7,35 @@ import exportIcon from '../assets/excel.png';
 const { Option } = Select;
 
 const PatrolIncidentLogs = () => {
+const [patrolData, setPatrolData] = useState([]);
+  const [incidentData, setIncidentData] = useState([]);
+
+  // Fetch patrol data by user ID
+  const fetchPatrolData = async () => {
+    try {
+      const response = await fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=2");
+      const data = await response.json();
+      setPatrolData(data);
+    } catch (error) {
+      console.error("Error fetching patrol data:", error);
+    }
+  };
+
+  // Fetch incident data
+  const fetchIncidentData = async () => {
+    try {
+      const response = await fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=2");
+      const data = await response.json();
+      setIncidentData(data);
+    } catch (error) {
+      console.error("Error fetching incident data:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPatrolData();
+    fetchIncidentData();
+  }, []);
 
   return (
     <div className="container">
