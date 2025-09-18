@@ -1,0 +1,228 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background:url("../assets/Background.png") no-repeat center center;
+  background-size: cover;
+  overflow-y: auto;
+
+}
+
+/* Header */
+.header {
+  height: 65px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+.header-logo {
+  height: 55px;
+  margin-right: 12px;
+  margin-top: 10px;
+}
+.header-title h1 {
+  font-size: 20px;
+  margin: 0;
+  color: #008000;
+}
+.header-title p {
+  font-size: 12px;
+  margin: 0;
+  color: #0077cc;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+  color: #006400;
+}
+
+/* Sidebar */
+.layout-body {
+  flex: 1;
+  display: flex;
+}
+.sidebar {
+  width: 240px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 20px 10px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  
+
+}
+.sidebar li {
+  margin: 18px 0;
+}
+
+.sidebar ul li {
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* underline */
+  
+}
+
+
+
+.sidebar a {
+  text-decoration: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 15px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+.sidebar a:hover,
+.sidebar a.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #00c853;
+}
+.sidebar .icon {
+  font-size: 18px;
+}
+.sidebar .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 6px 0;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  color: white;   /* default = white */
+  transition: all 0.3s ease;
+}
+
+/* Hover */
+.sidebar .menu-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #00a651;
+}
+
+/* Active NavLink */
+.sidebar .menu-item.active {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #00a651;
+  font-weight: 700;
+}
+
+/* Page content */
+.content {
+  flex: 1;
+  padding: 13px;
+  overflow-y: auto;
+  border: 1.949px solid rgba(255, 255, 255, 0.23);
+background: rgba(255, 255, 255, 0.13);
+box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 12.064px 12.064px 6.786px -13.572px #FFF inset;
+}
+
+/* Default dropdown button = plain white */
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 6px 0;
+  border-radius: 10px;
+  background: transparent;        /* default no highlight */
+  border: none;
+  color: white;                   /* default text white */
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.3s ease;
+}
+
+/* When dropdown is open → green style */
+.dropdown-toggle.active {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #00a651;
+  font-weight: 700;
+}
+
+.dropdown-menus {
+  margin: 8px 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dropdown-menus .menu-item {
+  color: white; /* default white */
+  font-weight: 500;
+}
+
+
+.dropdown-menu .menu-item.active {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #00a651;
+}
+
+/* Hamburger button */
+.hamburger-btn {
+  display: none;
+  font-size: 24px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+/* Sidebar mobile styles */
+.sidebar {
+  transition: transform 0.3s ease-in-out;
+}
+
+@media (max-width: 768px) {
+  .hamburger-btn {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 65px; /* below header */
+    left: 0;
+    height: 100%;
+    width: 240px;
+    background: rgba(0, 0, 0, 0.85);
+    transform: translateX(-100%);
+    z-index: 1000;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .layout-body {
+    flex-direction: column;
+  }
+
+  .content {
+    padding: 10px;
+  }
+}
