@@ -194,7 +194,6 @@ app.get('/api/incidents-with-images', async (req, res) => {
 });
 
 // New GET API to retrieve incident data by user_id using a PostgreSQL function
-// This route now calls the stored function `get_patrols_by_user`.
 app.get('/api/patrols-by-user', async (req, res) => {
     try {
         const { user_id } = req.query; // Get user_id from query parameters
@@ -208,7 +207,8 @@ app.get('/api/patrols-by-user', async (req, res) => {
         // We use an array for the replacements when calling a function with positional parameters.
         const [results] = await sequelize.query('SELECT * FROM get_patrols_by_user(:user_id)', {
             replacements: { user_id },
-            type: QueryTypes.SELECT, // Specify the type of query
+            // Access QueryTypes directly from the Sequelize object
+            type: Sequelize.QueryTypes.SELECT,
         });
 
         res.json(results);
