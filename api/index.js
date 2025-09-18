@@ -192,7 +192,7 @@ app.get('/api/incidents-with-images', async (req, res) => {
                 incidents i
             LEFT JOIN 
                 (
-                    SELECT incident_id, CONCAT('http://localhost:5000/', image_url) as image_url
+                    SELECT incident_id, CONCAT('http://68.178.167.39:5000/', image_url) as image_url
                     FROM incident_images
                 ) AS T ON i.incident_id = T.incident_id
             LEFT JOIN 
