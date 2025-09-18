@@ -1,0 +1,207 @@
+.leftpanel {
+  width: 280px;
+  height: 100vh;
+  
+  font-family: "Arial", sans-serif;
+}
+
+.sidebar-title {
+  color: #009245;
+}
+
+.sidebar-section {
+  margin-top: -2px;
+  border-bottom: 1px solid #e6f2e6;
+  padding-bottom: 15px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 600;
+  
+  color: #009245;
+ 
+}
+
+.section-content {
+  margin-top: 12px;
+  padding-left: 10px;
+  font-size: 16px;
+}
+
+.date-input-container {
+  display: flex;
+  align-items: center; /* Align items vertically in the center */
+  gap: 10px; /* Space between the date inputs and filter icon */
+ 
+}
+
+.input-field {
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 16px;
+  box-sizing: border-box;
+  flex: 1; /* Make the input fields fill the available space */
+}
+
+.input-field:focus {
+  border-color: #009245;
+  outline: none;
+}
+
+.filter-icon img {
+  width: 20px;
+  height: auto;
+  margin-top: 15px; /* Align the icon vertically with the inputs */
+}
+
+/* Placeholder styling for better visibility */
+.input-field::placeholder {
+  color: #888;
+  font-style: italic;
+}
+
+
+
+.date-input-container .input-field {
+  flex: 1;
+   color: #1B75BA;
+}
+
+.date-input-container .input-field:last-child {
+  margin-right: 10px;
+}
+
+
+input[type="checkbox"] {
+  margin-right: 8px;
+  border-radius: 9.026px;
+border: 1.005px solid rgba(255, 255, 255, 0.23);
+background: rgba(255, 255, 255, 0.02);
+box-shadow: -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, 6.22px 6.22px 3.499px -6.998px #FFF inset;
+}
+
+select {
+  font-size: 16px;
+  padding: 10px; /* Ensure padding is consistent */
+}
+
+input[type="date"] {
+  font-size: 11px;
+  padding: 10px; /* Ensure padding is consistent */
+ border-radius: 5.602px;
+border: 1.514px solid rgba(255, 255, 255, 0.23);
+background: rgba(255, 255, 255, 0.02);
+box-shadow: -7.03px -7.03px 3.515px -8.201px #B3B3B3 inset, -7.03px -7.03px 3.515px -8.201px #B3B3B3 inset, -7.03px -7.03px 3.515px -8.201px #B3B3B3 inset, 9.373px 9.373px 5.272px -10.545px #FFF inset;
+}
+
+.section-header svg {
+  font-size: 20px; /* Larger chevron icons */
+  color: #009245;
+  margin-right: 24px;
+}
+.green-label {
+ color: #1B75BA;
+font-family: Inter;
+font-size: 11px;
+font-style: normal;
+font-weight: 600;
+line-height: 140%; /* 34.16px */
+margin-bottom: 10px; /* Space between label and checkbox */
+
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column; /* Stack the checkboxes vertically */
+  gap: 10px; /* Space between each checkbox */
+}
+
+.checkbox-group label {
+ color: #1B75BA;
+font-family: Inter;
+font-size: 11px;
+font-style: normal;
+font-weight: 500;
+line-height: 140%; /* 34.16px */
+}
+
+
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 12px 0;
+  color: #009245;
+  font-size: 18px;
+}
+
+.section-content {
+  margin-top: 12px;
+  padding-left: 10px;
+  font-size: 16px;
+}
+
+
+.section-content label {
+  display: block;
+  margin-bottom: 8px; /* Space between checkboxes */
+  display: flex;
+  align-items: center; /* Align checkbox and text horizontally */
+  
+}
+
+input[type="checkbox"] {
+  appearance: none; /* Remove default checkbox appearance */
+  width: 18px; /* Adjust the size */
+  height: 18px; /* Adjust the size */
+  border-radius: 9.026px;
+border: 1.005px solid rgba(255, 255, 255, 0.23);
+background: rgba(255, 255, 255, 0.02);
+box-shadow: -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, 6.22px 6.22px 3.499px -6.998px #FFF inset;
+  
+  position: relative;
+  cursor: pointer; /* Pointer on hover */
+}
+
+/* Styling when checkbox is checked */
+input[type="checkbox"]:checked {
+  background-color: #388e3c; /* Green background for checked state */
+  border-color: #388e3c; /* Border color on checked */
+}
+
+/* Create a custom check mark inside the checkbox */
+input[type="checkbox"]:checked::after {
+  content: '\2713'; /* Unicode check mark character */
+  position: absolute;
+  top: 0;
+  left: 4px; /* Adjust position of check mark */
+  font-size: 14px;
+  color: white; /* Color of the check mark */
+}
+
+/* When the checkbox is hovered over */
+input[type="checkbox"]:hover {
+  background-color: rgba(255, 255, 255, 0.1); /* Hover effect */
+}
+
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column; /* Ensure checkboxes are stacked vertically */
+  gap: 10px; /* Space between each checkbox */
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center; /* Align checkbox and text horizontally */
+  
+}
+
+
+/* Styling when checkbox is checked */

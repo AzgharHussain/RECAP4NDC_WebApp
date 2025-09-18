@@ -1,0 +1,171 @@
+.search-container2 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-family: "barlow-r";
+  padding: 2px;
+}
+
+.search-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+.search-controls-h3{
+  color: #0B3C4D;
+}
+
+.options-village{
+  width: 50px !important;
+}
+
+.search-controls h3 {
+  color: #fff;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+
+.search-select-containers{
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap:3px;
+ 
+}
+
+.search-select,
+.search-select-District,
+.search-select-villages {
+  padding: 3px 5px;
+  border-radius: 3px;
+  border: 2px solid #2a7a8c;
+  font-size: 0.8rem;
+  background-color: #fff;
+  cursor: pointer;
+  width: 140px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.09);
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 0.8rem;
+  height: auto;
+      text-align: left;
+}
+.search-select-villages2{
+    padding: 3px 5px;
+
+  font-size: 0.78rem;
+  background-color: #fff;
+  cursor: pointer;
+ color: #690a27; font-size: 0.82rem;
+ 
+
+}
+.search-select { color: #10570b; }
+.search-select-District { color: #681bb4; }
+.search-select-villages { color: #690a27; font-size: 0.72rem; }
+
+.search-select:focus,
+.search-select-District:focus,
+.search-select-villages:focus {
+  outline: none;
+  border-color: #4db8c9;
+  box-shadow: 0 0 0 2px rgba(77, 184, 201, 0.18);
+}
+
+.search-select:hover,
+.search-select-District:hover,
+.search-select-villages:hover {
+  border-color: #4db8c9;
+}
+
+.search-select:disabled,
+.search-select-District:disabled,
+.search-select-villages:disabled {
+  background-color: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+  border-color: #ced4da;
+}
+
+.clear-button {
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  border: none;
+  background-color: #2a7a8c;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  
+}
+
+.clear-button:hover {
+  background-color: #4db8c9;
+  transform: translateY(-1px);
+}
+
+.clear-button:active {
+  transform: translateY(0);
+}
+
+.search-select.loading,
+.search-select-District.loading,
+.search-select-villages.loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.search-select.loading::after,
+.search-select-District.loading::after,
+.search-select-villages.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #0B3C4D;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .search-container2 {
+    padding: 0.8rem;
+  }
+  .search-controls {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  .search-select,
+  .search-select-District,
+  .search-select-villages,
+  .clear-button {
+    width: 100%;
+    max-width: 100%;
+  }
+  .search-controls h3 {
+    font-size: 0.97rem;
+    margin-bottom: 0.5rem;
+  }
+}

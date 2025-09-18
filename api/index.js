@@ -173,7 +173,7 @@ app.post('/api/full-incident', upload.array('images', 10), async (req, res) => {
     }
 });
 
-// New GET API to retrieve all incidents with full image paths according to user_id
+// New GET API to retrieve all incidents with full image paths and category names according to user_id
 app.get('/api/incidents-with-images', async (req, res) => {
     try {
         const { user_id } = req.query; // Get user_id from query parameters
@@ -186,14 +186,21 @@ app.get('/api/incidents-with-images', async (req, res) => {
         const query = `
             SELECT 
                 i.*, 
+                ic.category_name,
                 JSON_AGG(T.image_url) AS image_urls
-            FROM incidents i
-            LEFT JOIN (
-                SELECT incident_id, CONCAT('http://localhost:5000/', image_url) as image_url
-                FROM incident_images
-            ) AS T ON i.incident_id = T.incident_id
-            WHERE i.user_id = :user_id 
-            GROUP BY i.incident_id;
+            FROM 
+                incidents i
+            LEFT JOIN 
+                (
+                    SELECT incident_id, CONCAT('http://localhost:5000/', image_url) as image_url
+                    FROM incident_images
+                ) AS T ON i.incident_id = T.incident_id
+            LEFT JOIN 
+                incident_category ic ON i.incident_category_id = ic.category_id
+            WHERE 
+                i.user_id = :user_id 
+            GROUP BY 
+                i.incident_id, ic.category_name;
         `;
         
         const [results] = await sequelize.query(query, {
