@@ -194,26 +194,27 @@ app.get('/api/incidents-with-images', async (req, res) => {
 });
 
 // New GET API to retrieve incident data by user_id using a PostgreSQL function
-app.get('/api/incidents-with-details', async (req, res) => {
+// This route now calls the stored function `get_patrols_by_user`.
+app.get('/api/patrols-by-user', async (req, res) => {
     try {
         const { user_id } = req.query; // Get user_id from query parameters
-        
+
         // Validate that user_id is provided
         if (!user_id) {
             return res.status(400).json({ error: 'Missing required query parameter: user_id' });
         }
 
-        // Call the new PostgreSQL function to retrieve the data
-        const query = 'SELECT * FROM get_incidents_with_details(:user_id);';
-        
-        const [results] = await sequelize.query(query, {
+        // The query now executes the PostgreSQL function with the user_id as a parameter.
+        // We use an array for the replacements when calling a function with positional parameters.
+        const [results] = await sequelize.query('SELECT * FROM get_patrols_by_user(:user_id)', {
             replacements: { user_id },
+            type: QueryTypes.SELECT, // Specify the type of query
         });
 
         res.json(results);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Error retrieving incidents with details' });
+        res.status(500).json({ error: 'Error retrieving patrols' });
     }
 });
 
