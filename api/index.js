@@ -8,9 +8,9 @@ const fs = require('fs');
 
 // Initialize Sequelize with your database credentials
 const sequelize = new Sequelize(
-    'GIZ', // Database name
+    'Recap4NDC', // Database name
     'postgres', // Username
-    'Pass@123', // Password
+    'DB@$ecure#25', // Password
     {
         host: 'localhost',
         dialect: 'postgres',
@@ -67,10 +67,12 @@ app.get('/', (req, res) => {
 });
 
 // GET API for incident categories
+// New GET API for incident categories using a PostgreSQL function
 app.get('/api/incident-categories', async (req, res) => {
     try {
-        const result = await sequelize.query("SELECT * FROM \"incident_category\"");
-        res.json(result[0]);
+        const query = 'SELECT * FROM get_all_incident_categories()';
+        const [result] = await sequelize.query(query);
+        res.json(result);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error retrieving incident categories' });
@@ -78,102 +80,89 @@ app.get('/api/incident-categories', async (req, res) => {
 });
 
 // New single POST API to insert data and save images
+// New single POST API to insert data and save images using a PostgreSQL function
 app.post('/api/full-incident', upload.array('images', 10), async (req, res) => {
-    // Start a transaction to ensure atomicity
-    const t = await sequelize.transaction();
+    // Note: The transaction is now handled inside the PostgreSQL function,
+    // so we don't need a separate Sequelize transaction here.
 
     try {
-        // req.body now contains the JSON fields, and req.files contains the uploaded files
         let patrol, incident, userId;
-        
+
         try {
             patrol = JSON.parse(req.body.patrol);
             incident = JSON.parse(req.body.incident);
             userId = req.body.user_id; // Get the new user_id from the body
         } catch (parseError) {
-            await t.rollback();
             return res.status(400).json({ error: 'Invalid JSON format for patrol or incident data.' });
         }
 
         // Get the list of file paths to save to the database
-        // Fix: Use path.join and then replace backslashes with forward slashes for URLs
         const imageUrls = req.files.map(file => path.join('Incidentimage', file.originalname).replace(/\\/g, '/'));
 
-        // 1. Validate required data (including the new user_id)
+        // Validate required data (including the new user_id)
         if (!patrol || !incident || !userId) {
-            await t.rollback();
             return res.status(400).json({ error: 'Missing required data: patrol, incident, or user_id.' });
         }
 
         // Validate patrol data
         if (!patrol.patrol_officer_name || !patrol.start_time || !patrol.path_coords || !Array.isArray(patrol.path_coords) || patrol.path_coords.length < 2) {
-            await t.rollback();
             return res.status(400).json({ error: 'Invalid patrol data: missing officer name, start time, or a valid path_coords array.' });
         }
 
         // Validate incident data
         if (!incident.incident_category_id || !incident.incident_time || incident.latitude === undefined || incident.longitude === undefined) {
-            await t.rollback();
             return res.status(400).json({ error: 'Invalid incident data: missing category ID, incident time, latitude, or longitude.' });
         }
 
-        // Construct the LineString from the array of points for the patrol
+        // Prepare the path coordinates string for the function call
         const pointStrings = patrol.path_coords.map(coord => `${coord.longitude} ${coord.latitude}`).join(', ');
-        const lineString = `ST_GeomFromText('LINESTRING(${pointStrings})', 4326)`;
 
-        // 2. Insert into patrols table with the user_id
-        const patrolQuery = `
-            INSERT INTO patrols (patrol_officer_name, start_time, end_time, start_location, end_location, distance_kms, cover_distance, user_id)
-            VALUES (:patrol_officer_name, :start_time, :end_time, :start_location, :end_location, :distance_kms, ${lineString}, :user_id)
-            RETURNING patrol_id;
-        `;
-        const [patrolResult] = await sequelize.query(patrolQuery, {
-            replacements: { ...patrol, user_id: userId },
-            type: sequelize.QueryTypes.INSERT,
-            transaction: t
+        // Call the PostgreSQL function
+        const query = `SELECT * FROM insert_full_incident(
+            :patrol_officer_name,
+            :start_time,
+            :end_time,
+            :start_location,
+            :end_location,
+            :distance_kms,
+            :pointStrings,
+            :user_id,
+            :incident_category_id,
+            :incident_time,
+            :incident_latitude,
+            :incident_longitude,
+            :incident_reported_by,
+            :incident_description,
+            :image_urls
+        )`;
+
+        const [result] = await sequelize.query(query, {
+            replacements: {
+                ...patrol,
+                ...incident,
+                pointStrings: pointStrings,
+                user_id: userId,
+                image_urls: imageUrls,
+                incident_latitude: incident.latitude,
+                incident_longitude: incident.longitude
+            }
         });
-        const patrolId = patrolResult[0].patrol_id;
 
-        // 3. Insert into incidents table
-        const incidentQuery = `
-            INSERT INTO incidents (patrol_id, incident_category_id, incident_time, location_gps, incident_reported_by, incident_description, user_id)
-            VALUES (:patrolId, :incident_category_id, :incident_time, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326), :incident_reported_by, :incident_description, :user_id)
-            RETURNING incident_id;
-        `;
-        const [incidentResult] = await sequelize.query(incidentQuery, {
-            replacements: { ...incident, patrolId, user_id: userId },
-            type: sequelize.QueryTypes.INSERT,
-            transaction: t
-        });
-        const incidentId = incidentResult[0].incident_id;
+        // The result from the function is an array containing an object with patrol_id and incident_id
+        const { patrol_id, incident_id } = result[0];
 
-        // 4. Insert into incident_images table (bulk insert)
-        if (imageUrls.length > 0) {
-            const values = imageUrls.map(url => `(${incidentId}, '${url.replace(/'/g, "''")}')`).join(', ');
-            const imagesQuery = `
-                INSERT INTO incident_images (incident_id, image_url)
-                VALUES ${values}
-                RETURNING *;
-            `;
-            await sequelize.query(imagesQuery, { transaction: t });
-        }
-
-        // If all queries were successful, commit the transaction
-        await t.commit();
         res.status(201).json({
             message: 'All data inserted successfully',
-            patrol_id: patrolId,
-            incident_id: incidentId
+            patrol_id: patrol_id,
+            incident_id: incident_id
         });
     } catch (error) {
-        // If any query fails, roll back the transaction
-        await t.rollback();
-        console.error('Transaction failed:', error);
+        console.error('API call failed:', error);
         res.status(500).json({ error: 'Failed to create a full incident entry.' });
     }
 });
 
-// New GET API to retrieve all incidents with full image paths according to user_id
+// New GET API to retrieve all incidents with full image paths and category names according to user_id
 app.get('/api/incidents-with-images', async (req, res) => {
     try {
         const { user_id } = req.query; // Get user_id from query parameters
@@ -183,27 +172,18 @@ app.get('/api/incidents-with-images', async (req, res) => {
             return res.status(400).json({ error: 'Missing required query parameter: user_id' });
         }
 
-        const query = `
-            SELECT 
-                i.*, 
-                JSON_AGG(T.image_url) AS image_urls
-            FROM incidents i
-            LEFT JOIN (
-                SELECT incident_id, CONCAT('http://localhost:5000/', image_url) as image_url
-                FROM incident_images
-            ) AS T ON i.incident_id = T.incident_id
-            WHERE i.user_id = :user_id 
-            GROUP BY i.incident_id;
-        `;
+        // Call the PostgreSQL function and pass the user ID as a parameter
+        const query = 'SELECT * FROM get_incidents_with_details(:user_id);';
         
         const [results] = await sequelize.query(query, {
             replacements: { user_id },
         });
 
-        // Fix JSON_AGG returning a single null value if no images exist
+        // The PostgreSQL function's JSONB_AGG will return a single [null] if no images exist.
+        // This processes the results to return an empty array instead.
         const processedResults = results.map(row => ({
             ...row,
-            image_urls: row.image_urls.length === 1 && row.image_urls[0] === null ? [] : row.image_urls
+            image_urls: row.image_urls && row.image_urls[0] === null ? [] : row.image_urls
         }));
 
         res.json(processedResults);
@@ -213,32 +193,22 @@ app.get('/api/incidents-with-images', async (req, res) => {
     }
 });
 
-// New GET API to retrieve patrol data by user_id
+// New GET API to retrieve incident data by user_id using a PostgreSQL function
 app.get('/api/patrols-by-user', async (req, res) => {
     try {
         const { user_id } = req.query; // Get user_id from query parameters
-        
+
         // Validate that user_id is provided
         if (!user_id) {
             return res.status(400).json({ error: 'Missing required query parameter: user_id' });
         }
 
-        const query = `
-            SELECT 
-                patrol_id,
-                patrol_officer_name,
-                start_time,
-                end_time,
-                start_location,
-                end_location,
-                distance_kms,
-                user_id
-            FROM patrols
-            WHERE user_id = :user_id;
-        `;
-        
-        const [results] = await sequelize.query(query, {
+        // The query now executes the PostgreSQL function with the user_id as a parameter.
+        // We use an array for the replacements when calling a function with positional parameters.
+        const [results] = await sequelize.query('SELECT * FROM get_patrols_by_user(:user_id)', {
             replacements: { user_id },
+            // Access QueryTypes directly from the Sequelize object
+            type: Sequelize.QueryTypes.SELECT,
         });
 
         res.json(results);
@@ -247,7 +217,6 @@ app.get('/api/patrols-by-user', async (req, res) => {
         res.status(500).json({ error: 'Error retrieving patrols' });
     }
 });
-
 
 
 
