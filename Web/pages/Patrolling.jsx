@@ -1,26 +1,44 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Input, Select, DatePicker } from "antd";
-import { SearchOutlined } from '@ant-design/icons';
+import { Table, Button, Input, DatePicker } from "antd";
+import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import './PatrolIncidentLogs.css';  // Import the CSS for styling
 import exportIcon from '../assets/excel.png';
-import { EyeOutlined } from '@ant-design/icons';
-
-const { Option } = Select;
 
 const PatrolIncidentLogs = () => {
   const [patrolData, setPatrolData] = useState([]);
 
-  // Fetch patrol data by user ID
+  // ✅ Fetch incident data
   const fetchPatrolData = async () => {
     try {
       const response = await fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=2");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const data = await response.json();
-      setPatrolData(data);
+      console.log("Fetched data:", data); // 👀 Debug what API returns
+
+      // ✅ Always convert to array
+      let formattedData = [];
+
+      if (Array.isArray(data)) {
+        formattedData = data;
+      } else if (data && typeof data === "object") {
+        formattedData = [data];
+      } else {
+        formattedData = [];
+      }
+
+      // ✅ Add 'key' for AntD Table
+      formattedData = formattedData.map((item, index) => ({
+        key: item.patrol_id || index,
+        ...item,
+      }));
+
+      setPatrolData(formattedData);
     } catch (error) {
-      console.error("Error fetching patrol data:", error);
+      console.error("Error fetching Patrol data:", error);
+      setPatrolData([]); // fallback empty array on error
     }
   };
 
@@ -29,7 +47,7 @@ const PatrolIncidentLogs = () => {
     fetchPatrolData();
   }, []);
 
-  // Function to format date and time
+  // ✅ Format date and time
   const formatDateTime = (datetime) => {
     const date = new Date(datetime);
     const day = String(date.getDate()).padStart(2, '0');
@@ -43,70 +61,70 @@ const PatrolIncidentLogs = () => {
     };
   };
 
-  // Table columns with sorting and pagination
+  // ✅ Table columns with sorting and pagination
   const columns = [
     { 
       title: "Patrol ID", 
       dataIndex: "patrol_id", 
       key: "patrol_id",
-      sorter: (a, b) => a.patrol_id - b.patrol_id, // Sort by Patrol ID
-       align: 'center'
+      sorter: (a, b) => a.patrol_id - b.patrol_id,
+      align: 'center'
     },
     { 
       title: "Officer Name", 
       dataIndex: "patrol_officer_name", 
       key: "patrol_officer_name",
-      sorter: (a, b) => a.patrol_officer_name.localeCompare(b.patrol_officer_name), // Sort by Officer Name
-       align: 'center'
+      sorter: (a, b) => a.patrol_officer_name.localeCompare(b.patrol_officer_name),
+      align: 'center'
     },
     { 
       title: "Patrol Start Date", 
       dataIndex: "start_time", 
-      key: "start_time", 
+      key: "start_date",
       render: (text) => formatDateTime(text).date,
-      sorter: (a, b) => new Date(a.start_time) - new Date(b.start_time), // Sort by Patrol Start Date
-       align: 'center'
+      sorter: (a, b) => new Date(a.start_time) - new Date(b.start_time),
+      align: 'center'
     },
     { 
       title: "Patrol Start Time", 
       dataIndex: "start_time", 
-      key: "start_time", 
+      key: "start_time",
       render: (text) => formatDateTime(text).time,
-       align: 'center'
+      align: 'center'
     },
     { 
       title: "Patrol End Date", 
       dataIndex: "end_time", 
-      key: "end_time", 
+      key: "end_date", 
       render: (text) => formatDateTime(text).date,
-      sorter: (a, b) => new Date(a.end_time) - new Date(b.end_time), // Sort by Patrol End Date
-       align: 'center'
+      sorter: (a, b) => new Date(a.end_time) - new Date(b.end_time),
+      align: 'center'
     },
     { 
       title: "Patrol End Time", 
       dataIndex: "end_time", 
-      key: "end_time", 
+      key: "end_time",
       render: (text) => formatDateTime(text).time,
-       align: 'center'
+      align: 'center'
     },
     { 
       title: "Starting Point Location", 
       dataIndex: "start_location", 
       key: "start_location",
-       align: 'center'
+      align: 'center'
     },
     { 
       title: "End Point Location", 
       dataIndex: "end_location", 
       key: "end_location",
-       align: 'center'
+      align: 'center'
     },
     { 
       title: "Distance (in Kms)", 
       dataIndex: "distance_kms", 
       key: "distance_kms",
-      sorter: (a, b) => a.distance_kms - b.distance_kms, // Sort by Distance
-       align: 'center'
+      sorter: (a, b) => parseFloat(a.distance_kms) - parseFloat(b.distance_kms),
+      align: 'center'
     },
     {
       title: "Route",
@@ -126,10 +144,10 @@ const PatrolIncidentLogs = () => {
           }}
           icon={<EyeOutlined />}
         >
-          <h4>View</h4>
+          <h4 style={{margin: 0}}>View</h4>
         </Button>
       ),
-       align: 'center'
+      align: 'center'
     },
   ];
 
@@ -169,8 +187,8 @@ const PatrolIncidentLogs = () => {
         <Table
           className="transparent-table"
           columns={columns}
-          dataSource={patrolData}  // Pass the fetched patrolData here
-          pagination={{ pageSize: 5 }}  // Pagination with 5 items per page
+          dataSource={patrolData}  // ✅ now always array
+          pagination={{ pageSize: 5 }}
           bordered
           onChange={(pagination, filters, sorter) => {
             console.log('Table changes:', pagination, filters, sorter);
