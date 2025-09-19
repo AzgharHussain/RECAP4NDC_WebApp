@@ -34,7 +34,7 @@ describe('API Endpoint Tests', function() {
     const testUserId = "2";
     
     // Updated path to point to the 'Incidentimage' directory
-    const testImagePath = path.join(__dirname, '..', 'Incidentimage', 'Screenshot 2025-08-01 113117.png');
+    const testImagePath = path.join(__dirname, '..', 'Incidentimage', 'Screenshot 2025-08-01 104124.png');
 
     // Before running any tests, check if the test image exists.
     // This provides a clear error message instead of an ENOENT error during the test run.
