@@ -127,6 +127,19 @@
   font-weight: 700;
 }
 
+/* Adjust the images to change color when active or hovered */
+.sidebar .menu-item.active .menu-image,
+.sidebar .menu-item:hover .menu-image {
+  filter: brightness(94%) saturate(100%) invert(57%) sepia(281%) saturate(307%) hue-rotate(104deg); /* Adjust this filter */
+}
+
+.menu-image {
+  width: 20px;  /* Set width like an icon */
+  height: 20px; /* Set height like an icon */
+  object-fit: contain;  /* Prevent stretching */
+  margin-right: 8px;  /* Space between the image and text */
+  transition: filter 0.3s ease; /* Smooth transition for filter */
+}
 /* Page content */
 .content {
   flex: 1;
@@ -225,4 +238,10 @@ box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px
   .content {
     padding: 10px;
   }
+}
+.menu-image {
+  width: 20px;  /* Set width like an icon */
+  height: 20px; /* Set height like an icon */
+  object-fit: contain;  /* Prevent stretching */
+  margin-right: 8px;  /* Space between the image and text */
 }
