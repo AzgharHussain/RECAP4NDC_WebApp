@@ -1,20 +1,33 @@
-import React, { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import { FaThLarge, FaGlobe, FaClipboardList, FaBars,FaUpload, FaTimes,FaEye } from "react-icons/fa"; 
+import React, { useState, useEffect } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye } from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
 import brand from "../assets/logogiz.png";
+import patrollingIcon from "../assets/Patrolling.png";  // Import the Patrolling image
+import incidentIcon from "../assets/Incident.png";  // Import the Incident image
 import "./DashboardLayout.css";
 
 export default function DashboardLayout() {
-  const [openDropdown, setOpenDropdown] = useState(false);
-  const [activeLink, setActiveLink] = useState("");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // NEW STATE
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar open/close state
+  const [isPatrollingOpen, setIsPatrollingOpen] = useState(false); // State for dropdown
+  const [isWorkingPlanOpen, setIsWorkingPlanOpen] = useState(false); // State for dropdown
 
-  const handleLinkClick = (link) => {
-    setActiveLink(link);
-    setIsSidebarOpen(false); // close sidebar after click (mobile UX)
+  const location = useLocation(); // Access current location (route)
+
+  // Open the "Patrolling and Incident Logs" dropdown if we're on a relevant page
+  useEffect(() => {
+    if (location.pathname === "/petrolling-incident/patrolling" || location.pathname === "/petrolling-incident/incident") {
+      setIsPatrollingOpen(true); // Open dropdown if we're on Patrolling or Incident Logs page
+    }
+  }, [location]);
+
+  const handleLinkClick = () => {
+    setIsSidebarOpen(false); // Close sidebar after clicking a link (mobile UX)
   };
+
+  // Helper function to check if a link is active
+  const isActiveLink = (path) => location.pathname === path;
 
   return (
     <div className="layout">
@@ -44,8 +57,8 @@ export default function DashboardLayout() {
             <li>
               <NavLink
                 to="/dashboard"
-                className={`menu-item ${activeLink === "/dashboard" ? "active" : ""}`}
-                onClick={() => handleLinkClick("/dashboard")}
+                className={`menu-item ${isActiveLink("/dashboard") ? "active" : ""}`}
+                onClick={handleLinkClick}
               >
                 <FaThLarge className="icon" /> Overview
               </NavLink>
@@ -53,57 +66,82 @@ export default function DashboardLayout() {
             <li>
               <NavLink
                 to="/geo"
-                className={`menu-item ${activeLink === "/geo" ? "active" : ""}`}
-                onClick={() => handleLinkClick("/geo")}
+                className={`menu-item ${isActiveLink("/geo") ? "active" : ""}`}
+                onClick={handleLinkClick}
               >
                 <FaGlobe className="icon" /> Geo Dashboard
               </NavLink>
             </li>
-            <li>
-              <NavLink
-                to="/patrolling"
-                className={`menu-item ${activeLink === "/patrolling" ? "active" : ""}`}
-                onClick={() => handleLinkClick("/patrolling")}
+
+            {/* Patrolling and Incident Logs Dropdown */}
+            <li className={`dropdown ${isPatrollingOpen ? "open" : ""}`}>
+              <button
+                className={`dropdown-toggle ${isActiveLink("/petrolling-incident/patrolling") || isActiveLink("/petrolling-incident/incident") ? "active" : ""}`}
+                onClick={() => setIsPatrollingOpen(!isPatrollingOpen)} // Toggle only Patrolling dropdown
               >
                 <MdLocalPolice className="icon" /> Patrolling and Incident Logs
-              </NavLink>
+              </button>
+              {isPatrollingOpen && (
+                <ul className="dropdown-menus">
+                  <li>
+                    <NavLink
+                      to="/petrolling-incident/patrolling"
+                      className={`menu-item ${isActiveLink("/petrolling-incident/patrolling") ? "active" : ""}`}
+                      onClick={handleLinkClick}
+                    >
+                      <img src={patrollingIcon} alt="Patrolling Logs" className="menu-image" /> {/* Patrolling image */}
+                      Patrolling Logs
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/petrolling-incident/incident"
+                      className={`menu-item ${isActiveLink("/petrolling-incident/incident") ? "active" : ""}`}
+                      onClick={handleLinkClick}
+                    >
+                      <img src={incidentIcon} alt="Incident Logs" className="menu-image" /> {/* Incident image */}
+                      Incident Logs
+                    </NavLink>
+                  </li>
+                </ul>
+              )}
             </li>
 
-            {/* Dropdown */}
-            <li className={`dropdown ${openDropdown ? "open" : ""}`}>
+            {/* Working Plan Areas Dropdown */}
+            <li className={`dropdown ${isWorkingPlanOpen ? "open" : ""}`}>
               <button
-                className={`dropdown-toggle ${openDropdown ? "active" : ""}`}
-                onClick={() => setOpenDropdown(!openDropdown)}
+                className={`dropdown-toggle ${isWorkingPlanOpen ? "active" : ""}`}
+                onClick={() => setIsWorkingPlanOpen(!isWorkingPlanOpen)} // Toggle only Working Plan dropdown
               >
                 <FaClipboardList className="icon" /> Working Plan Areas
               </button>
-              {openDropdown && (
+              {isWorkingPlanOpen && (
                 <ul className="dropdown-menus">
                   <li>
                     <NavLink
                       to="/working-plan/upload"
-                      className={`menu-item ${activeLink === "/working-plan/upload" ? "active" : ""}`}
-                      onClick={() => handleLinkClick("/working-plan/upload")}
+                      className={`menu-item ${isActiveLink("/working-plan/upload") ? "active" : ""}`}
+                      onClick={handleLinkClick}
                     >
-                     <FaUpload className="icon" /> Upload Coupe Boundaries
+                      <FaUpload className="icon" /> Upload Coupe Boundaries
                     </NavLink>
                   </li>
                   <li>
                     <NavLink
                       to="/working-plan/view"
-                      className={`menu-item ${activeLink === "/working-plan/view" ? "active" : ""}`}
-                      onClick={() => handleLinkClick("/working-plan/view")}
+                      className={`menu-item ${isActiveLink("/working-plan/view") ? "active" : ""}`}
+                      onClick={handleLinkClick}
                     >
-                     <FaEye className="icon" /> View Coupe Boundaries
+                      <FaEye className="icon" /> View Coupe Boundaries
                     </NavLink>
                   </li>
                   <li>
                     <NavLink
                       to="/working-plan/log"
-                      className={`menu-item ${activeLink === "/working-plan/log" ? "active" : ""}`}
-                      onClick={() => handleLinkClick("/working-plan/log")}
+                      className={`menu-item ${isActiveLink("/working-plan/log") ? "active" : ""}`}
+                      onClick={handleLinkClick}
                     >
-                      <GiNotebook className="icon" />Coupe Observation Log
+                      <GiNotebook className="icon" /> Coupe Observation Log
                     </NavLink>
                   </li>
                 </ul>
