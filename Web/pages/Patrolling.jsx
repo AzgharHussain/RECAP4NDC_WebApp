@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Table, Button, Input, DatePicker } from "antd";
 import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
-import './PatrolIncidentLogs.css';  // Import the CSS for styling
+import './PatrolIncidentLogs.css';  
 import exportIcon from '../assets/excel.png';
+import dayjs from "dayjs";
 
 const PatrolIncidentLogs = () => {
   const [patrolData, setPatrolData] = useState([]);
+
+  // ✅ Filters state
+  const [searchText, setSearchText] = useState("");
+  const [startFilter, setStartFilter] = useState(null);  // dayjs object
+  const [endFilter, setEndFilter] = useState(null);      // dayjs object
+  const [filteredData, setFilteredData] = useState([]);
 
   // ✅ Fetch incident data
   const fetchPatrolData = async () => {
@@ -14,13 +21,11 @@ const PatrolIncidentLogs = () => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
-      console.log("Fetched data:", data); // 👀 Debug what API returns
+      console.log("Fetched data:", data);
 
       // ✅ Always convert to array
       let formattedData = [];
-
       if (Array.isArray(data)) {
         formattedData = data;
       } else if (data && typeof data === "object") {
@@ -47,11 +52,11 @@ const PatrolIncidentLogs = () => {
     fetchPatrolData();
   }, []);
 
-  // ✅ Format date and time
+  // ✅ Format date and time for display
   const formatDateTime = (datetime) => {
     const date = new Date(datetime);
     const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+    const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
@@ -61,7 +66,36 @@ const PatrolIncidentLogs = () => {
     };
   };
 
-  // ✅ Table columns with sorting and pagination
+  // ✅ Filtering logic runs whenever filters or patrolData changes
+  useEffect(() => {
+    let data = patrolData;
+
+    // Officer name filter
+    if (searchText.trim() !== "") {
+      const lower = searchText.toLowerCase();
+      data = data.filter(item =>
+        item.patrol_officer_name?.toLowerCase().includes(lower)
+      );
+    }
+
+    // Start date filter
+    if (startFilter) {
+      data = data.filter(item =>
+        dayjs(item.start_time).isSame(startFilter, 'day')
+      );
+    }
+
+    // End date filter
+    if (endFilter) {
+      data = data.filter(item =>
+        dayjs(item.end_time).isSame(endFilter, 'day')
+      );
+    }
+
+    setFilteredData(data);
+  }, [searchText, startFilter, endFilter, patrolData]);
+
+  // ✅ Table columns
   const columns = [
     { 
       title: "Patrol ID", 
@@ -165,19 +199,31 @@ const PatrolIncidentLogs = () => {
                 background: 'rgba(255, 255, 255, 0.2)',
                 border: 'none',
               }}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
               suffix={<SearchOutlined style={{ color: 'rgba(0, 0, 0, 0.25)', fontSize: '16px' }} />}
             />
-            <DatePicker placeholder="Search by Start Date & Time" style={{
-              width: "200px",
-              border: '2.21px solid rgba(255, 255, 255, 0.23)',
-              background: 'rgba(255, 255, 255, 0.02)',
-            }} />
-            <DatePicker placeholder="Search by End Date & Time" style={{
-              width: "200px",
-              color: '#fff',
-              border: '2.21px solid rgba(255, 255, 255, 0.23)',
-              background: 'rgba(255, 255, 255, 0.02)',
-            }} />
+            <DatePicker 
+              placeholder="Search by Start Date" 
+              style={{
+                width: "200px",
+                border: '2.21px solid rgba(255, 255, 255, 0.23)',
+                background: 'rgba(255, 255, 255, 0.02)',
+              }}
+              value={startFilter}
+              onChange={(date) => setStartFilter(date)}
+            />
+            <DatePicker 
+              placeholder="Search by End Date" 
+              style={{
+                width: "200px",
+                color: '#fff',
+                border: '2.21px solid rgba(255, 255, 255, 0.23)',
+                background: 'rgba(255, 255, 255, 0.02)',
+              }}
+              value={endFilter}
+              onChange={(date) => setEndFilter(date)}
+            />
             <Button className="btn-Export">
               Export
               <img src={exportIcon} alt="Export Icon" className="btn-icon" />
@@ -187,12 +233,9 @@ const PatrolIncidentLogs = () => {
         <Table
           className="transparent-table"
           columns={columns}
-          dataSource={patrolData}  // ✅ now always array
+          dataSource={filteredData}  
           pagination={{ pageSize: 5 }}
           bordered
-          onChange={(pagination, filters, sorter) => {
-            console.log('Table changes:', pagination, filters, sorter);
-          }}
         />
       </div>
     </div>
