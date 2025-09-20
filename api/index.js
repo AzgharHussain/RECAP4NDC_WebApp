@@ -80,33 +80,43 @@ app.get('/api/incident-categories', async (req, res) => {
 });
 
 // New single POST API to insert data and save images
+// New single POST API to insert data and save images
 app.post('/api/full-incident', upload.array('images', 10), async (req, res) => {
     try {
-        // Parse and validate data from the request body
-        const patrolData = JSON.parse(req.body.patrol); // Patrol data
-        const incidentData = JSON.parse(req.body.incident); // Incident data
-        const userId = req.body.user_id; // User ID
+        // Check if patrol and incidents data exist
+        if (!req.body.patrol || !req.body.incidents) {
+            return res.status(400).json({ error: 'Missing patrol or incidents data in request body.' });
+        }
 
-        // Prepare the image URLs
-        const imageUrls = req.files.map(file => path.join('Incidentimage', file.originalname).replace(/\\/g, '/'));
+        const patrolData = JSON.parse(req.body.patrol);
+        const incidentsData = JSON.parse(req.body.incidents); // <<< Use this directly
+        const userId = req.body.user_id;
 
-        // *** FIX: Format the imageUrls array for PostgreSQL ***
-        const pgArrayLiteral = imageUrls.length > 0 
-            ? `{${imageUrls.map(url => `"${url.replace(/"/g, '""')}"`).join(',')}}`
-            : `{}`;
+        // Clean the latlong string
+        if (patrolData.latlong) {
+            patrolData.latlong = patrolData.latlong.trim().replace(/,+$/, '');
+        }
 
-        // Convert date fields to ISO 8601 strings
-        patrolData.start_time = new Date(patrolData.start_time).toISOString();  // Convert to ISO string
-        patrolData.end_time = new Date(patrolData.end_time).toISOString();      // Convert to ISO string
-        incidentData.incident_time = new Date(incidentData.incident_time).toISOString(); // Convert to ISO string
+        // Convert date fields to ISO 8601 strings for PostgreSQL
+        if (patrolData.start_time) {
+            patrolData.start_time = new Date(patrolData.start_time).toISOString();
+        }
+        if (patrolData.end_time) {
+            patrolData.end_time = new Date(patrolData.end_time).toISOString();
+        }
+
+        incidentsData.forEach(incident => {
+            if (incident.incident_time) {
+                incident.incident_time = new Date(incident.incident_time).toISOString();
+            }
+        });
 
         // Define the SQL query to call the function
         const query = `
             SELECT * FROM create_full_incident(
-                :patrol_data, 
-                :incident_data, 
-                :user_id, 
-                :image_urls
+                :patrol_data,
+                :incidents_data,
+                :user_id
             );
         `;
 
@@ -114,32 +124,31 @@ app.post('/api/full-incident', upload.array('images', 10), async (req, res) => {
         const result = await sequelize.query(query, {
             replacements: {
                 patrol_data: JSON.stringify(patrolData),
-                incident_data: JSON.stringify(incidentData),
+                incidents_data: JSON.stringify(incidentsData), // <<< Send incidentsData directly
                 user_id: userId,
-                image_urls: pgArrayLiteral
             },
             type: sequelize.QueryTypes.SELECT
         });
 
-        // Check if the result is empty or malformed
         if (result && result.length > 0) {
-            // Send a success response with the IDs returned from the function
             res.status(201).json({
-                message: 'All data inserted successfully via function',
-                patrol_id: result[0].patrol_id, // Access the first element of the array
-                incident_id: result[0].incident_id
+                message: 'All data inserted successfully',
+                patrol_id: result[0].patrol_id,
+                incident_ids: result[0].incident_ids
             });
         } else {
-            // Handle the case when result is empty
             res.status(400).json({ error: 'Failed to insert incident data. No result returned.' });
         }
 
     } catch (error) {
-        // Handle errors
         console.error('API call failed:', error);
         res.status(500).json({ error: 'Failed to create a full incident entry.' });
     }
 });
+
+
+
+
 
 
 
