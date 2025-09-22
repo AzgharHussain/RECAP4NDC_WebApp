@@ -209,6 +209,24 @@ app.get('/api/patrols-by-user', async (req, res) => {
 
 
 
+// Define the API endpoint to call the PostgreSQL function
+app.get('/api/coupe_metadata/location', async (req, res) => {
+    try {
+        // Corrected: Use sequelize.query to call the function
+        const [result] = await sequelize.query('SELECT * FROM get_coupe_locations();');
+        
+        // Send the function's result as a JSON response
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('Error fetching coupe metadata:', err);
+        // Respond with an error message
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+
+
 // Start server and connect to DB
 const PORT = 5000;
 app.listen(PORT, async () => {
