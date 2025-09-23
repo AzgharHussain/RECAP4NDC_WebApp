@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 import "./LayerTogglePanel.css";
 
-const LeftSidebar = () => {
+const LeftSidebar = ({ showStateLayer, setShowStateLayer, showDistrictLayer, setShowDistrictLayer,showCoupeLayer,setShowCoupeLayer,showNdviLayer,setShowNdviLayer,showNdwiLayer,setShowNdwiLayer,setShowPatrollingLayer,showPatrollingLayer,showIncidentLayer,setShowIncidentLayer }) => {
   const [openSections, setOpenSections] = useState({
     forest: true,
     boundaries: true,
@@ -43,8 +43,10 @@ const LeftSidebar = () => {
        <div className="section-content">
   <label className="green-label">Select Layer:</label>
   <div className="checkbox-group">
-    <label><input type="checkbox" className="checkbox" /> NDVI</label>
-    <label><input type="checkbox" className="checkbox" /> NDWI</label>
+    <label><input type="checkbox" className="checkbox" checked={showNdviLayer}
+    onChange={() => setShowNdviLayer(prev => !prev)}/> NDVI</label>
+    <label><input type="checkbox" className="checkbox"  checked={showNdwiLayer}
+    onChange={() => setShowNdwiLayer(prev => !prev)}/> NDWI</label>
   </div>
 </div>
 
@@ -60,16 +62,36 @@ const LeftSidebar = () => {
     <img src="../assets/Boundry.png" alt="Forest Icon" style={{ width: '20px', marginRight: '-89px' }} />
     <span>Boundaries</span>
     {openSections.boundaries ? <FaChevronUp /> : <FaChevronDown />}
-  </div>
-  <label className="green-label">Select Boundaries:</label>
-  {openSections.boundaries && (
-    <div className="section-content">
-      <label className="green-label"><input type="checkbox" /> Division</label>
-      <label className="green-label"><input type="checkbox" /> Range</label>
-      <label className="green-label"><input type="checkbox" /> Block</label>
-      <label className="green-label"><input type="checkbox" /> Compartment</label>
-      <label className="green-label"><input type="checkbox" /> Coupe</label>
-    </div>
+        </div>
+        <label className="green-label">Select Boundaries:</label>
+        {openSections.boundaries && (
+          <div className="section-content">
+        <label className="green-label">
+          <input type="checkbox" checked={showStateLayer} 
+    onChange={() => setShowStateLayer(prev => !prev)}/> State
+        </label>
+        <label className="green-label">
+          <input type="checkbox" checked={showDistrictLayer}        // <-- bind to district state
+    onChange={() => setShowDistrictLayer(prev => !prev)}/> District
+        </label>
+        <label className="green-label">
+          <input type="checkbox" /> Division
+        </label>
+        <label className="green-label">
+          <input type="checkbox" /> Range
+        </label>
+        <label className="green-label">
+          <input type="checkbox" /> Block
+        </label>
+        <label className="green-label">
+          <input type="checkbox" /> Compartment
+        </label>
+        <label className="green-label">
+          <input type="checkbox" checked={showCoupeLayer}
+    onChange={() => setShowCoupeLayer(prev => !prev)}/> Coupe
+        </label>
+      </div>
+
   )}
 </div>
 
@@ -84,8 +106,10 @@ const LeftSidebar = () => {
         <label className="green-label">Select Patrolling / Incident:</label>
         {openSections.field && (
           <div className="section-content">
-            <label className="green-label"><input type="checkbox" /> Patrolling Routes</label>
-            <label className="green-label"><input type="checkbox" /> Incident Markers</label>
+            <label className="green-label"><input type="checkbox" checked={showPatrollingLayer}
+    onChange={() => setShowPatrollingLayer(prev => !prev)}/> Patrolling Routes</label>
+            <label className="green-label"><input type="checkbox" checked={showIncidentLayer}
+    onChange={(e) => setShowIncidentLayer(e.target.checked)}/> Incident Markers</label>
           </div>
         )}
       </div>

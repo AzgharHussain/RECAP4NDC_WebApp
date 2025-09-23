@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, lazy, Suspense } from "react";
-import { MapContainer, TileLayer, useMap,ScaleControl  } from "react-leaflet";
+import { MapContainer, TileLayer, useMap,ScaleControl ,WMSTileLayer  } from "react-leaflet";
 // import 'leaflet-rotate'; // Import the rotation functionality
 import { FaLeaf, FaSeedling, FaSolarPanel, FaTree,FaWater,  FaChevronUp, 
   FaChevronDown, 
@@ -42,7 +42,8 @@ import  DraggableZoomControl from "./DraggableZoomControl";
 import LatLngDisplay from "./LatLngDisplay";
 
 import 'leaflet/dist/leaflet.css';
-
+import PatrollingLayer from "./PatrollingLayer";
+import IncidentLayer from "./IncidentLayer";
 // Update your imports at the top
 import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
@@ -52,8 +53,10 @@ import { Flex } from "antd";
 const LayerTogglePanel = lazy(() => import("./LayerTogglePanel"));
 const RightSidebar = lazy(() => import("./RightSidebar"));
 const BasemapGallery = lazy(() => import("./Basemapgallery"));
+// add this at the top of MapView
 
-const position = [25.8499, 74.6399];
+
+const position = [23.2797, 71.3702];
 const customCRS = L.CRS.EPSG4326;
 
 // Basemap URLs
@@ -113,19 +116,92 @@ export default function MapView() {
   const [featureInfoPosition, setFeatureInfoPosition] = useState(null);
   const [isInfoToolActive, setIsInfoToolActive] = useState(false);
   const [isLayerLoading2, setIsLayerLoading2] = useState(true);
+const [showStateLayer, setShowStateLayer] = useState(false);
+const [showDistrictLayer, setShowDistrictLayer] = useState(false); 
+const [showCoupeLayer, setShowCoupeLayer] = useState(false);
+const [showNdviLayer, setShowNdviLayer] = useState(false);
+const [showNdwiLayer, setShowNdwiLayer] = useState(false);
+const [showPatrollingLayer, setShowPatrollingLayer] = useState(false);
+const [showIncidentLayer, setShowIncidentLayer] = useState(false);
+  const [incidentsData, setIncidentsData] = useState([]);
+
+const coupeLayers = [
+  "Arvalli_all_Range_all_WC_all_Coupe",
+  "Bhavnagar_coupes",
+  "Gandhinagar_MM_Coupe",
+  "Jamnagar_coupes",
+  "Junagadh coupes SHP",
+  "Mahisagar_all_Coupe_FF",
+  "Morbi_coupe_map",
+  "Narmada_CP_FS2_compt4_RRB",
+  "SK North_all_Range_all_WC_all_Coupe",
+  "Surat_all_Range_Coupe",
+  "Surendranagar_coupe",
+  "Vyara_MM_Coupe_Boundary_qgis",
+  "CUD_Coupe_bdn",
+  "AFF W.C COUPE",
+  "AFFORESTATION W.C _COUPE",
+  "BIO_WC_COUPE",
+  "Bharuch_Coupe_joined",
+  "DEV&CON W.C COUPE",
+  "DEVELO&CON W.C COUPE",
+  "DEV_AFF COUPE",
+  "DEV_DEV&CON W.C COUPE",
+  "D_AFFORESTATION W.C COUPE",
+  "D_DEVELOPMENT&CONSERVATION COUPE",
+  "D_GRASSBIR W.C COUPE",
+  "DesDev_WL_WC",
+  "Dev_Revenue",
+  "G.S.F.D.C.AREA",
+  "GR W.C COUPE",
+  "GRASSBIR W.C COUPE",
+  "Garbada_Afforestation_Coupe",
+  "Garbada_Develop &Conser Coupe",
+  "Garbada_Revenue",
+  "J_AFFORESTATION W.C_COUPE",
+  "J_GRASSBIR W.C COUPE",
+  "K_DEVELOPMENT&CONSERVATION W.C COUPE",
+  "L_AFFORESTATION W.C COUPE",
+  "L_DEVELOPMENT&CONSERVATION W.C COUPE",
+  "L_GRASSBIR W.C COUPE",
+  "PRO",
+  "RAN_AFFO W.C COUPE",
+  "RAN_DEV&CON W.C COUPE",
+  "RAN_GRASSBIR W.C COUPE",
+  "REV",
+  "REVENUE",
+  "REVENUE_Limkheda",
+  "REVENUE_Rampura",
+  "REVENUE_Randhikpur",
+  "REV_Sagtala",
+  "R_AFFORESTATION COUPE",
+  "R_GRASSBIR COUPE",
+  "Rev",
+  "Revenu",
+  "Revenu_Boundary",
+  "Revenu_Boundary_Sanjeli",
+  "SAG_BIODI W.C COUPE",
+  "SAG_DEV&CON W.C COUPE",
+  "S_AFFORESTATION W.C COUPE",
+  "S_DEV&CON W.C COUPE",
+  "S_GRASSBIR W.C COUPE",
+  "S_REVENUE",
+  "Vansi_AFF W.C COUPE",
+  "Vansi_BIO W.C COUPE",
+  "Vansi_DEV&CON W.C  COUPE",
+  "Vansi_REV",
+  "Wild Life_WC",
+   "con_cum_lmp"
+  // "Kanjeta_AFF W.C COUPE",
+  // "Sanjeli_AFFORESTATION W.C _COUPE"
+];
 
 // const districtsKmlUrl = "/KML/tbldistricts.kml"
 // const  villagesKmlUrl = "/KML/Aravali_village_list.kml"
 
 
 
-  const [feedback, setFeedback] = useState({ 
-    subject: "", 
-    comments: "" 
-  });
-  const [feedbackStatus, setFeedbackStatus] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+ 
 
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
@@ -422,6 +498,19 @@ const mapWrapperRef = useRef();
     link.href = canvas.toDataURL("image/png");
     link.click();
   };
+
+   // Fetch incidents whenever layer is toggled ON
+  useEffect(() => {
+    if (showIncidentLayer) {
+      fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
+        .then(res => res.json())
+        .then(data => {
+          console.log("Fetched incidents:", data); // debug
+          setIncidentsData(data);
+        })
+        .catch(err => console.error("Error fetching incidents", err));
+    }
+  }, [showIncidentLayer]);
   return (
     <div className="map-wrapper" >
 
@@ -611,8 +700,22 @@ const mapWrapperRef = useRef();
             activeToolSidebar={activeToolSidebar}
           />
           </Suspense> */}
-<LayerTogglePanel />
-     <div style={{display:Flex, }}>
+<LayerTogglePanel showStateLayer={showStateLayer} 
+  setShowStateLayer={setShowStateLayer} 
+   showDistrictLayer={showDistrictLayer}          // <-- add this
+  setShowDistrictLayer={setShowDistrictLayer} 
+  showCoupeLayer={showCoupeLayer}           // <-- add this
+  setShowCoupeLayer={setShowCoupeLayer}  
+  showNdviLayer={showNdviLayer}           // <-- add this
+  setShowNdviLayer={setShowNdviLayer}     // <-- add this
+  showNdwiLayer={showNdwiLayer}           // <-- add this
+  setShowNdwiLayer={setShowNdwiLayer} 
+  showPatrollingLayer={showPatrollingLayer}            // ← new
+  setShowPatrollingLayer={setShowPatrollingLayer} 
+   showIncidentLayer={showIncidentLayer}        // <-- add this
+  setShowIncidentLayer={setShowIncidentLayer}  // <-- add this
+   />
+     <div style={{display: "flex", width: "100%"}}>
 
           
 {/* <LocationSelector mapRef={mapRef} /> */}
@@ -631,6 +734,7 @@ const mapWrapperRef = useRef();
 
   whenCreated={(mapInstance) => {
     mapRef.current = mapInstance;
+    crs={customCRS} 
     // Enable rotation
     mapInstance.rotate = true;
     mapInstance.setBearing(0); // Initialize with 0 degrees rotation
@@ -653,6 +757,77 @@ const mapWrapperRef = useRef();
    
     url={basemaps[activeBasemap]}
   />
+
+  {showStateLayer && (
+    <WMSTileLayer
+      key="Gujarat_State"
+      url="https://gisfy.co.in:8443/geoserver/cite/wms"
+      layers="cite:Gujarat_State"
+      format="image/png"
+      transparent={true}
+      version="1.1.0"
+      opacity={1}
+    />
+  )}
+  {showDistrictLayer && (
+  <WMSTileLayer
+    key="district-layer"
+    url="https://gisfy.co.in:8443/geoserver/cite/wms"
+    layers="cite:Gujarat_district"   // <-- your district layer
+    format="image/png"
+    transparent={true}
+    version="1.1.0"
+    opacity={0.7}
+  />
+)}
+{showCoupeLayer && coupeLayers.map((layerName) => (
+  <WMSTileLayer
+    key={layerName}
+    url="https://gisfy.co.in:8443/geoserver/cite/wms"
+    layers={layerName}
+    format="image/png"
+    transparent={true}
+    version="1.1.0"
+    opacity={0.7}  // Adjust opacity if needed
+  />
+))}
+
+{showNdviLayer && (
+  <WMSTileLayer
+    url="https://gisfy.co.in:8443/geoserver/cite/wms"
+    layers="cite:2025_09_14_BIO_W_C_COUPE_ndvi,cite:2025_09_14_AFF_W_C_COUPE_ndvi,cite:2025_09_14_AFFORESTATION_W_C_COUP_ndvi,cite:2025_08_24_BIO_W_C_COUPE_ndvi,cite:2025_08_24_AFF_W_C_COUPE_ndvi,cite:2025_08_24_AFFORESTATION_W_C_COUP_ndvi"
+    format="image/png"
+    transparent={true}
+    version="1.1.0"
+    opacity={1}
+    detectRetina={true} // optional
+    crossOrigin="anonymous" // helps with CORS for PNGs
+  />
+)}
+
+{showNdwiLayer && (
+  <WMSTileLayer
+    url="https://gisfy.co.in:8443/geoserver/cite/wms"
+    layers="cite:2025_09_14_BIO_W_C_COUPE_ndwi,cite:2025_09_14_AFF_W_C_COUPE_ndwi,cite:2025_09_14_AFFORESTATION_W_C_COUP_ndwi,cite:2025_08_24_BIO_W_C_COUPE_ndwi,cite:2025_08_24_AFF_W_C_COUPE_ndwi,cite:2025_08_24_AFFORESTATION_W_C_COUP_ndwi"
+    format="image/png"
+    transparent={true}
+    version="1.1.0"
+    opacity={0.8}
+    zIndex={1000}
+    detectRetina={true}
+    crossOrigin="anonymous"
+  />
+)}
+
+
+<PatrollingLayer show={showPatrollingLayer} />
+ <IncidentLayer show={showIncidentLayer} incidents={incidentsData} />
+
+
+
+
+
+
   <AddControls />
   {/* <DefaultLayers /> */}
   <GeomanTools />

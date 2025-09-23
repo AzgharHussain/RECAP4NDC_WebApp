@@ -3,6 +3,9 @@ import { Table, Button, Input, Select, DatePicker } from "antd";
 import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import './PatrolIncidentLogs.css';  // Import the CSS for styling
 import exportIcon from '../assets/excel.png';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import noDataImage from '../assets/no-data.png';
 
 const { Option } = Select;
 
@@ -12,7 +15,7 @@ const PatrolIncidentLogs = () => {
   const [searchText, setSearchText] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [incidentDate, setIncidentDate] = useState(null);
-  const [expandedRows, setExpandedRows] = useState({}); // Track showAllImages per row
+  const [expandedRows, setExpandedRows] = useState({});
 
   // ✅ Fetch incident data
   const fetchIncidentData = async () => {
@@ -21,10 +24,8 @@ const PatrolIncidentLogs = () => {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      // Always array
       let formatted = Array.isArray(data) ? data : [data];
       formatted = formatted.map((item, index) => ({ key: item.p_incident_id || index, ...item }));
-
       setIncidentData(formatted);
     } catch (error) {
       console.error("Error fetching incident data:", error);
@@ -44,30 +45,22 @@ const PatrolIncidentLogs = () => {
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return {
-      date: `${day}-${month}-${year}`,
-      time: `${hours}:${minutes}`,
-    };
+    return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
   };
 
   // ✅ Filtering logic
   useEffect(() => {
     let data = [...incidentData];
 
-    // Officer Name search
     if (searchText.trim() !== "") {
       const lower = searchText.toLowerCase();
-      data = data.filter(item =>
-        item.p_incident_reported_by?.toLowerCase().includes(lower)
-      );
+      data = data.filter(item => item.p_incident_reported_by?.toLowerCase().includes(lower));
     }
 
-    // Category filter
     if (categoryFilter !== "All") {
       data = data.filter(item => item.p_category_name === categoryFilter);
     }
 
-    // Date filter
     if (incidentDate) {
       const selected = incidentDate.format("DD-MM-YYYY");
       data = data.filter(item => formatDateTime(item.p_incident_time).date === selected);
@@ -75,6 +68,38 @@ const PatrolIncidentLogs = () => {
 
     setFilteredData(data);
   }, [searchText, categoryFilter, incidentDate, incidentData]);
+
+  // ✅ Export to Excel handler
+  const handleExport = () => {
+    if (!filteredData.length) {
+      alert("No data to export");
+      return;
+    }
+
+    // Prepare data
+    const exportData = filteredData.map(item => ({
+      'Incident ID': item.p_incident_id,
+      'Patrol ID': item.p_patrol_id,
+      'Officer Name': item.p_incident_reported_by,
+      'Category': item.p_category_name,
+      'Incident Date': formatDateTime(item.p_incident_time).date,
+      'Incident Time': formatDateTime(item.p_incident_time).time,
+      'Location (GPS)': item.p_location_gps?.coordinates
+        ? `${item.p_location_gps.coordinates[1]}, ${item.p_location_gps.coordinates[0]}`
+        : 'N/A',
+      'Description': item.p_incident_description,
+      'Images Count': item.p_image_urls?.length || 0,
+    }));
+
+    // Convert to sheet & workbook
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Incident Logs");
+
+    // Save file
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([wbout], { type: "application/octet-stream" }), 'Incident_Logs.xlsx');
+  };
 
   // ✅ Table columns
   const columns = [
@@ -160,21 +185,13 @@ const PatrolIncidentLogs = () => {
                 key={index}
                 src={image}
                 alt={`Incident ${index}`}
-                style={{
-                  width: 100,
-                  height: 80,
-                  marginRight: 5,
-                  borderRadius: '5px',
-                  objectFit: 'cover',
-                }}
+                style={{ width: 100, height: 80, marginRight: 5, borderRadius: '5px', objectFit: 'cover' }}
               />
             ))}
             {images.length > 1 && !rowExpanded && (
               <Button
                 icon={<EyeOutlined />}
-                onClick={() =>
-                  setExpandedRows(prev => ({ ...prev, [record.key]: true }))
-                }
+                onClick={() => setExpandedRows(prev => ({ ...prev, [record.key]: true }))}
               />
             )}
           </div>
@@ -192,37 +209,26 @@ const PatrolIncidentLogs = () => {
           <div className="filters">
             <Input
               placeholder="Search by Officer Name"
-              style={{
-                width: "200px",
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: 'none',
-              }}
+              style={{ width: "200px", background: 'rgba(255, 255, 255, 0.2)', border: 'none' }}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               suffix={<SearchOutlined style={{ color: 'rgba(0, 0, 0, 0.25)', fontSize: '16px' }} />}
             />
-            <Select
-              value={categoryFilter}
-              onChange={(val) => setCategoryFilter(val)}
-              style={{ width: "200px" }}
-            >
+            <Select value={categoryFilter} onChange={(val) => setCategoryFilter(val)} style={{ width: "200px" }}>
               <Option value="All">All Incident Categories</Option>
               <Option value="Poaching">Poaching</Option>
               <Option value="Illegal Logging">Illegal Logging</Option>
               <Option value="Encroachment">Encroachment</Option>
+               <Option value="Other">Other</Option>
             </Select>
             <DatePicker
               placeholder="Search by Incident Date"
-              style={{
-                width: "200px",
-                border: '2.21px solid rgba(255, 255, 255, 0.23)',
-                background: 'rgba(255, 255, 255, 0.02)',
-              }}
+              style={{ width: "200px", border: '2.21px solid rgba(255, 255, 255, 0.23)', background: 'rgba(255, 255, 255, 0.02)' }}
               value={incidentDate}
               onChange={(val) => setIncidentDate(val)}
               format="DD-MM-YYYY"
             />
-            <Button className="btn-Export">
+            <Button className="btn-Export" onClick={handleExport}>
               Export
               <img src={exportIcon} alt="Export Icon" className="btn-icon" />
             </Button>
@@ -234,9 +240,20 @@ const PatrolIncidentLogs = () => {
           dataSource={filteredData}
           pagination={{ pageSize: 5 }}
           bordered
-          onChange={(pagination, filters, sorter) => {
-            console.log('Table changes:', pagination, filters, sorter);
-          }}
+          locale={{
+              emptyText: (
+                <div style={{ textAlign: 'center', padding: '50px 0' }}>
+                  <img
+                    src={noDataImage}
+                    alt="No Data"
+                    style={{ width: 60, marginBottom: 16 }}
+                  />
+                  <div style={{ fontSize: 16, color: '#00442c', fontWeight: 500 }}>
+                    No data available
+                  </div>
+                </div>
+              ),
+            }}
         />
       </div>
     </div>
