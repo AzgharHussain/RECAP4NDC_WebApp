@@ -1,206 +1,237 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { DatePicker, Select } from 'antd'; // Import DatePicker and Select from antd
+import { DatePicker, Select } from 'antd';
 import "./Dashboard.css";
 import filterIcon from "../assets/filter.png";
 
+const { Option } = Select;
 
-const { Option } = Select; // Destructuring Select's Option component
+// A custom tooltip component to style the tooltip in the BarChart.
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.8)',
+        border: '1px solid #ccc',
+        padding: '10px',
+        borderRadius: '5px',
+        color: '#000'
+      }}>
+        <p className="label">{`${label}`}</p>
+        <p className="intro" style={{ color: '#339af0' }}>{`${payload[0].name}: ${payload[0].value}`}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
+// A custom label for the PieChart to show the value.
+const renderCustomizedLabel = ({ name, percent, value }) => {
+  return `${name}: ${value}`;
+};
 
 export default function Dashboard() {
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
-
-  // Empty placeholders (replace with backend data later)
-  const forestCoverData = []; 
-  const patrolData = [];
-  const incidentsData = [];
-  const forestTypeData = [];
-  const soilTypeData = [];
-  const observationData = [];
+  const [patrolData, setPatrolData] = useState([]);
+  const [incidentsData, setIncidentsData] = useState([]);
+  const [loadingPatrols, setLoadingPatrols] = useState(false);
+  const [loadingIncidents, setLoadingIncidents] = useState(false);
 
   const COLORS = ["#ff6b6b", "#51cf66", "#339af0", "#ffa94d"];
 
-  const handleFromDateChange = (date) => {
-    setFromDate(date);
-  };
+  // Fetch patrol data with a loading state
+  useEffect(() => {
+    const fetchPatrolData = async () => {
+      setLoadingPatrols(true);
+      try {
+        const res = await fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=2");
+        const patrols = await res.json();
 
-  const handleToDateChange = (date) => {
-    setToDate(date);
-  };
+        let filtered = patrols;
+        if (fromDate && toDate) {
+          filtered = patrols.filter((item) => {
+            const patrolDate = new Date(item.start_time);
+            return patrolDate >= fromDate.toDate() && patrolDate <= toDate.toDate();
+          });
+        }
+
+        const total = filtered.length;
+        setPatrolData([{ name: "Patrols Conducted", value: total }]);
+      } catch (error) {
+        console.error("Error fetching patrol data:", error);
+        setPatrolData([{ name: "Patrols Conducted", value: 0 }]);
+      } finally {
+        setLoadingPatrols(false);
+      }
+    };
+    fetchPatrolData();
+  }, [fromDate, toDate]);
+
+  // Fetch incident data with a loading state
+  useEffect(() => {
+    const fetchIncidentData = async () => {
+      setLoadingIncidents(true);
+      try {
+        const res = await fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2");
+        const incidents = await res.json();
+
+        let filtered = incidents;
+        if (fromDate && toDate) {
+          filtered = incidents.filter((item) => {
+            const incidentDate = new Date(item.p_incident_time);
+            return incidentDate >= fromDate.toDate() && incidentDate <= toDate.toDate();
+          });
+        }
+
+        const categoryMap = {};
+        filtered.forEach((item) => {
+          const cat = item.p_category_name || "Unknown";
+          categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+        });
+
+        const chartData = Object.keys(categoryMap).map((cat) => ({
+          name: cat,
+          value: categoryMap[cat],
+        }));
+
+        setIncidentsData(chartData);
+      } catch (error) {
+        console.error("Error fetching incident data:", error);
+      } finally {
+        setLoadingIncidents(false);
+      }
+    };
+    fetchIncidentData();
+  }, [fromDate, toDate]);
+
+  // A helper function to check if the data is empty for the bar chart.
+  const isPatrolDataEmpty = patrolData.length === 0 || patrolData[0].value === 0;
 
   return (
     <div className="dashboard-container">
-<div className="heading-container">
-  <h3 className="main-heading">Overview</h3>
-
-  <div className="filters">
-    {/* From Date */}
-    <div className="filter-item">
-      <DatePicker
-        value={fromDate}
-        onChange={handleFromDateChange}
-        placeholder="Select From Date"
-        style={{
-          width: "200px",
-          color: '#fff',
-          border: '2.21px solid rgba(255, 255, 255, 0.23)',
-          background: 'rgba(255, 255, 255, 0.02)',
-          boxShadow: '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset'
-        }}
-      />
-    </div>
-
-    {/* To Date */}
-    <div className="filter-item">
-      <DatePicker
-        value={toDate}
-        onChange={handleToDateChange}
-        placeholder="Select To Date"
-        style={{
-          width: "200px",
-          color: '#fff',
-          border: '2.21px solid rgba(255, 255, 255, 0.23)',
-          background: 'rgba(255, 255, 255, 0.02)',
-          boxShadow: '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset'
-        }}
-      />
-    </div>
-
-
-    {/* Select Division */}
-    <div className="filter-item">
-      <Select
-        defaultValue="all"
-        style={{width: "200px",
-          color: '#fff',
-          border: '2.21px solid rgba(255, 255, 255, 0.23)',
-          background: 'rgba(255, 255, 255, 0.02)',
-          boxShadow: '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset' }}
-      >
-        <Option value="all">All Divisions</Option>
-        <Option value="north">North Division</Option>
-        <Option value="south">South Division</Option>
-        <Option value="east">East Division</Option>
-        <Option value="west">West Division</Option>
-      </Select>
-    </div>
-
-    {/* Select Range */}
-    <div className="filter-item">
-      <Select defaultValue="all" style={{width: "200px",
-          color: '#fff',
-          border: '2.21px solid rgba(255, 255, 255, 0.23)',
-          background: 'rgba(255, 255, 255, 0.02)',
-          boxShadow: '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset' }}>
-        <Option value="all">All Ranges</Option>
-        <Option value="range1">Range 1</Option>
-        <Option value="range2">Range 2</Option>
-        <Option value="range3">Range 3</Option>
-      </Select>
-    </div>
-
-    {/* Filter Button */}
-    <button>
-      <img src={filterIcon} alt="Filter Icon" className="FilterIcon" />
-    </button>
-  </div>
-</div>
-
-<div className="charts-grid">
-    {/* Forest Cover Change */}
-    <div className="chart-card" style={{ width: "71%" }}>
-        <h3>Forest Cover Change</h3>
-        <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-                <Pie
-                    data={forestCoverData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={90}
-                    label
-                >
-                    {forestCoverData.map((_, index) => (
-                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                </Pie>
-                <Legend />
-                <Tooltip />
-            </PieChart>
-        </ResponsiveContainer>
-    </div>
-
-    {/* Patrolling and Incidents */}
-   <div className="chart-card" style={{ width: "128%" , marginLeft:"-28%"}}>
-        <h3>Patrolling and Incidents</h3>
-        <ResponsiveContainer width="50%" height={250}>
-            <BarChart data={patrolData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
+      <div className="heading-container">
+        <h3 className="main-heading">Overview</h3>
+        <div className="filters">
+          {/* From Date */}
+          <div className="filter-item">
+            <DatePicker
+              value={fromDate}
+              onChange={setFromDate}
+              placeholder="Select From Date"
+              style={{
+                width: "200px",
+                color: '#fff',
+                border: '2.21px solid rgba(255, 255, 255, 0.23)',
+                background: 'rgba(255, 255, 255, 0.02)',
+                boxShadow:
+                  '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset'
+              }}
+              dropdownClassName="custom-date-picker-dropdown"
+            />
+          </div>
+          {/* To Date */}
+          <div className="filter-item">
+            <DatePicker
+              value={toDate}
+              onChange={setToDate}
+              placeholder="Select To Date"
+              style={{
+                width: "200px",
+                color: '#fff',
+                border: '2.21px solid rgba(255, 255, 255, 0.23)',
+                background: 'rgba(255, 255, 255, 0.02)',
+                boxShadow:
+                  '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset'
+              }}
+              dropdownClassName="custom-date-picker-dropdown"
+            />
+          </div>
+          {/* Division */}
+          <div className="filter-item">
+            <Select
+              defaultValue="all"
+              style={{
+                width: "200px",
+                color: '#fff',
+                border: '2.21px solid rgba(255, 255, 255, 0.23)',
+                background: 'rgba(255, 255, 255, 0.02)',
+                boxShadow: '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset'
+              }}
+            >
+              <Option value="all">All Divisions</Option>
+              <Option value="north">North Division</Option>
+              <Option value="south">South Division</Option>
+            </Select>
+          </div>
+          {/* Range */}
+          <div className="filter-item">
+            <Select
+              defaultValue="all"
+              style={{
+                width: "200px",
+                color: '#fff',
+                border: '2.21px solid rgba(255, 255, 255, 0.23)',
+                background: 'rgba(255, 255, 255, 0.02)',
+                boxShadow: '-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset'
+              }}>
+              <Option value="all">All Ranges</Option>
+              <Option value="range1">Range 1</Option>
+              <Option value="range2">Range 2</Option>
+            </Select>
+          </div>
+          <button>
+            <img src={filterIcon} alt="Filter Icon" className="FilterIcon" />
+          </button>
+        </div>
+      </div>
+      <div className="charts-grid">
+        {/* Patrolling Count */}
+        <div className="chart-card">
+          <h3>Total number of Patrols Conducted</h3>
+          {loadingPatrols ? (
+            <div className="loading-state">Loading...</div>
+          ) : isPatrolDataEmpty ? (
+            <div className="no-data-state">No patrol data available for the selected period.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={patrolData}>
+                <XAxis dataKey="name" stroke="#fff" />
+                <YAxis stroke="#fff" />
+                <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="value" fill="#339af0" />
-            </BarChart>
-        </ResponsiveContainer>
-
-        <ResponsiveContainer width="50%" height={250}>
-            <PieChart>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+        {/* Incidents */}
+        <div className="chart-card">
+          <h3>Total number of Incidents</h3>
+          {loadingIncidents ? (
+            <div className="loading-state">Loading...</div>
+          ) : incidentsData.length === 0 ? (
+            <div className="no-data-state">No incident data available for the selected period.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
                 <Pie
-                    data={incidentsData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={90}
-                    label
+                  data={incidentsData}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={90}
+                  label={renderCustomizedLabel}
                 >
-                    {incidentsData.map((_, index) => (
-                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                    ))}
+                  {incidentsData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
                 </Pie>
                 <Legend />
                 <Tooltip />
-            </PieChart>
-        </ResponsiveContainer>
-    </div>
-
-    {/* Forest Type and Soil Type */}
-    <div className="chart-card">
-        <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-                <Pie
-                    data={forestTypeData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={90}
-                    label
-                >
-                    {forestTypeData.map((_, index) => (
-                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                </Pie>
-                <Legend />
-                <Tooltip />
-            </PieChart>
-        </ResponsiveContainer>
-
-        <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-                <Pie
-                    data={soilTypeData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={90}
-                    label
-                >
-                    {soilTypeData.map((_, index) => (
-                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                </Pie>
-                <Legend />
-                <Tooltip />
-            </PieChart>
-        </ResponsiveContainer>
-    </div>
-</div>
-
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

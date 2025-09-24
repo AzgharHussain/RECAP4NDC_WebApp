@@ -19,7 +19,7 @@ html, body {
   padding: 0;
   font-family: "Inter", sans-serif;
   background: linear-gradient(to right, rgba(210, 240, 220, 0.8), rgba(190, 235, 210, 0.8));
-  color: var(--white); /* Set default text color to white */
+  color: #00442c !important; /* Set default text color to white */
 }
 
 
@@ -44,7 +44,7 @@ html, body {
   flex: 1;
   padding: 20px;
   border-radius: var(--border-radius);
-  color: var(--white); /* Set text color to white for this section */
+  color:#00442c !important; /* Set text color to white for this section */
   margin-top: -30px;
 }
 
@@ -56,7 +56,7 @@ html, body {
   flex: 1;
   padding: 20px;
   border-radius: var(--border-radius);
-  color: var(--white); /* Set text color to white for this section */
+  color:#00442c !important; /* Set text color to white for this section */
   margin-top: -30px;
 }
 
@@ -69,7 +69,7 @@ html, body {
   flex: 1;
   padding: 30px;
   border-radius: var(--border-radius);
-  color: var(--white); /* Set text color to white for this section */
+  color: #00442c !important; /* Set text color to white for this section */
   height: 80%;
   opacity: 1.0;
 border: 3.37px solid rgba(255, 255, 255, 0.23);
@@ -105,7 +105,7 @@ box-shadow: -15.645px -15.645px 7.823px -18.253px #B3B3B3 inset, -15.645px -15.6
 
 .upload-area p {
   font-size: 18px;
-  color: var(--white); /* Text inside the upload area is now white */
+  color: #00442c !important; /* Text inside the upload area is now white */
 }
 
 .choose-file-btn {
