@@ -80,7 +80,7 @@ const PatrolMap = ({ patrol }) => {
       {/* Base map */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
       />
 
       {/* Start marker */}

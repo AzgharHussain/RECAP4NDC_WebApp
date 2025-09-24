@@ -59,7 +59,7 @@ const LeftSidebar = ({ showStateLayer, setShowStateLayer, showDistrictLayer, set
       {/* Boundaries */}
       <div className="sidebar-section">
   <div className="section-header" onClick={() => toggleSection("boundaries")}>
-    <img src="../assets/Boundry.png" alt="Forest Icon" style={{ width: '20px', marginRight: '-89px' }} />
+    <img src="../assets/Boundry.png" alt="Forest Icon" style={{ width: '20px', marginRight: '-69px' }} />
     <span>Boundaries</span>
     {openSections.boundaries ? <FaChevronUp /> : <FaChevronDown />}
         </div>
@@ -99,7 +99,7 @@ const LeftSidebar = ({ showStateLayer, setShowStateLayer, showDistrictLayer, set
       {/* Field Data */}
       <div className="sidebar-section">
         <div className="section-header" onClick={() => toggleSection("field")}>
-            <img src="../assets/field.png" alt="Forest Icon" style={{ width: '20px', marginRight: '-89px' }} />
+            <img src="../assets/field.png" alt="Forest Icon" style={{ width: '20px', marginRight: '-86px' }} />
           <span> Field Data</span>
           {openSections.field ? <FaChevronUp /> : <FaChevronDown />}
         </div>

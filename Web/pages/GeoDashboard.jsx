@@ -1,23 +1,12 @@
 import React, { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { MapContainer, TileLayer, useMap,ScaleControl ,WMSTileLayer  } from "react-leaflet";
-// import 'leaflet-rotate'; // Import the rotation functionality
-import { FaLeaf, FaSeedling, FaSolarPanel, FaTree,FaWater,  FaChevronUp, 
-  FaChevronDown, 
-  FaFolder, 
-  FaFilePdf, 
-  FaCalendarAlt, 
-  FaUpload, 
-  FaExternalLinkAlt, 
-  FaDownload,
-  FaFileExcel, FaFileAlt,FaChalkboardTeacher, FaFileSignature ,FaUsers,FaCommentDots,FaInfoCircle} from 'react-icons/fa';
+import {FaInfoCircle} from 'react-icons/fa';
 import html2canvas from "html2canvas";
 import L, { icon } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-easyprint";
-import domtoimage from "dom-to-image";
 import PrintControl from "./PrintControl";
 import axios from 'axios';
-import { FaImages } from 'react-icons/fa';
 import "leaflet-draw";
 import "leaflet-draw/dist/leaflet.draw.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -25,108 +14,58 @@ import 'leaflet-geometryutil';
 import Cookies from "js-cookie";
 import "./GeoDashboard.css";
 import { useNavigate } from 'react-router-dom';
-
-import { FaSignOutAlt } from "react-icons/fa";
-
 import { saveAs } from 'file-saver';
 import 'leaflet-measure/dist/leaflet-measure.css';
-
-// import report from "./Resources/Technical Reports/Ecological Scoping Study SPWD.pdf"
 import "./RightSidebar.css";
-
 import SearchControlWithInput from './SearchControl';
-
 import Swal from "sweetalert2";
 import  DraggableZoomControl from "./DraggableZoomControl";
-// import CompassControl from "./CompassControl";
 import LatLngDisplay from "./LatLngDisplay";
-
 import 'leaflet/dist/leaflet.css';
 import PatrollingLayer from "./PatrollingLayer";
 import IncidentLayer from "./IncidentLayer";
-// Update your imports at the top
 import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
-import { Flex } from "antd";
-
 
 const LayerTogglePanel = lazy(() => import("./LayerTogglePanel"));
 const RightSidebar = lazy(() => import("./RightSidebar"));
 const BasemapGallery = lazy(() => import("./Basemapgallery"));
-// add this at the top of MapView
-
-
-const position = [23.2797, 71.3702];
+const position = [22.6093, 74.4097];
 const customCRS = L.CRS.EPSG4326;
 
-// Basemap URLs
 const basemaps = {
   LightGray: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   DarkGray: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
   Imagery: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-
   Oceans: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
   Streets: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
   NationalGeo: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
   positron:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"
   
 };
-const Loader2 = () => {
-  console.log("loading");
-  return (
-    <div className="map-loader">
-      <div className="map-loader__radar">
-        <div className="map-loader__center">
-          <div className="map-loader__satellite"></div>
-          <div className="map-loader__pulse"></div>
-          <div className="map-loader__pulse delay-1"></div>
-          <div className="map-loader__pulse delay-2"></div>
-        </div>
-        <div className="map-loader__sweep"></div>
-      </div>
-      <div className="map-loader__message">Loading...</div>
-
-    </div>
-  );
-};
-
-
-
 export default function MapView() {
   const mapRef = useRef(null);
   const [activeBasemap, setActiveBasemap] = useState("LightGray");
   const [activeTool, setActiveTool] = useState("layers");
- // const [addedLayers, setAddedLayers] = useState({});
-  const [legendlist, setLegendlist] = useState([]);
-  const [attributetables, setAttributetables] = useState([]);
   const [activetoolone, setActivetoolone] = useState("");
-  const [layers, setLayers] = useState("");
   const [userdata, setuserdata] = useState("");
-  const [mapTitle, setMapTitle] = useState('');
-  const [layout, setLayout] = useState('Letter ANSI A Landscape');
-  const [format, setFormat] = useState('PDF');
-  const [isOpenlogout, setIsOpenlogout] = useState(false);
-  const [drawnPolygons, setDrawnPolygons] = useState([]);
-  const [showTutorial, setShowTutorial] = useState(true);
-  const [intropopup, setIntropopup] = useState(true);
-  const [showsearchicnon, setShowsearchicnon] = useState(false);
-   const [showsearchicnonarea, setShowsearchicnonarea] = useState(false);
-  const [showdraggableZoomControl, setShowDraggableZoomControl] = useState(false);
- const [featureInfo, setFeatureInfo] = useState(null);
-  const [featureInfoPosition, setFeatureInfoPosition] = useState(null);
   const [isInfoToolActive, setIsInfoToolActive] = useState(false);
-  const [isLayerLoading2, setIsLayerLoading2] = useState(true);
-const [showStateLayer, setShowStateLayer] = useState(false);
-const [showDistrictLayer, setShowDistrictLayer] = useState(false); 
-const [showCoupeLayer, setShowCoupeLayer] = useState(false);
-const [showNdviLayer, setShowNdviLayer] = useState(false);
-const [showNdwiLayer, setShowNdwiLayer] = useState(false);
-const [showPatrollingLayer, setShowPatrollingLayer] = useState(false);
-const [showIncidentLayer, setShowIncidentLayer] = useState(false);
+  const [showStateLayer, setShowStateLayer] = useState(false);
+  const [showDistrictLayer, setShowDistrictLayer] = useState(false); 
+  const [showCoupeLayer, setShowCoupeLayer] = useState(false);
+  const [showNdviLayer, setShowNdviLayer] = useState(false);
+  const [showNdwiLayer, setShowNdwiLayer] = useState(false);
+  const [showPatrollingLayer, setShowPatrollingLayer] = useState(false);
+  const [showIncidentLayer, setShowIncidentLayer] = useState(false);
   const [incidentsData, setIncidentsData] = useState([]);
+// inside MapView component
+const [showLayerTogglePanel, setShowLayerTogglePanel] = useState(true); // default open
 
 const coupeLayers = [
-  "Arvalli_all_Range_all_WC_all_Coupe",
+  
+ "Arvalli_all_Range_all_WC_all_Coupe",
+ "AFF_W_C_COUPE",
+ "AFFORESTATION_W_C_COUPE",
   "Bhavnagar_coupes",
   "Gandhinagar_MM_Coupe",
   "Jamnagar_coupes",
@@ -134,78 +73,87 @@ const coupeLayers = [
   "Mahisagar_all_Coupe_FF",
   "Morbi_coupe_map",
   "Narmada_CP_FS2_compt4_RRB",
-  "SK North_all_Range_all_WC_all_Coupe",
-  "Surat_all_Range_Coupe",
+   "SK_North_all_Range_all_WC_all_Coupe",
+   "Surat_all_Range_Coupe",
   "Surendranagar_coupe",
   "Vyara_MM_Coupe_Boundary_qgis",
   "CUD_Coupe_bdn",
   "AFF W.C COUPE",
   "AFFORESTATION W.C _COUPE",
-  "BIO_WC_COUPE",
+  "BIO_W_C_COUPE",
   "Bharuch_Coupe_joined",
-  "DEV&CON W.C COUPE",
-  "DEVELO&CON W.C COUPE",
-  "DEV_AFF COUPE",
-  "DEV_DEV&CON W.C COUPE",
-  "D_AFFORESTATION W.C COUPE",
-  "D_DEVELOPMENT&CONSERVATION COUPE",
-  "D_GRASSBIR W.C COUPE",
+  "DEV&CON_W_C_COUPE",
+  "DEVELO&CON_W_C_COUPE",
+  "DEV_AFF_COUPE",
+  "DEV_DEV&CON_W_C_COUPE",
+  "D_AFFORESTATION_W_C_COUPE",
+  "D_DEVELOPMENT&CONSERVATION_COUPE",
+  "D_GRASSBIR_W_C_COUPE",
   "DesDev_WL_WC",
   "Dev_Revenue",
-  "G.S.F.D.C.AREA",
-  "GR W.C COUPE",
-  "GRASSBIR W.C COUPE",
+  "G_S_F_D_C_AREA",
+  "GR_W_C_COUPE",
+  "GRASSBIR_W_C_COUPE",
   "Garbada_Afforestation_Coupe",
-  "Garbada_Develop &Conser Coupe",
-  "Garbada_Revenue",
-  "J_AFFORESTATION W.C_COUPE",
-  "J_GRASSBIR W.C COUPE",
-  "K_DEVELOPMENT&CONSERVATION W.C COUPE",
-  "L_AFFORESTATION W.C COUPE",
-  "L_DEVELOPMENT&CONSERVATION W.C COUPE",
-  "L_GRASSBIR W.C COUPE",
+  "Garbada_Develop&Conser_Coupe",
+   "Garbada_Revenue",
+  "J_AFFORESTATION_W_C_COUPE",
+  "J_GRASSBIR_W_C_COUPE",
+  "K_DEVELOPMENT&CONSERVATION_W_C_COUPE",
+  "L_AFFORESTATION_W_C_COUPE",
+  "L_DEVELOPMENT&CONSERVATION_W_C_COUPE",
+  "L_GRASSBIR_W_C_COUPE",
   "PRO",
-  "RAN_AFFO W.C COUPE",
-  "RAN_DEV&CON W.C COUPE",
-  "RAN_GRASSBIR W.C COUPE",
+  "RAN_AFFO_W_C_COUPE",
+  "RAN_DEV&CON_W_C_COUPE",
+  "RAN_GRASSBIR_W_C_COUPE",
   "REV",
   "REVENUE",
   "REVENUE_Limkheda",
   "REVENUE_Rampura",
   "REVENUE_Randhikpur",
   "REV_Sagtala",
-  "R_AFFORESTATION COUPE",
-  "R_GRASSBIR COUPE",
+  "R_AFFORESTATION_COUPE",
+  "R_GRASSBIR_COUPE",
   "Rev",
   "Revenu",
   "Revenu_Boundary",
   "Revenu_Boundary_Sanjeli",
-  "SAG_BIODI W.C COUPE",
-  "SAG_DEV&CON W.C COUPE",
-  "S_AFFORESTATION W.C COUPE",
-  "S_DEV&CON W.C COUPE",
-  "S_GRASSBIR W.C COUPE",
+  "SAG_BIODI_W_C_COUPE",
+  "SAG_DEV&CON_W_C_COUPE",
+  "S_AFFORESTATION_W_C_COUPE",
+  "S_DEV&CON_W_C_COUPE",
+  "S_GRASSBIR_W_C_COUPE",
   "S_REVENUE",
-  "Vansi_AFF W.C COUPE",
-  "Vansi_BIO W.C COUPE",
-  "Vansi_DEV&CON W.C  COUPE",
+  "Vansi_AFF_W_C_COUPE",
+  "Vansi_BIO_W_C_COUPE",
+  "Vansi_DEV&CON_W_C_COUPE",
   "Vansi_REV",
-  "Wild Life_WC",
-   "con_cum_lmp"
-  // "Kanjeta_AFF W.C COUPE",
-  // "Sanjeli_AFFORESTATION W.C _COUPE"
+  "Wild_Life_WC",
+   "con_cum_lmp",
+  "Kanjeta_AFF_W_C_COUPE",
+  "Sanjeli_AFFORESTATION_W_C_COUPE"
 ];
 
-// const districtsKmlUrl = "/KML/tbldistricts.kml"
-// const  villagesKmlUrl = "/KML/Aravali_village_list.kml"
+const ndviLayers = [
+  "cite:2025_09_01_BIO_W_C_COUPE_ndvi",
+  "cite:2025_09_01_AFF_W_C_COUPE_ndvi_",
+  "cite:2025_09_01_AFFORESTATION_W_C_COUPE_ndvi",
+  "cite:2025_08_01_BIO_W_C_COUPE_ndvi",
+  "cite:2025_08_01_AFF_W_C_COUPE_ndvi",
+  "cite:2025_08_01_AFFORESTATION_W_C_COUPE_ndvi",
+];
 
-
-
- 
+const ndwiLayers = [
+  "cite:2025_09_01_BIO_W_C_COUPE_ndwi",
+  "cite:2025_09_01_AFF_W_C_COUPE_ndwi",
+  "cite:2025_09_01_AFFORESTATION_W_C_COUPE_ndwi",
+  "cite:2025_08_01_BIO_W_C_COUPE_ndwi",
+  "cite:2025_08_01_AFF_W_C_COUPE_ndwi",
+  "cite:2025_08_01_AFFORESTATION_W_C_COUPE_ndwi",
+];
 
   const navigate = useNavigate();
-  const dropdownRef = useRef(null);
-// Measure tool using leaflet-active-area
 
 const GeomanTools = () => {
   const map = useMap();
@@ -263,18 +211,13 @@ const handleDrawingToolClick = (toolType) => {
     });
   }
 };
-
   // Function to handle button click
   const handleButtonClick = (toolName, title) => {
     setActiveTool(toolName);
   };
-
   const zoomIn = () => mapRef.current?.zoomIn();
   const zoomOut = () => mapRef.current?.zoomOut();
   const resetView = () => mapRef.current?.setView(position, 7);
-
-
-
   const toggleFullscreen = () => {
     const elem = document.querySelector(".map-wrapper");
     if (!document.fullscreenElement) {
@@ -306,15 +249,9 @@ const handleDrawingToolClick = (toolType) => {
       navigate("");
       return;
     }
-
     const id = Cookies.get("id");
-
-    
-
     fetchUser();
   }, [navigate]);
-
-
   const locate = () => {
     const map = mapRef.current;
     if (map) {
@@ -327,7 +264,6 @@ const handleDrawingToolClick = (toolType) => {
       });
     }
   };
-
   const handleLogout = () => {
     Cookies.remove("token");
     Cookies.remove("role");
@@ -336,8 +272,6 @@ const handleDrawingToolClick = (toolType) => {
     setIsOpenlogout(false);
     navigate("");
   };
-
-  
   const AddControls = () => {
     const map = useMap();
     useEffect(() => {
@@ -346,11 +280,6 @@ const handleDrawingToolClick = (toolType) => {
     }, [map]);
     return null;
   };
-
- 
-
-
-
   const handleFeedbackChange = (event) => { 
     const { name, value } = event.target;
     setFeedback((prevFeedback) => ({
@@ -427,22 +356,13 @@ const handleDrawingToolClick = (toolType) => {
           text: `Error deleting user: ${error.message}`,
         });
       }
-    };
-
-
-
-
+    }
     const [activeTab, setActiveTab] = useState('Forest Landscape Restoration');
 
   const handleTabClick = (tabName) => {
     setActiveTab(tabName);
   };
 
-
-  const village_id=null
-  const setvillage_id =null
-
- const [showreports, setshowreports] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
 
 
@@ -629,37 +549,13 @@ const mapWrapperRef = useRef();
   >
     <i className="bi bi-house-fill" />
   </button>
-
- 
-  
 </aside>
-
-        </div>
-
-        
-          <SearchControlWithInput mapRef={mapRef} />
-        
+        </div>      
+          <SearchControlWithInput mapRef={mapRef} />       
         {activeToolSidebar === "searchIconArea" && (
-          <div  style={{
-      // position: 'absolute',
-      //     top: '2%',
-      //     right: '6%',
-      //     zIndex: 1000,
-      //     color:"black",
-      //     padding: '5px',
-      //     borderRadius: '5px',
-      //     width: '450px',
-      //     boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-      //     backgroundColor: "rgba(0, 0, 0, 0.5)"
-    }}>
-         
+          <div  style={{    }}>      
             </div>
-        )}
-        
-   
-
-        
-         
+        )}       
       <Suspense fallback={<div>Loading...</div>}>
         <BasemapGallery
           activeBasemap={activeBasemap}
@@ -668,69 +564,62 @@ const mapWrapperRef = useRef();
           map={mapRef.current} // Pass the map instance here
         />
       </Suspense>
-     
-
-        
-        
-        
-
-
         {activeToolSidebar === "measure" && (
            <Suspense fallback={<div>Loading...</div>}>
           <RightSidebar mapRef={mapRef}  
               setActiveToolSidebar={setActiveToolSidebar} />
         </Suspense>
         )}
-
-       
-
-   
-        <div className="main-container" ref={mapWrapperRef} style={{ height: `calc(100vh - ${headerHeight}px)` }}>
-  {/* <Suspense fallback={<div>Loading...</div>}>
-             <LayerTogglePanel
-            mapRef={mapRef}
-            layers={layers}
-            setActiveTool={setActiveTool}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            setActiveBasemap={setActiveBasemap}
-            activeBasemap={activeBasemap}
-            // isLayerLoading2={isLayerLoading2}
-            // setIsLayerLoading2={setIsLayerLoading2}
-            activeToolSidebar={activeToolSidebar}
+        <div className="main-container" ref={mapWrapperRef} style={{ height: `calc(90vh - ${headerHeight}px)` }}>
+  {/* Toggle Layer Panel button */}
+      <button
+        title="Layers Panel"
+        type="button"
+        onClick={() => setShowLayerTogglePanel(prev => !prev)}
+        className={activeToolSidebar === "layersPanel" ? "tool-button-active" : "tool-button"}
+        style={{ maxHeight: "27px",marginTop:"-9px",marginLeft:"-7px" }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path
+            d="M3 6H21M3 12H21M3 18H21" // hamburger icon
+            stroke={activeToolSidebar === "layersPanel" ? "#ffffff" : "#39E23E"}
+            strokeWidth="2"
+            strokeLinecap="round"
           />
-          </Suspense> */}
-<LayerTogglePanel showStateLayer={showStateLayer} 
-  setShowStateLayer={setShowStateLayer} 
-   showDistrictLayer={showDistrictLayer}          // <-- add this
-  setShowDistrictLayer={setShowDistrictLayer} 
-  showCoupeLayer={showCoupeLayer}           // <-- add this
-  setShowCoupeLayer={setShowCoupeLayer}  
-  showNdviLayer={showNdviLayer}           // <-- add this
-  setShowNdviLayer={setShowNdviLayer}     // <-- add this
-  showNdwiLayer={showNdwiLayer}           // <-- add this
-  setShowNdwiLayer={setShowNdwiLayer} 
-  showPatrollingLayer={showPatrollingLayer}            // ← new
-  setShowPatrollingLayer={setShowPatrollingLayer} 
-   showIncidentLayer={showIncidentLayer}        // <-- add this
-  setShowIncidentLayer={setShowIncidentLayer}  // <-- add this
-   />
-     <div style={{display: "flex", width: "100%"}}>
-
-          
-{/* <LocationSelector mapRef={mapRef} /> */}
+        </svg>
+      </button>
 
 
-<MapContainer
-  center={position}
-  zoom={7.3}
- style={{
-  height:"100%",
-  width:"70vw"
+        {showLayerTogglePanel && (
+        <div className="leftpanel-container" style={{ overflow: 'auto' }}>
+          <LayerTogglePanel
+            showStateLayer={showStateLayer} 
+            setShowStateLayer={setShowStateLayer} 
+            showDistrictLayer={showDistrictLayer}          
+            setShowDistrictLayer={setShowDistrictLayer} 
+            showCoupeLayer={showCoupeLayer}           
+            setShowCoupeLayer={setShowCoupeLayer}  
+            showNdviLayer={showNdviLayer}           
+            setShowNdviLayer={setShowNdviLayer}     
+            showNdwiLayer={showNdwiLayer}           
+            setShowNdwiLayer={setShowNdwiLayer} 
+            showPatrollingLayer={showPatrollingLayer}            
+            setShowPatrollingLayer={setShowPatrollingLayer} 
+            showIncidentLayer={showIncidentLayer}        
+            setShowIncidentLayer={setShowIncidentLayer}  
+          />
+        </div>
+      )}
+     <div style={{display: "flex", width: "auto" ,height:"auto"}}>
 
-//  height: "85.4vh",
-//   width: activeTab === "Renewable Energy" || activeTab === "Climate Adaptations and Finance (NbS)" ? "100vw" : "70vw"
-}}
+      <MapContainer
+        center={position}
+        zoom={7.3}
+      style={{
+        height:"100%",
+        width:"83vw"
+
+      }}
 
   whenCreated={(mapInstance) => {
     mapRef.current = mapInstance;
@@ -742,17 +631,7 @@ const mapWrapperRef = useRef();
   rotate={true} // Enable rotation capability
   bearing={0} // Initial bearing
 >
-
-
-
-
-
  <PrintControl mapRef={mapRef} />
-
-
-
-
-
    <TileLayer
    
     url={basemaps[activeBasemap]}
@@ -779,78 +658,58 @@ const mapWrapperRef = useRef();
     version="1.1.0"
     opacity={0.7}
   />
-)}
-{showCoupeLayer && coupeLayers.map((layerName) => (
-  <WMSTileLayer
-    key={layerName}
-    url="https://gisfy.co.in:8443/geoserver/cite/wms"
-    layers={layerName}
-    format="image/png"
-    transparent={true}
-    version="1.1.0"
-    opacity={0.7}  // Adjust opacity if needed
-  />
-))}
+  )}
+  {showCoupeLayer && coupeLayers.map((layerName) => (
+    <WMSTileLayer
+      key={layerName}
+      url="https://gisfy.co.in:8443/geoserver/cite/wms"
+      layers={layerName}
+      format="image/png"
+      transparent={true}
+      version="1.1.0"
+      opacity={0.7}  // Adjust opacity if needed
+    />
+  ))}
 
-{showNdviLayer && (
-  <WMSTileLayer
-    url="https://gisfy.co.in:8443/geoserver/cite/wms"
-    layers="cite:2025_09_14_BIO_W_C_COUPE_ndvi,cite:2025_09_14_AFF_W_C_COUPE_ndvi,cite:2025_09_14_AFFORESTATION_W_C_COUP_ndvi,cite:2025_08_24_BIO_W_C_COUPE_ndvi,cite:2025_08_24_AFF_W_C_COUPE_ndvi,cite:2025_08_24_AFFORESTATION_W_C_COUP_ndvi"
-    format="image/png"
-    transparent={true}
-    version="1.1.0"
-    opacity={1}
-    detectRetina={true} // optional
-    crossOrigin="anonymous" // helps with CORS for PNGs
-  />
-)}
-
-{showNdwiLayer && (
-  <WMSTileLayer
-    url="https://gisfy.co.in:8443/geoserver/cite/wms"
-    layers="cite:2025_09_14_BIO_W_C_COUPE_ndwi,cite:2025_09_14_AFF_W_C_COUPE_ndwi,cite:2025_09_14_AFFORESTATION_W_C_COUP_ndwi,cite:2025_08_24_BIO_W_C_COUPE_ndwi,cite:2025_08_24_AFF_W_C_COUPE_ndwi,cite:2025_08_24_AFFORESTATION_W_C_COUP_ndwi"
-    format="image/png"
-    transparent={true}
-    version="1.1.0"
-    opacity={0.8}
-    zIndex={1000}
-    detectRetina={true}
-    crossOrigin="anonymous"
-  />
-)}
-
-
-<PatrollingLayer show={showPatrollingLayer} />
- <IncidentLayer show={showIncidentLayer} incidents={incidentsData} />
-
-
-
-
-
-
-  <AddControls />
-  {/* <DefaultLayers /> */}
-  <GeomanTools />
-  {/* <AutoKMLLayers
-    districtsKmlUrl={districtsKmlUrl}
-    villagesKmlUrl={villagesKmlUrl}
-   
-  /> */}
-  <ScaleControl  
-    position="bottomleft" 
-    className="custom-scale-control" 
-  />
+  {showNdviLayer &&
+    ndviLayers.map((layer) => (
+      <WMSTileLayer
+        key={layer}
+        url="https://gisfy.co.in:8443/geoserver/cite/wms"
+        layers={layer}               // single layer each time
+        format="image/png"
+        transparent={true}
+        version="1.1.0"
+        opacity={1}                  // adjust individually if needed
+      />
+    ))}
+    {showNdwiLayer &&
+      ndwiLayers.map((layer) => (
+        <WMSTileLayer
+          key={layer}
+          url="https://gisfy.co.in:8443/geoserver/cite/wms"
+          layers={layer}               // single NDWI layer each
+          format="image/png"
+          transparent={true}
+          version="1.1.0"
+          opacity={1}                  // adjust individually if needed
+        />
+      ))}
+    <PatrollingLayer show={showPatrollingLayer} />
+    <IncidentLayer show={showIncidentLayer} incidents={incidentsData} />
+      <AddControls />
+      <GeomanTools />
+      <ScaleControl  
+        position="bottomleft" 
+        className="custom-scale-control" 
+      />
        {activeToolSidebar === "search"  && (
           <DraggableZoomControl mapRef={mapRef} />
         )} 
-  <LatLngDisplay />
-  {/* <CompassControl rotationEnabled={true} /> */}
-</MapContainer>
-</div>
-         
+        <LatLngDisplay />
+      </MapContainer>
+      </div>       
         </div>
-       
-
         {activetoolone === "Edit" && (
           <Suspense fallback={<div>Loading...</div>}>
             <ForestDegradationAnalysis 
