@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye } from "react-icons/fa"; 
+import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown } from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
 import brand from "../assets/logogiz.png";
@@ -74,32 +74,54 @@ export default function DashboardLayout() {
             </li>
 
             {/* Patrolling and Incident Logs Dropdown */}
-            <li className={`dropdown ${isPatrollingOpen ? "open" : ""}`}>
+           <li className={`dropdown ${isPatrollingOpen ? "open" : ""}`}>
               <button
-                className={`dropdown-toggle ${isActiveLink("/petrolling-incident/patrolling") || isActiveLink("/petrolling-incident/incident") ? "active" : ""}`}
+                className={`dropdown-toggle ${
+                  isActiveLink("/petrolling-incident/patrolling") ||
+                  isActiveLink("/petrolling-incident/incident")
+                    ? "active"
+                    : ""
+                }`}
                 onClick={() => setIsPatrollingOpen(!isPatrollingOpen)} // Toggle only Patrolling dropdown
               >
                 <MdLocalPolice className="icon" /> Patrolling and Incident Logs
+                {/* ▼▲ icon toggle */}
+                {isPatrollingOpen ? <FaChevronUp /> : <FaChevronDown />}
               </button>
+
               {isPatrollingOpen && (
                 <ul className="dropdown-menus">
                   <li>
                     <NavLink
                       to="/petrolling-incident/patrolling"
-                      className={`menu-item ${isActiveLink("/petrolling-incident/patrolling") ? "active" : ""}`}
+                      className={`menu-item ${
+                        isActiveLink("/petrolling-incident/patrolling") ? "active" : ""
+                      }`}
                       onClick={handleLinkClick}
                     >
-                      <img src={patrollingIcon} alt="Patrolling Logs" className="menu-image" /> {/* Patrolling image */}
+                      <img
+                        src={patrollingIcon}
+                        alt="Patrolling Logs"
+                        className="menu-image"
+                      />{" "}
+                      {/* Patrolling image */}
                       Patrolling Logs
                     </NavLink>
                   </li>
                   <li>
                     <NavLink
                       to="/petrolling-incident/incident"
-                      className={`menu-item ${isActiveLink("/petrolling-incident/incident") ? "active" : ""}`}
+                      className={`menu-item ${
+                        isActiveLink("/petrolling-incident/incident") ? "active" : ""
+                      }`}
                       onClick={handleLinkClick}
                     >
-                      <img src={incidentIcon} alt="Incident Logs" className="menu-image" /> {/* Incident image */}
+                      <img
+                        src={incidentIcon}
+                        alt="Incident Logs"
+                        className="menu-image"
+                      />{" "}
+                      {/* Incident image */}
                       Incident Logs
                     </NavLink>
                   </li>
@@ -107,46 +129,57 @@ export default function DashboardLayout() {
               )}
             </li>
 
+
             {/* Working Plan Areas Dropdown */}
-            <li className={`dropdown ${isWorkingPlanOpen ? "open" : ""}`}>
-              <button
-                className={`dropdown-toggle ${isWorkingPlanOpen ? "active" : ""}`}
-                onClick={() => setIsWorkingPlanOpen(!isWorkingPlanOpen)} // Toggle only Working Plan dropdown
-              >
-                <FaClipboardList className="icon" /> Working Plan Areas
-              </button>
-              {isWorkingPlanOpen && (
-                <ul className="dropdown-menus">
-                  <li>
-                    <NavLink
-                      to="/working-plan/upload"
-                      className={`menu-item ${isActiveLink("/working-plan/upload") ? "active" : ""}`}
-                      onClick={handleLinkClick}
-                    >
-                      <FaUpload className="icon" /> Upload Coupe Boundaries
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink
-                      to="/working-plan/view"
-                      className={`menu-item ${isActiveLink("/working-plan/view") ? "active" : ""}`}
-                      onClick={handleLinkClick}
-                    >
-                      <FaEye className="icon" /> View Coupe Boundaries
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink
-                      to="/working-plan/log"
-                      className={`menu-item ${isActiveLink("/working-plan/log") ? "active" : ""}`}
-                      onClick={handleLinkClick}
-                    >
-                      <GiNotebook className="icon" /> Coupe Observation Log
-                    </NavLink>
-                  </li>
-                </ul>
-              )}
-            </li>
+           <li className={`dropdown ${isWorkingPlanOpen ? "open" : ""}`}>
+            <button
+              className={`dropdown-toggle ${isWorkingPlanOpen ? "active" : ""}`}
+              onClick={() => setIsWorkingPlanOpen(!isWorkingPlanOpen)} // Toggle only Working Plan dropdown
+            >
+              <FaClipboardList className="icon" /> Working Plan Areas
+              {/* ▼▲ icon toggle */}
+              {isWorkingPlanOpen ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+
+                {isWorkingPlanOpen && (
+                  <ul className="dropdown-menus">
+                    <li>
+                      <NavLink
+                        to="/working-plan/upload"
+                        className={`menu-item ${
+                          isActiveLink("/working-plan/upload") ? "active" : ""
+                        }`}
+                        onClick={handleLinkClick}
+                      >
+                        <FaUpload className="icon" /> Upload Coupe Boundaries
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink
+                        to="/working-plan/view"
+                        className={`menu-item ${
+                          isActiveLink("/working-plan/view") ? "active" : ""
+                        }`}
+                        onClick={handleLinkClick}
+                      >
+                        <FaEye className="icon" /> View Coupe Boundaries
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink
+                        to="/working-plan/log"
+                        className={`menu-item ${
+                          isActiveLink("/working-plan/log") ? "active" : ""
+                        }`}
+                        onClick={handleLinkClick}
+                      >
+                        <GiNotebook className="icon" /> Coupe Observation Log
+                      </NavLink>
+                    </li>
+                  </ul>
+                )}
+              </li>
+
           </ul>
         </aside>
 
