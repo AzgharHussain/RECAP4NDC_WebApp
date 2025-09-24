@@ -8,9 +8,9 @@ const fs = require('fs');
 
 // Initialize Sequelize with your database credentials
 const sequelize = new Sequelize(
-    'GIZ', // Database name
+    'Giz', // Database name
     'postgres', // Username
-    'Pass@123', // Password
+    'pass@123', // Password
     {
         host: 'localhost',
         dialect: 'postgres',
