@@ -121,7 +121,7 @@ const PatrolIncidentLogs = () => {
 
   const fetchPatrolData = async () => {
     try {
-      const response = await fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=2");
+      const response = await fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=1");
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       let formattedData = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : [];
