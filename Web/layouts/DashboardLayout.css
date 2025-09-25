@@ -4,7 +4,7 @@
   height: 100vh;
   background:url("../assets/Background.png") no-repeat center center;
   background-size: cover;
-  /* overflow-y: auto; */
+   overflow-y: auto; 
 
 }
 
@@ -50,6 +50,7 @@
 .layout-body {
   flex: 1;
   display: flex;
+
 }
 .sidebar {
   width: 240px;

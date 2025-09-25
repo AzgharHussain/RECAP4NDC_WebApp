@@ -14,7 +14,7 @@ export default function App() {
   return (
     <Routes>
       {/* Login without sidebar */}
-      <Route path="/" element={<Login />} />
+      <Route path="*" element={<Login />} />
 
       {/* Protected pages with master layout */}
       <Route element={<DashboardLayout />}>
