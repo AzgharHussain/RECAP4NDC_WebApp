@@ -8,7 +8,7 @@ const fs = require('fs');
 
 // Initialize Sequelize with your database credentials
 const sequelize = new Sequelize(
-    'Giz', // Database name
+    'GIZ', // Database name
     'postgres', // Username
     'pass@123', // Password
     {
@@ -221,6 +221,54 @@ app.get('/api/coupe_metadata/location', async (req, res) => {
         console.error('Error fetching coupe metadata:', err);
         // Respond with an error message
         res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+
+// Main API endpoint for creating a coupe log and uploading images
+app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
+    const { issue_id, issue_type, observation_notes, user_id } = req.body;
+    const files = req.files;
+
+    if (!issue_id || !user_id) {
+        return res.status(400).json({ error: 'Issue ID and User ID are required.' });
+    }
+
+    const client = await pool.connect();
+    try {
+        // Collect the paths of the uploaded images
+        const imagePaths = files.map(file => file.path);
+
+        // Call the PostgreSQL function with the log data and image paths array
+        // The function will handle the insertion into both tables atomically
+        const functionCallQuery = `
+            SELECT public.insert_coupe_log_with_images($1, $2, $3, $4, $5) AS log_id;
+        `;
+        const functionResult = await client.query(functionCallQuery, [
+            issue_id,
+            issue_type,
+            observation_notes,
+            user_id,
+            imagePaths,
+        ]);
+        
+        // The function's return value (the new log_id) is in the first row
+        const logId = functionResult.rows[0].log_id;
+
+        res.status(201).json({ 
+            message: 'Log and images successfully saved via PostgreSQL function.', 
+            logId: logId,
+            imageCount: files.length
+        });
+
+    } catch (error) {
+        // Log the error to the console for debugging
+        console.error('API request failed:', error);
+        res.status(500).json({ error: 'Failed to save log and images.' });
+    } finally {
+        // Release the database client back to the pool
+        client.release();
     }
 });
 
