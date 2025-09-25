@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Polyline, Marker, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Polyline,
+  Marker,
+  Popup,
+  useMap,
+} from "react-leaflet";
 import L from "leaflet";
 
 const startIcon = new L.Icon({
@@ -24,48 +31,67 @@ const endIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
-export default function PatrollingLayer({ show }) {
-  const [patrols, setPatrols] = useState([]);
+// Component to zoom & render patrol route
+function PatrolRoute({ patrol }) {
+  const map = useMap();
 
+  let coords = [];
+  if (patrol.cover_distance?.coordinates) {
+    // GeoJSON [lng, lat] → Leaflet [lat, lng]
+    coords = patrol.cover_distance.coordinates.map(([lat, lng]) => [lat, lng]);
+  } else if (patrol.route_points) {
+    coords = patrol.route_points.map((p) => p.split(",").map(Number));
+  } else {
+    const start = patrol.start_location.split(",").map(Number);
+    const end = patrol.end_location.split(",").map(Number);
+    coords = [start, end];
+  }
+
+  const start = coords[0];
+  const end = coords[coords.length - 1];
+
+  // Auto zoom
   useEffect(() => {
-    if (show) {
-      fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=2")
-        .then((res) => res.json())
-        .then((data) => setPatrols(data))
-        .catch((err) => console.error("Error fetching patrol data", err));
+    if (coords.length > 0) {
+      map.fitBounds(coords, { padding: [50, 50] });
     }
-  }, [show]);
-
-  if (!show) return null;
+  }, [coords, map]);
 
   return (
     <>
-      {patrols.map((patrol, i) => {
-        const [startLat, startLon] = patrol.start_location
-          .split(",")
-          .map(Number);
-        const [endLat, endLon] = patrol.end_location.split(",").map(Number);
-
-        // Only connect start to end
-        const coords = [
-          [startLat, startLon],
-          [endLat, endLon],
-        ];
-
-        return (
-          <React.Fragment key={i}>
-            <Marker position={[startLat, startLon]} icon={startIcon}>
-              <Popup>Start: {patrol.patrol_officer_name}</Popup>
-            </Marker>
-
-            <Marker position={[endLat, endLon]} icon={endIcon}>
-              <Popup>End: {patrol.patrol_officer_name}</Popup>
-            </Marker>
-
-            <Polyline positions={coords} color="blue" />
-          </React.Fragment>
-        );
-      })}
+      <Marker position={start} icon={startIcon}>
+        <Popup>Start</Popup>
+      </Marker>
+      <Marker position={end} icon={endIcon}>
+        <Popup>End</Popup>
+      </Marker>
+      <Polyline positions={coords} pathOptions={{ color: "white", weight: 4 }} />
     </>
+  );
+}
+
+export default function PatrolMap({ patrol }) {
+  if (!patrol) return null;
+
+  return (
+    <div style={{ width: "100%", height: "500px" }}>
+      <h3>
+        Patrol Route - {patrol.patrol_officer_name} (Distance:{" "}
+        {parseFloat(patrol.distance_kms).toFixed(3)} km)
+      </h3>
+
+      <MapContainer
+        center={[33.5453, 75.2291]} // fallback center
+        zoom={17}
+        style={{ width: "100%", height: "450px" }}
+      >
+        {/* Satellite basemap (Google-style) */}
+        <TileLayer
+          url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+          subdomains={["mt0", "mt1", "mt2", "mt3"]}
+        />
+        <PatrolRoute patrol={patrol} />
+      </MapContainer>
+    </div>
   );
 }
