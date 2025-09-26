@@ -234,8 +234,8 @@ app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
         issue_type, 
         observation_notes, 
         user_id,
-        coupe_id,
-        officer_name, // Capture the new field
+        input_table_name, // ⭐ CHANGED: Replaced coupe_id with input_table_name
+        officer_name,
         
         // Capture the single JSON string from the form-data body
         properties_data
@@ -257,7 +257,7 @@ app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
                 :issue_type, 
                 :observation_notes, 
                 :user_id, 
-                :coupe_id,
+                :input_table_name, -- ⭐ CHANGED: Replaced :coupe_id with :input_table_name
                 :officer_name, 
                 CAST(:properties_json AS jsonb), 
                 ${imagePathsLiteral}
@@ -271,8 +271,8 @@ app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
                 issue_type: issue_type,
                 observation_notes: observation_notes,
                 user_id: user_id,
-                coupe_id: coupe_id,
-                officer_name: officer_name, // Pass the new value
+                input_table_name: input_table_name, // ⭐ CHANGED: Pass the new value
+                officer_name: officer_name,
                 // Pass the raw string for the JSON column
                 properties_json: propertiesJsonString
             },
