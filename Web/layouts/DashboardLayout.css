@@ -4,7 +4,7 @@
   height: 100vh;
   background:url("../assets/Background.png") no-repeat center center;
   background-size: cover;
-  overflow-y: auto;
+   overflow-y: auto; 
 
 }
 
@@ -50,6 +50,7 @@
 .layout-body {
   flex: 1;
   display: flex;
+
 }
 .sidebar {
   width: 240px;
@@ -58,6 +59,8 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.15);
+  overflow: auto;
+  
 }
 
 .sidebar ul {
@@ -91,6 +94,7 @@
   padding: 10px 15px;
   border-radius: 12px;
   transition: all 0.3s ease;
+  
 }
 .sidebar a:hover,
 .sidebar a.active {

@@ -1,12 +1,14 @@
-import React from "react";
+import React,{useState} from "react";
 import { Table, Button, Input, Select, DatePicker } from "antd";
 import { SearchOutlined } from '@ant-design/icons'; // Import the Search icon
-import "./CoupeObservation.css";
+import "./PatrolIncidentLogs.css";
 import exportIcon from '../assets/excel.png';
+import noDataImage from '../assets/no-data.png';
 
 const { Option } = Select;
 
 const CoupeObservation = () => {
+  const [filteredData, setFilteredData] = useState([]);
   // Only columns (no data)
   const columns = [
     { title: 'Coupe ID', dataIndex: 'coupeId', key: 'coupeId' },
@@ -86,12 +88,27 @@ const CoupeObservation = () => {
       </div>
 
       {/* Transparent Table */}
-      <Table
-        columns={columns}
-        dataSource={[]} // empty data array
-        pagination={false}
-        className="transparent-table"
-      />
+       <Table
+                className="transparent-table"
+                columns={columns}
+                dataSource={filteredData}
+                pagination={{ pageSize: 5 }}
+                bordered
+                locale={{
+                    emptyText: (
+                      <div style={{ textAlign: 'center', padding: '50px 0' }}>
+                        <img
+                          src={noDataImage}
+                          alt="No Data"
+                          style={{ width: 60, marginBottom: 16 }}
+                        />
+                        <div style={{ fontSize: 16, color: '#00442c', fontWeight: 500 }}>
+                          No data available
+                        </div>
+                      </div>
+                    ),
+                  }}
+              />
     </div>
   );
 };
