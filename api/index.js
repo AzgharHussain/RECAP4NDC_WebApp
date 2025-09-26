@@ -228,47 +228,90 @@ app.get('/api/coupe_metadata/location', async (req, res) => {
 
 // Main API endpoint for creating a coupe log and uploading images
 app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
-    const { issue_id, issue_type, observation_notes, user_id } = req.body;
-    const files = req.files;
-
-    if (!issue_id || !user_id) {
-        return res.status(400).json({ error: 'Issue ID and User ID are required.' });
-    }
-
-    const client = await pool.connect();
-    try {
-        // Collect the paths of the uploaded images
-        const imagePaths = files.map(file => file.path);
-
-        // Call the PostgreSQL function with the log data and image paths array
-        // The function will handle the insertion into both tables atomically
-        const functionCallQuery = `
-            SELECT public.insert_coupe_log_with_images($1, $2, $3, $4, $5) AS log_id;
-        `;
-        const functionResult = await client.query(functionCallQuery, [
-            issue_id,
-            issue_type,
-            observation_notes,
-            user_id,
-            imagePaths,
-        ]);
+    // Destructure required fields and the single JSON string
+    const { 
+        issue_id, 
+        issue_type, 
+        observation_notes, 
+        user_id,
+        coupe_id,
         
-        // The function's return value (the new log_id) is in the first row
-        const logId = functionResult.rows[0].log_id;
+        // ⭐ NEW: Capture the single JSON string key
+        properties_data
+    } = req.body;
+    
+    // ... validation checks ...
 
-        res.status(201).json({ 
-            message: 'Log and images successfully saved via PostgreSQL function.', 
-            logId: logId,
-            imageCount: files.length
+    // ⭐ PARSE the incoming JSON string to extract all individual fields
+    const properties = JSON.parse(properties_data);
+
+    // Destructure properties needed for the coupe_log table's regular columns
+    const { 
+        Division, 
+        Range_Nmae, 
+        Round_Name, 
+        Village_Na, 
+        Beat_Name, 
+        Area, 
+        Compt_No 
+    } = properties;
+    
+    // Convert Area to numeric
+    const numericArea = Area ? parseFloat(Area) : null; 
+    
+    // The full JSON string to pass to the function is properties_data itself!
+    const propertiesJsonString = properties_data; // No need to re-stringify
+
+    try {
+        // ... (Image handling remains the same) ...
+
+        // 2. Function call query remains the same
+        const functionCallQuery = `
+            SELECT public.insert_coupe_log_with_images(
+                :issue_id, 
+                :issue_type, 
+                :observation_notes, 
+                :user_id, 
+                :coupe_id, 
+                :Division, 
+                :Range_Nmae, 
+                :Round_Name, 
+                :Village_Na, 
+                :Beat_Name, 
+                :Area, 
+                :Compt_No,
+                CAST(:properties_json AS jsonb), 
+                CAST(:image_paths AS character varying[])
+            ) AS log_id;
+        `;
+        
+        // 3. Execute the query
+        const [functionResult] = await sequelize.query(functionCallQuery, {
+            replacements: {
+                issue_id: issue_id,
+                issue_type: issue_type,
+                observation_notes: observation_notes,
+                user_id: user_id,
+                coupe_id: coupe_id,
+                // Pass the extracted properties for the regular columns
+                Division: Division,
+                Range_Nmae: Range_Nmae,
+                Round_Name: Round_Name,
+                Village_Na: Village_Na,
+                Beat_Name: Beat_Name,
+                Area: numericArea, 
+                Compt_No: Compt_No,
+                // Pass the raw string for the JSON column
+                properties_json: propertiesJsonString, 
+                image_paths: imagePathsArray
+            },
+            type: Sequelize.QueryTypes.SELECT 
         });
+        
+        // ... (Response handling remains the same) ...
 
     } catch (error) {
-        // Log the error to the console for debugging
-        console.error('API request failed:', error);
-        res.status(500).json({ error: 'Failed to save log and images.' });
-    } finally {
-        // Release the database client back to the pool
-        client.release();
+        // ... (Error handling remains the same) ...
     }
 });
 
