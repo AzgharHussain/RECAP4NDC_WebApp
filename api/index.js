@@ -235,31 +235,30 @@ app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
         observation_notes, 
         user_id,
         coupe_id,
+        officer_name, // Capture the new field
         
         // Capture the single JSON string from the form-data body
         properties_data
     } = req.body;
     
-    // NO PARSING OR DESTRUCTURING NEEDED HERE!
-    // The PostgreSQL function now handles the internal parsing of this JSON string.
     const propertiesJsonString = properties_data; 
 
     // Assuming imagePathsArray is generated correctly from req.files
     const imagePathsArray = req.files.map(file => file.filename);
 
-    // ⭐ FIX: Manually construct the PostgreSQL array literal string
-    // This is necessary because Sequelize's CAST syntax is generating an error.
+    // Manually construct the PostgreSQL array literal string
     const imagePathsLiteral = `ARRAY[${imagePathsArray.map(path => `'${path}'`).join(', ')}]`;
 
     try {
-        // 2. The function call query now uses only ONE parameter for properties
+        // 2. The function call query, rebuilt to ensure clean spacing
         const functionCallQuery = `
             SELECT public.insert_coupe_log_with_images(
                 :issue_id, 
                 :issue_type, 
                 :observation_notes, 
                 :user_id, 
-                :coupe_id, 
+                :coupe_id,
+                :officer_name, 
                 CAST(:properties_json AS jsonb), 
                 ${imagePathsLiteral}
             ) AS log_id;
@@ -273,9 +272,9 @@ app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
                 observation_notes: observation_notes,
                 user_id: user_id,
                 coupe_id: coupe_id,
+                officer_name: officer_name, // Pass the new value
                 // Pass the raw string for the JSON column
                 properties_json: propertiesJsonString
-                // ⭐ The image_paths replacement is no longer needed
             },
             type: Sequelize.QueryTypes.SELECT 
         });
