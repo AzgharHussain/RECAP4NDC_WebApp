@@ -236,36 +236,23 @@ app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
         user_id,
         coupe_id,
         
-        // ⭐ NEW: Capture the single JSON string key
+        // Capture the single JSON string from the form-data body
         properties_data
     } = req.body;
     
-    // ... validation checks ...
+    // NO PARSING OR DESTRUCTURING NEEDED HERE!
+    // The PostgreSQL function now handles the internal parsing of this JSON string.
+    const propertiesJsonString = properties_data; 
 
-    // ⭐ PARSE the incoming JSON string to extract all individual fields
-    const properties = JSON.parse(properties_data);
+    // Assuming imagePathsArray is generated correctly from req.files
+    const imagePathsArray = req.files.map(file => file.filename);
 
-    // Destructure properties needed for the coupe_log table's regular columns
-    const { 
-        Division, 
-        Range_Nmae, 
-        Round_Name, 
-        Village_Na, 
-        Beat_Name, 
-        Area, 
-        Compt_No 
-    } = properties;
-    
-    // Convert Area to numeric
-    const numericArea = Area ? parseFloat(Area) : null; 
-    
-    // The full JSON string to pass to the function is properties_data itself!
-    const propertiesJsonString = properties_data; // No need to re-stringify
+    // ⭐ FIX: Manually construct the PostgreSQL array literal string
+    // This is necessary because Sequelize's CAST syntax is generating an error.
+    const imagePathsLiteral = `ARRAY[${imagePathsArray.map(path => `'${path}'`).join(', ')}]`;
 
     try {
-        // ... (Image handling remains the same) ...
-
-        // 2. Function call query remains the same
+        // 2. The function call query now uses only ONE parameter for properties
         const functionCallQuery = `
             SELECT public.insert_coupe_log_with_images(
                 :issue_id, 
@@ -273,15 +260,8 @@ app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
                 :observation_notes, 
                 :user_id, 
                 :coupe_id, 
-                :Division, 
-                :Range_Nmae, 
-                :Round_Name, 
-                :Village_Na, 
-                :Beat_Name, 
-                :Area, 
-                :Compt_No,
                 CAST(:properties_json AS jsonb), 
-                CAST(:image_paths AS character varying[])
+                ${imagePathsLiteral}
             ) AS log_id;
         `;
         
@@ -293,30 +273,57 @@ app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
                 observation_notes: observation_notes,
                 user_id: user_id,
                 coupe_id: coupe_id,
-                // Pass the extracted properties for the regular columns
-                Division: Division,
-                Range_Nmae: Range_Nmae,
-                Round_Name: Round_Name,
-                Village_Na: Village_Na,
-                Beat_Name: Beat_Name,
-                Area: numericArea, 
-                Compt_No: Compt_No,
                 // Pass the raw string for the JSON column
-                properties_json: propertiesJsonString, 
-                image_paths: imagePathsArray
+                properties_json: propertiesJsonString
+                // ⭐ The image_paths replacement is no longer needed
             },
             type: Sequelize.QueryTypes.SELECT 
         });
         
-        // ... (Response handling remains the same) ...
+        const logId = functionResult.log_id;
+        if (logId) {
+            res.status(201).json({ message: 'Coupe log created successfully', logId });
+        } else {
+            res.status(500).json({ error: 'Failed to retrieve log_id from database function.' });
+        }
 
     } catch (error) {
-        // ... (Error handling remains the same) ...
+        console.error('Error in API endpoint:', error);
+        res.status(500).json({ error: 'Failed to create coupe log.', details: error.message });
     }
 });
 
 
 
+app.get('/api/coupe/log-with-images', async (req, res) => {
+    try {
+        const { user_id } = req.query; // Get user_id from query parameters
+        
+        // Validate that user_id is provided
+        if (!user_id) {
+            return res.status(400).json({ error: 'Missing required query parameter: user_id' });
+        }
+
+        // Call the PostgreSQL function and pass the user ID as a parameter
+        const query = 'SELECT * FROM get_coupe_logs_with_details(:user_id);';
+        
+        const [results] = await sequelize.query(query, {
+            replacements: { user_id },
+        });
+
+        // The PostgreSQL function's JSONB_AGG will return a single [null] if no images exist.
+        // This processes the results to return an empty array instead.
+        const processedResults = results.map(row => ({
+            ...row,
+            image_urls: row.image_urls && row.image_urls[0] === null ? [] : row.image_urls
+        }));
+
+        res.json(processedResults);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error retrieving incidents with images' });
+    }
+});
 
 // Start server and connect to DB
 const PORT = 5000;
