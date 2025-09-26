@@ -44,27 +44,27 @@ function LoginPage() {
           <div className="field">
             <input type="text" placeholder="Enter User ID" />
            <span className="icon">
-  <img src="/assets/user.png" alt="User" width="20" height="20" />
-</span>
+          <img src="/assets/user.png" alt="User" width="20" height="20" />
+        </span>
           </div>
 
           {/* Password */}
           <label className="input-label">Password</label>
-          <div className="field">
-            <input
-              type={showPwd ? "text" : "password"}
-              placeholder="Enter Password"
-            />
-           <button
-              type="button"
-              className="eye"
-              onClick={() => setShowPwd((s) => !s)}
-            >
-              {showPwd ? "👁" : <img src="/assets/Eyeclose.png" alt="Closed Eye" width="20" height="20" />}
-            </button>
+            <div className="field">
+              <input
+                type={showPwd ? "text" : "password"}
+                placeholder="Enter Password"
+                required
+              />
+              <button
+                type="button"
+                className="eye"
+                onClick={() => setShowPwd((s) => !s)}
+              >
+                {showPwd ? "👁" : <img src="/assets/Eyeclose.png" alt="Closed Eye" width="20" height="20" />}
+              </button>
+            </div>
 
-
-          </div>
 
           {/* Login Button */}
           <button className="btn-login" onClick={handleLogin}>
