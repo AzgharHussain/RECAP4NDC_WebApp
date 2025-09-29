@@ -22,8 +22,7 @@ import Swal from "sweetalert2";
 import  DraggableZoomControl from "./DraggableZoomControl";
 import LatLngDisplay from "./LatLngDisplay";
 import 'leaflet/dist/leaflet.css';
-import PatrollingLayer from "./PatrollingLayer";
-import IncidentLayer from "./IncidentLayer";
+// import IncidentLayer from "./IncidentLayer";
 import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
 
@@ -419,6 +418,50 @@ const mapWrapperRef = useRef();
     link.click();
   };
 
+  const zoomToLayer = (layerName) => {
+  const map = mapRef.current;
+  if (!map) return;
+
+  let bounds;
+
+  switch(layerName) {
+    case 'stateLayer':
+      bounds = L.latLngBounds([[20.0, 70.0], [24.0, 80.0]]); // Define the bounds for Gujarat, update with real bounds
+      break;
+    case 'districtLayer':
+      bounds = L.latLngBounds([[21.5, 72.5], [23.5, 75.5]]); // Define the bounds for the district, update with real bounds
+      break;
+    // Define bounds for other layers similarly
+    default:
+      bounds = L.latLngBounds([[22.6093, 74.4097], [22.6093, 74.4097]]); // Default view, replace with the layer's bounds
+  }
+
+  map.fitBounds(bounds, { padding: [50, 50] }); // You can adjust padding
+};
+
+const handleLayerToggle = (layerType, isChecked) => {
+  const map = mapRef.current;
+
+  if (isChecked) {
+    // If the checkbox is checked, show the layer and zoom to it
+    if (layerType === 'stateLayer') {
+      setShowStateLayer(true);
+      zoomToLayer('stateLayer'); // Zoom to this layer
+    } else if (layerType === 'districtLayer') {
+      setShowDistrictLayer(true);
+      zoomToLayer('districtLayer');
+    }
+    // Add similar logic for other layers
+  } else {
+    // If the checkbox is unchecked, hide the layer
+    if (layerType === 'stateLayer') {
+      setShowStateLayer(false);
+    } else if (layerType === 'districtLayer') {
+      setShowDistrictLayer(false);
+    }
+    // Add similar logic for other layers
+  }
+};
    // Fetch incidents whenever layer is toggled ON
   useEffect(() => {
     if (showIncidentLayer) {
@@ -623,7 +666,7 @@ const mapWrapperRef = useRef();
 
   whenCreated={(mapInstance) => {
     mapRef.current = mapInstance;
-    crs={customCRS} 
+    // crs={customCRS} 
     // Enable rotation
     mapInstance.rotate = true;
     mapInstance.setBearing(0); // Initialize with 0 degrees rotation
@@ -636,8 +679,36 @@ const mapWrapperRef = useRef();
    
     url={basemaps[activeBasemap]}
   />
+ <WMSTileLayer
+    key="gujarat-difference"
+    url="https://gisfy.co.in:8443/geoserver/cite/wms"
+    layers="cite:Gujarat_difference"
+    format="image/png"
+    transparent={true}
+    version="1.1.0"
+    opacity={0.7}
+  />
 
-  {showStateLayer && (
+  <WMSTileLayer
+      key="Gujarat_State"
+      url="https://gisfy.co.in:8443/geoserver/cite/wms"
+      layers="cite:Gujarat_State"
+      format="image/png"
+      transparent={true}
+      version="1.1.0"
+      opacity={1}
+    />
+
+    <WMSTileLayer
+      key="Gujarat_State"
+      url="https://www.gisfy.co.in:8443/geoserver_tnc_agwl/cite/wms"
+      layers="cite:Gujarat_State"
+      format="image/png"
+      transparent={true}
+      version="1.1.0"
+      opacity={1}
+    />
+  {/* {showStateLayer && (
     <WMSTileLayer
       key="Gujarat_State"
       url="https://gisfy.co.in:8443/geoserver/cite/wms"
@@ -647,7 +718,7 @@ const mapWrapperRef = useRef();
       version="1.1.0"
       opacity={1}
     />
-  )}
+  )} */}
   {showDistrictLayer && (
   <WMSTileLayer
     key="district-layer"
@@ -656,7 +727,7 @@ const mapWrapperRef = useRef();
     format="image/png"
     transparent={true}
     version="1.1.0"
-    opacity={0.7}
+    opacity={1}
   />
   )}
   {showCoupeLayer && coupeLayers.map((layerName) => (
@@ -667,7 +738,7 @@ const mapWrapperRef = useRef();
       format="image/png"
       transparent={true}
       version="1.1.0"
-      opacity={0.7}  // Adjust opacity if needed
+      opacity={1}  // Adjust opacity if needed
     />
   ))}
 
@@ -694,9 +765,31 @@ const mapWrapperRef = useRef();
           version="1.1.0"
           opacity={1}                  // adjust individually if needed
         />
-      ))}
-    <PatrollingLayer show={showPatrollingLayer} />
-    <IncidentLayer show={showIncidentLayer} incidents={incidentsData} />
+      ))}    
+      {showPatrollingLayer && (
+        <WMSTileLayer
+          key="patrols"
+          url="https://gisfy.co.in:8443/geoserver/cite/wms"
+          layers="cite:patrols"
+          format="image/png"
+          transparent={true}
+          version="1.1.0"
+          opacity={1}
+        />
+      )}
+       {showIncidentLayer && (
+        <WMSTileLayer
+          key="incidents"
+          url="https://gisfy.co.in:8443/geoserver/cite/wms"
+          layers="cite:incidents"
+          format="image/png"
+          transparent={true}
+          version="1.1.0"
+          opacity={1}
+        />
+      )}
+    {/* <PatrollingLayer show={showPatrollingLayer} /> */}
+    {/* <IncidentLayer show={showIncidentLayer} incidents={incidentsData} /> */}
       <AddControls />
       <GeomanTools />
       <ScaleControl  
