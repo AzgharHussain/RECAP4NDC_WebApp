@@ -66,10 +66,10 @@ const LeftSidebar = ({ showStateLayer, setShowStateLayer, showDistrictLayer, set
         <label className="green-label">Select Boundaries:</label>
         {openSections.boundaries && (
           <div className="section-content">
-        <label className="green-label">
+        {/* <label className="green-label">
           <input type="checkbox" checked={showStateLayer} 
     onChange={() => setShowStateLayer(prev => !prev)}/> State
-        </label>
+        </label> */}
         <label className="green-label">
           <input type="checkbox" checked={showDistrictLayer}        // <-- bind to district state
     onChange={() => setShowDistrictLayer(prev => !prev)}/> District

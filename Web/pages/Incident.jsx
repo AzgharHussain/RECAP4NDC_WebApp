@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Input, Select, DatePicker } from "antd";
+import { Table, Button, Input, Select, DatePicker, Modal } from "antd";
 import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import './PatrolIncidentLogs.css';  // Import the CSS for styling
 import exportIcon from '../assets/excel.png';
@@ -16,11 +16,13 @@ const PatrolIncidentLogs = () => {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [incidentDate, setIncidentDate] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
+  const [isModalVisible, setIsModalVisible] = useState(false);
+    const [selectedImages, setSelectedImages] = useState([]);
 
   // ✅ Fetch incident data
   const fetchIncidentData = async () => {
     try {
-      const response = await fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2");
+      const response = await fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=1");
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
@@ -170,36 +172,29 @@ const PatrolIncidentLogs = () => {
       key: "p_incident_description"
     },
     {
-      title: "Images",
-      dataIndex: "p_image_urls",
-      key: "p_image_urls",
-      render: (images, record) => {
-        if (!images || images.length === 0) return "No images available";
-        const rowExpanded = expandedRows[record.key] || false;
-        const displayImages = rowExpanded ? images : images.slice(0, 1);
-
-        return (
-          <div className="image-row">
-            {displayImages.map((image, index) => (
-              <img
-                key={index}
-                src={image}
-                alt={`Incident ${index}`}
-                style={{ width: 100, height: 80, marginRight: 5, borderRadius: '5px', objectFit: 'cover' }}
-              />
-            ))}
-            {images.length > 1 && !rowExpanded && (
+       title: 'Images',
+            dataIndex: 'p_image_urls',
+            key: 'p_image_urls',
+            render: (images) => (
               <Button
                 icon={<EyeOutlined />}
-                onClick={() => setExpandedRows(prev => ({ ...prev, [record.key]: true }))}
+                onClick={() => showModal(images)} // Open the modal with the images
+                style={{ border: 'none', backgroundColor: 'transparent' }}
               />
-            )}
-          </div>
-        );
-      },
-      align: 'center'
-    },
-  ];
+            ),
+          },
+        ];
+      
+        // Open modal with images
+        const showModal = (images) => {
+          setSelectedImages(images);
+          setIsModalVisible(true);
+        };
+      
+        // Close the modal
+        const handleCancel = () => {
+          setIsModalVisible(false);
+        };
 
   return (
     <div className="container">
@@ -219,7 +214,7 @@ const PatrolIncidentLogs = () => {
               <Option value="Poaching">Poaching</Option>
               <Option value="Illegal Logging">Illegal Logging</Option>
               <Option value="Encroachment">Encroachment</Option>
-               <Option value="Other">Other</Option>
+              <Option value="Other">Other</Option>
             </Select>
             <DatePicker
               placeholder="Search by Incident Date"
@@ -241,20 +236,34 @@ const PatrolIncidentLogs = () => {
           pagination={{ pageSize: 5 }}
           bordered
           locale={{
-              emptyText: (
-                <div style={{ textAlign: 'center', padding: '50px 0' }}>
-                  <img
-                    src={noDataImage}
-                    alt="No Data"
-                    style={{ width: 60, marginBottom: 16 }}
-                  />
-                  <div style={{ fontSize: 16, color: '#00442c', fontWeight: 500 }}>
-                    No data available
-                  </div>
+            emptyText: (
+              <div style={{ textAlign: 'center', padding: '50px 0' }}>
+                <img
+                  src={noDataImage}
+                  alt="No Data"
+                  style={{ width: 60, marginBottom: 16 }}
+                />
+                <div style={{ fontSize: 16, color: '#00442c', fontWeight: 500 }}>
+                  No data available
                 </div>
-              ),
-            }}
+              </div>
+            ),
+          }}
         />
+        {/* Modal to display the images */}
+             <Modal
+               visible={isModalVisible}
+               onCancel={handleCancel}
+               footer={null}
+               width={800}
+               title="View Images"
+             >
+               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                 {selectedImages.map((image, index) => (
+                   <img key={index} src={image} alt={`Image ${index}`} style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', marginBottom: '15px' }} />
+                 ))}
+               </div>
+             </Modal>
       </div>
     </div>
   );
