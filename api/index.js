@@ -324,6 +324,46 @@ app.get('/api/coupe/log-with-images', async (req, res) => {
     }
 });
 
+
+
+// Assuming you have 'app', 'sequelize', and 'Sequelize' defined and configured elsewhere.
+
+// GET /api/coupe_data
+app.get('/api/coupe_data', async (req, res) => {
+    // 1. Define the SQL query to call the PostgreSQL function.
+    // This calls the 'get_coupe_data()' function which is designed to return ALL rows.
+    const sqlQuery = 'SELECT * FROM get_coupe_data();';
+
+    console.log('Executing function call:', sqlQuery);
+
+    try {
+        // 2. Execute the function call using Sequelize
+        // With QueryTypes.SELECT, sequelize.query returns an array of result objects (the data rows).
+        // The result structure is: [results, metadata] (if not using { type: ... })
+        // or just the results array if using { type: Sequelize.QueryTypes.SELECT }
+        
+        // NOTE: The 'rows' variable will directly hold the array of data objects.
+        const rows = await sequelize.query(sqlQuery, {
+            type: Sequelize.QueryTypes.SELECT
+        });
+        
+        // 3. 'rows' is the array of data rows returned by the function
+        // We now use 'rows' directly instead of destructuring [result].
+        res.status(200).json({
+            count: rows.length,
+            data: rows // This sends the entire array of ALL coupe data
+        });
+
+    } catch (error) {
+        console.error('Error executing coupe data function:', error.stack);
+        // Send a 500 Internal Server Error response
+        res.status(500).json({
+            error: 'Failed to fetch coupe data using function.',
+            details: error.message
+        });
+    }
+});
+
 // Start server and connect to DB
 const PORT = 5000;
 app.listen(PORT, async () => {
