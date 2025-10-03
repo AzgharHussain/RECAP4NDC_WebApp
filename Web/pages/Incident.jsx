@@ -252,7 +252,7 @@ const PatrolIncidentLogs = () => {
         />
         {/* Modal to display the images */}
              <Modal
-               visible={isModalVisible}
+               open={isModalVisible}
                onCancel={handleCancel}
                footer={null}
                width={800}

@@ -221,17 +221,22 @@ const CoupeObservation = () => {
               color: '#fff', // Color for selected text
               border: 'none',
             }}
-            dropdownStyle={{
-              backgroundColor: 'rgba(255, 255, 255, 0.2)', // Background color of the dropdown
-              color: '#fff', // Color for dropdown items
+            styles={{
+              popup: {
+                root: {
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)', // Background color of the dropdown
+                  color: '#fff', // Color for dropdown items
+                }
+              }
             }}
           >
-            <Option value="All">All Issue Types</Option>
-            <Option value="Invasive Species">Invasive Species</Option>
-            <Option value="Illegal Logging">Illegal Logging</Option>
-            <Option value="Tree Disease">Tree Disease</Option>
-            <Option value="Illegal House">Illegal House</Option>
-          </Select>
+          <Option value="All">All Issue Types</Option>
+          <Option value="Invasive Species">Invasive Species</Option>
+          <Option value="Illegal Logging">Illegal Logging</Option>
+          <Option value="Tree Disease">Tree Disease</Option>
+          
+        </Select>
+
 
 
           <DatePicker
@@ -283,7 +288,7 @@ const CoupeObservation = () => {
 
       {/* Modal to display the images */}
       <Modal
-        visible={isModalVisible}
+        open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
         width={800}
