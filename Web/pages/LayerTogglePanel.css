@@ -204,4 +204,16 @@ input[type="checkbox"]:hover {
 }
 
 
-/* Styling when checkbox is checked */
+/* Force RangePicker to look like your native input */
+.my-custom-date input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  height: auto;
+  font-size: 14px;
+}
+
+.my-custom-date {
+  width: auto !important;
+}
+

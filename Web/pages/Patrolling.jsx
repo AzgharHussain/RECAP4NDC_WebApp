@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Input, DatePicker,Modal } from "antd";
+import { Table, Button, Input, DatePicker, Modal } from "antd";
 import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import './PatrolIncidentLogs.css';  
 import exportIcon from '../assets/excel.png';
@@ -9,103 +9,87 @@ import { saveAs } from 'file-saver';
 import noDataImage from '../assets/no-data.png';
 
 // ✅ Leaflet imports
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import "leaflet/dist/leaflet.css";
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
 
-// ✅ custom icons for start and end
-const startIcon = new L.Icon({
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-});
-const endIcon = new L.Icon({
-  iconUrl:
-    "https://cdn-icons-png.flaticon.com/512/684/684908.png", // different icon
-  iconSize: [25, 25],
-  iconAnchor: [12, 12],
-  popupAnchor: [0, -12],
-});
 
 // ✅ force map to resize after modal opens
-function ResizeMapOnShow({ bounds }) {
-  const map = useMap();
-  useEffect(() => {
-    setTimeout(() => {
-      map.invalidateSize();
-      if (bounds && bounds.length > 1) {
-        map.fitBounds(bounds, { padding: [20, 20] });
-      }
-    }, 300);
-  }, [map, bounds]);
-  return null;
-}
+function ResizeMapOnShow({ coords }) {
+        const map = useMap();
+        useEffect(() => {
+            setTimeout(() => {
+                map.invalidateSize();
+                if (coords && coords.length > 1) {
+                    map.fitBounds(L.latLngBounds(coords), { padding: [50, 50] }); 
+                }
+            }, 700);
+        }, [map, coords]);
+        return null;
+    }
+const startIcon = new L.Icon({
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+    });
 
+    const endIcon = new L.Icon({
+        iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+        iconSize: [25, 25],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -12],
+    });
 
+    function PatrolMap({ patrol }) {
+        if (!patrol?.geom?.coordinates?.length) {
+            return <p>No route available</p>;
+        }
 
-// ✅ helper: parse "lat,lng" string → [lat, lng]
-const parseLocation = (value) => {
-  if (!value) return null;
-  if (typeof value === "string" && value.includes(",")) {
-    const [lat, lng] = value.split(",").map((v) => parseFloat(v.trim()));
-    if (!isNaN(lat) && !isNaN(lng)) return [lat, lng];
-  }
-  return null;
-};
+        const routeCoords = patrol.geom.coordinates.map(
+            ([lat, lng]) => [lat, lng]
+        );
 
-// ✅ Map Component
-const PatrolMap = ({ patrol }) => {
-  if (!patrol) return null;
+        const start = routeCoords[0];
+        const end = routeCoords[routeCoords.length - 1] || start;
 
-  // Parse start and end
-  const start = parseLocation(patrol.start_location);
-  const end = parseLocation(patrol.end_location);
+        const initialZoom = 22; 
+        
+        return (
+            <MapContainer
+                style={{ height: "400px", width: "100%" }}
+                center={start}
+                zoom={initialZoom}
+                scrollWheelZoom={true}
+            >
+                <ResizeMapOnShow coords={routeCoords} /> 
 
-  if (!start || !end) return <p>No valid coordinates</p>;
+                <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+                    url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}" 
+                />
 
-  const bounds = [start, end];
-
-  return (
-    <MapContainer
-      style={{ height: "400px", width: "100%" }}
-      center={start}
-      zoom={15}
-      scrollWheelZoom={true}
-    >
-      {/* Auto zoom to fit start and end */}
-      <ResizeMapOnShow bounds={bounds} />
-
-      {/* Base map */}
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-      />
-
-      {/* Start marker */}
-      <Marker position={start} icon={startIcon}>
-        <Popup>
-          Start: {start[0].toFixed(5)}, {start[1].toFixed(5)}
-        </Popup>
-      </Marker>
-
-      {/* End marker */}
-      <Marker position={end} icon={endIcon}>
-        <Popup>
-          End: {end[0].toFixed(5)}, {end[1].toFixed(5)}
-        </Popup>
-      </Marker>
-
-      {/* Navigation line start → end */}
-      <Polyline positions={[start, end]} color="blue" />
-    </MapContainer>
-  );
-};
-
-
-
-
+                <Marker position={start} icon={startIcon}> 
+                    <Popup>Start</Popup>
+                </Marker>
+                
+                {routeCoords.length > 1 && (
+                    <>
+                        <Marker position={end} icon={endIcon}>
+                            <Popup>End</Popup>
+                        </Marker>
+                        <Polyline
+                            positions={routeCoords}
+                            pathOptions={{ color: "white", weight: 3, opacity: 1 }} 
+                        />
+                    </>
+                )}
+                
+                {routeCoords.length === 1 && (
+                    <Popup position={start}>Only one location point logged.</Popup>
+                )}
+            </MapContainer>
+        );
+    }
 const PatrolIncidentLogs = () => {
   const [patrolData, setPatrolData] = useState([]);
   const [searchText, setSearchText] = useState("");
@@ -204,8 +188,8 @@ const PatrolIncidentLogs = () => {
     { title: "Distance (in Kms)", dataIndex: "distance_kms", key: "distance_kms", sorter: (a, b) => parseFloat(a.distance_kms) - parseFloat(b.distance_kms), align: 'center' },
     {
       title: "Route",
-      dataIndex: "route",
-      key: "route",
+      dataIndex: "geom",
+      key: "geom",
       render: (_, record) => (
         <Button
           style={{
@@ -267,18 +251,18 @@ const PatrolIncidentLogs = () => {
 
       {/* Map display */}
        <Modal
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        width={800}
-        title={
-          selectedPatrol
-            ? `Patrol Route - ${selectedPatrol.patrol_officer_name} (Distance: ${selectedPatrol.distance_kms} km)`
-            : "Patrol Route"
-        }
-      >
-        {selectedPatrol && <PatrolMap patrol={selectedPatrol} />}
-      </Modal>
+                    open={isModalVisible}
+                    onCancel={() => setIsModalVisible(false)}
+                    footer={null}
+                    width={800}
+                    title={
+                        selectedPatrol
+                            ? `Patrol Route - ${selectedPatrol.patrol_officer_name} (Distance: ${selectedPatrol.distance_kms} km)`
+                            : "Patrol Route"
+                    }
+                >
+                    {selectedPatrol && <PatrolMap patrol={selectedPatrol} />}
+                </Modal>
     </div>
   );
 };

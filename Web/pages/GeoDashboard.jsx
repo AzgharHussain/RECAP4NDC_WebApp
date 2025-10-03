@@ -22,8 +22,7 @@ import Swal from "sweetalert2";
 import  DraggableZoomControl from "./DraggableZoomControl";
 import LatLngDisplay from "./LatLngDisplay";
 import 'leaflet/dist/leaflet.css';
-import PatrollingLayer from "./PatrollingLayer";
-import IncidentLayer from "./IncidentLayer";
+// import IncidentLayer from "./IncidentLayer";
 import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
 
@@ -43,6 +42,11 @@ const basemaps = {
   positron:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"
   
 };
+
+// Utility function to fetch legend for a WMS layer
+const getLegendUrl = (layerName) => 
+  `https://www.gisfy.co.in:8443/geoserver/cite/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=${layerName}`;
+
 export default function MapView() {
   const mapRef = useRef(null);
   const [activeBasemap, setActiveBasemap] = useState("LightGray");
@@ -55,85 +59,81 @@ export default function MapView() {
   const [showCoupeLayer, setShowCoupeLayer] = useState(false);
   const [showNdviLayer, setShowNdviLayer] = useState(false);
   const [showNdwiLayer, setShowNdwiLayer] = useState(false);
+  const [showChangeLayer, setShowChangeLayer] = useState(false);
   const [showPatrollingLayer, setShowPatrollingLayer] = useState(false);
   const [showIncidentLayer, setShowIncidentLayer] = useState(false);
   const [incidentsData, setIncidentsData] = useState([]);
 // inside MapView component
 const [showLayerTogglePanel, setShowLayerTogglePanel] = useState(true); // default open
+const [selectedDate, setSelectedDate] = useState("");
+const [showLegend, setShowLegend] = useState(false);
+  const [layerLegends, setLayerLegends] = useState({});
+const [filteredNdviLayers, setFilteredNdviLayers] = useState([]);
+const [filteredNdwiLayers, setFilteredNdwiLayers] = useState([]);
+const [filteredChangeLayers, setFilteredChangeLayers] = useState([]);
+ const [coupeLayers, setCoupeLayers] = useState([]);
 
-const coupeLayers = [
-  
- "Arvalli_all_Range_all_WC_all_Coupe",
- "AFF_W_C_COUPE",
- "AFFORESTATION_W_C_COUPE",
-  "Bhavnagar_coupes",
-  "Gandhinagar_MM_Coupe",
-  "Jamnagar_coupes",
-  "Junagadh coupes SHP",
-  "Mahisagar_all_Coupe_FF",
-  "Morbi_coupe_map",
-  "Narmada_CP_FS2_compt4_RRB",
-   "SK_North_all_Range_all_WC_all_Coupe",
-   "Surat_all_Range_Coupe",
-  "Surendranagar_coupe",
-  "Vyara_MM_Coupe_Boundary_qgis",
-  "CUD_Coupe_bdn",
-  "AFF W.C COUPE",
-  "AFFORESTATION W.C _COUPE",
-  "BIO_W_C_COUPE",
-  "Bharuch_Coupe_joined",
-  "DEV&CON_W_C_COUPE",
-  "DEVELO&CON_W_C_COUPE",
-  "DEV_AFF_COUPE",
-  "DEV_DEV&CON_W_C_COUPE",
-  "D_AFFORESTATION_W_C_COUPE",
-  "D_DEVELOPMENT&CONSERVATION_COUPE",
-  "D_GRASSBIR_W_C_COUPE",
-  "DesDev_WL_WC",
-  "Dev_Revenue",
-  "G_S_F_D_C_AREA",
-  "GR_W_C_COUPE",
-  "GRASSBIR_W_C_COUPE",
-  "Garbada_Afforestation_Coupe",
-  "Garbada_Develop&Conser_Coupe",
-   "Garbada_Revenue",
-  "J_AFFORESTATION_W_C_COUPE",
-  "J_GRASSBIR_W_C_COUPE",
-  "K_DEVELOPMENT&CONSERVATION_W_C_COUPE",
-  "L_AFFORESTATION_W_C_COUPE",
-  "L_DEVELOPMENT&CONSERVATION_W_C_COUPE",
-  "L_GRASSBIR_W_C_COUPE",
-  "PRO",
-  "RAN_AFFO_W_C_COUPE",
-  "RAN_DEV&CON_W_C_COUPE",
-  "RAN_GRASSBIR_W_C_COUPE",
-  "REV",
-  "REVENUE",
-  "REVENUE_Limkheda",
-  "REVENUE_Rampura",
-  "REVENUE_Randhikpur",
-  "REV_Sagtala",
-  "R_AFFORESTATION_COUPE",
-  "R_GRASSBIR_COUPE",
-  "Rev",
-  "Revenu",
-  "Revenu_Boundary",
-  "Revenu_Boundary_Sanjeli",
-  "SAG_BIODI_W_C_COUPE",
-  "SAG_DEV&CON_W_C_COUPE",
-  "S_AFFORESTATION_W_C_COUPE",
-  "S_DEV&CON_W_C_COUPE",
-  "S_GRASSBIR_W_C_COUPE",
-  "S_REVENUE",
-  "Vansi_AFF_W_C_COUPE",
-  "Vansi_BIO_W_C_COUPE",
-  "Vansi_DEV&CON_W_C_COUPE",
-  "Vansi_REV",
-  "Wild_Life_WC",
-   "con_cum_lmp",
-  "Kanjeta_AFF_W_C_COUPE",
-  "Sanjeli_AFFORESTATION_W_C_COUPE"
-];
+// const fetchCoupeLayers = async (retries = 3) => {
+//   try {
+//     const response = await axios.get("http://68.178.167.39:5000/api/coupe_metadata/location", { timeout: 10000 });
+//     setCoupeLayers(response.data);
+//   } catch (error) {
+//     if (retries > 0 && error.code === 'ERR_NETWORK') {
+//       console.log(`Retrying... (${3 - retries + 1})`);
+//       fetchCoupeLayers(retries - 1);  // Retry logic
+//     } else {
+//       console.error("Error fetching coupe layers:", error.message);
+//       alert("There was an issue connecting to the server. Please check your network or try again later.");
+//     }
+//   }
+// };
+
+
+useEffect(() => {
+  fetchCoupeLayers();
+}, []);
+
+
+// Handle filter button click
+const handleFilter = ({ fromDate, toDate }) => {
+  // Convert "2025-09-01" -> "2025_09_01"
+  const formatDate = (d) => d.replaceAll("-", "_");
+
+  const from = fromDate ? formatDate(fromDate) : null;
+  const to = toDate ? formatDate(toDate) : null;
+
+  // Helper function to check if a layer matches the selected date range
+  const isWithinDateRange = (layer) => {
+    const layerDate = layer.split('_')[0];  // Extract the date part from the layer name, e.g., "2025_09_01"
+    
+    if (from && to) {
+      return layerDate >= from && layerDate <= to;
+    }
+    if (from) {
+      return layerDate >= from;
+    }
+    if (to) {
+      return layerDate <= to;
+    }
+    return true;  // If no date range is selected, return true for all layers
+  };
+
+  const filterLayers = (layers) => {
+    return layers.filter((layer) => isWithinDateRange(layer));
+  };
+
+  // Apply filter to NDVI and NDWI layers
+  setFilteredNdviLayers(filterLayers(ndviLayers));
+  setFilteredNdwiLayers(filterLayers(ndwiLayers));
+  setFilteredChangeLayers(filterLayers(changeLayers));
+};
+
+
+
+// Utility function to create the WMS URL for each layer
+  const getWmsUrl = (layerName) => {
+    return `http://68.178.167.39:8081/geoserver/cite/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=cite:${layerName}&maxFeatures=50&outputFormat=application/json`;
+  };
 
 const ndviLayers = [
   "cite:2025_09_01_BIO_W_C_COUPE_ndvi",
@@ -153,43 +153,120 @@ const ndwiLayers = [
   "cite:2025_08_01_AFFORESTATION_W_C_COUPE_ndwi",
 ];
 
+const changeLayers = [
+  "cite:2025_09_01_BIO_W_C_COUPE_ndvi_change",
+ 
+];
+
+
+  // fetch coupe metadata
+  const fetchCoupeLayers = async () => {
+    try {
+      const response = await axios.get(
+        "http://68.178.167.39:5000/api/coupe_metadata/location"
+      );
+      setCoupeLayers(response.data);
+    } catch (error) {
+      console.error("Error fetching coupe layers:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCoupeLayers();
+  }, []);
+
+  // Fetch incidents
+  useEffect(() => {
+    if (showIncidentLayer) {
+      fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
+        .then((res) => res.json())
+        .then((data) => setIncidentsData(data))
+        .catch((err) => console.error("Error fetching incidents", err));
+    }
+  }, [showIncidentLayer]);
+
+     const toggleLegend = () => {
+    setShowLegend(!showLegend);
+  };
+
+const layerConfig = {
+  stateLayer: "cite:Gujarat_State",
+  districtLayer: "cite:Gujarat_district",
+  coupeLayer: "dynamic",   // handled separately
+  ndviLayer: ndviLayers,
+  ndwiLayer: ndwiLayers,
+  changeLayer: changeLayers,
+  patrollingLayer: "cite:patrols",
+  incidentLayer: "cite:incidents",
+};
+
   const navigate = useNavigate();
+
+
+//   useEffect(() => {
+//     if (!map) return;
+
+//     // Handle when a line is created
+//     const handleLineCreated = (e) => {
+//       const layer = e.layer;
+//       const latlngs = layer.getLatLngs();
+      
+//       // Calculate length if needed
+//       const length = L.GeometryUtil.length(latlngs);
+      
+//       // You can store the line or do something with it
+//       console.log('Line created:', latlngs, 'Length:', length);
+      
+//       // Optionally add a popup with the length
+//       layer.bindPopup(`Line length: ${length.toFixed(2)} meters`).openPopup();
+//     };
+
+//     map.on('pm:create', (e) => {
+//       if (e.layerType === 'Line') {
+//         handleLineCreated(e);
+//       }
+//       // Handle other shape types if needed
+//     });
+
+//     return () => {
+//       map.off('pm:create');
+//     };
+//   }, [map]);
+
+//   return null;
+// };
 
 const GeomanTools = () => {
   const map = useMap();
-  
+
   useEffect(() => {
     if (!map) return;
 
-    // Handle when a line is created
-    const handleLineCreated = (e) => {
-      const layer = e.layer;
-      const latlngs = layer.getLatLngs();
-      
-      // Calculate length if needed
-      const length = L.GeometryUtil.length(latlngs);
-      
-      // You can store the line or do something with it
-      console.log('Line created:', latlngs, 'Length:', length);
-      
-      // Optionally add a popup with the length
-      layer.bindPopup(`Line length: ${length.toFixed(2)} meters`).openPopup();
+    const onCreate = (e) => {
+      if (e.layerType === "Line") {
+        const latlngs = e.layer.getLatLngs();
+        const length = L.GeometryUtil.length(latlngs);
+        console.log("Line created:", latlngs, "Length:", length);
+        e.layer.bindPopup(`Length: ${length.toFixed(2)} m`).openPopup();
+      } else {
+        console.log(`${e.layerType} created`, e.layer.toGeoJSON?.());
+      }
     };
 
-    map.on('pm:create', (e) => {
-      if (e.layerType === 'Line') {
-        handleLineCreated(e);
-      }
-      // Handle other shape types if needed
-    });
+    map.on("pm:create", onCreate);
 
     return () => {
-      map.off('pm:create');
+      map.off("pm:create", onCreate);
     };
   }, [map]);
 
   return null;
 };
+
+
+
+
+  
 
 const handleDrawingToolClick = (toolType) => {
   const map = mapRef.current;
@@ -419,18 +496,65 @@ const mapWrapperRef = useRef();
     link.click();
   };
 
-   // Fetch incidents whenever layer is toggled ON
-  useEffect(() => {
-    if (showIncidentLayer) {
-      fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
-        .then(res => res.json())
-        .then(data => {
-          console.log("Fetched incidents:", data); // debug
-          setIncidentsData(data);
-        })
-        .catch(err => console.error("Error fetching incidents", err));
-    }
-  }, [showIncidentLayer]);
+  const zoomToLayer = (layerName) => {
+  const map = mapRef.current;
+  if (!map) return;
+
+  let bounds;
+
+  switch(layerName) {
+    case 'stateLayer':
+      bounds = L.latLngBounds([[20.0, 70.0], [24.0, 80.0]]); // Define the bounds for Gujarat, update with real bounds
+      break;
+    case 'districtLayer':
+      bounds = L.latLngBounds([[21.5, 72.5], [23.5, 75.5]]); // Define the bounds for the district, update with real bounds
+      break;
+    // Define bounds for other layers similarly
+    default:
+      bounds = L.latLngBounds([[22.6093, 74.4097], [22.6093, 74.4097]]); // Default view, replace with the layer's bounds
+  }
+
+  map.fitBounds(bounds, { padding: [50, 50] }); // You can adjust padding
+};
+
+const handleLayerToggle = (layerType, isChecked) => {
+  const map = mapRef.current;
+
+  const layerMap = {
+    stateLayer: "cite:Gujarat_State",
+    districtLayer: "cite:Gujarat_district",
+    patrollingLayer: "cite:patrols",
+    incidentLayer: "cite:incidents",
+    ndviLayer: ndviLayers,
+    ndwiLayer: ndwiLayers,
+    changeLayer: changeLayers,
+    coupeLayer: coupeLayers.map(l => l.input_table_name), // dynamic
+  };
+
+  if (isChecked) {
+  const wmsLayers = layerMap[layerType];
+  if (wmsLayers) {
+    // Always store under the UI key, not raw layer name
+    setLayerLegends((prev) => ({
+      ...prev,
+      [layerType]: Array.isArray(wmsLayers)
+        ? wmsLayers.map((layer) => getLegendUrl(layer)) // store array of legend urls
+        : getLegendUrl(wmsLayers),
+    }));
+  }
+} else {
+  // Remove legends by UI key
+  setLayerLegends((prev) => {
+    const updated = { ...prev };
+    delete updated[layerType];
+    return updated;
+  });
+}
+
+};
+
+
+
   return (
     <div className="map-wrapper" >
 
@@ -440,22 +564,7 @@ const mapWrapperRef = useRef();
  
 <aside className="left-sidebar">
 
-  {/* Search Icon Area */}
-  <button
-    title="Filter"
-    type="button"
-    onClick={() => handleToolSidebarClick("searchIconArea")}
-    className={activeToolSidebar === "searchIconArea" ? "tool-button-active" : "tool-button"}
-  >
-    <svg width="16" height="16" viewBox="0 0 24 24">
-      <path
-        d="M4 6H20M7 12H17M10 18H14"
-        stroke={activeToolSidebar === "searchIconArea" ? "#ffffff" : "#39E23C"}
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  </button>
+
 
   {/* Search */}
   <button
@@ -549,6 +658,33 @@ const mapWrapperRef = useRef();
   >
     <i className="bi bi-house-fill" />
   </button>
+
+      <button
+        className="legend-toggle-btn"
+        onClick={toggleLegend}
+        style={{
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          padding: "10px",  
+          cursor: "pointer",
+          borderRadius: "16.606px",
+          background: "transparent",  // Hide the background
+          border: "none",  // Remove the border
+          boxShadow: "none", // Remove the box shadow if needed
+        }}
+      >
+        <img
+          src="../assets/Legend.png" // Replace with the correct path to your legend image
+          alt="Legend"
+          style={{
+            width: "30px",  // Adjust width and height as needed
+            height: "30px",
+          }}
+        />
+      </button>
+
+
 </aside>
         </div>      
           <SearchControlWithInput mapRef={mapRef} />       
@@ -592,6 +728,7 @@ const mapWrapperRef = useRef();
 
         {showLayerTogglePanel && (
         <div className="leftpanel-container" style={{ overflow: 'auto' }}>
+          <Suspense fallback={<div>Loading...</div>}>
           <LayerTogglePanel
             showStateLayer={showStateLayer} 
             setShowStateLayer={setShowStateLayer} 
@@ -603,11 +740,14 @@ const mapWrapperRef = useRef();
             setShowNdviLayer={setShowNdviLayer}     
             showNdwiLayer={showNdwiLayer}           
             setShowNdwiLayer={setShowNdwiLayer} 
+              setShowChangeLayer={setShowChangeLayer} 
             showPatrollingLayer={showPatrollingLayer}            
             setShowPatrollingLayer={setShowPatrollingLayer} 
             showIncidentLayer={showIncidentLayer}        
             setShowIncidentLayer={setShowIncidentLayer}  
+            onFilter={handleFilter}
           />
+          </Suspense>
         </div>
       )}
      <div style={{display: "flex", width: "auto" ,height:"auto"}}>
@@ -621,82 +761,237 @@ const mapWrapperRef = useRef();
 
       }}
 
-  whenCreated={(mapInstance) => {
-    mapRef.current = mapInstance;
-    crs={customCRS} 
-    // Enable rotation
-    mapInstance.rotate = true;
-    mapInstance.setBearing(0); // Initialize with 0 degrees rotation
-  }}
-  rotate={true} // Enable rotation capability
-  bearing={0} // Initial bearing
->
- <PrintControl mapRef={mapRef} />
-   <TileLayer
-   
-    url={basemaps[activeBasemap]}
+        whenCreated={(mapInstance) => {
+          mapRef.current = mapInstance;
+          // crs={customCRS} 
+          // Enable rotation
+          mapInstance.rotate = true;
+          mapInstance.setBearing(0); // Initialize with 0 degrees rotation
+        }}
+        rotate={true} // Enable rotation capability
+        bearing={0} // Initial bearing
+      >
+      <PrintControl mapRef={mapRef} />
+        <TileLayer
+        
+          url={basemaps[activeBasemap]}
+    
   />
 
-  {showStateLayer && (
-    <WMSTileLayer
-      key="Gujarat_State"
-      url="https://gisfy.co.in:8443/geoserver/cite/wms"
-      layers="cite:Gujarat_State"
-      format="image/png"
-      transparent={true}
-      version="1.1.0"
-      opacity={1}
-    />
-  )}
-  {showDistrictLayer && (
-  <WMSTileLayer
-    key="district-layer"
-    url="https://gisfy.co.in:8443/geoserver/cite/wms"
-    layers="cite:Gujarat_district"   // <-- your district layer
-    format="image/png"
-    transparent={true}
-    version="1.1.0"
-    opacity={0.7}
-  />
-  )}
-  {showCoupeLayer && coupeLayers.map((layerName) => (
-    <WMSTileLayer
-      key={layerName}
-      url="https://gisfy.co.in:8443/geoserver/cite/wms"
-      layers={layerName}
-      format="image/png"
-      transparent={true}
-      version="1.1.0"
-      opacity={0.7}  // Adjust opacity if needed
-    />
-  ))}
 
-  {showNdviLayer &&
-    ndviLayers.map((layer) => (
-      <WMSTileLayer
-        key={layer}
+
+    <WMSTileLayer
+        key="gujarat-difference"
         url="https://gisfy.co.in:8443/geoserver/cite/wms"
-        layers={layer}               // single layer each time
+        layers="cite:Gujarat_difference"
         format="image/png"
         transparent={true}
         version="1.1.0"
-        opacity={1}                  // adjust individually if needed
+        opacity={0.7}
       />
-    ))}
-    {showNdwiLayer &&
-      ndwiLayers.map((layer) => (
-        <WMSTileLayer
-          key={layer}
+
+      <WMSTileLayer
+          key="Gujarat_State"
           url="https://gisfy.co.in:8443/geoserver/cite/wms"
-          layers={layer}               // single NDWI layer each
+          layers="cite:Gujarat_State"
           format="image/png"
           transparent={true}
           version="1.1.0"
-          opacity={1}                  // adjust individually if needed
+          opacity={1}
         />
-      ))}
-    <PatrollingLayer show={showPatrollingLayer} />
-    <IncidentLayer show={showIncidentLayer} incidents={incidentsData} />
+
+        <WMSTileLayer
+          key="tblIndia"
+          url="https://www.gisfy.co.in:8443/geoserver_tnc_agwl/cite/wms"
+          layers="cite:tblIndia"
+          format="image/png"
+          transparent={true}
+          version="1.1.0"
+          opacity={1}
+        />
+    
+    {showDistrictLayer && (
+            <WMSTileLayer
+              url="https://gisfy.co.in:8443/geoserver/cite/wms"
+              layers="cite:Gujarat_district"
+              format="image/png"
+              transparent
+            />
+          )}
+ 
+
+   {/* Iterate through the coupe layers and add them dynamically */}
+            {showCoupeLayer && coupeLayers.map((layer) => (
+              <WMSTileLayer
+                key={layer.input_table_name}
+                url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                layers={layer.input_table_name}
+                format="image/png"
+                transparent={true}
+                version="1.1.0"
+                opacity={1}
+              />
+            ))}
+
+      {showNdviLayer &&
+        (filteredNdviLayers.length > 0 ? 
+          filteredNdviLayers.map((layer) => (
+            <WMSTileLayer
+              key={layer}
+              url="https://gisfy.co.in:8443/geoserver/cite/wms"
+              layers={layer}
+              format="image/png"
+              transparent={true}
+              version="1.1.0"
+              opacity={1}
+            />
+          )) : 
+          ndviLayers.map((layer) => (
+            <WMSTileLayer
+              key={layer}
+              url="https://gisfy.co.in:8443/geoserver/cite/wms"
+              layers={layer}
+              format="image/png"
+              transparent={true}
+              version="1.1.0"
+              opacity={1}
+            />
+          ))
+      )}
+
+      {showNdwiLayer &&
+        (filteredNdwiLayers.length > 0 ? 
+          filteredNdwiLayers.map((layer) => (
+            <WMSTileLayer
+              key={layer}
+              url="https://gisfy.co.in:8443/geoserver/cite/wms"
+              layers={layer}
+              format="image/png"
+              transparent={true}
+              version="1.1.0"
+              opacity={1}
+            />
+          )) : 
+          ndwiLayers.map((layer) => (
+            <WMSTileLayer
+              key={layer}
+              url="https://gisfy.co.in:8443/geoserver/cite/wms"
+              layers={layer}
+              format="image/png"
+              transparent={true}
+              version="1.1.0"
+              opacity={1}
+            />
+          ))
+      )}
+
+    {showChangeLayer &&
+            (filteredChangeLayers.length > 0 ? 
+              filteredChangeLayers.map((layer) => (
+                <WMSTileLayer
+                  key={layer}
+                  url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                  layers={layer}
+                  format="image/png"
+                  transparent={true}
+                  version="1.1.0"
+                  opacity={1}
+                />
+              )) : 
+              changeLayers.map((layer) => (
+                <WMSTileLayer
+                  key={layer}
+                  url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                  layers={layer}
+                  format="image/png"
+                  transparent={true}
+                  version="1.1.0"
+                  opacity={1}
+                />
+              ))
+          )}
+
+      {showPatrollingLayer && (
+        <WMSTileLayer
+          key="patrols"
+          url="https://gisfy.co.in:8443/geoserver/cite/wms"
+          layers="cite:patrols"
+          format="image/png"
+          transparent={true}
+          version="1.1.0"
+          opacity={1}
+        />
+      )}
+       {showIncidentLayer && (
+        <WMSTileLayer
+          key="incidents"
+          url="https://gisfy.co.in:8443/geoserver/cite/wms"
+          layers="cite:incidents"
+          format="image/png"
+          transparent={true}
+          version="1.1.0"
+          opacity={1}
+        />
+      )}
+
+      {showLegend && (
+    <div
+        className="map-legend"
+        style={{
+            position: "fixed",
+            bottom: "80px",    // Position the legend
+            right: "20px",
+            backgroundColor: "rgba(255, 255, 255, 0.8)",  // Semi-transparent background
+            padding: "10px",
+            borderRadius: "8px",
+            boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.2)",
+            maxHeight: "300px", // Limit height of the legend
+            overflowY: "auto",  // Allow scrolling
+            width: "200px",
+            zIndex: 1000,       // Ensure it’s on top of other map elements
+        }}
+    >
+        <h4>Map Legend</h4>
+        <ul>
+  {Object.entries(layerLegends).map(([layerKey, legend]) => (
+    <li key={layerKey}>
+      {layerKey === "districtLayer" ? (
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{
+            width: "30px",
+            height: "3px",
+            backgroundColor: "#f6d919",
+            marginRight: "8px"
+          }} />
+          <span>District Boundary</span>
+        </div>
+      ) : layerKey === "stateLayer" ? (
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{
+            width: "30px",
+            height: "3px",
+            backgroundColor: "#000000",
+            marginRight: "8px"
+          }} />
+          <span>State Boundary</span>
+        </div>
+      ) : Array.isArray(legend) ? (
+        legend.map((url, idx) => (
+          <img key={idx} src={url} alt={`${layerKey} legend`} style={{ width: "100%", height: "auto" }} />
+        ))
+      ) : (
+        <img src={legend} alt={`${layerKey} legend`} style={{ width: "100%", height: "auto" }} />
+      )}
+    </li>
+  ))}
+</ul>
+
+
+    </div>
+)}
+
+
+  
       <AddControls />
       <GeomanTools />
       <ScaleControl  
