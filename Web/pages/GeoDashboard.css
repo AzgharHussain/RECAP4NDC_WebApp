@@ -1524,6 +1524,11 @@ color: #000;
   background-color: #f4f4f4;
 }
 
+.map-legend img {
+  width: auto !important;
+  height: 40px !important;  /* make symbol more visible */
+  image-rendering: pixelated; /* keeps sharp edges */
+}
 
 
 

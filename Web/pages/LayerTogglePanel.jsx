@@ -1,21 +1,26 @@
 import React, { useState } from "react";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 import "./LayerTogglePanel.css";
-
-const LeftSidebar = ({ showStateLayer, setShowStateLayer, showDistrictLayer, setShowDistrictLayer,showCoupeLayer,setShowCoupeLayer,showNdviLayer,setShowNdviLayer,showNdwiLayer,setShowNdwiLayer,setShowPatrollingLayer,showPatrollingLayer,showIncidentLayer,setShowIncidentLayer }) => {
+import { DatePicker } from "antd";
+const { RangePicker } = DatePicker;
+const LeftSidebar = ({ showDistrictLayer, setShowDistrictLayer,showCoupeLayer,setShowCoupeLayer,showNdviLayer,setShowNdviLayer,showNdwiLayer,setShowNdwiLayer,setShowPatrollingLayer,showPatrollingLayer,showIncidentLayer,setShowIncidentLayer,showChangeLayer,setShowChangeLayer,onFilter}) => {
   const [openSections, setOpenSections] = useState({
     forest: true,
     boundaries: true,
     field: true,
   });
-
+ const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const toggleSection = (section) => {
     setOpenSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
   };
-
+ const handleFilterClick = () => {
+    if (!fromDate && !toDate) return;
+    onFilter({ fromDate, toDate });
+  };
   return (
     <aside className="leftpanel">
       <h3 className="sidebar-title">
@@ -33,9 +38,11 @@ const LeftSidebar = ({ showStateLayer, setShowStateLayer, showDistrictLayer, set
         {openSections.forest && (
           <div className="section-content">
        <div className="date-input-container">
-  <input type="date" className="input-field" placeholder="Select From Date" />
-  <input type="date" className="input-field" placeholder="Select To Date" />
-  <div className="filter-icon">
+  <input type="date" className="input-field" placeholder="Select From Date" value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}/>
+  <input type="date" className="input-field" placeholder="Select To Date" value={toDate}
+                onChange={(e) => setToDate(e.target.value)}/>
+  <div className="filter-icon" onClick={handleFilterClick}>
     <img src="../assets/filter.png" alt="Filter" />
   </div>
 </div>
@@ -47,6 +54,8 @@ const LeftSidebar = ({ showStateLayer, setShowStateLayer, showDistrictLayer, set
     onChange={() => setShowNdviLayer(prev => !prev)}/> NDVI</label>
     <label><input type="checkbox" className="checkbox"  checked={showNdwiLayer}
     onChange={() => setShowNdwiLayer(prev => !prev)}/> NDWI</label>
+     <label><input type="checkbox" className="checkbox"  checked={showChangeLayer}
+    onChange={() => setShowChangeLayer(prev => !prev)}/>NDVI Change</label>
   </div>
 </div>
 
@@ -66,10 +75,7 @@ const LeftSidebar = ({ showStateLayer, setShowStateLayer, showDistrictLayer, set
         <label className="green-label">Select Boundaries:</label>
         {openSections.boundaries && (
           <div className="section-content">
-        {/* <label className="green-label">
-          <input type="checkbox" checked={showStateLayer} 
-    onChange={() => setShowStateLayer(prev => !prev)}/> State
-        </label> */}
+      
         <label className="green-label">
           <input type="checkbox" checked={showDistrictLayer}        // <-- bind to district state
     onChange={() => setShowDistrictLayer(prev => !prev)}/> District
