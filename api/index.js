@@ -228,52 +228,141 @@ app.get('/api/coupe_metadata/location', async (req, res) => {
 
 // Main API endpoint for creating a coupe log and uploading images
 app.post('/api/coupe/log', upload.array('images', 10), async (req, res) => {
-    const { issue_id, issue_type, observation_notes, user_id } = req.body;
-    const files = req.files;
-
-    if (!issue_id || !user_id) {
-        return res.status(400).json({ error: 'Issue ID and User ID are required.' });
-    }
-
-    const client = await pool.connect();
-    try {
-        // Collect the paths of the uploaded images
-        const imagePaths = files.map(file => file.path);
-
-        // Call the PostgreSQL function with the log data and image paths array
-        // The function will handle the insertion into both tables atomically
-        const functionCallQuery = `
-            SELECT public.insert_coupe_log_with_images($1, $2, $3, $4, $5) AS log_id;
-        `;
-        const functionResult = await client.query(functionCallQuery, [
-            issue_id,
-            issue_type,
-            observation_notes,
-            user_id,
-            imagePaths,
-        ]);
+    // Destructure required fields and the single JSON string
+    const { 
+        issue_id, 
+        issue_type, 
+        observation_notes, 
+        user_id,
+        input_table_name, // ⭐ CHANGED: Replaced coupe_id with input_table_name
+        officer_name,
         
-        // The function's return value (the new log_id) is in the first row
-        const logId = functionResult.rows[0].log_id;
+        // Capture the single JSON string from the form-data body
+        properties_data
+    } = req.body;
+    
+    const propertiesJsonString = properties_data; 
 
-        res.status(201).json({ 
-            message: 'Log and images successfully saved via PostgreSQL function.', 
-            logId: logId,
-            imageCount: files.length
+    // Assuming imagePathsArray is generated correctly from req.files
+    const imagePathsArray = req.files.map(file => file.filename);
+
+    // Manually construct the PostgreSQL array literal string
+    const imagePathsLiteral = `ARRAY[${imagePathsArray.map(path => `'${path}'`).join(', ')}]`;
+
+    try {
+        // 2. The function call query, rebuilt to ensure clean spacing
+        const functionCallQuery = `
+            SELECT public.insert_coupe_log_with_images(
+                :issue_id, 
+                :issue_type, 
+                :observation_notes, 
+                :user_id, 
+                :input_table_name, -- ⭐ CHANGED: Replaced :coupe_id with :input_table_name
+                :officer_name, 
+                CAST(:properties_json AS jsonb), 
+                ${imagePathsLiteral}
+            ) AS log_id;
+        `;
+        
+        // 3. Execute the query
+        const [functionResult] = await sequelize.query(functionCallQuery, {
+            replacements: {
+                issue_id: issue_id,
+                issue_type: issue_type,
+                observation_notes: observation_notes,
+                user_id: user_id,
+                input_table_name: input_table_name, // ⭐ CHANGED: Pass the new value
+                officer_name: officer_name,
+                // Pass the raw string for the JSON column
+                properties_json: propertiesJsonString
+            },
+            type: Sequelize.QueryTypes.SELECT 
         });
+        
+        const logId = functionResult.log_id;
+        if (logId) {
+            res.status(201).json({ message: 'Coupe log created successfully', logId });
+        } else {
+            res.status(500).json({ error: 'Failed to retrieve log_id from database function.' });
+        }
 
     } catch (error) {
-        // Log the error to the console for debugging
-        console.error('API request failed:', error);
-        res.status(500).json({ error: 'Failed to save log and images.' });
-    } finally {
-        // Release the database client back to the pool
-        client.release();
+        console.error('Error in API endpoint:', error);
+        res.status(500).json({ error: 'Failed to create coupe log.', details: error.message });
     }
 });
 
 
 
+app.get('/api/coupe/log-with-images', async (req, res) => {
+    try {
+        const { user_id } = req.query; // Get user_id from query parameters
+        
+        // Validate that user_id is provided
+        if (!user_id) {
+            return res.status(400).json({ error: 'Missing required query parameter: user_id' });
+        }
+
+        // Call the PostgreSQL function and pass the user ID as a parameter
+        const query = 'SELECT * FROM get_coupe_logs_with_details(:user_id);';
+        
+        const [results] = await sequelize.query(query, {
+            replacements: { user_id },
+        });
+
+        // The PostgreSQL function's JSONB_AGG will return a single [null] if no images exist.
+        // This processes the results to return an empty array instead.
+        const processedResults = results.map(row => ({
+            ...row,
+            image_urls: row.image_urls && row.image_urls[0] === null ? [] : row.image_urls
+        }));
+
+        res.json(processedResults);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error retrieving incidents with images' });
+    }
+});
+
+
+
+// Assuming you have 'app', 'sequelize', and 'Sequelize' defined and configured elsewhere.
+
+// GET /api/coupe_data
+app.get('/api/coupe_data', async (req, res) => {
+    // 1. Define the SQL query to call the PostgreSQL function.
+    // This calls the 'get_coupe_data()' function which is designed to return ALL rows.
+    const sqlQuery = 'SELECT * FROM get_coupe_data();';
+
+    console.log('Executing function call:', sqlQuery);
+
+    try {
+        // 2. Execute the function call using Sequelize
+        // With QueryTypes.SELECT, sequelize.query returns an array of result objects (the data rows).
+        // The result structure is: [results, metadata] (if not using { type: ... })
+        // or just the results array if using { type: Sequelize.QueryTypes.SELECT }
+        
+        // NOTE: The 'rows' variable will directly hold the array of data objects.
+        const rows = await sequelize.query(sqlQuery, {
+            type: Sequelize.QueryTypes.SELECT
+        });
+        
+        // 3. 'rows' is the array of data rows returned by the function
+        // We now use 'rows' directly instead of destructuring [result].
+        res.status(200).json({
+            count: rows.length,
+            data: rows // This sends the entire array of ALL coupe data
+        });
+
+    } catch (error) {
+        console.error('Error executing coupe data function:', error.stack);
+        // Send a 500 Internal Server Error response
+        res.status(500).json({
+            error: 'Failed to fetch coupe data using function.',
+            details: error.message
+        });
+    }
+});
 
 // Start server and connect to DB
 const PORT = 5000;
