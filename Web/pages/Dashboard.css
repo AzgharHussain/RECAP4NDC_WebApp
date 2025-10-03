@@ -33,7 +33,11 @@ body {
   flex-direction: column;
   color: #004d00;
   padding: 20px;
+  max-height: 700px; /* Set a max height */
+  overflow: auto; /* Enable scrolling */
 }
+
+
 
 .heading-container {
   display: flex;
@@ -150,3 +154,95 @@ button {
 .recharts-legend-item-text {
   color: #fff !important;
 }
+
+@media (max-width: 768px) {
+  .heading-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+.map-legend {
+  max-width: 250px;
+  background-color: rgba(255, 255, 255, 0.85);
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+}
+
+.legend-toggle-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #39E23C;
+  color: white;
+  padding: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+
+:where(.css-dev-only-do-not-override-xepvsj).ant-select-dropdown .ant-select-item {
+    position: relative;
+    display: block;
+    min-height: 32px;
+    padding: 5px 12px;
+    color: white;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 1.5714285714285714;
+    box-sizing: border-box;
+    cursor: pointer;
+ 
+    border-radius: 4px;
+}
+
+/* For mobile view (max-width: 768px) */
+@media (max-width: 768px) {
+  /* Ensure the pie chart is centered properly */
+  .recharts-surface {
+    margin: 0 auto;
+  }
+
+  /* Adjust the pie chart's legend positioning */
+  .recharts-legend-wrapper {
+    position: relative;
+    margin-top: 20px;  /* Spacing between the pie chart and legend */
+    font-size: 12px;  /* Reduce font size for better readability on mobile */
+    text-align: center;  /* Center the legend on mobile */
+  }
+
+  /* Adjust the individual legend items for mobile */
+  .recharts-legend-item {
+    display: inline-block;
+    margin: 5px 10px; /* Add margin to prevent items from overlapping */
+    font-size: 12px; /* Smaller font size for better fitting */
+  }
+
+  /* Adjust pie chart labels for mobile (smaller text to avoid overlap) */
+  .recharts-pie-label-text {
+    font-size: 10px;  /* Decrease label font size */
+    text-anchor: middle;  /* Ensure labels are centered in each segment */
+  }
+
+  .chart-card {
+    padding: 10px;
+    margin: 10px;
+    width: 100%; /* Full width for mobile */
+    height: auto; /* Allow content to adjust height */
+  }
+  
+}
+
+/* For tablets or medium-sized screens (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    max-height: 1200px;  /* Increase the height of the container */
+    overflow-y: auto;  /* Enable scrolling if content overflows */
+  }
+}
+
