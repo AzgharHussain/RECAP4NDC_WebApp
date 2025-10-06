@@ -330,11 +330,34 @@ app.get('/api/coupe/log-with-images', async (req, res) => {
 // CASCADING DROPDOWN ROUTES (Already Corrected in previous step)
 // -------------------------------------------------------------------
 
-// 1. Get DISTINCT Divisions
-app.get('/api/divisions', async (req, res) => {
+
+
+// 1. Get DISTINCT Working Circles (NEW first step)
+app.get('/api/working-circles', async (req, res) => {
     try {
-        const results = await sequelize.query('SELECT division_name FROM get_divisions()', {
-            type: Sequelize.QueryTypes.SELECT // ✅ FIXED
+        // Renaming the route to be consistent with the first dropdown.
+        const results = await sequelize.query('SELECT wc_name FROM get_all_wcs()', {
+            type: Sequelize.QueryTypes.SELECT
+        });
+        res.json(results);
+    } catch (err) {
+        console.error('Error fetching working circles:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 2. Get DISTINCT Divisions (Filtered by Working Circle)
+app.get('/api/divisions', async (req, res) => {
+    // Requires a workingCircle parameter for filtering
+    const { workingCircle } = req.query;
+    if (!workingCircle)
+        return res.status(400).json({ error: 'Working Circle parameter is required' });
+
+    try {
+        // Using a new function get_divisions_by_wc
+        const results = await sequelize.query('SELECT division_name FROM get_divisions_by_wc(:workingCircle)', {
+            replacements: { workingCircle },
+            type: Sequelize.QueryTypes.SELECT
         });
         res.json(results);
     } catch (err) {
@@ -343,15 +366,17 @@ app.get('/api/divisions', async (req, res) => {
     }
 });
 
-// 2. Get DISTINCT Ranges
+// 3. Get DISTINCT Ranges (Filtered by WC and Division)
 app.get('/api/ranges', async (req, res) => {
-    const { division } = req.query;
-    if (!division) return res.status(400).json({ error: 'Division parameter is required' });
+    const { workingCircle, division } = req.query;
+    if (!workingCircle || !division)
+        return res.status(400).json({ error: 'Working Circle and Division parameters are required' });
 
     try {
-        const results = await sequelize.query('SELECT range_name FROM get_ranges(:division)', {
-            replacements: { division },
-            type: Sequelize.QueryTypes.SELECT // ✅ FIXED
+        // Using a new function get_ranges_by_wc_division
+        const results = await sequelize.query('SELECT range_name FROM get_ranges_by_wc_division(:workingCircle, :division)', {
+            replacements: { workingCircle, division },
+            type: Sequelize.QueryTypes.SELECT
         });
         res.json(results);
     } catch (err) {
@@ -360,16 +385,18 @@ app.get('/api/ranges', async (req, res) => {
     }
 });
 
-// 3. Get DISTINCT Beats
+
+// 4. Get DISTINCT Beats (Filtered by WC, Division, and Range)
 app.get('/api/beats', async (req, res) => {
-    const { division, range } = req.query;
-    if (!division || !range)
-        return res.status(400).json({ error: 'Division and Range parameters are required' });
+    const { workingCircle, division, range } = req.query;
+    if (!workingCircle || !division || !range)
+        return res.status(400).json({ error: 'Working Circle, Division, and Range parameters are required' });
 
     try {
-        const results = await sequelize.query('SELECT beat_name FROM get_beats(:division, :range)', {
-            replacements: { division, range },
-            type: Sequelize.QueryTypes.SELECT // ✅ FIXED
+        // Using a new function get_beats_by_wc_division_range
+        const results = await sequelize.query('SELECT beat_name FROM get_beats_by_wc_division_range(:workingCircle, :division, :range)', {
+            replacements: { workingCircle, division, range },
+            type: Sequelize.QueryTypes.SELECT
         });
         res.json(results);
     } catch (err) {
@@ -378,23 +405,9 @@ app.get('/api/beats', async (req, res) => {
     }
 });
 
-// 4. Get DISTINCT Working Circles
-app.get('/api/working-circles', async (req, res) => {
-    const { division, range, beat } = req.query;
-    if (!division || !range || !beat)
-        return res.status(400).json({ error: 'Division, Range, and Beat parameters are required' });
 
-    try {
-        const results = await sequelize.query('SELECT wc_name FROM get_wcs(:division, :range, :beat)', {
-            replacements: { division, range, beat },
-            type: Sequelize.QueryTypes.SELECT // ✅ FIXED
-        });
-        res.json(results);
-    } catch (err) {
-        console.error('Error fetching working circles:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
+
+
 
 // 5. Final Data View
 app.get('/api/coupes', async (req, res) => {
