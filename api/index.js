@@ -326,43 +326,98 @@ app.get('/api/coupe/log-with-images', async (req, res) => {
 
 
 
-// Assuming you have 'app', 'sequelize', and 'Sequelize' defined and configured elsewhere.
+// -------------------------------------------------------------------
+// CASCADING DROPDOWN ROUTES (Already Corrected in previous step)
+// -------------------------------------------------------------------
 
-// GET /api/coupe_data
-app.get('/api/coupe_data', async (req, res) => {
-    // 1. Define the SQL query to call the PostgreSQL function.
-    // This calls the 'get_coupe_data()' function which is designed to return ALL rows.
-    const sqlQuery = 'SELECT * FROM get_coupe_data();';
-
-    console.log('Executing function call:', sqlQuery);
-
+// 1. Get DISTINCT Divisions
+app.get('/api/divisions', async (req, res) => {
     try {
-        // 2. Execute the function call using Sequelize
-        // With QueryTypes.SELECT, sequelize.query returns an array of result objects (the data rows).
-        // The result structure is: [results, metadata] (if not using { type: ... })
-        // or just the results array if using { type: Sequelize.QueryTypes.SELECT }
-        
-        // NOTE: The 'rows' variable will directly hold the array of data objects.
-        const rows = await sequelize.query(sqlQuery, {
-            type: Sequelize.QueryTypes.SELECT
+        const results = await sequelize.query('SELECT division_name FROM get_divisions()', {
+            type: Sequelize.QueryTypes.SELECT // ✅ FIXED
         });
-        
-        // 3. 'rows' is the array of data rows returned by the function
-        // We now use 'rows' directly instead of destructuring [result].
-        res.status(200).json({
-            count: rows.length,
-            data: rows // This sends the entire array of ALL coupe data
-        });
-
-    } catch (error) {
-        console.error('Error executing coupe data function:', error.stack);
-        // Send a 500 Internal Server Error response
-        res.status(500).json({
-            error: 'Failed to fetch coupe data using function.',
-            details: error.message
-        });
+        res.json(results);
+    } catch (err) {
+        console.error('Error fetching divisions:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+// 2. Get DISTINCT Ranges
+app.get('/api/ranges', async (req, res) => {
+    const { division } = req.query;
+    if (!division) return res.status(400).json({ error: 'Division parameter is required' });
+
+    try {
+        const results = await sequelize.query('SELECT range_name FROM get_ranges(:division)', {
+            replacements: { division },
+            type: Sequelize.QueryTypes.SELECT // ✅ FIXED
+        });
+        res.json(results);
+    } catch (err) {
+        console.error('Error fetching ranges:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 3. Get DISTINCT Beats
+app.get('/api/beats', async (req, res) => {
+    const { division, range } = req.query;
+    if (!division || !range)
+        return res.status(400).json({ error: 'Division and Range parameters are required' });
+
+    try {
+        const results = await sequelize.query('SELECT beat_name FROM get_beats(:division, :range)', {
+            replacements: { division, range },
+            type: Sequelize.QueryTypes.SELECT // ✅ FIXED
+        });
+        res.json(results);
+    } catch (err) {
+        console.error('Error fetching beats:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 4. Get DISTINCT Working Circles
+app.get('/api/working-circles', async (req, res) => {
+    const { division, range, beat } = req.query;
+    if (!division || !range || !beat)
+        return res.status(400).json({ error: 'Division, Range, and Beat parameters are required' });
+
+    try {
+        const results = await sequelize.query('SELECT wc_name FROM get_wcs(:division, :range, :beat)', {
+            replacements: { division, range, beat },
+            type: Sequelize.QueryTypes.SELECT // ✅ FIXED
+        });
+        res.json(results);
+    } catch (err) {
+        console.error('Error fetching working circles:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 5. Final Data View
+app.get('/api/coupes', async (req, res) => {
+    const { division, range, beat, wc } = req.query;
+    if (!division || !range || !beat || !wc)
+        return res.status(400).json({ error: 'All parameters (Division, Range, Beat, WC) are required' });
+
+    try {
+        const sql = `
+            SELECT * FROM public.merged_coupe_filter1
+            WHERE division = :division AND range = :range AND beat = :beat AND wc = :wc;
+        `;
+        const results = await sequelize.query(sql, {
+            replacements: { division, range, beat, wc },
+            type: Sequelize.QueryTypes.SELECT // ✅ FIXED
+        });
+        res.json(results);
+    } catch (err) {
+        console.error('Error fetching final coupe data:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 
 // Start server and connect to DB
 const PORT = 5000;
