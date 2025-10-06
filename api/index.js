@@ -419,6 +419,23 @@ app.get('/api/coupes', async (req, res) => {
 });
 
 
+// New GET API to retrieve all NDVI change data by calling the PostgreSQL function
+app.get('/api/ndvi-change-data', async (req, res) => {
+    const functionCall = 'SELECT * FROM public.get_ndvi_change_data();';
+    
+    try {
+        // Execute the function call using Sequelize
+        const [results] = await sequelize.query(functionCall);
+        
+        // Respond with the JSON data
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching NDVI change data via function:', error);
+        // Respond with a 500 error if the query fails
+        res.status(500).json({ error: 'Failed to retrieve NDVI change data.' });
+    }
+});
+
 // Start server and connect to DB
 const PORT = 5000;
 app.listen(PORT, async () => {
