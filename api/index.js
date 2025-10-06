@@ -421,18 +421,35 @@ app.get('/api/coupes', async (req, res) => {
 
 // New GET API to retrieve all NDVI change data by calling the PostgreSQL function
 app.get('/api/ndvi-change-data', async (req, res) => {
-    const functionCall = 'SELECT * FROM public.get_ndvi_change_data();';
+    // 1. Get and validate limit/offset from query parameters
+    const { limit, offset } = req.query;
     
+    // Set sensible defaults
+    const pageLimit = parseInt(limit, 10) || 1000; // Default limit set to 1000 records
+    const pageOffset = parseInt(offset, 10) || 0;
+    
+    // 2. Define the function call with parameters
+    // NOTE: This assumes you create the function below in your DB
+    const functionCall = 'SELECT * FROM public.get_ndvi_change_data_paginated(:limit, :offset);';
+
     try {
-        // Execute the function call using Sequelize
-        const [results] = await sequelize.query(functionCall);
+        // 3. Execute the function call using Sequelize with replacements
+        const [results] = await sequelize.query(functionCall, {
+            replacements: {
+                limit: pageLimit,
+                offset: pageOffset
+            },
+            type: Sequelize.QueryTypes.SELECT
+        });
         
-        // Respond with the JSON data
+        // 4. Respond with the paginated JSON data
         res.json(results);
     } catch (error) {
-        console.error('Error fetching NDVI change data via function:', error);
-        // Respond with a 500 error if the query fails
-        res.status(500).json({ error: 'Failed to retrieve NDVI change data.' });
+        console.error('Error fetching NDVI change data:', error);
+        res.status(500).json({ 
+            error: 'Failed to retrieve NDVI change data. Use the limit/offset parameters for large queries.',
+            details: error.message
+        });
     }
 });
 
