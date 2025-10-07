@@ -57,7 +57,6 @@ const renderCustomizedLabel = ({ name, percent, value }) => {
 const COLORS = [
     "#59a14f", // Green
    "#f44336", // Red
-   "#ff5722", // Deep Orange
   "#607d8b", // Blue Grey
   "#795548", // Brown Accent
   "#c2185b", // Berry Pink
@@ -360,108 +359,187 @@ useEffect(() => {
         </div>
       </div>
       <div className="charts-grid">
-
-    {/* 🌳 Forest Cover Change Chart (Donut with Centered Text) */}
-    <div className="chart-card" style={{ textAlign: "center" }}>
-      <h3>Forest Cover Change</h3>
-      {loadingForest ? (
-        <div className="loading-state">Loading...</div>
-      ) : forestChangeData.length === 0 ? (
-        <div className="no-data-state">No forest change data available.</div>
-      ) : (
-        <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={forestChangeData}
-            dataKey="percentage"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            innerRadius={80}
-            outerRadius={110}
-            startAngle={90}
-            endAngle={-270}
-            labelLine={false}
-            label={({ name, percentage, cx, cy, midAngle, outerRadius }) => {
-              const RADIAN = Math.PI / 180;
-              const radius = outerRadius + 30;
-              const x = cx + radius * Math.cos(-midAngle * RADIAN);
-              const y = cy + radius * Math.sin(-midAngle * RADIAN);
-              const color = name === "Afforestation" ? "#008125" : "#C5443E";
-              return (
-                <text
-                  x={x}
-                  y={y}
-                  fill={color}
-                  textAnchor={x > cx ? "start" : "end"}
-                  dominantBaseline="central"
-                  fontSize={14}
-                  fontWeight={600}
-                >
-                  {`${name} - ${percentage.toFixed(0)}%`}
-                </text>
-              );
-            }}
-          >
-            {forestChangeData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={entry.name === "Afforestation" ? "#008125" : "#C5443E"}
-              />
-            ))}
-
-            {/* ✅ Center text using Recharts Label */}
-            <Label
-              value={forestChangeData
-                .reduce((acc, cur) => acc + cur.value, 0)
-                .toLocaleString()}
-              position="center"
+        {/* 🌳 Forest Cover Change Chart — Round Legend Dots + Divider Line */}
+          <div className="chart-card" style={{ textAlign: "center" }}>
+            <h3
               style={{
-                fontSize: "24px",
-                fontWeight: "bold",
-                fill: "#333",
+                marginBottom: "8px",
+                color: "#000",
+                fontWeight: 600,
               }}
-            />
-          </Pie>
-
-          <Legend
-            layout="vertical"
-            align="right"
-            verticalAlign="middle"
-            formatter={(value) => {
-              const item = forestChangeData.find((d) => d.name === value);
-              return `${value} - ${item ? item.percentage.toFixed(0) : 0}%`;
+            >
+              Forest Cover Change
+            </h3>
+            <div
+            style={{
+              width: "100%", // full width across the card
+              height: "1.5px",
+              backgroundColor: "rgba(255, 255, 255, 0.13)",
+              margin: "0 0 -15px 0", // top & bottom spacing
+              borderRadius: "2px",
+              boxShadow:
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "12.064px 12.064px 6.786px -13.572px #FFF inset",
+              border: "0.949px solid rgba(255, 255, 255, 0.30)",
             }}
-          />
+          ></div>
 
-          <Tooltip
-            formatter={(value) => `${value.toFixed(2)}%`}
-            contentStyle={{
-              backgroundColor: "rgba(255,255,255,0.85)",
-              border: "1px solid #ddd",
-              borderRadius: "6px",
-              color: "#000",
+
+            {loadingForest ? (
+              <div className="loading-state">Loading...</div>
+            ) : forestChangeData.length === 0 ? (
+              <div className="no-data-state">No forest change data available.</div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={forestChangeData}
+                      dataKey="percentage"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={80}
+                      outerRadius={110}
+                      startAngle={90}
+                      endAngle={-270}
+                      labelLine={false}
+                    >
+                      {forestChangeData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.name === "Afforestation" ? "#008125" : "#C5443E"}
+                        />
+                      ))}
+
+                      {/* ✅ Center Total Value */}
+                      <Label
+                        value={forestChangeData
+                          .reduce((acc, cur) => acc + cur.value, 0)
+                          .toLocaleString()}
+                        position="center"
+                        style={{
+                          fontSize: "26px",
+                          fontWeight: "bold",
+                          fill: "#333",
+                        }}
+                      />
+                    </Pie>
+
+                    {/* ✅ Custom Legend with round dots and margin-right */}
+                    <Legend
+                      layout="vertical"
+                      align="right"
+                      verticalAlign="middle"
+                      wrapperStyle={{
+                        marginRight: "30px", // spacing between chart and legend
+                      }}
+                      content={({ payload }) => (
+                        <ul
+                          style={{
+                            listStyle: "none",
+                            margin: 0,
+                            padding: 0,
+                            textAlign: "left",
+                          }}
+                        >
+                          {payload.map((entry, index) => (
+                            <li
+                              key={`item-${index}`}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                marginBottom: 6,
+                                color: "#000",
+                                fontSize: 14,
+                                fontWeight: 500,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: "50%", // 🟢 makes legend marker round
+                                  backgroundColor: entry.color,
+                                  marginRight: 8,
+                                }}
+                              ></span>
+                              {`${entry.value} - ${forestChangeData.find(
+                                (d) => d.name === entry.value
+                              )?.percentage.toFixed(0)}%`}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    />
+
+                    <Tooltip
+                      formatter={(value) => `${value.toFixed(2)}%`}
+                      contentStyle={{
+                        backgroundColor: "rgba(255,255,255,0.85)",
+                        border: "1px solid #ddd",
+                        borderRadius: "6px",
+                        color: "#000",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* ✅ Label below the chart */}
+                <p
+                  style={{
+                    marginTop: "-10px",
+                    fontSize: "16px",
+                    color: "#333",
+                    fontWeight: 500,
+                  }}
+                >
+                  Total Area of Forest Change
+                </p>
+              </>
+            )}
+          </div>
+        {/* 🟢 Patrolling Count — with label under chart */}
+      <div className="chart-card" style={{ textAlign: "center" }}>
+        <h3>Total number of Patrols Conducted</h3>
+         <div
+            style={{
+              width: "100%", // full width across the card
+              height: "1.5px",
+              backgroundColor: "rgba(255, 255, 255, 0.13)",
+              margin: "0 0 10px 0", // top & bottom spacing
+              borderRadius: "2px",
+              boxShadow:
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "12.064px 12.064px 6.786px -13.572px #FFF inset",
+              border: "0.949px solid rgba(255, 255, 255, 0.30)",
             }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
-
-      )}
-    </div>
-        {/* Patrolling Count */}
-        <div className="chart-card">
-          <h3>Total number of Patrols Conducted</h3>
-          {loadingPatrols ? (
-            <div className="loading-state">Loading...</div>
-          ) : isPatrolDataEmpty ? (
-            <div className="no-data-state">
-              No patrol data available for the selected period.
-            </div>
-          ) : (
+          ></div>
+        {loadingPatrols ? (
+          <div className="loading-state">Loading...</div>
+        ) : isPatrolDataEmpty ? (
+          <div className="no-data-state">
+            No patrol data available for the selected period.
+          </div>
+        ) : (
+          <>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={patrolData}>
-                <XAxis dataKey="name" stroke="#fff" />
-                <YAxis stroke="#fff" />
+                <XAxis
+                  dataKey="name"
+                  stroke="#fff"
+                  interval={0} // ✅ Force display of all ticks
+                  angle={-30}  // ✅ Tilt labels to avoid overlap
+                  textAnchor="end"
+                  height={60}
+                />
+
+                <YAxis stroke="#000" />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="value">
                   {patrolData.map((entry, index) => (
@@ -473,76 +551,278 @@ useEffect(() => {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          )}
-        </div>
+
+            {/* ✅ Label below chart */}
+            <p
+              style={{
+                marginTop: "8px",
+                fontSize: "16px",
+                color: "#333",
+                fontWeight: 500,
+              }}
+            >
+              Total Number of Patrols Conducted
+            </p>
+          </>
+        )}
+      </div>
+
        
       </div>
       {/* Issue Type Chart - Change Pie to Bar */}
       <div className="charts-grid">
-         {/* Incidents */}
-        <div className="chart-card">
-          <h3>Total number of Incidents</h3>
-          {loadingIncidents ? (
-            <div className="loading-state">Loading...</div>
-          ) : incidentsData.length === 0 ? (
-            <div className="no-data-state">
-              No incident data available for the selected period.
-            </div>
-          ) : (
-            <ResponsiveContainer width={PIE_CHART_SIZE.width} height={PIE_CHART_SIZE.height}>
-              <PieChart>
-                <Pie
-                  data={incidentsData}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={PIE_CHART_SIZE.outerRadius}
-                  label={({ name, value }) => `${name}: ${value}`}
-                >
-                  {incidentsData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Legend
-                  layout="vertical"
-                  verticalAlign="top"
-                  align="right"
-                  wrapperStyle={{
-                    marginTop: 20,
-                    fontSize: "12px",
-                    lineHeight: "1.5",
-                    color: "#fff",
-                  }}
-                />
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+        {/* 🟢 Incidents — Donut with center total and % legend */}
+          <div className="chart-card" style={{ textAlign: "center" }}>
+            <h3>Total number of Incidents</h3>
+            <div
+              style={{
+                width: "100%",
+                height: "1.5px",
+                backgroundColor: "rgba(255, 255, 255, 0.13)",
+                margin: "0 0 -15px 0",
+                borderRadius: "2px",
+                boxShadow:
+                  "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                  "12.064px 12.064px 6.786px -13.572px #FFF inset",
+                border: "0.949px solid rgba(255, 255, 255, 0.30)",
+              }}
+            ></div>
 
-        <div className="chart-card">
-          <h3>Observation Issues Reported</h3>
-          {loadingIssues ? (
-            <div className="loading-state">Loading...</div>
-          ) : issueTypeData.length === 0 ? (
-            <div className="no-data-state">No issue type data available.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={issueTypeData}>
-                <XAxis dataKey="name" stroke="#fff" />
-                <YAxis stroke="#fff" />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value">
-                  {issueTypeData.map((entry, index) => (
-                    <Cell
-                      key={`cell-bar-${index}`}
-                      fill={COLORS[index % COLORS.length]}
+            {loadingIncidents ? (
+              <div className="loading-state">Loading...</div>
+            ) : incidentsData.length === 0 ? (
+              <div className="no-data-state">
+                No incident data available for the selected period.
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={incidentsData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={70}
+                      outerRadius={100}
+                      startAngle={90}
+                      endAngle={-270}
+                      labelLine={false}
+                      label={false}
+                    >
+                      {incidentsData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+
+                      {/* ✅ Center Total Value */}
+                      <Label
+                        value={incidentsData
+                          .reduce((acc, cur) => acc + cur.value, 0)
+                          .toLocaleString()}
+                        position="center"
+                        style={{
+                          fontSize: "26px",
+                          fontWeight: "bold",
+                          fill: "#333",
+                        }}
+                      />
+                    </Pie>
+
+                    {/* ✅ Custom Legend with round dots + percentages */}
+                    <Legend
+                      layout="vertical"
+                      align="right"
+                      verticalAlign="middle"
+                      wrapperStyle={{
+                        marginRight: "25px",
+                      }}
+                      content={({ payload }) => {
+                        const total = incidentsData.reduce(
+                          (sum, item) => sum + item.value,
+                          0
+                        );
+                        return (
+                          <ul
+                            style={{
+                              listStyle: "none",
+                              margin: 0,
+                              padding: 0,
+                              textAlign: "left",
+                            }}
+                          >
+                            {payload.map((entry, index) => {
+                              const item = incidentsData.find(
+                                (d) => d.name === entry.value
+                              );
+                              const percent = ((item?.value / total) * 100).toFixed(0);
+                              return (
+                                <li
+                                  key={`item-${index}`}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    marginBottom: 6,
+                                    color: "#000",
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      display: "inline-block",
+                                      width: 12,
+                                      height: 12,
+                                      borderRadius: "50%",
+                                      backgroundColor: entry.color,
+                                      marginRight: 8,
+                                    }}
+                                  ></span>
+                                  {`${entry.value} - ${percent}%`}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        );
+                      }}
                     />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+
+                    <Tooltip
+                      formatter={(value, name) => [`${value}`, `${name}`]}
+                      contentStyle={{
+                        backgroundColor: "rgba(255,255,255,0.85)",
+                        border: "1px solid #ddd",
+                        borderRadius: "6px",
+                        color: "#000",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* ✅ Bottom Label */}
+                <p
+                  style={{
+                    marginTop: "-10px",
+                    fontSize: "16px",
+                    color: "#333",
+                    fontWeight: 500,
+                  }}
+                >
+                  Total number of Incidents
+                </p>
+              </>
+            )}
+          </div>
+
+        {/* 🟢 Observation Issues Reported — with right-side round legend */}
+{/* 🟢 Observation Issues Reported — Bar Chart with working Legend */}
+<div className="chart-card" style={{ textAlign: "center" }}>
+  <h3>Observation Issues Reported</h3>
+
+  {/* Divider line */}
+  <div
+    style={{
+      width: "100%",
+      height: "1.5px",
+      backgroundColor: "rgba(255, 255, 255, 0.13)",
+      margin: "0 0 10px 0",
+      borderRadius: "2px",
+      boxShadow:
+        "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+        "12.064px 12.064px 6.786px -13.572px #FFF inset",
+      border: "0.949px solid rgba(255, 255, 255, 0.30)",
+    }}
+  ></div>
+
+  {loadingIssues ? (
+    <div className="loading-state">Loading...</div>
+  ) : issueTypeData.length === 0 ? (
+    <div className="no-data-state">No issue type data available.</div>
+  ) : (
+    <>
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart
+          data={issueTypeData}
+          margin={{ top: 10, right: 100, left: 0, bottom: 10 }}
+        >
+          <XAxis dataKey="name" stroke="#000" />
+          <YAxis stroke="#000" />
+          <Tooltip content={<CustomTooltip />} />
+
+          <Bar dataKey="value" barSize={60}>
+            {issueTypeData.map((entry, index) => (
+              <Cell
+                key={`cell-bar-${index}`}
+                fill={COLORS[index % COLORS.length]}
+              />
+            ))}
+          </Bar>
+
+          {/* ✅ Fixed working legend with round dots */}
+          <Legend
+            layout="vertical"
+            align="right"
+            verticalAlign="middle"
+            wrapperStyle={{
+              right: 10,
+              fontSize: "13px",
+              lineHeight: "1.5",
+              color: "#000",
+            }}
+            content={() => (
+              <ul
+                style={{
+                  listStyle: "none",
+                  margin: 0,
+                  padding: 0,
+                  textAlign: "left",
+                }}
+              >
+                {issueTypeData.map((item, index) => (
+                  <li
+                    key={index}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginBottom: 6,
+                      color: "#000",
+                      fontSize: 14,
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%", // 🟢 round marker
+                        backgroundColor: COLORS[index % COLORS.length],
+                        marginRight: 8,
+                      }}
+                    ></span>
+                    {item.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+
+      {/* ✅ Label below chart */}
+      <p
+        style={{
+          marginTop: "5px",
+          fontSize: "16px",
+          color: "#333",
+          fontWeight: 500,
+        }}
+      >
+        Observation Issues Reported
+      </p>
+    </>
+  )}
+</div>
+
+
       </div>
     </div>
   );

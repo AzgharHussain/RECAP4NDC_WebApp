@@ -49,7 +49,7 @@ body {
 
 .main-heading {
   font-weight: 700;
-  color: #009245;
+  color: #000;
   margin-right: 20px;
 }
 
@@ -144,7 +144,7 @@ button {
 
 /* Recharts styling */
 .recharts-wrapper .recharts-cartesian-axis-tick-value tspan {
-  fill: #fff; /* X-axis and Y-axis labels */
+  fill: #000; /* X-axis and Y-axis labels */
 }
 
 .recharts-tooltip-wrapper {
@@ -152,7 +152,7 @@ button {
 }
 
 .recharts-legend-item-text {
-  color: #fff !important;
+  color:#000 !important;
 }
 
 @media (max-width: 768px) {
