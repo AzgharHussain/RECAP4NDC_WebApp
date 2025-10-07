@@ -3,6 +3,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Label,
   BarChart,
   Bar,
   XAxis,
@@ -16,6 +17,12 @@ import "./Dashboard.css";
 import filterIcon from "../assets/filter.png";
 
 const { Option } = Select;
+// Global chart size configuration for consistent PieCharts
+const PIE_CHART_SIZE = {
+  width: "100%",
+  height: 260,
+  outerRadius: 90,
+};
 
 // A custom tooltip component to style the tooltip in the BarChart.
 const CustomTooltip = ({ active, payload, label }) => {
@@ -48,13 +55,14 @@ const renderCustomizedLabel = ({ name, percent, value }) => {
 
 // 🎨 Color Palette for charts
 const COLORS = [
+    "#59a14f", // Green
+   "#f44336", // Red
    "#ff5722", // Deep Orange
   "#607d8b", // Blue Grey
   "#795548", // Brown Accent
   "#c2185b", // Berry Pink
   "#8bc34a", // Light Green
   "#2196f3", // Blue
-  "#f44336", // Red
   "#e91e63", // Pink Accent
   "#009688", // Teal Accent
   "#edc949", // Yellow
@@ -63,7 +71,6 @@ const COLORS = [
   "#af7aa1", // Purple
   "#ff9da7", // Pink
   "#76b7b2", // Teal
-  "#59a14f", // Green
   "#f0a5bc", // Light Pink
   "#ff6361", // Coral
   "#3f51b5", // Indigo
@@ -85,7 +92,8 @@ export default function Dashboard() {
   const [loadingIncidents, setLoadingIncidents] = useState(false);
   const [loadingIssues, setLoadingIssues] = useState(false); // Loading state for issue type data
   const [issueTypeData, setIssueTypeData] = useState([]); 
-
+const [forestChangeData, setForestChangeData] = useState([]);
+const [loadingForest, setLoadingForest] = useState(false);
   // Fetch patrol data with a loading state
 useEffect(() => {
   const fetchPatrolData = async () => {
@@ -151,7 +159,7 @@ useEffect(() => {
     setLoadingIncidents(true);
     try {
       const res = await fetch(
-        "http://68.178.167.39:5000/api/incidents-with-images?user_id=2"
+        "http://68.178.167.39:5000/api/incidents-with-images?user_id=1"
       );
       const incidents = await res.json();
 
@@ -204,7 +212,7 @@ useEffect(() => {
       setLoadingIssues(true);
       try {
         const res = await fetch(
-          "http://68.178.167.39:5000/api/coupe/log-with-images?user_id=2"
+          "http://68.178.167.39:5000/api/coupe/log-with-images?user_id=1"
         );
         const logs = await res.json();
 
@@ -232,6 +240,33 @@ useEffect(() => {
     fetchIssueTypeData();
   }, [fromDate, toDate]);
 
+useEffect(() => {
+  const fetchForestChangeData = async () => {
+    setLoadingForest(true);
+    try {
+      const res = await fetch("http://68.178.167.39:5000/api/ndvi-change-summary");
+      const data = await res.json();
+
+      const chartData = data.map((item) => ({
+        name: item.change_type,
+        value: parseInt(item.category_count),
+        percentage: parseFloat(item.percentage_of_total),
+      }));
+
+      setForestChangeData(chartData);
+    } catch (error) {
+      console.error("Error fetching forest change data:", error);
+      setForestChangeData([]);
+    } finally {
+      setLoadingForest(false);
+    }
+  };
+
+  fetchForestChangeData();
+}, []);
+
+
+
   // A helper function to check if the data is empty for the bar chart.
   const isPatrolDataEmpty =
     patrolData.length === 0 || patrolData[0].value === 0;
@@ -244,23 +279,27 @@ useEffect(() => {
           {/* From Date */}
           <div className="filter-item">
             <DatePicker
-              value={fromDate}
-              onChange={setFromDate}
-              placeholder="Select From Date"
-              style={{
-                width: "200px",
-                color: "#fff",
-                border: "2.21px solid rgba(255, 255, 255, 0.23)",
-                background: "rgba(255, 255, 255, 0.02)",
-                boxShadow:
-                  "-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset",
-              }}
-              dropdownClassName="custom-date-picker-dropdown"
-            />
+            value={fromDate}
+            onChange={setFromDate}
+            placeholder="Select From Date"
+            style={{
+              width: "200px",
+              color: "#fff",
+              border: "2.21px solid rgba(255, 255, 255, 0.23)",
+              background: "rgba(255, 255, 255, 0.02)",
+              boxShadow:
+                "-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset",
+            }}
+            classNames={{
+              popup: {
+                root: "custom-date-picker-dropdown",
+              },
+            }}
+          />
+
           </div>
           {/* To Date */}
-          <div className="filter-item">
-            <DatePicker
+          <DatePicker
               value={toDate}
               onChange={setToDate}
               placeholder="Select To Date"
@@ -272,9 +311,13 @@ useEffect(() => {
                 boxShadow:
                   "-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset",
               }}
-              dropdownClassName="custom-date-picker-dropdown"
+              classNames={{
+                popup: {
+                  root: "custom-date-picker-dropdown",
+                },
+              }}
             />
-          </div>
+
           {/* Division */}
           <div className="filter-item">
             <Select
@@ -317,28 +360,94 @@ useEffect(() => {
         </div>
       </div>
       <div className="charts-grid">
-         <div className="chart-card">
-          <h3>Forest Cover Change</h3>
-          <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  
+
+    {/* 🌳 Forest Cover Change Chart (Donut with Centered Text) */}
+    <div className="chart-card" style={{ textAlign: "center" }}>
+      <h3>Forest Cover Change</h3>
+      {loadingForest ? (
+        <div className="loading-state">Loading...</div>
+      ) : forestChangeData.length === 0 ? (
+        <div className="no-data-state">No forest change data available.</div>
+      ) : (
+        <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={forestChangeData}
+            dataKey="percentage"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            innerRadius={80}
+            outerRadius={110}
+            startAngle={90}
+            endAngle={-270}
+            labelLine={false}
+            label={({ name, percentage, cx, cy, midAngle, outerRadius }) => {
+              const RADIAN = Math.PI / 180;
+              const radius = outerRadius + 30;
+              const x = cx + radius * Math.cos(-midAngle * RADIAN);
+              const y = cy + radius * Math.sin(-midAngle * RADIAN);
+              const color = name === "Afforestation" ? "#008125" : "#C5443E";
+              return (
+                <text
+                  x={x}
+                  y={y}
+                  fill={color}
+                  textAnchor={x > cx ? "start" : "end"}
+                  dominantBaseline="central"
+                  fontSize={14}
+                  fontWeight={600}
                 >
-                  
-                
-                </Pie>
-                <Legend 
-                layout="vertical"
-          verticalAlign="top"  // Align it to the top
-          align="right"  // Align legend to the right
-          wrapperStyle={{
-            marginTop: 20, // Add margin space between Pie chart and Legend
-          }}
-                />
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+                  {`${name} - ${percentage.toFixed(0)}%`}
+                </text>
+              );
+            }}
+          >
+            {forestChangeData.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={entry.name === "Afforestation" ? "#008125" : "#C5443E"}
+              />
+            ))}
+
+            {/* ✅ Center text using Recharts Label */}
+            <Label
+              value={forestChangeData
+                .reduce((acc, cur) => acc + cur.value, 0)
+                .toLocaleString()}
+              position="center"
+              style={{
+                fontSize: "24px",
+                fontWeight: "bold",
+                fill: "#333",
+              }}
+            />
+          </Pie>
+
+          <Legend
+            layout="vertical"
+            align="right"
+            verticalAlign="middle"
+            formatter={(value) => {
+              const item = forestChangeData.find((d) => d.name === value);
+              return `${value} - ${item ? item.percentage.toFixed(0) : 0}%`;
+            }}
+          />
+
+          <Tooltip
+            formatter={(value) => `${value.toFixed(2)}%`}
+            contentStyle={{
+              backgroundColor: "rgba(255,255,255,0.85)",
+              border: "1px solid #ddd",
+              borderRadius: "6px",
+              color: "#000",
+            }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+
+      )}
+    </div>
         {/* Patrolling Count */}
         <div className="chart-card">
           <h3>Total number of Patrols Conducted</h3>
@@ -380,35 +489,36 @@ useEffect(() => {
               No incident data available for the selected period.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={incidentsData}
-                dataKey="value"
-                nameKey="name"
-                outerRadius="80%" // Adjust size to avoid overcrowding
-                labelLine={false} // Disable label lines for mobile devices
-                label={({ name, percent, value }) => `${name}: ${value}`} // Custom label
-              >
-                {incidentsData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Legend 
-                layout="vertical"
-                verticalAlign="top" // Align legend at the top
-                align="right" // Align legend to the right
-                wrapperStyle={{
-                  marginTop: 20, // Add margin space
-                  fontSize: "12px", // Reduce font size on mobile
-                }}
-              />
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-
+            <ResponsiveContainer width={PIE_CHART_SIZE.width} height={PIE_CHART_SIZE.height}>
+              <PieChart>
+                <Pie
+                  data={incidentsData}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={PIE_CHART_SIZE.outerRadius}
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {incidentsData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Legend
+                  layout="vertical"
+                  verticalAlign="top"
+                  align="right"
+                  wrapperStyle={{
+                    marginTop: 20,
+                    fontSize: "12px",
+                    lineHeight: "1.5",
+                    color: "#fff",
+                  }}
+                />
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           )}
         </div>
+
         <div className="chart-card">
           <h3>Observation Issues Reported</h3>
           {loadingIssues ? (

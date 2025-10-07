@@ -6,7 +6,7 @@ import "../App.css";
 
 // === Images ===
 import brand from "../assets/logo-giz.png";
-import leftImage from "../assets/Group.jpg";
+import leftImage from "../assets/Group.png";
 import rightBg from "../assets/Background.png";
 
 // Pages

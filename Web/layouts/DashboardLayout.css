@@ -150,9 +150,16 @@
   padding: 13px;
   overflow-y: auto;
   border: 1.949px solid rgba(255, 255, 255, 0.23);
-background: rgba(255, 255, 255, 0.13);
-box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, 12.064px 12.064px 6.786px -13.572px #FFF inset;
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: 
+    -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
+    12.064px 12.064px 6.786px -13.572px #FFF inset;
+
+  /* 🔑 ensure height is constrained */
+  height: 100%;        /* or a fixed px */
+  max-height: 650px;   /* for example */
 }
+
 
 /* Default dropdown button = plain white */
 .dropdown-toggle {
@@ -248,4 +255,64 @@ box-shadow: -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, -9.048px -9.048px
   height: 20px; /* Set height like an icon */
   object-fit: contain;  /* Prevent stretching */
   margin-right: 8px;  /* Space between the image and text */
+}
+
+/* ================= HEADER LOGOS SECTION ================= */
+.header-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+  gap: 25px;
+  flex-wrap: nowrap;
+  padding: 0 10px;
+}
+
+/* Logo image styles */
+.header-logos img {
+  height: 35px;
+  width: auto;
+  object-fit: contain;
+  transition: transform 0.3s ease, filter 0.3s ease;
+  filter: brightness(95%) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  cursor: pointer;
+}
+
+/* Hover effect: subtle glow & zoom */
+.header-logos img:hover {
+  transform: scale(1.1);
+  filter: brightness(105%) drop-shadow(0 0 4px rgba(0, 255, 100, 0.5));
+}
+
+/* When screen shrinks → logos reduce size */
+@media (max-width: 1200px) {
+  .header-logos img {
+    height: 35px;
+  }
+}
+
+@media (max-width: 992px) {
+  .header-logos img {
+    height: 28px;
+  }
+}
+
+/* On mobile → horizontal scroll (instead of hiding) */
+@media (max-width: 768px) {
+  .header-logos {
+    overflow-x: auto;
+    gap: 10px;
+    padding: 6px 0;
+    justify-content: flex-start;
+    scroll-behavior: smooth;
+  }
+
+  .header-logos::-webkit-scrollbar {
+    height: 5px;
+  }
+
+  .header-logos::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+  }
 }

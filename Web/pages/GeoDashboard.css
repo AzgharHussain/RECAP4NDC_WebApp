@@ -31,12 +31,7 @@
 }
 
 
-.main-container{
-  display:flex ;
-  flex-direction: row;
-  /* height: 85vh; */
-  width: 100vw;
-}
+
 
 .leaflet-control-scale {
   background-color: white;
@@ -1279,8 +1274,8 @@ color: #000;
 .main-container {
   display: flex;
   flex-direction: row;
-  width: 100vw;
-  height: 100vh; /* Full height for the map */
+  width: 110vw;
+  
 }
 
 /* Leaflet scale control */
@@ -1526,8 +1521,18 @@ color: #000;
 
 .map-legend img {
   width: auto !important;
-  height: 40px !important;  /* make symbol more visible */
-  image-rendering: pixelated; /* keeps sharp edges */
+  /* height: 16px !important; */
+  image-rendering: pixelated;
+}
+
+/* .map-legend li strong:contains("NDVI") + img,
+.map-legend li strong:contains("NDWI") + img,
+.map-legend li strong:contains("Change") + img {
+  height: 64px !important;
+} */
+
+.large-legend {
+  height: 64px !important; /* equal or greater specificity */
 }
 
 
