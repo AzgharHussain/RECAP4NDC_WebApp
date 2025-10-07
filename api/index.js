@@ -432,35 +432,24 @@ app.get('/api/coupes', async (req, res) => {
 });
 
 
-// New GET API to retrieve all NDVI change data by calling the PostgreSQL function
-app.get('/api/ndvi-change-data', async (req, res) => {
-    // 1. Get and validate limit/offset from query parameters
-    const { limit, offset } = req.query;
-    
-    // Set sensible defaults
-    const pageLimit = parseInt(limit, 10) || 1000; // Default limit set to 1000 records
-    const pageOffset = parseInt(offset, 10) || 0;
-    
-    // 2. Define the function call with parameters
-    // NOTE: This assumes you create the function below in your DB
-    const functionCall = 'SELECT * FROM public.get_ndvi_change_data_paginated(:limit, :offset);';
+app.get('/api/ndvi-change-summary', async (req, res) => {
+    // 1. Define the function call
+    const functionCall = 'SELECT change_type, category_count, percentage_of_total FROM public.get_ndvi_change_summary();';
 
     try {
-        // 3. Execute the function call using Sequelize with replacements
-        const [results] = await sequelize.query(functionCall, {
-            replacements: {
-                limit: pageLimit,
-                offset: pageOffset
-            },
+        // 2. Execute the function call using Sequelize with the correct QueryType.
+        //    A raw SELECT query with QueryTypes.SELECT returns an array of results.
+        const results = await sequelize.query(functionCall, {
             type: Sequelize.QueryTypes.SELECT
         });
         
-        // 4. Respond with the paginated JSON data
+        // 3. Respond with the full results array.
+        //    The 'results' variable here already holds the array of row objects.
         res.json(results);
     } catch (error) {
-        console.error('Error fetching NDVI change data:', error);
+        console.error('Error fetching NDVI change summary:', error);
         res.status(500).json({ 
-            error: 'Failed to retrieve NDVI change data. Use the limit/offset parameters for large queries.',
+            error: 'Failed to retrieve NDVI change summary. Check the function definition and database connection.',
             details: error.message
         });
     }
