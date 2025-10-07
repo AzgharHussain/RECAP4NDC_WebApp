@@ -1,15 +1,11 @@
-import React from "react"; 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import "../App.css";
 
-
 // === Images ===
 import brand from "../assets/logo-giz.png";
-import leftImage from "../assets/Group.png";
-import rightBg from "../assets/Background.png";
-
-// Pages
+import backImage from "../assets/backimage.jpg"; // ✅ your new background
+import leftLogos from "../assets/Logo.png"; // 🟢 your left-side logos image
 import Dashboard from "../pages/Dashboard";
 
 function LoginPage() {
@@ -22,18 +18,46 @@ function LoginPage() {
   };
 
   return (
-    <div className="screen">
-      {/* LEFT PANEL */}
-      <section className="left-panel">
-        <div className="left-panel-glass">
-          <img src={leftImage} alt="Left Panel Banner" className="left-image" />
-        </div>
-      </section>
+    <div
+      className="login-screen"
+      style={{
+        backgroundImage: `
+          linear-gradient(180deg, rgba(48,144,89,0.85) -6.02%, rgba(234,194,147,0.85) 51.41%, rgba(54,117,165,0.85) 86.7%),
+          url(${backImage})
+        `,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        height: "100vh",
+        width: "100%",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "0 80px",
+        position: "relative",
+      }}
+    >
+      {/* ✅ LEFT SIDE – Logos */}
 
-      {/* RIGHT PANEL */}
-      <section
-        className="right-panel"
-        style={{ backgroundImage: `url(${rightBg})` }} // ✅ KEEPING YOUR BACKGROUND
+      <img
+        src={leftLogos}
+        alt="Partner Logos"
+        style={{
+          width: "26%",
+          height: "auto",
+          objectFit: "contain",
+        }}
+      />
+
+      <div
+        className="right-Panel"
+        style={{
+          flex: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center", // centers vertically & horizontally
+          height: "100%",
+        }}
       >
         <div className="form-card">
           <img src={brand} alt="RECAP4NDC" className="brand" />
@@ -43,28 +67,36 @@ function LoginPage() {
           <label className="input-label">User ID</label>
           <div className="field">
             <input type="text" placeholder="Enter User ID" />
-           <span className="icon">
-          <img src="/assets/user.png" alt="User" width="20" height="20" />
-        </span>
+            <span className="icon">
+              <img src="/assets/user.png" alt="User" width="20" height="20" />
+            </span>
           </div>
 
           {/* Password */}
           <label className="input-label">Password</label>
-            <div className="field">
-              <input
-                type={showPwd ? "text" : "password"}
-                placeholder="Enter Password"
-                required
-              />
-              <button
-                type="button"
-                className="eye"
-                onClick={() => setShowPwd((s) => !s)}
-              >
-                {showPwd ? "👁" : <img src="/assets/Eyeclose.png" alt="Closed Eye" width="20" height="20" />}
-              </button>
-            </div>
-
+          <div className="field">
+            <input
+              type={showPwd ? "text" : "password"}
+              placeholder="Enter Password"
+              required
+            />
+            <button
+              type="button"
+              className="eye"
+              onClick={() => setShowPwd((s) => !s)}
+            >
+              {showPwd ? (
+                "👁"
+              ) : (
+                <img
+                  src="/assets/Eyeclose.png"
+                  alt="Closed Eye"
+                  width="20"
+                  height="20"
+                />
+              )}
+            </button>
+          </div>
 
           {/* Login Button */}
           <button className="btn-login" onClick={handleLogin}>
@@ -78,9 +110,9 @@ function LoginPage() {
           <div className="footer-note">
             2025 © All Rights Reserved By | RECAP4NDC
           </div>
-          <button className="lang-chip">ગુજ</button>
+          <button className="lang-chip">જીયુ</button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

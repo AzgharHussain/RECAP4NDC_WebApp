@@ -1,84 +1,4 @@
-:root {
-  --white: #ffffff;
-  --muted: rgba(0, 0, 0, 0.65);
-  --green1: #59ea8c;
-  --green2: #27c468;
-  /* define gradient variable once */
-  --color-4: linear-gradient(180deg, #309059 -6.02%, #EAC293 51.41%, #3675A5 86.7%);
-}
 
-* {
-  box-sizing: border-box;
-}
-html,
-body,
-#root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
-body {
-  font-family: "Spline Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  overflow: hidden;
-}
-
-.screen {
-  display: flex;
-  height: 100vh;
-  width: 100vw;
-}
-
-.left-panel {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  position: relative;
-}
-
-/* Glass overlay on left panel */
-.left-panel-glass {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  /* gradient background */
-  background-image: var(--color-4);
-  background-size: cover;
-  background-position: center;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-}
-.left-image {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  z-index: 2;
-}
-
-/* ===== Right Panel ===== */
-.right-panel {
-  flex: 2;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  height: 100%;
-  padding: 50px;
-
-  /* Apply gradient over image but make sure both are visible */
-  background: 
-    url("../assets/Background.png") no-repeat center/cover, /* Background image */
-    linear-gradient(180deg, #309059 -6.02%, #EAC293 51.41%, #3675A5 86.7%); /* Gradient */
-
-  background-size: cover; /* Make sure the image covers the whole panel */
-  background-blend-mode: overlay; /* Blend gradient with image */
-}
 
 .form-card,
 .footer-bar {
@@ -94,6 +14,8 @@ body {
   padding: 32px 28px;
   text-align: center;
   background: transparent;
+
+  
 }
 
 .brand {
@@ -104,7 +26,7 @@ body {
 
 .login-heading {
   font-size: 32px;
-  color: #fff;
+  color: #000;
   text-align: center;
   font-feature-settings: 'dlig' on;
   font-family: "Spline Sans";
@@ -117,7 +39,7 @@ body {
   display: block;
   margin: 10px 0 6px;
   font-size: 19px;
-  color: #fff;
+  color: #000;
   font-feature-settings: 'dlig' on;
   font-family: "Spline Sans";
   font-style: normal;
@@ -148,12 +70,12 @@ body {
   flex: 1;
   height: 100%;
   font-size: 16px;
-  color: #fff;
+  color: #000;
   font-weight: 500;
 }
 
 .field input::placeholder {
-  color: rgba(255, 255, 255, 0.8);
+  color:#838383;
 }
 
 .eye {
@@ -223,8 +145,8 @@ body {
 .footer-bar {
   position: absolute;
   bottom: 16px;
-  left: 0;
-  width: 100%;
+  /* left: 0; */
+  width: 65%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -247,7 +169,7 @@ body {
 .footer-note {
   font-size: 12px;
   font-weight: 500;
-  color: #383838;
+  color: #fff;
   text-align: justify;
   font-family: Inter;
   font-style: normal;
@@ -279,38 +201,13 @@ body {
 }
 
 .lang-chip.active {
-  color: #04FF29;
+  color: #fff;
 }
 
 .lang-left { left: 16px; }
 .lang-right { right: 16px; }
 
-/* Tablets */
-@media (max-width: 1024px) {
-  .screen { flex-direction: column; }
-  .left-panel { display: none; }
-  .form-card { width: 80%; }
-}
 
-/* Mobiles */
-@media (max-width: 768px) {
-  .screen { flex-direction: column; }
-  .left-panel { display: none; }
-  .right-panel { padding: 20px; }
-  .form-card {
-    width: 100%;
-    max-width: 350px;
-    padding: 15px;
-  }
-  .brand { height: 100px; }
-  .login-heading { font-size: 20px; }
-  .btn-login { height: 46px; font-size: 14px; }
-  .footer-bar {
-    flex-direction: column;
-    gap: 10px;
-    text-align: center;
-  }
-}
 
 /* Desktop only */
 @media (min-width: 1280px) {
