@@ -33,7 +33,7 @@ body {
   flex-direction: column;
   color: #004d00;
   padding: 20px;
-  max-height: 700px; /* Set a max height */
+  max-height: 600px; /* Set a max height */
   overflow: auto; /* Enable scrolling */
 }
 
@@ -91,7 +91,7 @@ button {
 /* Chart Card Styling */
 .chart-card {
   backdrop-filter: blur(10px);
-  padding: 20px;
+  padding: 1px;
   flex: 1 1 48%;
   min-width: 300px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -103,7 +103,7 @@ button {
 
 .chart-card h3 {
   text-align: center;
-  color: #228B22;
+  color: #000;
   font-weight: 600;
   margin-bottom: 10px;
 }
@@ -169,7 +169,7 @@ button {
   padding: 15px;
   border-radius: 10px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  font-size: 14px;
+  font-size: 10px;
 }
 
 .legend-toggle-btn {
@@ -211,6 +211,7 @@ button {
   /* Adjust the pie chart's legend positioning */
   .recharts-legend-wrapper {
     position: relative;
+    color: #333;
     margin-top: 20px;  /* Spacing between the pie chart and legend */
     font-size: 12px;  /* Reduce font size for better readability on mobile */
     text-align: center;  /* Center the legend on mobile */
