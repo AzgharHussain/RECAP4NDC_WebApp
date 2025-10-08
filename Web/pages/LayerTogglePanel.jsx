@@ -24,7 +24,7 @@ const LeftSidebar = ({ showDistrictLayer, setShowDistrictLayer,showCoupeLayer,se
   return (
     <aside className="leftpanel">
       <h3 className="sidebar-title">
-  <img src="../assets/Explor.png" alt="Icon" style={{ width: '20px', marginRight: '8px' }} />
+  <img src="../assets/Explor1.png" alt="Icon" style={{ width: '20px', marginRight: '8px' }} />
   Explore Data
 </h3>
 

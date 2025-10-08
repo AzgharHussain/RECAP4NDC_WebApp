@@ -77,7 +77,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #00442c !important;  /* default text color */
+  color: #000 !important;  /* default text color */
   border: 2.21px solid rgba(255, 255, 255, 0.23);
   background: rgba(255, 255, 255, 0.02);
   padding: 6px 12px;
@@ -90,7 +90,7 @@
 :where(.css-dev-only-do-not-override-xepvsj).ant-btn-variant-outlined:not(:disabled):not(.ant-btn-disabled):hover, :where(.css-dev-only-do-not-override-xepvsj).ant-btn-variant-dashed:not(:disabled):not(.ant-btn-disabled):hover
 
  {
-    color: #00442c !important;  /* default text color */
+    color: #000 !important;  /* default text color */
     /* border-color: #4096ff; */
     background: rgba(255, 255, 255, 0.02);
      box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
@@ -124,7 +124,7 @@
 
 /* === Force ONLY table headings (column titles) to light blue === */
 .transparent-table .ant-table-thead > tr > th {
-  color: #00442c !important;   /* light blue */
+  color: #000 !important;   /* light blue */
   font-weight: bold;
 }
 
@@ -132,14 +132,14 @@
 .transparent-table .ant-table-column-sorter,
 .transparent-table .ant-table-column-sorter-up,
 .transparent-table .ant-table-column-sorter-down {
-  color: #00442c !important;
+  color: #000 !important;
 }
 
 /* === Force filter placeholders to light blue === */
 .ant-input::placeholder,
 .ant-picker-input > input::placeholder,
 .ant-select-selection-placeholder {
-  color: #00442c !important;
+  color: #000 !important;
   opacity: 1 !important;
 }
 
@@ -147,12 +147,12 @@
 .ant-input,
 .ant-picker-input > input,
 .ant-select-selection-item {
-  color: #00442c !important;
+  color: #000 !important;
 }
 
 /* === Export Button (text + icon) === */
 .btn-Export {
-  color: #00442c !important;
+  color: #000 !important;
 }
 
 /* === Transparent Table Body Cells === */
@@ -221,7 +221,7 @@
  {
     display: block;
     padding: 0 6px;
-    color: #1677ff; 
+    color: #000; 
 }
 
 :where(.css-dev-only-do-not-override-xepvsj).ant-btn-variant-outlined, :where(.css-dev-only-do-not-override-xepvsj).ant-btn-variant-dashed

@@ -24,7 +24,9 @@ const UploadCoupe = () => {
       return;
     }
     if (!["zip", "geojson", "kml"].includes(ext)) {
-      setMessage("Error: Invalid file format. Please upload a .zip (shapefile), .geojson or .kml.");
+      setMessage(
+        "Error: Invalid file format. Please upload a .zip (shapefile), .geojson or .kml."
+      );
       return;
     }
 
@@ -42,7 +44,10 @@ const UploadCoupe = () => {
 
       const data = await res.json();
       if (res.ok) {
-        setMessage("Upload succeeded: " + (data.message || "File processed. Layer published."));
+        setMessage(
+          "Upload succeeded: " +
+            (data.message || "File processed. Layer published.")
+        );
       } else {
         setMessage("Upload failed: " + (data.error || "Unknown error"));
       }
@@ -55,11 +60,13 @@ const UploadCoupe = () => {
   return (
     <div className="upload-container">
       <div className="heading-container">
-        <h3 className="main-heading">Working Plan Areas (Upload Coupe Boundaries)</h3>
+        <h3 className="main-heading">
+          Working Plan Areas (Upload Coupe Boundaries)
+        </h3>
       </div>
-      <div className="content-container" style={{display: "flex", gap: 20}}>
-        <div className="left-section" style={{flex: 1}}>
-          <h2 style={{ textDecoration: "underline", color: "#00442c" }}>
+      <div className="content-container" style={{ display: "flex", gap: 20 }}>
+        <div className="left-section" style={{ flex: 1 }}>
+          <h2 style={{ textDecoration: "underline", color: "#000" }}>
             How to upload coupe boundaries?
           </h2>
           <p>
@@ -69,7 +76,8 @@ const UploadCoupe = () => {
           </p>
           <p>Only upload coupe boundaries.</p>
           <p>
-            Once uploaded, the shapefile will be imported to the database and published to GeoServer automatically.
+            Once uploaded, the shapefile will be imported to the database and
+            published to GeoServer automatically.
           </p>
 
           <h3>Supported File Formats</h3>
@@ -93,16 +101,31 @@ const UploadCoupe = () => {
           </ul>
         </div>
 
-        <div className="right-section" style={{flex: 1}}>
-          <h2 style={{ textDecoration: "underline", color: "#00442c" }}>
+        <div className="right-section" style={{ flex: 1 }}>
+          <h2 style={{ textDecoration: "underline", color: "#000" }}>
             Upload Coupe Boundaries
           </h2>
 
           <div className="under-section">
             <div className="file-upload">
-              <div className="upload-area" style={{border: "2px dashed #ccc", padding: 20, borderRadius: 8}}>
-                <FaCloudUploadAlt style={{ marginRight: "10px", fontSize: "32px" }} />
-                <p style={{ display: "inline", marginRight: "10px", color: "#009245" }}>
+              <div
+                className="upload-area"
+                style={{
+                  border: "2px dashed #ccc",
+                  padding: 20,
+                  borderRadius: 8,
+                }}
+              >
+                <FaCloudUploadAlt
+                  style={{ marginRight: "10px", fontSize: "32px" }}
+                />
+                <p
+                  style={{
+                    display: "inline",
+                    marginRight: "10px",
+                    color: "#009245",
+                  }}
+                >
                   Drag and Drop file here or
                 </p>
                 <a
@@ -127,8 +150,16 @@ const UploadCoupe = () => {
               </div>
             </div>
 
-            <div className="message-container" style={{marginTop: 12}}>
-              {message && <p style={{ color: message.startsWith("Error") ? "red" : "green" }}>{message}</p>}
+            <div className="message-container" style={{ marginTop: 12 }}>
+              {message && (
+                <p
+                  style={{
+                    color: message.startsWith("Error") ? "red" : "green",
+                  }}
+                >
+                  {message}
+                </p>
+              )}
               {fileName && <p>Selected File: {fileName}</p>}
             </div>
           </div>

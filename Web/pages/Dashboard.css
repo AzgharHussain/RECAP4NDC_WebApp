@@ -169,7 +169,7 @@ button {
   padding: 15px;
   border-radius: 10px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  font-size: 10px;
+  font-size: 15px;
 }
 
 .legend-toggle-btn {
@@ -201,43 +201,113 @@ button {
     border-radius: 4px;
 }
 
-/* For mobile view (max-width: 768px) */
+
+
+/* ===========================
+   📱 Mobile / Small Screens
+   =========================== */
 @media (max-width: 768px) {
-  /* Ensure the pie chart is centered properly */
-  .recharts-surface {
-    margin: 0 auto;
-  }
 
-  /* Adjust the pie chart's legend positioning */
-  .recharts-legend-wrapper {
-    position: relative;
-    color: #333;
-    margin-top: 20px;  /* Spacing between the pie chart and legend */
-    font-size: 12px;  /* Reduce font size for better readability on mobile */
-    text-align: center;  /* Center the legend on mobile */
-  }
-
-  /* Adjust the individual legend items for mobile */
-  .recharts-legend-item {
-    display: inline-block;
-    margin: 5px 10px; /* Add margin to prevent items from overlapping */
-    font-size: 12px; /* Smaller font size for better fitting */
-  }
-
-  /* Adjust pie chart labels for mobile (smaller text to avoid overlap) */
-  .recharts-pie-label-text {
-    font-size: 10px;  /* Decrease label font size */
-    text-anchor: middle;  /* Ensure labels are centered in each segment */
-  }
-
-  .chart-card {
+  .dashboard-container {
     padding: 10px;
-    margin: 10px;
-    width: 100%; /* Full width for mobile */
-    height: auto; /* Allow content to adjust height */
+    max-height: unset;
+    overflow: visible;
   }
-  
+
+  .heading-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    padding: 0;
+  }
+
+  .filters .filter-item,
+  .filters .ant-picker,
+  .filters .ant-select,
+  .filters button {
+    width: 100% !important;
+  }
+
+  .FilterIcon {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Shrink donut chart inside cards */
+  .chart-card .recharts-wrapper {
+    width: 350px !important;
+    height: 250px !important;
+    margin: 0 auto !important;
+    margin-left: -20px!important;
+  }
+
+  .chart-card svg {
+    transform: scale(0.75);       /* Shrink the entire chart */
+    transform-origin: center;     /* Keep it centered */
+  }
+
+  /* Adjust total value font size inside center */
+  .chart-card text {
+    font-size: 18px !important;
+  }
+
+  /* Center legend below the chart */
+  .recharts-legend-wrapper {
+    position: relative !important;
+    margin-top: 8px !important;
+    text-align: center !important;
+  }
+   /* ✅ Place legend to the right side of the donut */
+  .chart-card .recharts-legend-wrapper {
+    position: absolute !important;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 100px; /* Adjust if needed */
+    text-align: left;
+  }
+
+  .chart-card .recharts-legend-wrapper ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chart-card .recharts-legend-wrapper li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #000;
+    font-weight: 500;
+  }
+
+  .chart-card .recharts-legend-wrapper li span {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 250px;
+  }
 }
+
+/* ===========================
+   💻 Tablet View
+   =========================== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-container {
+    max-height: unset;
+    overflow-y: auto;
+  }
+}
+
 
 /* For tablets or medium-sized screens (max-width: 1024px) */
 @media (max-width: 1024px) {
