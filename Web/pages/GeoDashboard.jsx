@@ -51,7 +51,7 @@ const getLegendUrl = (layerName) =>
   )}`;
 export default function MapView() {
   const mapRef = useRef(null);
-  const [activeBasemap, setActiveBasemap] = useState("LightGray");
+  const [activeBasemap, setActiveBasemap] = useState("Imagery");
   const [activeTool, setActiveTool] = useState("layers");
   const [activetoolone, setActivetoolone] = useState("");
   const [userdata, setuserdata] = useState("");
@@ -727,7 +727,7 @@ const handleToolSidebarClick = (toolName) => {
         <svg width="16" height="16" viewBox="0 0 24 24">
           <path
                 d="M3 6H21M3 12H21M3 18H21"
-                stroke="#39E23E"
+                stroke="#fff"
                 strokeWidth="2"
                 strokeLinecap="round"
               />
@@ -944,14 +944,15 @@ const handleToolSidebarClick = (toolName) => {
               position: "fixed",
               bottom: "80px",
               right: "20px",
-              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              backgroundColor: "rgba(255, 255, 255, 0.03)",
               padding: "10px",
               borderRadius: "8px",
-              boxShadow: "0px 4px 6px rgba(0,0,0,0.2)",
-              maxHeight: "350px",
+              boxShadow: "-6.479px -6.479px 3.24px -7.559px #B3B3B3 inset, -6.479px -6.479px 3.24px -7.559px #B3B3B3 inset, -6.479px -6.479px 3.24px -7.559px #B3B3B3 inset, 8.639px 8.639px 4.86px -9.719px #FFF inset",
               overflowY: "auto",
-              width: "240px",
+              width: "229px",
               zIndex: 10000,
+              height:"152px",
+
             }}
           >
             <h4 style={{ margin: "6px 0" }}>Map Legend</h4>

@@ -15,7 +15,7 @@ import logos8 from "../assets/logos8.png";
 import logos9 from "../assets/logos9.png";
 import logos10 from "../assets/logos10.png";
 import logos11 from "../assets/logos11.png";
-
+import userIcon from "../assets/user.png"; // ✅ import your image
 import patrollingIcon from "../assets/Patrolling.png";  // Import the Patrolling image
 import incidentIcon from "../assets/Incident.png";  // Import the Incident image
 import "./DashboardLayout.css";
@@ -72,7 +72,9 @@ export default function DashboardLayout() {
         </div>
 
         <div className="header-right">
-          <span className="user-icon">👤</span>
+         <span className="user-icon">
+  <img src={userIcon} alt="User Icon" className="user-icon-img" />
+</span>
           <span className="username">Admin ▼</span>
         </div>
       </header>

@@ -46,6 +46,15 @@
   font-weight: bold;
   color: #006400;
 }
+.user-icon-img {
+  width: 20px;   /* Adjust size */
+  height: 20px;
+  border-radius: 63.536px;
+border: 2.053px solid rgba(255, 255, 255, 0.15);
+background: rgba(255, 255, 255, 0.15);
+box-shadow: -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, 12.707px 12.707px 7.148px -14.296px #FFF inset;
+  object-fit: cover;   /* Keeps aspect ratio */
+}
 
 /* Sidebar */
 .layout-body {
@@ -61,7 +70,7 @@
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.15);
   overflow: auto;
-  
+  max-height: 620px;
 }
 
 .sidebar ul {
@@ -86,7 +95,7 @@
 
 .sidebar a {
   text-decoration: none;
-  color: #fff;
+  color: #000;
   font-weight: 600;
   font-size: 15px;
   display: flex;
@@ -114,7 +123,7 @@
   border-radius: 10px;
   text-decoration: none;
   font-weight: 600;
-  color: white;   /* default = white */
+  color: #000;   /* default = white */
   transition: all 0.3s ease;
 }
 
@@ -144,6 +153,8 @@
   object-fit: contain;  /* Prevent stretching */
   margin-right: 8px;  /* Space between the image and text */
   transition: filter 0.3s ease; /* Smooth transition for filter */
+ filter: brightness(0) saturate(100%);
+  
 }
 /* Page content */
 .content {
@@ -158,7 +169,7 @@
 
   /* 🔑 ensure height is constrained */
   height: 100%;        /* or a fixed px */
-  max-height: 650px;   /* for example */
+ 
 }
 
 
@@ -172,7 +183,7 @@
   border-radius: 10px;
   background: transparent;        /* default no highlight */
   border: none;
-  color: white;                   /* default text white */
+  color: #000;                   /* default text white */
   font-weight: 600;
   cursor: pointer;
   width: 100%;
@@ -196,7 +207,7 @@
 }
 
 .dropdown-menus .menu-item {
-  color: white; /* default white */
+  color: #000; /* default white */
   font-weight: 500;
 }
 
@@ -213,7 +224,7 @@
   font-size: 24px;
   background: none;
   border: none;
-  color: white;
+  color: #000;
   cursor: pointer;
   margin-right: 10px;
 }

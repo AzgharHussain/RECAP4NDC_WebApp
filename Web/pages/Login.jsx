@@ -17,6 +17,11 @@ function LoginPage() {
     navigate("/dashboard"); // redirect after login
   };
 
+  const handleLanguageSwitch = () => {
+    navigate("/"); // ✅ redirects back to login
+    window.scrollTo(0, 0); // optional: ensures scroll resets
+  };
+
   return (
     <div
       className="login-screen"
@@ -39,15 +44,8 @@ function LoginPage() {
     >
       {/* ✅ LEFT SIDE – Logos */}
 
-      <img
-        src={leftLogos}
-        alt="Partner Logos"
-        style={{
-          width: "26%",
-          height: "auto",
-          objectFit: "contain",
-        }}
-      />
+      <img src={leftLogos} alt="Partner Logos" className="partner-logos" />
+
 
       <div
         className="right-Panel"
@@ -106,7 +104,7 @@ function LoginPage() {
 
         {/* Footer Bar */}
         <div className="footer-bar">
-          <button className="lang-chip active">EN</button>
+           <button className="lang-chip active" onClick={handleLanguageSwitch}>EN</button>
           <div className="footer-note">
             2025 © All Rights Reserved By | RECAP4NDC
           </div>
