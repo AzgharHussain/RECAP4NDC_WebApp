@@ -6,7 +6,7 @@
 }
 
 .sidebar-title {
-  color: #009245;
+  color: #000;
 }
 
 .sidebar-section {
@@ -21,7 +21,7 @@
   cursor: pointer;
   font-weight: 600;
   
-  color: #009245;
+  color: #000;
  
 }
 
@@ -68,7 +68,7 @@
 
 .date-input-container .input-field {
   flex: 1;
-   color: #1B75BA;
+   color: #000;
 }
 
 .date-input-container .input-field:last-child {
@@ -104,7 +104,7 @@ box-shadow: -7.03px -7.03px 3.515px -8.201px #B3B3B3 inset, -7.03px -7.03px 3.51
   margin-right: 24px;
 }
 .green-label {
- color: #1B75BA;
+ color: #000;
 font-family: Inter;
 font-size: 11px;
 font-style: normal;
@@ -121,7 +121,7 @@ margin-bottom: 10px; /* Space between label and checkbox */
 }
 
 .checkbox-group label {
- color: #1B75BA;
+ color: #000;
 font-family: Inter;
 font-size: 11px;
 font-style: normal;

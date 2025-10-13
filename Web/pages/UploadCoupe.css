@@ -19,7 +19,7 @@ html, body {
   padding: 0;
   font-family: "Inter", sans-serif;
   background: linear-gradient(to right, rgba(210, 240, 220, 0.8), rgba(190, 235, 210, 0.8));
-  color: #00442c !important; /* Set default text color to white */
+  color: #000 !important; /* Set default text color to white */
 }
 
 
@@ -31,7 +31,7 @@ html, body {
 .main-heading {
   /* font-size: 23px; */
   font-weight: 700;
-  color: #009245;
+  color: #000;
 }
 
 .content-container {
@@ -44,7 +44,7 @@ html, body {
   flex: 1;
   padding: 20px;
   border-radius: var(--border-radius);
-  color:#00442c !important; /* Set text color to white for this section */
+  color:#000 !important; /* Set text color to white for this section */
   margin-top: -30px;
 }
 
@@ -56,7 +56,7 @@ html, body {
   flex: 1;
   padding: 20px;
   border-radius: var(--border-radius);
-  color:#00442c !important; /* Set text color to white for this section */
+  color:#000 !important; /* Set text color to white for this section */
   margin-top: -30px;
 }
 
@@ -69,7 +69,7 @@ html, body {
   flex: 1;
   padding: 30px;
   border-radius: var(--border-radius);
-  color: #00442c !important; /* Set text color to white for this section */
+  color: #000 !important; /* Set text color to white for this section */
   height: 80%;
   opacity: 1.0;
 border: 3.37px solid rgba(255, 255, 255, 0.23);
@@ -105,7 +105,7 @@ box-shadow: -15.645px -15.645px 7.823px -18.253px #B3B3B3 inset, -15.645px -15.6
 
 .upload-area p {
   font-size: 18px;
-  color: #00442c !important; /* Text inside the upload area is now white */
+  color: #000 !important; /* Text inside the upload area is now white */
 }
 
 .choose-file-btn {
@@ -122,7 +122,10 @@ box-shadow: -15.645px -15.645px 7.823px -18.253px #B3B3B3 inset, -15.645px -15.6
   background-color: var(--blue);
 }
 
-
+.upload-container{
+overflow: auto;
+    max-height: 600px;
+}
 
 /* Style for the new heading outside right-section */
 .upload-heading {
