@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Table, Button, Input, Select, DatePicker, Modal } from "antd";
-import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
-import './PatrolIncidentLogs.css';  // Import the CSS for styling
-import exportIcon from '../assets/excel.png';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import noDataImage from '../assets/no-data.png';
+import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
+import "./PatrolIncidentLogs.css"; // Import the CSS for styling
+import exportIcon from "../assets/excel.png";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import noDataImage from "../assets/no-data.png";
+import { useLanguage } from "../context/LanguageContext";
 
 const { Option } = Select;
 
@@ -17,17 +18,63 @@ const PatrolIncidentLogs = () => {
   const [incidentDate, setIncidentDate] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
   const [isModalVisible, setIsModalVisible] = useState(false);
-    const [selectedImages, setSelectedImages] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
+  
+  const { language } = useLanguage(); // use global language
 
-  // ✅ Fetch incident data
+  const text = {
+    en: {
+      title: "Incident Logs",
+      searchPlaceholder: "Search by Officer Name",
+      categoryFilterPlaceholder: "Select Incident Category",
+      dateFilterPlaceholder: "Search by Incident Date",
+      exportButton: "Export",
+      noDataText: "No data available",
+      incidentId: "Incident ID",
+      patrolId: "Patrol ID",
+      officerName: "Officer Name",
+      category: "Incident Category",
+      incidentDate: "Incident Date",
+      incidentTime: "Incident Time",
+      location: "Location (GPS)",
+      description: "Incident Description",
+      images: "Images",
+      viewImages: "View Images",
+    },
+    gu: {
+      title: "અકપાસના લોગ્સ",
+      searchPlaceholder: "કર્મચારી નામ દ્વારા શોધો",
+      categoryFilterPlaceholder: "અકસ્માત શ્રેણી પસંદ કરો",
+      dateFilterPlaceholder: "અકસ્માત તારીખ દ્વારા શોધો",
+      exportButton: "નિકાલ",
+      noDataText: "કોઈ માહિતી ઉપલબ્ધ નથી",
+      incidentId: "અકસ્માત ID",
+      patrolId: "પેટ્રોલ ID",
+      officerName: "કર્મચારીનું નામ",
+      category: "શ્રેણી",
+      incidentDate: "અકસ્માત તારીખ",
+      incidentTime: "અકસ્માત સમય",
+      location: "સ્થળ (GPS)",
+      description: "અકસ્માત વર્ણન",
+      images: "ચિત્રો",
+      viewImages: "ચિત્રો જુઓ",
+    },
+  };
+
+  // Fetch incident data
   const fetchIncidentData = async () => {
     try {
-      const response = await fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=1");
+      const response = await fetch(
+        "http://68.178.167.39:5000/api/incidents-with-images?user_id=1"
+      );
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
       let formatted = Array.isArray(data) ? data : [data];
-      formatted = formatted.map((item, index) => ({ key: item.p_incident_id || index, ...item }));
+      formatted = formatted.map((item, index) => ({
+        key: item.p_incident_id || index,
+        ...item,
+      }));
       setIncidentData(formatted);
     } catch (error) {
       console.error("Error fetching incident data:", error);
@@ -39,117 +86,119 @@ const PatrolIncidentLogs = () => {
     fetchIncidentData();
   }, []);
 
-  // ✅ Format date and time
   const formatDateTime = (datetime) => {
     const date = new Date(datetime);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
     return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
   };
 
-  // ✅ Filtering logic
   useEffect(() => {
     let data = [...incidentData];
 
     if (searchText.trim() !== "") {
       const lower = searchText.toLowerCase();
-      data = data.filter(item => item.p_incident_reported_by?.toLowerCase().includes(lower));
+      data = data.filter((item) =>
+        item.p_incident_reported_by?.toLowerCase().includes(lower)
+      );
     }
 
     if (categoryFilter !== "All") {
-      data = data.filter(item => item.p_category_name === categoryFilter);
+      data = data.filter((item) => item.p_category_name === categoryFilter);
     }
 
     if (incidentDate) {
       const selected = incidentDate.format("DD-MM-YYYY");
-      data = data.filter(item => formatDateTime(item.p_incident_time).date === selected);
+      data = data.filter(
+        (item) => formatDateTime(item.p_incident_time).date === selected
+      );
     }
 
     setFilteredData(data);
   }, [searchText, categoryFilter, incidentDate, incidentData]);
 
-  // ✅ Export to Excel handler
   const handleExport = () => {
     if (!filteredData.length) {
-      alert("No data to export");
+      alert(text[language].noDataText);
       return;
     }
 
-    // Prepare data
-    const exportData = filteredData.map(item => ({
-      'Incident ID': item.p_incident_id,
-      'Patrol ID': item.p_patrol_id,
-      'Officer Name': item.p_incident_reported_by,
-      'Category': item.p_category_name,
-      'Incident Date': formatDateTime(item.p_incident_time).date,
-      'Incident Time': formatDateTime(item.p_incident_time).time,
-      'Location (GPS)': item.p_location_gps?.coordinates
+    const exportData = filteredData.map((item) => ({
+      [text[language].incidentId]: item.p_incident_id,
+      [text[language].patrolId]: item.p_patrol_id,
+      [text[language].officerName]: item.p_incident_reported_by,
+      [text[language].category]: item.p_category_name,
+      [text[language].incidentDate]: formatDateTime(item.p_incident_time).date,
+      [text[language].incidentTime]: formatDateTime(item.p_incident_time).time,
+      [text[language].location]: item.p_location_gps?.coordinates
         ? `${item.p_location_gps.coordinates[1]}, ${item.p_location_gps.coordinates[0]}`
-        : 'N/A',
-      'Description': item.p_incident_description,
-      'Images Count': item.p_image_urls?.length || 0,
+        : "N/A",
+      [text[language].description]: item.p_incident_description,
+      [text[language].images]: item.p_image_urls?.length || 0,
     }));
 
-    // Convert to sheet & workbook
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Incident Logs");
 
-    // Save file
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    saveAs(new Blob([wbout], { type: "application/octet-stream" }), 'Incident_Logs.xlsx');
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    saveAs(
+      new Blob([wbout], { type: "application/octet-stream" }),
+      "Incident_Logs.xlsx"
+    );
   };
 
-  // ✅ Table columns
   const columns = [
     {
-      title: "Incident ID",
+      title: text[language].incidentId,
       dataIndex: "p_incident_id",
       key: "p_incident_id",
       sorter: (a, b) => a.p_incident_id - b.p_incident_id,
-      align: 'center'
+      align: "center",
     },
     {
-      title: "Patrol ID",
+      title: text[language].patrolId,
       dataIndex: "p_patrol_id",
       key: "p_patrol_id",
       sorter: (a, b) => a.p_patrol_id - b.p_patrol_id,
-      align: 'center'
+      align: "center",
     },
     {
-      title: "Officer Name",
+      title: text[language].officerName,
       dataIndex: "p_incident_reported_by",
       key: "p_incident_reported_by",
-      sorter: (a, b) => a.p_incident_reported_by.localeCompare(b.p_incident_reported_by),
-      align: 'center'
+      sorter: (a, b) =>
+        a.p_incident_reported_by.localeCompare(b.p_incident_reported_by),
+      align: "center",
     },
     {
-      title: "Incident Category",
+      title: text[language].category,
       dataIndex: "p_category_name",
       key: "p_category_name",
       sorter: (a, b) => a.p_category_name.localeCompare(b.p_category_name),
-      align: 'center'
+      align: "center",
     },
     {
-      title: "Incident Date",
+      title: text[language].incidentDate,
       dataIndex: "p_incident_time",
       key: "p_incident_time_date",
       render: (text) => formatDateTime(text).date,
-      sorter: (a, b) => new Date(a.p_incident_time) - new Date(b.p_incident_time),
-      align: 'center'
+      sorter: (a, b) =>
+        new Date(a.p_incident_time) - new Date(b.p_incident_time),
+      align: "center",
     },
     {
-      title: "Incident Time",
+      title: text[language].incidentTime,
       dataIndex: "p_incident_time",
       key: "p_incident_time",
       render: (text) => formatDateTime(text).time,
-      align: 'center'
+      align: "center",
     },
     {
-      title: "Location (GPS)",
+      title: text[language].location,
       dataIndex: "p_location_gps",
       key: "p_location_gps",
       render: (text) => {
@@ -164,67 +213,81 @@ const PatrolIncidentLogs = () => {
         }
         return "N/A";
       },
-      align: 'center'
+      align: "center",
     },
     {
-      title: "Incident Description",
+      title: text[language].description,
       dataIndex: "p_incident_description",
-      key: "p_incident_description"
+      key: "p_incident_description",
     },
     {
-       title: 'Images',
-            dataIndex: 'p_image_urls',
-            key: 'p_image_urls',
-            render: (images) => (
-              <Button
-                icon={<EyeOutlined />}
-                onClick={() => showModal(images)} // Open the modal with the images
-                style={{ border: 'none', backgroundColor: 'transparent' }}
-              />
-            ),
-          },
-        ];
-      
-        // Open modal with images
-        const showModal = (images) => {
-          setSelectedImages(images);
-          setIsModalVisible(true);
-        };
-      
-        // Close the modal
-        const handleCancel = () => {
-          setIsModalVisible(false);
-        };
+      title: text[language].images,
+      dataIndex: "p_image_urls",
+      key: "p_image_urls",
+      render: (images) => (
+        <Button
+          icon={<EyeOutlined />}
+          onClick={() => showModal(images)} // Open the modal with the images
+          style={{ border: "none", backgroundColor: "transparent" }}
+        />
+      ),
+    },
+  ];
+
+  const showModal = (images) => {
+    setSelectedImages(images);
+    setIsModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+  };
 
   return (
     <div className="container">
       <div className="section">
         <div className="heading-container">
-          <h3 className="main-heading">Incident Logs</h3>
+          <h3 className="main-heading">{text[language].title}</h3>
           <div className="filters">
             <Input
-              placeholder="Search by Officer Name"
-              style={{ width: "200px", background: 'rgba(255, 255, 255, 0.2)', border: 'none' }}
+              placeholder={text[language].searchPlaceholder}
+              style={{
+                width: "200px",
+                background: "rgba(255, 255, 255, 0.2)",
+                border: "none",
+              }}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              suffix={<SearchOutlined style={{ color: 'rgba(0, 0, 0, 0.25)', fontSize: '16px' }} />}
+              suffix={
+                <SearchOutlined
+                  style={{ color: "rgba(0, 0, 0, 0.25)", fontSize: "16px" }}
+                />
+              }
             />
-            <Select value={categoryFilter} onChange={(val) => setCategoryFilter(val)} style={{ width: "200px" }}>
-              <Option value="All">All Incident Categories</Option>
+            <Select
+              value={categoryFilter}
+              onChange={(val) => setCategoryFilter(val)}
+              style={{ width: "200px" }}
+            >
+              <Option value="All">{text[language].categoryFilterPlaceholder}</Option>
               <Option value="Poaching">Poaching</Option>
               <Option value="Illegal Logging">Illegal Logging</Option>
               <Option value="Encroachment">Encroachment</Option>
               <Option value="Other">Other</Option>
             </Select>
             <DatePicker
-              placeholder="Search by Incident Date"
-              style={{ width: "200px", border: '2.21px solid rgba(255, 255, 255, 0.23)', background: 'rgba(255, 255, 255, 0.02)' }}
+              placeholder={text[language].dateFilterPlaceholder}
+              style={{
+                width: "200px",
+                border: "2.21px solid rgba(255, 255, 255, 0.23)",
+                background: "rgba(255, 255, 255, 0.02)",
+              }}
               value={incidentDate}
               onChange={(val) => setIncidentDate(val)}
               format="DD-MM-YYYY"
             />
             <Button className="btn-Export" onClick={handleExport}>
-              Export
+              {text[language].exportButton}
               <img src={exportIcon} alt="Export Icon" className="btn-icon" />
             </Button>
           </div>
@@ -237,33 +300,48 @@ const PatrolIncidentLogs = () => {
           bordered
           locale={{
             emptyText: (
-              <div style={{ textAlign: 'center', padding: '50px 0' }}>
+              <div style={{ textAlign: "center", padding: "50px 0" }}>
                 <img
                   src={noDataImage}
                   alt="No Data"
                   style={{ width: 60, marginBottom: 16 }}
                 />
-                <div style={{ fontSize: 16, color: '#00442c', fontWeight: 500 }}>
-                  No data available
+                <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
+                  {text[language].noDataText}
                 </div>
               </div>
             ),
           }}
         />
-        {/* Modal to display the images */}
-             <Modal
-               open={isModalVisible}
-               onCancel={handleCancel}
-               footer={null}
-               width={800}
-               title="View Images"
-             >
-               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                 {selectedImages.map((image, index) => (
-                   <img key={index} src={image} alt={`Image ${index}`} style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', marginBottom: '15px' }} />
-                 ))}
-               </div>
-             </Modal>
+        <Modal
+          open={isModalVisible}
+          onCancel={handleCancel}
+          footer={null}
+          width={800}
+          title={text[language].viewImages}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            {selectedImages.map((image, index) => (
+              <img
+                key={index}
+                src={image}
+                alt={`Image ${index}`}
+                style={{
+                  width: "100%",
+                  maxHeight: "500px",
+                  objectFit: "contain",
+                  marginBottom: "15px",
+                }}
+              />
+            ))}
+          </div>
+        </Modal>
       </div>
     </div>
   );
