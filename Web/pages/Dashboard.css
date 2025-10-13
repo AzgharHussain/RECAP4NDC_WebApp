@@ -25,22 +25,29 @@ body {
 }
 
 .layout {
-  overflow-y:hidden;
+  display: flex;
+  flex-direction: column;
+ 
+  background: 
+    linear-gradient(180deg, rgba(48, 144, 89, 0.85) -6.02%, rgba(234, 194, 147, 0.85) 51.41%, rgba(54, 117, 165, 0.85) 86.7%),
+    url("../assets/Background.png") no-repeat center center;
+  overflow-y: hidden; /* Ensure content scrolls if necessary */
 }
 
 .dashboard-container {
-  display: flex;
+ display: flex;
   flex-direction: column;
   color: #004d00;
   padding: 20px;
-  max-height: 700px; /* Set a max height */
-  overflow: auto; /* Enable scrolling */
+  overflow-y: auto; /* Allow scroll when content overflows */
+
+ 
 }
 
 
 
 .heading-container {
-  display: flex;
+ display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 30px;
@@ -49,7 +56,7 @@ body {
 
 .main-heading {
   font-weight: 700;
-  color: #009245;
+  color: #000;
   margin-right: 20px;
 }
 
@@ -91,7 +98,7 @@ button {
 /* Chart Card Styling */
 .chart-card {
   backdrop-filter: blur(10px);
-  padding: 20px;
+  padding: 1px;
   flex: 1 1 48%;
   min-width: 300px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -103,7 +110,7 @@ button {
 
 .chart-card h3 {
   text-align: center;
-  color: #228B22;
+  color: #000;
   font-weight: 600;
   margin-bottom: 10px;
 }
@@ -144,7 +151,7 @@ button {
 
 /* Recharts styling */
 .recharts-wrapper .recharts-cartesian-axis-tick-value tspan {
-  fill: #fff; /* X-axis and Y-axis labels */
+  fill: #000; /* X-axis and Y-axis labels */
 }
 
 .recharts-tooltip-wrapper {
@@ -152,38 +159,10 @@ button {
 }
 
 .recharts-legend-item-text {
-  color: #fff !important;
+  color:#000 !important;
 }
 
-@media (max-width: 768px) {
-  .heading-container {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-}
 
-.map-legend {
-  max-width: 250px;
-  background-color: rgba(255, 255, 255, 0.85);
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  font-size: 14px;
-}
-
-.legend-toggle-btn {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #39E23C;
-  color: white;
-  padding: 12px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  font-size: 20px;
-}
 
 
 :where(.css-dev-only-do-not-override-xepvsj).ant-select-dropdown .ant-select-item {
@@ -201,48 +180,113 @@ button {
     border-radius: 4px;
 }
 
-/* For mobile view (max-width: 768px) */
+
+
+/* ===========================
+   📱 Mobile / Small Screens
+   =========================== */
 @media (max-width: 768px) {
-  /* Ensure the pie chart is centered properly */
-  .recharts-surface {
-    margin: 0 auto;
-  }
-
-  /* Adjust the pie chart's legend positioning */
-  .recharts-legend-wrapper {
-    position: relative;
-    margin-top: 20px;  /* Spacing between the pie chart and legend */
-    font-size: 12px;  /* Reduce font size for better readability on mobile */
-    text-align: center;  /* Center the legend on mobile */
-  }
-
-  /* Adjust the individual legend items for mobile */
-  .recharts-legend-item {
-    display: inline-block;
-    margin: 5px 10px; /* Add margin to prevent items from overlapping */
-    font-size: 12px; /* Smaller font size for better fitting */
-  }
-
-  /* Adjust pie chart labels for mobile (smaller text to avoid overlap) */
-  .recharts-pie-label-text {
-    font-size: 10px;  /* Decrease label font size */
-    text-anchor: middle;  /* Ensure labels are centered in each segment */
-  }
-
-  .chart-card {
+  .dashboard-container {
     padding: 10px;
-    margin: 10px;
-    width: 100%; /* Full width for mobile */
-    height: auto; /* Allow content to adjust height */
+    max-height: unset;
+    overflow: visible;
   }
-  
+
+  .heading-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    padding: 0;
+  }
+
+  .filters .filter-item,
+  .filters .ant-picker,
+  .filters .ant-select,
+  .filters button {
+    width: 100% !important;
+  }
+
+  .FilterIcon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .chart-card .recharts-wrapper {
+    width: 300px !important;
+    height: 180px !important;
+    margin: 0 auto !important;
+  }
+
+  .chart-card svg {
+    transform: scale(0.75); /* Shrink the entire chart */
+    transform-origin: center;
+  }
+
+  .chart-card text {
+    font-size: 18px !important;
+  }
+
+  .recharts-legend-wrapper {
+    position: relative !important;
+    margin-top: 25px !important;
+    text-align: center !important;
+  }
+
+  .chart-card .recharts-legend-wrapper {
+    position: absolute !important;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 100px; /* Adjust if needed */
+    text-align: left;
+  }
+
+  .chart-card .recharts-legend-wrapper ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chart-card .recharts-legend-wrapper li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #000;
+    font-weight: 500;
+  }
+
+  .chart-card .recharts-legend-wrapper li span {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 250px;
+  }
+
+  .charts-grid {
+    flex-direction: column; /* Stack charts vertically */
+    align-items: center;    /* Center charts */
+  }
 }
 
-/* For tablets or medium-sized screens (max-width: 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-container {
+    max-height: unset;
+    overflow-y: auto;
+  }
+}
+
 @media (max-width: 1024px) {
   .dashboard-container {
-    max-height: 1200px;  /* Increase the height of the container */
-    overflow-y: auto;  /* Enable scrolling if content overflows */
+    max-height: 1200px;
+    overflow-y: auto;
   }
 }
-
