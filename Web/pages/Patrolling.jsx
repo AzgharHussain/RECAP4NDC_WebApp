@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import noDataImage from "../assets/no-data.png";
+import { useLanguage } from "../context/LanguageContext"; // Import language context
 
 // ✅ Leaflet imports
 import {
@@ -95,6 +96,7 @@ function PatrolMap({ patrol }) {
     </MapContainer>
   );
 }
+
 const PatrolIncidentLogs = () => {
   const [patrolData, setPatrolData] = useState([]);
   const [searchText, setSearchText] = useState("");
@@ -103,6 +105,8 @@ const PatrolIncidentLogs = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [selectedPatrol, setSelectedPatrol] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const { language } = useLanguage(); // Get current language (either 'en' or 'gu')
 
   // ✅ for map view
   const [selectedRoute, setSelectedRoute] = useState(null);
@@ -198,14 +202,14 @@ const PatrolIncidentLogs = () => {
 
   const columns = [
     {
-      title: "Patrol ID",
+      title: language === "gu" ? "પેટ્રોલિંગ આઈડી" : "Patrol ID",
       dataIndex: "patrol_id",
       key: "patrol_id",
       sorter: (a, b) => a.patrol_id - b.patrol_id,
       align: "center",
     },
     {
-      title: "Officer Name",
+      title: language === "gu" ? "અધિકારીનું નામ" : "Officer Name",
       dataIndex: "patrol_officer_name",
       key: "patrol_officer_name",
       sorter: (a, b) =>
@@ -213,7 +217,7 @@ const PatrolIncidentLogs = () => {
       align: "center",
     },
     {
-      title: "Patrol Start Date",
+      title: language === "gu" ? "પેટ્રોલિંગ શરૂ થવાની તારીખ" : "Patrol Start Date",
       dataIndex: "start_time",
       key: "start_date",
       render: (text) => formatDateTime(text).date,
@@ -221,14 +225,14 @@ const PatrolIncidentLogs = () => {
       align: "center",
     },
     {
-      title: "Patrol Start Time",
+      title: language === "gu" ? "પેટ્રોલિંગ શરૂ થવાનો સમય" : "Patrol Start Time",
       dataIndex: "start_time",
       key: "start_time",
       render: (text) => formatDateTime(text).time,
       align: "center",
     },
     {
-      title: "Patrol End Date",
+      title: language === "gu" ? "પેટ્રોલિંગ પૂર્ણ થવાની તારીખ" : "Patrol End Date",
       dataIndex: "end_time",
       key: "end_date",
       render: (text) => formatDateTime(text).date,
@@ -236,33 +240,33 @@ const PatrolIncidentLogs = () => {
       align: "center",
     },
     {
-      title: "Patrol End Time",
+      title: language === "gu" ? "પેટ્રોલિંગ પૂર્ણ થવાનો સમય" : "Patrol End Time",
       dataIndex: "end_time",
       key: "end_time",
       render: (text) => formatDateTime(text).time,
       align: "center",
     },
     {
-      title: "Starting Point Location",
+      title: language === "gu" ? "શરૂઆતનું સ્થાન" : "Starting Point Location",
       dataIndex: "start_location",
       key: "start_location",
       align: "center",
     },
     {
-      title: "End Point Location",
+      title: language === "gu" ? "અંતિમ સ્થાન" : "End Point Location",
       dataIndex: "end_location",
       key: "end_location",
       align: "center",
     },
     {
-      title: "Distance (in Kms)",
+      title: language === "gu" ? "અંતર" : "Distance (in Kms)",
       dataIndex: "distance_kms",
       key: "distance_kms",
       sorter: (a, b) => parseFloat(a.distance_kms) - parseFloat(b.distance_kms),
       align: "center",
     },
     {
-      title: "Route",
+      title: language === "gu" ? "રસ્તો" : "Route",
       dataIndex: "geom",
       key: "geom",
       render: (_, record) => (
@@ -279,7 +283,7 @@ const PatrolIncidentLogs = () => {
             setIsModalVisible(true);
           }}
         >
-          View
+          {language === "gu" ? "દેખાવ" : "View"}
         </Button>
       ),
       align: "center",
@@ -290,10 +294,12 @@ const PatrolIncidentLogs = () => {
     <div className="container">
       <div className="section">
         <div className="heading-container">
-          <h3 className="main-heading">Patrolling Logs</h3>
+          <h3 className="main-heading">
+            {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Patrolling Logs"}
+          </h3>
           <div className="filters">
             <Input
-              placeholder="Search by Officer Name"
+              placeholder={language === "gu" ? "અધિકારીના નામ પ્રમાણે શોધો" : "Search by Officer Name"}
               style={{
                 width: "200px",
                 background: "rgba(255, 255, 255, 0.2)",
@@ -308,7 +314,7 @@ const PatrolIncidentLogs = () => {
               }
             />
             <DatePicker
-              placeholder="Search by Start Date"
+              placeholder={language === "gu" ? "શરૂઆતની તારીખથી શોધો" : "Search by Start Date"}
               style={{
                 width: "200px",
                 border: "2.21px solid rgba(255, 255, 255, 0.23)",
@@ -318,7 +324,7 @@ const PatrolIncidentLogs = () => {
               onChange={(date) => setStartFilter(date)}
             />
             <DatePicker
-              placeholder="Search by End Date"
+              placeholder={language === "gu" ? "સમાપ્ત તારીખથી શોધો" : "Search by End Date"}
               style={{
                 width: "200px",
                 color: "#fff",
@@ -329,7 +335,7 @@ const PatrolIncidentLogs = () => {
               onChange={(date) => setEndFilter(date)}
             />
             <Button className="btn-Export" onClick={handleExport}>
-              Export
+              {language === "gu" ? "નિકાસ કરો" : "Export"}
               <img src={exportIcon} alt="Export Icon" className="btn-icon" />
             </Button>
           </div>
@@ -349,7 +355,7 @@ const PatrolIncidentLogs = () => {
                   style={{ width: 60, marginBottom: 16 }}
                 />
                 <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
-                  No data available
+                  {language === "gu" ? "કોઈ ડેટા ઉપલબ્ધ નથી" : "No data available"}
                 </div>
               </div>
             ),
@@ -365,8 +371,8 @@ const PatrolIncidentLogs = () => {
         width={800}
         title={
           selectedPatrol
-            ? `Patrol Route - ${selectedPatrol.patrol_officer_name} (Distance: ${selectedPatrol.distance_kms} km)`
-            : "Patrol Route"
+            ? `${language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"} - ${selectedPatrol.patrol_officer_name} (${language === "gu" ? "અંતર" : "Distance"}: ${selectedPatrol.distance_kms} km)`
+            : language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"
         }
       >
         {selectedPatrol && <PatrolMap patrol={selectedPatrol} />}
@@ -374,4 +380,5 @@ const PatrolIncidentLogs = () => {
     </div>
   );
 };
+
 export default PatrolIncidentLogs;

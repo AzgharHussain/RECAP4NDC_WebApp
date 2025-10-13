@@ -41,7 +41,10 @@
 .transparent-table .ant-table-tbody > tr:hover > td {
   background: rgba(0, 0, 0, 0.05) !important;  /* slight black highlight on hover */
 }
-
+.section{
+      overflow: auto;
+    max-height: 620px;
+}
 /* === Filters Section === */
 .filters-section {
   display: flex;

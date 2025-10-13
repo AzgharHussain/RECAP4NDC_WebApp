@@ -86,6 +86,8 @@ const ndviLayers = [
   "cite:2025_08_01_BIO_W_C_COUPE_ndvi",
   "cite:2025_08_01_AFF_W_C_COUPE_ndvi",
   "cite:2025_08_01_AFFORESTATION_W_C_COUPE_ndvi",
+  "cite:2025_09_01_Adapur_view_ndvi",
+  "cite:2025_08_01_Abhapur_view_ndvi"
 ];
 
 const ndwiLayers = [
@@ -95,6 +97,8 @@ const ndwiLayers = [
   "cite:2025_08_01_BIO_W_C_COUPE_ndwi",
   "cite:2025_08_01_AFF_W_C_COUPE_ndwi",
   "cite:2025_08_01_AFFORESTATION_W_C_COUPE_ndwi",
+  "cite:2025_09_01_Adapur_view_ndwi",
+ " cite:2025_08_01_Abhapur_view_ndwi"
 ];
 
 const changeLayers = [
