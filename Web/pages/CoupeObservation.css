@@ -61,7 +61,7 @@
 }
 
 .filters-section .ant-input::placeholder {
-  color: #00442c !important;
+  color: #000 !important;
   opacity: 1;
 }
 
@@ -87,7 +87,7 @@
 .ant-picker-input > input {
   border: 2.21px solid rgba(255, 255, 255, 0.23);
   background: rgba(255, 255, 255, 0.02);
-  color: #00442c !important;
+  color: #000 !important;
   box-shadow: -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
               -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
               -10.261px -10.261px 5.13px -11.971px #B3B3B3 inset,
@@ -95,11 +95,11 @@
 }
 
 .filters-section .ant-select-selection-item {
-  color: #00442c !important;
+  color: #000 !important;
 }
 
 .filters-section .ant-picker-input > input::placeholder {
-  color: #00442c !important;
+  color: #000 !important;
   opacity: 1;
 }
 

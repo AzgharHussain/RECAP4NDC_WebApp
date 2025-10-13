@@ -31,12 +31,7 @@
 }
 
 
-.main-container{
-  display:flex ;
-  flex-direction: row;
-  /* height: 85vh; */
-  width: 100vw;
-}
+
 
 .leaflet-control-scale {
   background-color: white;
@@ -307,15 +302,16 @@
   }
   
   .tool-button {
-    background: #0A3A48;
+   background: rgba(255, 255, 255, 0.02);
+box-shadow: -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, -4.665px -4.665px 2.333px -5.443px #B3B3B3 inset, 6.22px 6.22px 3.499px -6.998px #FFF inset;
     width: 35px;
-    border-radius: 3px;
-    border: none;
+    border: 1.849px solid rgba(255, 255, 255, 0.23);
     padding: 2px;
     font-size: 1.3rem;
-    border-radius: 4px;
+    border-radius: 3px;
     cursor: pointer;
-    color: #39E23C;
+    color: #fff;
+    
   }
 
    .tool-button-active {
@@ -481,8 +477,8 @@ display: none !important;
 
 .user-icon {
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  /* width: 40px; */
+  /* height: 40px; */
 }
 
 .user-details {
@@ -1279,8 +1275,8 @@ color: #000;
 .main-container {
   display: flex;
   flex-direction: row;
-  width: 100vw;
-  height: 100vh; /* Full height for the map */
+  width: 110vw;
+  
 }
 
 /* Leaflet scale control */
@@ -1526,8 +1522,18 @@ color: #000;
 
 .map-legend img {
   width: auto !important;
-  height: 40px !important;  /* make symbol more visible */
-  image-rendering: pixelated; /* keeps sharp edges */
+  /* height: 16px !important; */
+  image-rendering: pixelated;
+}
+
+/* .map-legend li strong:contains("NDVI") + img,
+.map-legend li strong:contains("NDWI") + img,
+.map-legend li strong:contains("Change") + img {
+  height: 64px !important;
+} */
+
+.large-legend {
+  height: 64px !important; /* equal or greater specificity */
 }
 
 
