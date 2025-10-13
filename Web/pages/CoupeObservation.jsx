@@ -5,7 +5,8 @@ import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
 import dayjs from "dayjs"; // For date formatting
 import * as XLSX from "xlsx"; // Import xlsx
-import { saveAs } from "file-saver"; // Import file-saver
+import { saveAs } from "file-saver"; // Import file-saverz
+import { useLanguage } from "../context/LanguageContext"; // Import language context
 
 const { Option } = Select;
 
@@ -17,6 +18,54 @@ const CoupeObservation = () => {
   const [originalData, setOriginalData] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
+
+  const { language } = useLanguage(); // Use the language context
+
+  // Define text for English and Gujarati
+  const text = {
+    en: {
+      title: "Working Plan Areas (Coupe Observation Log)",
+      searchPlaceholder: "Search by Officer Name",
+      issueTypePlaceholder: "Select Issue Type",
+      datePickerPlaceholder: "Select To Date",
+      exportButton: "Export",
+      noDataText: "No data available",
+      serialNo: "Serial No.",
+      issueId: "Issue ID",
+      officerName: "Officer Name",
+      submittedDate: "Submitted Date",
+      submittedTime: "Submitted Time",
+      issueType: "Issue Type",
+      observationNotes: "Observation Notes",
+      images: "Images",
+      viewImages: "View Images",
+      allIssueTypes: "All Issue Types",
+      invasiveSpecies: "Invasive Species",
+      illegalLogging: "Illegal Logging",
+      treeDisease: "Tree Disease",
+    },
+    gu: {
+      title: "કાર્ય યોજના ક્ષેત્રો (કોપ ઓબઝર્વેશન લોગ)",
+      searchPlaceholder: "કર્મચારી નામ દ્વારા શોધો",
+      issueTypePlaceholder: "સમસ્યા પ્રકાર પસંદ કરો",
+      datePickerPlaceholder: "તારીખ પસંદ કરો",
+      exportButton: "નિકાલ",
+      noDataText: "કોઈ માહિતી ઉપલબ્ધ નથી",
+      serialNo: "ક્રમ નંબર",
+      issueId: "સમસ્યા ID",
+      officerName: "કર્મચારીનું નામ",
+      submittedDate: "સબમિટ થયેલી તારીખ",
+      submittedTime: "સબમિટ થયેલો સમય",
+      issueType: "સમસ્યા પ્રકાર",
+      observationNotes: "પરિક્ષણ નોંધો",
+      images: "ચિત્રો",
+      viewImages: "ચિત્રો જુઓ",
+      allIssueTypes: "બધા સમસ્યાના પ્રકાર",
+      invasiveSpecies: "આક્રમક પ્રજાતિઓ",
+      illegalLogging: "અકાયદેસર લોગિંગ",
+      treeDisease: "વૃક્ષ બિમારી",
+    },
+  };
 
   // Fetch data from the API
   useEffect(() => {
@@ -96,25 +145,25 @@ const CoupeObservation = () => {
 
   const columns = [
     {
-      title: "Serial No.",
+      title: text[language].serialNo,
       dataIndex: "p_log_id",
       key: "p_log_id",
       sorter: (a, b) => a.p_log_id - b.p_log_id, // numeric sort
     },
     {
-      title: "Issue ID",
+      title: text[language].issueId,
       dataIndex: "p_issue_id",
       key: "p_issue_id",
       sorter: (a, b) => a.p_issue_id.localeCompare(b.p_issue_id), // string sort
     },
     {
-      title: "Officer Name",
+      title: text[language].officerName,
       dataIndex: "p_officer_name",
       key: "p_officer_name",
       sorter: (a, b) => a.p_officer_name.localeCompare(b.p_officer_name), // string sort
     },
     {
-      title: "Submitted Date",
+      title: text[language].submittedDate,
       dataIndex: "p_date_time",
       key: "submitted_date",
       render: (text) => formatDateTime(text).date,
@@ -123,7 +172,7 @@ const CoupeObservation = () => {
         new Date(a.p_date_time).getTime() - new Date(b.p_date_time).getTime(),
     },
     {
-      title: "Submitted Time",
+      title: text[language].submittedTime,
       dataIndex: "p_date_time",
       key: "submitted_time",
       render: (text) => formatDateTime(text).time,
@@ -132,13 +181,13 @@ const CoupeObservation = () => {
         new Date(a.p_date_time).getTime() - new Date(b.p_date_time).getTime(),
     },
     {
-      title: "Issue Type",
+      title: text[language].issueType,
       dataIndex: "p_issue_type",
       key: "p_issue_type",
       sorter: (a, b) => a.p_issue_type.localeCompare(b.p_issue_type),
     },
     {
-      title: "Observation Notes",
+      title: text[language].observationNotes,
       dataIndex: "p_observation_notes",
       key: "p_observation_notes",
       sorter: (a, b) =>
@@ -147,7 +196,7 @@ const CoupeObservation = () => {
         ),
     },
     {
-      title: "Images",
+      title: text[language].images,
       dataIndex: "p_image_urls",
       key: "p_image_urls",
       render: (images) => (
@@ -174,20 +223,20 @@ const CoupeObservation = () => {
   // Export data to Excel
   const handleExport = () => {
     if (filteredData.length === 0) {
-      alert("No data to export");
+      alert(text[language].noDataText);
       return;
     }
 
     // Format the filtered data to match the columns you want in the export
     const exportData = filteredData.map((item) => ({
-      "Serial No.": item.p_log_id,
-      "Issue ID": item.p_issue_id,
-      "Officer Name": item.p_officer_name,
-      "Submitted Date": formatDateTime(item.p_date_time).date,
-      "Submitted Time": formatDateTime(item.p_date_time).time,
-      "Issue Type": item.p_issue_type,
-      "Observation Notes": item.p_observation_notes,
-      Images: item.p_image_urls.join(", "), // Join image URLs if needed
+      [text[language].serialNo]: item.p_log_id,
+      [text[language].issueId]: item.p_issue_id,
+      [text[language].officerName]: item.p_officer_name,
+      [text[language].submittedDate]: formatDateTime(item.p_date_time).date,
+      [text[language].submittedTime]: formatDateTime(item.p_date_time).time,
+      [text[language].issueType]: item.p_issue_type,
+      [text[language].observationNotes]: item.p_observation_notes,
+      [text[language].images]: item.p_image_urls.join(", "), // Join image URLs if needed
     }));
 
     // Create a worksheet and book, then trigger download
@@ -205,14 +254,12 @@ const CoupeObservation = () => {
   return (
     <div style={{ borderRadius: "10px", padding: "-8px" }}>
       <div className="heading-container">
-        <h3 className="main-heading">
-          Working Plan Areas (Coupe Observation Log)
-        </h3>
+        <h3 className="main-heading">{text[language].title}</h3>
 
         {/* Filters Section */}
         <div className="filters-section">
           <Input
-            placeholder="Search by Officer Name"
+            placeholder={text[language].searchPlaceholder}
             value={searchOfficer}
             onChange={handleSearchOfficerChange}
             style={{
@@ -238,23 +285,15 @@ const CoupeObservation = () => {
               color: "#fff", // Color for selected text
               border: "none",
             }}
-            styles={{
-              popup: {
-                root: {
-                  backgroundColor: "rgba(255, 255, 255, 0.2)", // Background color of the dropdown
-                  color: "#fff", // Color for dropdown items
-                },
-              },
-            }}
           >
-            <Option value="All">All Issue Types</Option>
-            <Option value="Invasive Species">Invasive Species</Option>
-            <Option value="Illegal Logging">Illegal Logging</Option>
-            <Option value="Tree Disease">Tree Disease</Option>
+            <Option value="All">{text[language].allIssueTypes}</Option>
+            <Option value="Invasive Species">{text[language].invasiveSpecies}</Option>
+            <Option value="Illegal Logging">{text[language].illegalLogging}</Option>
+            <Option value="Tree Disease">{text[language].treeDisease}</Option>
           </Select>
 
           <DatePicker
-            placeholder="Select To Date"
+            placeholder={text[language].datePickerPlaceholder}
             value={selectedDate ? dayjs(selectedDate) : null}
             onChange={handleDateChange}
             style={{
@@ -266,7 +305,7 @@ const CoupeObservation = () => {
           />
 
           <Button className="btn-Export" onClick={handleExport}>
-            Export
+            {text[language].exportButton}
             <img src={exportIcon} alt="Export Icon" className="btn-icon" />
           </Button>
         </div>
@@ -289,7 +328,7 @@ const CoupeObservation = () => {
                 style={{ width: 60, marginBottom: 16 }}
               />
               <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
-                No data available
+                {text[language].noDataText}
               </div>
             </div>
           ),
@@ -302,7 +341,7 @@ const CoupeObservation = () => {
         onCancel={handleCancel}
         footer={null}
         width={800}
-        title="View Images"
+        title={text[language].viewImages}
       >
         <div
           style={{

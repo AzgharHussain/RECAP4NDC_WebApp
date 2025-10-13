@@ -13,6 +13,7 @@ import {
   Legend,
 } from "recharts";
 import { DatePicker, Select } from "antd";
+import { useLanguage } from "../context/LanguageContext"; // ✅ Import global language context
 import "./Dashboard.css";
 import filterIcon from "../assets/filter.png";
 
@@ -55,34 +56,53 @@ const renderCustomizedLabel = ({ name, percent, value }) => {
 
 // 🎨 Color Palette for charts
 const COLORS = [
-    "#59a14f", // Green
-   "#f44336", // Red
-  "#607d8b", // Blue Grey
-  "#795548", // Brown Accent
-  "#c2185b", // Berry Pink
-  "#8bc34a", // Light Green
-  "#2196f3", // Blue
-  "#e91e63", // Pink Accent
-  "#009688", // Teal Accent
-  "#edc949", // Yellow
-  "#9c755f", // Brown
-  "#bab0ac", // Grey
-  "#af7aa1", // Purple
-  "#ff9da7", // Pink
-  "#76b7b2", // Teal
-  "#f0a5bc", // Light Pink
-  "#ff6361", // Coral
-  "#3f51b5", // Indigo
-  "#00bcd4", // Cyan
-  "#4caf50", // Green
-  "#ffeb3b", // Yellow Accent
-  "#9e9e9e", // Grey Accent
-  "#673ab7", // Deep Purple
- 
+  "#59a14f", "#f44336", "#607d8b", "#795548", "#c2185b", "#8bc34a",
+  "#2196f3", "#e91e63", "#009688", "#edc949", "#9c755f", "#bab0ac",
+  "#af7aa1", "#ff9da7", "#76b7b2", "#f0a5bc", "#ff6361", "#3f51b5",
+  "#00bcd4", "#4caf50", "#ffeb3b", "#9e9e9e", "#673ab7",
 ];
 
 
 export default function Dashboard() {
+
+  const { language } = useLanguage(); // ✅ Access global language context
+
+  const text = {
+    en: {
+      overview: "Overview",
+      selectFromDate: "Select From Date",
+      selectToDate: "Select To Date",
+      allDivisions: "All Divisions",
+      allRanges: "All Ranges",
+      forestChange: "Forest Cover Change",
+      totalPatrols: "Total Number of Patrols Conducted",
+      totalIncidents: "Total Number of Incidents",
+      observationIssues: "Observation Issues Reported",
+      totalArea: "Total Area of Forest Change",
+      noForestData: "No forest change data available.",
+      noPatrolData: "No patrol data available for the selected period.",
+      noIncidentData: "No incident data available for the selected period.",
+      noIssueData: "No issue type data available.",
+      loading: "Loading...",
+    },
+    gu: {
+      overview: "સારાંશ",
+      selectFromDate: "થી તારીખ પસંદ કરો",
+      selectToDate: "સુધી તારીખ પસંદ કરો",
+      allDivisions: "બધી ડિવિઝન",
+      allRanges: "બધા રેન્જ",
+      forestChange: "વન આવરણમાં ફેરફાર",
+      totalPatrols: "કુલ પેટ્રોલિંગ કામગીરી",
+      totalIncidents: "કુલ ઘટનાઓની સંખ્યા",
+      observationIssues: "અવલોકન મુદ્દા નોંધાયા",
+      totalArea: "વન આવરણમાં કુલ ફેરફાર વિસ્તાર",
+      noForestData: "વન ફેરફારના ડેટા ઉપલબ્ધ નથી.",
+      noPatrolData: "પસંદ કરેલા સમયગાળા માટે પેટ્રોલિંગ ડેટા ઉપલબ્ધ નથી.",
+      noIncidentData: "પસંદ કરેલા સમયગાળા માટે ઘટનાઓનો ડેટા ઉપલબ્ધ નથી.",
+      noIssueData: "મુદ્દાના પ્રકારનો ડેટા ઉપલબ્ધ નથી.",
+      loading: "લોડ થઈ રહ્યું છે...",
+    },
+  };
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [patrolData, setPatrolData] = useState([]);
@@ -273,14 +293,14 @@ useEffect(() => {
   return (
     <div className="dashboard-container">
       <div className="heading-container">
-        <h3 className="main-heading">Overview</h3>
+       <h3 className="main-heading">{text[language].overview}</h3>
         <div className="filters">
           {/* From Date */}
           <div className="filter-item">
             <DatePicker
             value={fromDate}
             onChange={setFromDate}
-            placeholder="Select From Date"
+            placeholder={text[language].selectFromDate}
             style={{
               width: "200px",
               color: "#fff",
@@ -301,7 +321,7 @@ useEffect(() => {
           <DatePicker
               value={toDate}
               onChange={setToDate}
-              placeholder="Select To Date"
+              placeholder={text[language].selectToDate}
               style={{
                 width: "200px",
                 color: "#fff",
@@ -330,9 +350,9 @@ useEffect(() => {
                   "-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset",
               }}
             >
-              <Option value="all">All Divisions</Option>
-              <Option value="north">North Division</Option>
-              <Option value="south">South Division</Option>
+              <Option value="all">{text[language].allDivisions}</Option>
+              <Option value="north">{language === "gu" ? "ઉત્તર વિભાગ" : "North Division"}</Option>
+              <Option value="south">{language === "gu" ? "દક્ષિણ વિભાગ" : "South Division"}</Option>
             </Select>
           </div>
           {/* Range */}
@@ -348,9 +368,9 @@ useEffect(() => {
                   "-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset",
               }}
             >
-              <Option value="all">All Ranges</Option>
-              <Option value="range1">Range 1</Option>
-              <Option value="range2">Range 2</Option>
+               <Option value="all">{text[language].allRanges}</Option>
+            <Option value="range1">{language === "gu" ? "રેન્જ ૧" : "Range 1"}</Option>
+            <Option value="range2">{language === "gu" ? "રેન્જ ૨" : "Range 2"}</Option>
             </Select>
           </div>
           <button>
@@ -368,7 +388,7 @@ useEffect(() => {
                 fontWeight: 600,
               }}
             >
-              Forest Cover Change
+              {text[language].forestChange}
             </h3>
             <div
             style={{
@@ -388,9 +408,9 @@ useEffect(() => {
 
 
             {loadingForest ? (
-              <div className="loading-state">Loading...</div>
+              <div className="loading-state">{text[language].loading}</div>
             ) : forestChangeData.length === 0 ? (
-              <div className="no-data-state">No forest change data available.</div>
+              <div className="no-data-state">{text[language].noForestData}</div>
             ) : (
               <>
                 <ResponsiveContainer width="100%" height={300}>
@@ -497,14 +517,14 @@ useEffect(() => {
                     fontWeight: 500,
                   }}
                 >
-                  Total Area of Forest Change
+                  {text[language].totalArea}
                 </p>
               </>
             )}
           </div>
         {/* 🟢 Patrolling Count — with label under chart */}
       <div className="chart-card" style={{ textAlign: "center" }}>
-        <h3>Total number of Patrols Conducted</h3>
+        <h3>{text[language].totalPatrols}</h3>
          <div
             style={{
               width: "100%", // full width across the card
@@ -521,10 +541,10 @@ useEffect(() => {
             }}
           ></div>
         {loadingPatrols ? (
-          <div className="loading-state">Loading...</div>
+          <div className="loading-state">{text[language].loading}</div>
         ) : isPatrolDataEmpty ? (
           <div className="no-data-state">
-            No patrol data available for the selected period.
+            {text[language].noPatrolData}
           </div>
         ) : (
           <>
@@ -561,7 +581,7 @@ useEffect(() => {
                 fontWeight: 500,
               }}
             >
-              Total Number of Patrols Conducted
+             {text[language].totalPatrols}
             </p>
           </>
         )}
@@ -573,7 +593,7 @@ useEffect(() => {
       <div className="charts-grid">
         {/* 🟢 Incidents — Donut with center total and % legend */}
           <div className="chart-card" style={{ textAlign: "center" }}>
-            <h3>Total number of Incidents</h3>
+            <h3>{text[language].totalIncidents}</h3>
             <div
               style={{
                 width: "100%",
@@ -589,10 +609,10 @@ useEffect(() => {
             ></div>
 
             {loadingIncidents ? (
-              <div className="loading-state">Loading...</div>
+              <div className="loading-state">{text[language].loading}</div>
             ) : incidentsData.length === 0 ? (
               <div className="no-data-state">
-                No incident data available for the selected period.
+                {text[language].noIncidentData}
               </div>
             ) : (
               <>
@@ -706,7 +726,7 @@ useEffect(() => {
                     fontWeight: 500,
                   }}
                 >
-                  Total number of Incidents
+                  {text[language].totalIncidents}
                 </p>
               </>
             )}
@@ -715,7 +735,7 @@ useEffect(() => {
         {/* 🟢 Observation Issues Reported — with right-side round legend */}
 {/* 🟢 Observation Issues Reported — Bar Chart with working Legend */}
 <div className="chart-card" style={{ textAlign: "center" }}>
-  <h3>Observation Issues Reported</h3>
+  <h3>{text[language].observationIssues}</h3>
 
   {/* Divider line */}
   <div
@@ -733,9 +753,9 @@ useEffect(() => {
   ></div>
 
   {loadingIssues ? (
-    <div className="loading-state">Loading...</div>
+    <div className="loading-state">{text[language].loading}</div>
   ) : issueTypeData.length === 0 ? (
-    <div className="no-data-state">No issue type data available.</div>
+    <div className="no-data-state">{text[language].noIssueData}</div>
   ) : (
     <>
       <ResponsiveContainer width="100%" height={280}>
@@ -816,7 +836,7 @@ useEffect(() => {
           fontWeight: 500,
         }}
       >
-        Observation Issues Reported
+        {text[language].observationIssues}
       </p>
     </>
   )}

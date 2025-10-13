@@ -1,25 +1,41 @@
 import React, { useState } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "../App.css";
+import { useLanguage } from "../context/LanguageContext"; // ✅ import hook
 
 // === Images ===
 import brand from "../assets/logo-giz.png";
-import backImage from "../assets/backimage.jpg"; // ✅ your new background
-import leftLogos from "../assets/Logo.png"; // 🟢 your left-side logos image
-import Dashboard from "../pages/Dashboard";
+import backImage from "../assets/backimage.jpg";
+import leftLogos from "../assets/Logo.png";
 
-function LoginPage() {
+function Login() {
   const [showPwd, setShowPwd] = useState(false);
+  const { language, toggleLanguage } = useLanguage(); // ✅ use global language
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    // Later: add real authentication logic
-    navigate("/dashboard"); // redirect after login
+  const text = {
+    en: {
+      title: "Login",
+      userId: "User ID",
+      userPlaceholder: "Enter User ID",
+      password: "Password",
+      passPlaceholder: "Enter Password",
+      loginButton: "Login",
+      footer: "2025 © All Rights Reserved By | RECAP4NDC",
+    },
+    gu: {
+      title: "લૉગિન",
+      userId: "વપરાશકર્તા ID",
+      userPlaceholder: "વપરાશકર્તા ID દાખલ કરો",
+      password: "પાસવર્ડ",
+      passPlaceholder: "પાસવર્ડ દાખલ કરો",
+      loginButton: "લૉગિન કરો",
+      footer: "૨૦૨૫ © સર્વ અધિકારો સુરક્ષિત | RECAP4NDC",
+    },
   };
 
-  const handleLanguageSwitch = () => {
-    navigate("/"); // ✅ redirects back to login
-    window.scrollTo(0, 0); // optional: ensures scroll resets
+  const handleLogin = () => {
+    navigate("/dashboard");
   };
 
   return (
@@ -42,10 +58,7 @@ function LoginPage() {
         position: "relative",
       }}
     >
-      {/* ✅ LEFT SIDE – Logos */}
-
       <img src={leftLogos} alt="Partner Logos" className="partner-logos" />
-
 
       <div
         className="right-Panel"
@@ -53,29 +66,27 @@ function LoginPage() {
           flex: 1,
           display: "flex",
           justifyContent: "center",
-          alignItems: "center", // centers vertically & horizontally
+          alignItems: "center",
           height: "100%",
         }}
       >
         <div className="form-card">
           <img src={brand} alt="RECAP4NDC" className="brand" />
-          <h2 className="login-heading">Login</h2>
+          <h2 className="login-heading">{text[language].title}</h2>
 
-          {/* User ID */}
-          <label className="input-label">User ID</label>
+          <label className="input-label">{text[language].userId}</label>
           <div className="field">
-            <input type="text" placeholder="Enter User ID" />
+            <input type="text" placeholder={text[language].userPlaceholder} />
             <span className="icon">
               <img src="/assets/user.png" alt="User" width="20" height="20" />
             </span>
           </div>
 
-          {/* Password */}
-          <label className="input-label">Password</label>
+          <label className="input-label">{text[language].password}</label>
           <div className="field">
             <input
               type={showPwd ? "text" : "password"}
-              placeholder="Enter Password"
+              placeholder={text[language].passPlaceholder}
               required
             />
             <button
@@ -96,30 +107,30 @@ function LoginPage() {
             </button>
           </div>
 
-          {/* Login Button */}
           <button className="btn-login" onClick={handleLogin}>
-            Login
+            {text[language].loginButton}
           </button>
         </div>
 
         {/* Footer Bar */}
         <div className="footer-bar">
-           <button className="lang-chip active" onClick={handleLanguageSwitch}>EN</button>
-          <div className="footer-note">
-            2025 © All Rights Reserved By | RECAP4NDC
-          </div>
-          <button className="lang-chip">જીયુ</button>
+          <button
+            className={`lang-chip ${language === "en" ? "active" : ""}`}
+            onClick={() => toggleLanguage("en")}
+          >
+            EN
+          </button>
+          <div className="footer-note">{text[language].footer}</div>
+          <button
+            className={`lang-chip ${language === "gu" ? "active" : ""}`}
+            onClick={() => toggleLanguage("gu")}
+          >
+            જીયુ
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-    </Routes>
-  );
-}
+export default Login;

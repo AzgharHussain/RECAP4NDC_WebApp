@@ -18,14 +18,43 @@ import logos11 from "../assets/logos11.png";
 import userIcon from "../assets/user.png"; // ✅ import your image
 import patrollingIcon from "../assets/Patrolling.png";  // Import the Patrolling image
 import incidentIcon from "../assets/Incident.png";  // Import the Incident image
+import { useLanguage } from "../context/LanguageContext";
 import "./DashboardLayout.css";
 
 export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar open/close state
   const [isPatrollingOpen, setIsPatrollingOpen] = useState(false); // State for dropdown
   const [isWorkingPlanOpen, setIsWorkingPlanOpen] = useState(false); // State for dropdown
-
+ const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false); // State for Admin dropdown
   const location = useLocation(); // Access current location (route)
+  const { language,toggleLanguage  } = useLanguage();  // ✅ Access language context
+
+  // Language Texts
+  const text = {
+    en: {
+      overview: "Overview",
+      geoDashboard: "Geo Dashboard",
+      patrollingLogs: "Patrolling Logs",
+      incidentLogs: "Incident Logs",
+      workingPlan: "Working Plan Areas",
+      uploadCoupe: "Upload Coupe Boundaries",
+      viewCoupe: "View Coupe Boundaries",
+      coupeLog: "Coupe Observation Log",
+      patrollingIncident: "Patrolling and Incident Logs",
+    },
+    gu: {
+      overview: "સારાંશ",
+      geoDashboard: "ભૂગોળ ડેશબોર્ડ",
+      patrollingLogs: "પેટ્રોલિંગ લોગ્સ",
+      incidentLogs: "ઘટના લોગ્સ",
+      workingPlan: "કામ કરવાના વિસ્તારમાં",
+      uploadCoupe: "કૂપ બાઉન્ડરી અપલોડ કરો",
+      viewCoupe: "કૂપ બાઉન્ડરી જુઓ",
+      coupeLog: "કૂપ અવલોકન લોગ",
+      patrollingIncident: "પેટ્રોલિંગ અને ઘટનાઓના લોગ્સ",
+    },
+  };
+
 
   // Open the "Patrolling and Incident Logs" dropdown if we're on a relevant page
   useEffect(() => {
@@ -75,7 +104,23 @@ export default function DashboardLayout() {
          <span className="user-icon">
   <img src={userIcon} alt="User Icon" className="user-icon-img" />
 </span>
-          <span className="username">Admin ▼</span>
+          <span className="username" onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)} >Admin ▼</span>
+        {isAdminMenuOpen && (
+            <div className="admin-dropdown">
+              <button
+                className={`lang-chip ${language === "en" ? "active" : ""}`}
+                onClick={() => toggleLanguage("en")}
+              >
+                EN
+              </button>
+              <button
+                className={`lang-chip ${language === "gu" ? "active" : ""}`}
+                onClick={() => toggleLanguage("gu")}
+              >
+                જીયુ
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -91,7 +136,7 @@ export default function DashboardLayout() {
                 className={`menu-item ${isActiveLink("/dashboard") ? "active" : ""}`}
                 onClick={handleLinkClick}
               >
-                <FaThLarge className="icon" /> Overview
+                <FaThLarge className="icon" /> {text[language].overview}
               </NavLink>
             </li>
             <li>
@@ -100,7 +145,7 @@ export default function DashboardLayout() {
                 className={`menu-item ${isActiveLink("/geo") ? "active" : ""}`}
                 onClick={handleLinkClick}
               >
-                <FaGlobe className="icon" /> Geo Dashboard
+                <FaGlobe className="icon" /> {text[language].geoDashboard}
               </NavLink>
             </li>
 
@@ -115,7 +160,7 @@ export default function DashboardLayout() {
                 }`}
                 onClick={() => setIsPatrollingOpen(!isPatrollingOpen)} // Toggle only Patrolling dropdown
               >
-                <MdLocalPolice className="icon" /> Patrolling and Incident Logs
+                <MdLocalPolice className="icon" /> {text[language].patrollingIncident}
                 {/* ▼▲ icon toggle */}
                 {isPatrollingOpen ? <FaChevronUp /> : <FaChevronDown />}
               </button>
@@ -136,7 +181,7 @@ export default function DashboardLayout() {
                         className="menu-image"
                       />{" "}
                       {/* Patrolling image */}
-                      Patrolling Logs
+                     {text[language].patrollingLogs}
                     </NavLink>
                   </li>
                   <li>
@@ -153,7 +198,7 @@ export default function DashboardLayout() {
                         className="menu-image"
                       />{" "}
                       {/* Incident image */}
-                      Incident Logs
+                      {text[language].incidentLogs}
                     </NavLink>
                   </li>
                 </ul>
@@ -167,7 +212,7 @@ export default function DashboardLayout() {
               className={`dropdown-toggle ${isWorkingPlanOpen ? "active" : ""}`}
               onClick={() => setIsWorkingPlanOpen(!isWorkingPlanOpen)} // Toggle only Working Plan dropdown
             >
-              <FaClipboardList className="icon" /> Working Plan Areas
+              <FaClipboardList className="icon" /> {text[language].workingPlan}
               {/* ▼▲ icon toggle */}
               {isWorkingPlanOpen ? <FaChevronUp /> : <FaChevronDown />}
             </button>
@@ -182,7 +227,7 @@ export default function DashboardLayout() {
                         }`}
                         onClick={handleLinkClick}
                       >
-                        <FaUpload className="icon" /> Upload Coupe Boundaries
+                        <FaUpload className="icon" /> {text[language].uploadCoupe}
                       </NavLink>
                     </li>
                     <li>
@@ -193,7 +238,7 @@ export default function DashboardLayout() {
                         }`}
                         onClick={handleLinkClick}
                       >
-                        <FaEye className="icon" /> View Coupe Boundaries
+                        <FaEye className="icon" /> {text[language].viewCoupe}
                       </NavLink>
                     </li>
                     <li>
@@ -204,7 +249,7 @@ export default function DashboardLayout() {
                         }`}
                         onClick={handleLinkClick}
                       >
-                        <GiNotebook className="icon" /> Coupe Observation Log
+                        <GiNotebook className="icon" />  {text[language].coupeLog}
                       </NavLink>
                     </li>
                   </ul>
