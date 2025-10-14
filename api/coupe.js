@@ -1,9 +1,9 @@
 /**
- * coupe.js — Final HTTPS-only version with full TLS and network diagnostics
+ * coupe.js — Final HTTPS-only version with PostgreSQL Pool + full TLS and network diagnostics
  */
 
 const express = require("express");
-const { Client } = require("pg");
+const { Pool } = require("pg");
 const shapefile = require("shapefile");
 const fs = require("fs");
 const path = require("path");
@@ -22,9 +22,9 @@ app.use(express.urlencoded({ extended: true }));
 const upload = multer({ dest: "uploads/" });
 
 // ============================
-// 🔧 PostgreSQL Configuration
+// 🔧 PostgreSQL Pool Configuration
 // ============================
-const pgClient = new Client({
+const pool = new Pool({
   user: "postgres",
   host: "68.178.167.39",
   database: "Recap4NDC",
@@ -48,16 +48,18 @@ app.post("/uploadShapefile", upload.single("shapefile"), async (req, res) => {
   const { path: filePath } = req.file;
   const coupeName = req.body.coupeName;
 
-  if (!coupeName) return res.status(400).send("Coupe name is required.");
+  if (!coupeName)
+    return res.status(400).json({ success: false, message: "Coupe name is required." });
+
+  const client = await pool.connect();
 
   try {
-    await pgClient.connect();
-    console.log("✅ Connected to PostgreSQL");
+    console.log("✅ PostgreSQL connection acquired from pool");
 
     const shapefilePath = await unzipShapefile(filePath);
-    await createTableForCoupe(coupeName);
+    await createTableForCoupe(client, coupeName);
     const shapefileData = await extractShapefileData(shapefilePath, coupeName);
-    await insertShapefileDataToTable(coupeName, shapefileData);
+    await insertShapefileDataToTable(client, coupeName, shapefileData);
 
     const tableName =
       coupeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "") + "_table";
@@ -66,7 +68,7 @@ app.post("/uploadShapefile", upload.single("shapefile"), async (req, res) => {
     console.log(`🌍 Publishing layer to GeoServer: ${tableName}`);
     await publishLayerWithStyle(tableName, styleName, tableName);
 
-    await insertIntoBeatviewMetadata(1, coupeName, tableName);
+    await insertIntoBeatviewMetadata(client, 1, coupeName, tableName);
 
     res.status(200).json({
       success: true,
@@ -77,8 +79,8 @@ app.post("/uploadShapefile", upload.single("shapefile"), async (req, res) => {
     console.error("💥 Fatal error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   } finally {
-    await pgClient.end();
-    console.log("🔚 PostgreSQL connection closed.");
+    client.release();
+    console.log("🔚 PostgreSQL connection released back to pool.");
   }
 });
 
@@ -118,7 +120,7 @@ async function extractShapefileData(shapefilePath, coupeName) {
 }
 
 // ---- Create PostGIS Table ----
-async function createTableForCoupe(coupeName) {
+async function createTableForCoupe(client, coupeName) {
   const tableName =
     coupeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "") + "_table";
   const dropSQL = `DROP TABLE IF EXISTS "${tableName}"`;
@@ -130,19 +132,19 @@ async function createTableForCoupe(coupeName) {
     );
     CREATE INDEX "${tableName}_geom_idx" ON "${tableName}" USING GIST (geom);
   `;
-  await pgClient.query(dropSQL);
-  await pgClient.query(createSQL);
+  await client.query(dropSQL);
+  await client.query(createSQL);
   console.log(`✅ Table "${tableName}" created.`);
 }
 
 // ---- Insert Shapefile Data into Table ----
-async function insertShapefileDataToTable(coupeName, shapefileData) {
+async function insertShapefileDataToTable(client, coupeName, shapefileData) {
   const tableName =
     coupeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "") + "_table";
   for (const data of shapefileData) {
     if (!data.geometry) continue;
     const insertSQL = `INSERT INTO "${tableName}" (geom) VALUES (ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))`;
-    await pgClient.query(insertSQL, [JSON.stringify(data.geometry)]);
+    await client.query(insertSQL, [JSON.stringify(data.geometry)]);
   }
   console.log(`✅ Inserted ${shapefileData.length} geometries into "${tableName}".`);
 }
@@ -177,7 +179,7 @@ async function checkStyleExists(styleName) {
   }
 }
 
-// ---- Publish Layer to GeoServer (with full diagnostics) ----
+// ---- Publish Layer to GeoServer ----
 async function publishLayerWithStyle(tableName, styleName, dbTableName) {
   const styleExists = await checkStyleExists(styleName);
   const url = `${GEOSERVER_URL}/workspaces/${WORKSPACE}/datastores/${DATASTORE}/featuretypes`;
@@ -215,12 +217,6 @@ async function publishLayerWithStyle(tableName, styleName, dbTableName) {
     if (!res.ok) {
       console.error(`❌ GeoServer responded with status ${res.status} ${res.statusText}`);
       console.error("📄 Response Body:\n", text);
-      if (res.status === 401)
-        console.error("⚠️ Authentication failed. Check username/password.");
-      else if (res.status === 404)
-        console.error("⚠️ Datastore not found — check workspace and datastore names.");
-      else if (res.status === 500)
-        console.error("⚠️ Internal GeoServer error — verify database/table connection.");
       return false;
     }
 
@@ -233,24 +229,20 @@ async function publishLayerWithStyle(tableName, styleName, dbTableName) {
     return true;
   } catch (err) {
     console.error("💥 Network/TLS error during layer publish:");
-    console.error(err); // full error object for diagnosis
+    console.error(err);
     console.error(`🔍 Check connectivity to: ${url}`);
-    console.error(
-      `🧪 Try: curl -vk -u ${GEOSERVER_USER}:${GEOSERVER_PASS} "${url}.json"`
-    );
-    console.error("💡 If curl fails → SSL handshake or port issue (8443).");
     return false;
   }
 }
 
 // ---- Insert Metadata Record ----
-async function insertIntoBeatviewMetadata(beatId, viewName, tableName) {
+async function insertIntoBeatviewMetadata(client, beatId, viewName, tableName) {
   const sql = `
     INSERT INTO public.beatview_metadata (beat_id, beat_name, input_table_name)
     VALUES ($1, $2, $3)
     ON CONFLICT (beat_id) DO NOTHING;
   `;
-  await pgClient.query(sql, [beatId, viewName, tableName]);
+  await client.query(sql, [beatId, viewName, tableName]);
   console.log(`✅ Inserted into beatview_metadata for ${viewName}`);
 }
 
@@ -285,6 +277,3 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🌍 Using GeoServer (HTTPS): ${GEOSERVER_URL}`);
 });
-
-
-
