@@ -103,6 +103,8 @@ const ndwiLayers = [
 
 const changeLayers = [
   "cite:2025_09_01_BIO_W_C_COUPE_ndvi_change",
+  "cite:2025_09_01_Adapur_view_ndvi_change",
+  "cite:2025_09_01_AGAR_view_ndvi_change"
  
 ];
 
