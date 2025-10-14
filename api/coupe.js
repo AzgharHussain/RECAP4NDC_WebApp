@@ -280,14 +280,11 @@ app.get("/test-geoserver", async (req, res) => {
 // ============================
 // 🚀 Start Server
 // ============================
-// const PORT = 6000;
-// app.listen(PORT, () => {
-//   console.log(`🚀 Server running on http://localhost:${PORT}`);
-//   console.log(`🌍 Using GeoServer (HTTPS): ${GEOSERVER_URL}`);
-// });
-// Start server and connect to DB
 const PORT = 6000;
-app.listen(PORT, async () => {
-    await pgClient();
-    console.log(`Server is running on port ${PORT}`);
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🌍 Using GeoServer (HTTPS): ${GEOSERVER_URL}`);
 });
+
+
+
