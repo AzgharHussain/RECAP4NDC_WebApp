@@ -9,6 +9,7 @@ const UploadCoupe = () => {
   const [fileName, setFileName] = useState("");
   const [message, setMessage] = useState("");
   const { language } = useLanguage(); // Use the language context
+   
 
   // Define text for English and Gujarati
   const text = {
@@ -99,30 +100,36 @@ const UploadCoupe = () => {
       return;
     }
 
+    // Generate coupeName automatically
+    const baseName = file.name.split(".")[0]; // Gandhinagar_MM_Map
+    const prefix = baseName.split("_")[0]; // Gandhinagar
+    const coupeName = `${prefix}_Coupe`; // Gandhinagar_Coupe
+
+    console.log("Auto-generated coupeName:", coupeName);
+
     setMessage(text[language].uploading);
     setFileName(file.name);
 
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("shapefile", file);
+      fd.append("coupeName", coupeName);
 
-      const res = await fetch("/api/upload", {
+      const res = await fetch("http://68.178.167.39:6000/uploadShapefile", {
         method: "POST",
         body: fd,
       });
 
       const data = await res.json();
-      if (res.ok) {
-        setMessage(
-          text[language].uploadSuccess +
-            (data.message || "ફાઈલ પ્રોસેસ થઈ ગઈ છે. લેયર પ્રકાશિત કરી છે.")
-        );
+
+      if (res.ok && data.success) {
+        setMessage(`${text[language].uploadSuccess}${data.message}`);
       } else {
-        setMessage(text[language].uploadFailed + (data.error || "અજાણું ભૂલ"));
+        setMessage(`${text[language].uploadFailed}${data.message || "Unknown error"}`);
       }
     } catch (err) {
       console.error(err);
-      setMessage(text[language].uploadFailed + err.message);
+      setMessage(`${text[language].uploadFailed}${err.message}`);
     }
   };
 
