@@ -118,7 +118,6 @@ const LeftSidebar = ({ showDistrictLayer, setShowDistrictLayer,showCoupeLayer,se
   </div>
 </div>
         </div>
-
         )}
       </div>
 
@@ -157,8 +156,6 @@ const LeftSidebar = ({ showDistrictLayer, setShowDistrictLayer,showCoupeLayer,se
 
   )}
 </div>
-
-
       {/* Field Data */}
       <div className="sidebar-section">
         <div className="section-header" onClick={() => toggleSection("field")}>

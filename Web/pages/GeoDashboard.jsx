@@ -22,17 +22,18 @@ import Swal from "sweetalert2";
 import  DraggableZoomControl from "./DraggableZoomControl";
 import LatLngDisplay from "./LatLngDisplay";
 import 'leaflet/dist/leaflet.css';
-// import IncidentLayer from "./IncidentLayer";
 import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
+
 
 const LayerTogglePanel = lazy(() => import("./LayerTogglePanel"));
 const RightSidebar = lazy(() => import("./RightSidebar"));
 const BasemapGallery = lazy(() => import("./Basemapgallery"));
-import legendIcon from "../assets/Legend.png"; // <<--- correct import for legend button
-const position = [22.6093, 74.4097];
-const customCRS = L.CRS.EPSG4326;
 
+import legendIcon from "../assets/Legend.png"; // <<--- correct import for legend button
+const position = [22.7531, 71.8046];
+
+const customCRS = L.CRS.EPSG4326;
 const basemaps = {
   LightGray: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   DarkGray: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
@@ -41,9 +42,7 @@ const basemaps = {
   Streets: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
   NationalGeo: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
   positron:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"
-  
 };
-
 // Utility function to fetch legend for a WMS layer
 const getLegendUrl = (layerName) =>
   `https://www.gisfy.co.in:8443/geoserver/cite/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=${encodeURIComponent(
@@ -65,20 +64,15 @@ export default function MapView() {
   const [showPatrollingLayer, setShowPatrollingLayer] = useState(false);
   const [showIncidentLayer, setShowIncidentLayer] = useState(false);
   const [incidentsData, setIncidentsData] = useState([]);
-// inside MapView component
-const [showLayerTogglePanel, setShowLayerTogglePanel] = useState(true); // default open
-const [selectedDate, setSelectedDate] = useState("");
-const [showLegend, setShowLegend] = useState(false);
+  const [showLayerTogglePanel, setShowLayerTogglePanel] = useState(true); // default open
+  const [selectedDate, setSelectedDate] = useState("");
+  const [showLegend, setShowLegend] = useState(false);
   const [layerLegends, setLayerLegends] = useState({});
-const [filteredNdviLayers, setFilteredNdviLayers] = useState([]);
-const [filteredNdwiLayers, setFilteredNdwiLayers] = useState([]);
-const [filteredChangeLayers, setFilteredChangeLayers] = useState([]);
- const [coupeLayers, setCoupeLayers] = useState([]);
-const navigate = useNavigate();
-
-
-
-
+  const [filteredNdviLayers, setFilteredNdviLayers] = useState([]);
+  const [filteredNdwiLayers, setFilteredNdwiLayers] = useState([]);
+  const [filteredChangeLayers, setFilteredChangeLayers] = useState([]);
+  const [coupeLayers, setCoupeLayers] = useState([]);
+  const navigate = useNavigate();
 const ndviLayers = [
   "cite:2025_09_01_BIO_W_C_COUPE_ndvi",
   "cite:2025_09_01_AFF_W_C_COUPE_ndvi_",
@@ -89,7 +83,6 @@ const ndviLayers = [
   "cite:2025_09_01_Adapur_view_ndvi",
   "cite:2025_08_01_Abhapur_view_ndvi"
 ];
-
 const ndwiLayers = [
   "cite:2025_09_01_BIO_W_C_COUPE_ndwi",
   "cite:2025_09_01_AFF_W_C_COUPE_ndwi",
@@ -100,13 +93,12 @@ const ndwiLayers = [
   "cite:2025_09_01_Adapur_view_ndwi",
  " cite:2025_08_01_Abhapur_view_ndwi"
 ];
-
 const changeLayers = [
   "cite:2025_09_01_BIO_W_C_COUPE_ndvi_change",
+  "cite:2025_09_01_Adapur_view_ndvi_change",
+  "cite:2025_09_01_AGAR_view_ndvi_change"
  
 ];
-
-// fetch coupe metadata
   const fetchCoupeLayers = async () => {
     try {
       const response = await axios.get("http://68.178.167.39:5000/api/coupe_metadata/location");
@@ -119,8 +111,6 @@ const changeLayers = [
   useEffect(() => {
     fetchCoupeLayers();
   }, []);
-
-  // Fetch incidents when incident layer toggled
   useEffect(() => {
     if (showIncidentLayer) {
       fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
@@ -131,12 +121,10 @@ const changeLayers = [
       setIncidentsData([]);
     }
   }, [showIncidentLayer]);
-
   // Toggle legend visibility
   const toggleLegend = () => {
     setShowLegend((s) => !s);
   };
-
   // Normalizes a layer name to ensure a workspace prefix exists (if missing).
   // If layer already has a colon (workspace:layer) we return as-is.
   const normalizeLayerName = (raw) => {
@@ -145,7 +133,6 @@ const changeLayers = [
     // default workspace 'cite' if none provided
     return `cite:${raw}`;
   };
-
   // Build dynamic legend list whenever layers are toggled or coupe/ndvi data changes
   useEffect(() => {
     const legends = {};
@@ -168,27 +155,6 @@ const changeLayers = [
     if (showIncidentLayer) {
       legends["Incidents"] = getLegendUrl("cite:incidents");
     }
-
-    // NDVI: if filtered list available use that, otherwise use default
-    // if (showNdviLayer) {
-    //   const list = filteredNdviLayers.length > 0 ? filteredNdviLayers : ndviLayers;
-    //   legends["NDVI"] = list.map((l) => getLegendUrl(normalizeLayerName(l.replace(/^cite:/, ""))));
-    //   // Note: some servers expect workspace:layer, some want raw layer name.
-    //   // We pass normalizeLayerName without duplicate 'cite:' to be safe.
-    // }
-
-    // // NDWI:
-    // if (showNdwiLayer) {
-    //   const list = filteredNdwiLayers.length > 0 ? filteredNdwiLayers : ndwiLayers;
-    //   legends["NDWI"] = list.map((l) => getLegendUrl(normalizeLayerName(l.replace(/^cite:/, ""))));
-    // }
-
-    // // Change layers:
-    // if (showChangeLayer) {
-    //   const list = filteredChangeLayers.length > 0 ? filteredChangeLayers : changeLayers;
-    //   legends["Change"] = list.map((l) => getLegendUrl(normalizeLayerName(l.replace(/^cite:/, ""))));
-    // }
-
     // --- NDVI / NDWI / Change: Single legend per category ---
   if (showNdviLayer) {
     legends["NDVI"] = getSingleLegend(
@@ -289,8 +255,6 @@ const changeLayers = [
     return null;
   };
 
-
-
 const GeomanTools = () => {
     const map = useMap();
     useEffect(() => {
@@ -308,13 +272,6 @@ const GeomanTools = () => {
 
     return null;
   };
-
-
-
-
-
-  
-
 const handleDrawingToolClick = (toolType) => {
   const map = mapRef.current;
   if (!map) return;
@@ -348,8 +305,17 @@ const handleDrawingToolClick = (toolType) => {
       document.exitFullscreen();
     }
   };
+  useEffect(() => {
+    const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
+    if (!hasSeenTutorial) {
+      setShowTutorial(true);
+      localStorage.setItem('hasSeenTutorial', 'true');
+    }
+  }, []);
 
-
+  const handleCloseTutorial = () => {
+    setShowTutorial(false);
+  };
 
   useEffect(() => {
     const token = Cookies.get("token");
@@ -563,29 +529,38 @@ const handleToolSidebarClick = (toolName) => {
     link.href = canvas.toDataURL("image/png");
     link.click();
   };
-
-
-
   return (
     <div className="map-wrapper" >
-
-
       <div className="map-layout">
         <div className="map-top-left">
- 
 <aside className="left-sidebar">
-
-
+   {/* Search Icon Area */}
+  {/* <button
+    title="Filter"
+    type="button"
+    onClick={() => handleToolSidebarClick("searchIconArea")}
+    className={activeToolSidebar === "searchIconArea" ? "tool-button-active" : "tool-button"}
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24">
+      <path
+        d="M4 6H20M7 12H17M10 18H14"
+        stroke={activeToolSidebar === "searchIconArea" ? "#ffffff" : "#39E23C"}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  </button> */}
 
   {/* Search */}
-  <button
-    title="Search"
-    type="button"
-    onClick={() => handleToolSidebarClick("search")}
-    className={activeToolSidebar === "search" ? "tool-button-active" : "tool-button"}
-  >
-    <i className="bi bi-search" />
-  </button>
+ <button
+  title="Search"
+  type="button"
+  onClick={() => handleToolSidebarClick("search")}
+  className={activeToolSidebar === "search" ? "tool-button-active" : "tool-button"}
+>
+  <i className="bi bi-search" />
+</button>
+
 
   {/* Zoom In */}
   <button
@@ -691,15 +666,9 @@ const handleToolSidebarClick = (toolName) => {
                 style={{ width: "30px", height: "30px" }}
               />
       </button>
-
-
 </aside>
         </div>      
-          <SearchControlWithInput mapRef={mapRef} />       
-        {/* {activeToolSidebar === "searchIconArea" && (
-          <div  style={{    }}>      
-            </div>
-        )}        */}
+          {/* <SearchControlWithInput mapRef={mapRef} />        */}
       <Suspense fallback={<div>Loading...</div>}>
         <BasemapGallery
           activeBasemap={activeBasemap}
@@ -708,6 +677,13 @@ const handleToolSidebarClick = (toolName) => {
           map={mapRef.current} // Pass the map instance here
         />
       </Suspense>
+{activeToolSidebar === "measure" && (
+           <Suspense fallback={<div>Loading...</div>}>
+          <RightSidebar mapRef={mapRef}  
+              setActiveToolSidebar={setActiveToolSidebar} />
+        </Suspense>
+        )}
+
         <div className="main-container" ref={mapWrapperRef} style={{ height: `calc(90vh - ${headerHeight}px)` }}>
   {/* Toggle Layer Panel button */}
       <button
@@ -726,8 +702,6 @@ const handleToolSidebarClick = (toolName) => {
               />
         </svg>
       </button>
-
-
          {showLayerTogglePanel && (
             <div className="leftpanel-container" style={{ overflow: "auto" }}>
               <Suspense fallback={<div>Loading...</div>}>
@@ -755,7 +729,7 @@ const handleToolSidebarClick = (toolName) => {
      <div style={{ display: "flex", width: "auto", height: "auto" }}>
             <MapContainer
               center={position}
-              zoom={7.3}
+              zoom={7.8}
               style={{ height: "100%", width: "83vw" }}
               whenCreated={(mapInstance) => {
                 mapRef.current = mapInstance;
@@ -769,6 +743,7 @@ const handleToolSidebarClick = (toolName) => {
             >
       <PrintControl mapRef={mapRef} />
               <TileLayer url={basemaps[activeBasemap]} />
+             <SearchControlWithInput />
 
               <WMSTileLayer
                 key="gujarat-difference"
@@ -924,7 +899,8 @@ const handleToolSidebarClick = (toolName) => {
       <AddControls />
       <GeomanTools />
        <ScaleControl position="bottomleft" className="custom-scale-control" />
-              {activeTool === "search" && <DraggableZoomControl mapRef={mapRef} />}
+              {activeToolSidebar === "search" && <DraggableZoomControl mapRef={mapRef} />}
+
               <LatLngDisplay />
       </MapContainer>
       </div>       
