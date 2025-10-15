@@ -338,17 +338,7 @@ const handleDrawingToolClick = (toolType) => {
       document.exitFullscreen();
     }
   };
-  useEffect(() => {
-    const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
-    if (!hasSeenTutorial) {
-      setShowTutorial(true);
-      localStorage.setItem('hasSeenTutorial', 'true');
-    }
-  }, []);
-
-  const handleCloseTutorial = () => {
-    setShowTutorial(false);
-  };
+  
 
   useEffect(() => {
     const token = Cookies.get("token");
