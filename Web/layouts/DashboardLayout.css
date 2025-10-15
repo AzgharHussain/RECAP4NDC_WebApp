@@ -70,7 +70,7 @@ box-shadow: -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, -9.53px -9.53px 4.7
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.15);
   overflow: auto;
-  max-height: 100vh; /* Prevent sidebar from resizing */
+  max-height: 93vh; /* Prevent sidebar from resizing */
 }
 
 .sidebar ul {
@@ -167,9 +167,6 @@ box-shadow: -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, -9.53px -9.53px 4.7
   box-shadow: 
     -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
     12.064px 12.064px 6.786px -13.572px #FFF inset;
-
-  /* Keep the content area consistent even during zoom */
-  height: calc(100vh - 65px); /* Exclude header height */
 }
 
 
