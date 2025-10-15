@@ -25,11 +25,14 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
 
+
 const LayerTogglePanel = lazy(() => import("./LayerTogglePanel"));
 const RightSidebar = lazy(() => import("./RightSidebar"));
 const BasemapGallery = lazy(() => import("./Basemapgallery"));
+
 import legendIcon from "../assets/Legend.png"; // <<--- correct import for legend button
-const position = [22.6093, 74.4097];
+const position = [22.7531, 71.8046];
+
 const customCRS = L.CRS.EPSG4326;
 const basemaps = {
   LightGray: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -531,15 +534,33 @@ const handleToolSidebarClick = (toolName) => {
       <div className="map-layout">
         <div className="map-top-left">
 <aside className="left-sidebar">
-  {/* Search */}
-  <button
-    title="Search"
+   {/* Search Icon Area */}
+  {/* <button
+    title="Filter"
     type="button"
-    onClick={() => handleToolSidebarClick("search")}
-    className={activeToolSidebar === "search" ? "tool-button-active" : "tool-button"}
+    onClick={() => handleToolSidebarClick("searchIconArea")}
+    className={activeToolSidebar === "searchIconArea" ? "tool-button-active" : "tool-button"}
   >
-    <i className="bi bi-search" />
-  </button>
+    <svg width="16" height="16" viewBox="0 0 24 24">
+      <path
+        d="M4 6H20M7 12H17M10 18H14"
+        stroke={activeToolSidebar === "searchIconArea" ? "#ffffff" : "#39E23C"}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  </button> */}
+
+  {/* Search */}
+ <button
+  title="Search"
+  type="button"
+  onClick={() => handleToolSidebarClick("search")}
+  className={activeToolSidebar === "search" ? "tool-button-active" : "tool-button"}
+>
+  <i className="bi bi-search" />
+</button>
+
 
   {/* Zoom In */}
   <button
@@ -610,6 +631,7 @@ const handleToolSidebarClick = (toolName) => {
    <FaInfoCircle />
   </button>
 
+
   {/* Home */}
   <button
     title="Home"
@@ -646,7 +668,7 @@ const handleToolSidebarClick = (toolName) => {
       </button>
 </aside>
         </div>      
-          <SearchControlWithInput mapRef={mapRef} />       
+          {/* <SearchControlWithInput mapRef={mapRef} />        */}
       <Suspense fallback={<div>Loading...</div>}>
         <BasemapGallery
           activeBasemap={activeBasemap}
@@ -655,6 +677,13 @@ const handleToolSidebarClick = (toolName) => {
           map={mapRef.current} // Pass the map instance here
         />
       </Suspense>
+{activeToolSidebar === "measure" && (
+           <Suspense fallback={<div>Loading...</div>}>
+          <RightSidebar mapRef={mapRef}  
+              setActiveToolSidebar={setActiveToolSidebar} />
+        </Suspense>
+        )}
+
         <div className="main-container" ref={mapWrapperRef} style={{ height: `calc(90vh - ${headerHeight}px)` }}>
   {/* Toggle Layer Panel button */}
       <button
@@ -700,7 +729,7 @@ const handleToolSidebarClick = (toolName) => {
      <div style={{ display: "flex", width: "auto", height: "auto" }}>
             <MapContainer
               center={position}
-              zoom={7.3}
+              zoom={7.8}
               style={{ height: "100%", width: "83vw" }}
               whenCreated={(mapInstance) => {
                 mapRef.current = mapInstance;
@@ -714,6 +743,7 @@ const handleToolSidebarClick = (toolName) => {
             >
       <PrintControl mapRef={mapRef} />
               <TileLayer url={basemaps[activeBasemap]} />
+             <SearchControlWithInput />
 
               <WMSTileLayer
                 key="gujarat-difference"
@@ -869,7 +899,8 @@ const handleToolSidebarClick = (toolName) => {
       <AddControls />
       <GeomanTools />
        <ScaleControl position="bottomleft" className="custom-scale-control" />
-              {activeTool === "search" && <DraggableZoomControl mapRef={mapRef} />}
+              {activeToolSidebar === "search" && <DraggableZoomControl mapRef={mapRef} />}
+
               <LatLngDisplay />
       </MapContainer>
       </div>       
