@@ -209,39 +209,59 @@ const changeLayers = [
     coupeLayers,
   ]);
 
-  // Filtering helper and other existing functions (kept the same)
-  const handleFilter = ({ fromDate, toDate }) => {
-  const formatDate = (d) => d.replaceAll("-", "_");
+const handleFilter = ({ fromDate, toDate }) => {
+  if (!fromDate && !toDate) {
+    setFilteredNdviLayers(ndviLayers);
+    setFilteredNdwiLayers(ndwiLayers);
+    setFilteredChangeLayers(changeLayers);
+    return;
+  }
 
-  const from = fromDate ? formatDate(fromDate) : null;
-  const to = toDate ? formatDate(toDate) : null;
-
-  const extractDate = (layer) => {
-    // Remove prefix if exists
-    const cleanLayer = layer.replace(/^cite:/, "");
-    // Take first three parts as the date
-    const parts = cleanLayer.split("_");
-    // Example: ["2025", "09", "01", "BIO", ...]
-    if (parts.length >= 3) return `${parts[0]}_${parts[1]}_${parts[2]}`;
+  // 🔧 Utility to parse either "YYYY-MM-DD" or "DD-MM-YYYY"
+  const parseInputDate = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split("-");
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    } else if (parts[2].length === 4) {
+      // DD-MM-YYYY
+      return new Date(parts[2], parts[1] - 1, parts[0]);
+    }
     return null;
   };
 
-  const isWithinDateRange = (layer) => {
+  // 🧠 Extract date (YYYY_MM_DD) from layer name
+  const extractDate = (layer) => {
+    const clean = layer.replace(/^cite:/, "");
+    const parts = clean.split("_");
+    if (parts.length >= 3) {
+      const [y, m, d] = parts.slice(0, 3);
+      return new Date(y, m - 1, d);
+    }
+    return null;
+  };
+
+  const from = parseInputDate(fromDate);
+  const to = parseInputDate(toDate);
+
+  const isWithinRange = (layer) => {
     const layerDate = extractDate(layer);
     if (!layerDate) return false;
-
     if (from && to) return layerDate >= from && layerDate <= to;
     if (from) return layerDate >= from;
     if (to) return layerDate <= to;
     return true;
   };
 
-  const filterLayers = (layers) => layers.filter((layer) => isWithinDateRange(layer));
+  const filterLayers = (layers) => layers.filter(isWithinRange);
 
   setFilteredNdviLayers(filterLayers(ndviLayers));
   setFilteredNdwiLayers(filterLayers(ndwiLayers));
   setFilteredChangeLayers(filterLayers(changeLayers));
 };
+
+
 
 
  // minimal map controls & utilities
