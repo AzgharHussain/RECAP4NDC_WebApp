@@ -154,6 +154,7 @@ box-shadow: -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, -9.53px -9.53px 4.7
   margin-right: 8px;  /* Space between the image and text */
   transition: filter 0.3s ease; /* Smooth transition for filter */
  filter: brightness(0) saturate(100%);
+  margin-left: 6px;
   
 }
 /* Page content */

@@ -211,25 +211,38 @@ const changeLayers = [
 
   // Filtering helper and other existing functions (kept the same)
   const handleFilter = ({ fromDate, toDate }) => {
-    const formatDate = (d) => d.replaceAll("-", "_");
+  const formatDate = (d) => d.replaceAll("-", "_");
 
-    const from = fromDate ? formatDate(fromDate) : null;
-    const to = toDate ? formatDate(toDate) : null;
+  const from = fromDate ? formatDate(fromDate) : null;
+  const to = toDate ? formatDate(toDate) : null;
 
-    const isWithinDateRange = (layer) => {
-      const layerDate = layer.split("_")[0]; // safer split
-      if (from && to) return layerDate >= from && layerDate <= to;
-      if (from) return layerDate >= from;
-      if (to) return layerDate <= to;
-      return true;
-    };
-
-    const filterLayers = (layers) => layers.filter((layer) => isWithinDateRange(layer));
-
-    setFilteredNdviLayers(filterLayers(ndviLayers));
-    setFilteredNdwiLayers(filterLayers(ndwiLayers));
-    setFilteredChangeLayers(filterLayers(changeLayers));
+  const extractDate = (layer) => {
+    // Remove prefix if exists
+    const cleanLayer = layer.replace(/^cite:/, "");
+    // Take first three parts as the date
+    const parts = cleanLayer.split("_");
+    // Example: ["2025", "09", "01", "BIO", ...]
+    if (parts.length >= 3) return `${parts[0]}_${parts[1]}_${parts[2]}`;
+    return null;
   };
+
+  const isWithinDateRange = (layer) => {
+    const layerDate = extractDate(layer);
+    if (!layerDate) return false;
+
+    if (from && to) return layerDate >= from && layerDate <= to;
+    if (from) return layerDate >= from;
+    if (to) return layerDate <= to;
+    return true;
+  };
+
+  const filterLayers = (layers) => layers.filter((layer) => isWithinDateRange(layer));
+
+  setFilteredNdviLayers(filterLayers(ndviLayers));
+  setFilteredNdwiLayers(filterLayers(ndwiLayers));
+  setFilteredChangeLayers(filterLayers(changeLayers));
+};
+
 
  // minimal map controls & utilities
   const zoomIn = () => mapRef.current?.zoomIn();
