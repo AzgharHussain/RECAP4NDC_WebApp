@@ -186,7 +186,7 @@
   color: #000 !important; /* Change filter values text to black */
 }
 
-:where(.css-dev-only-do-not-override-xepvsj).ant-pagination .ant-pagination-item-active
+.ant-pagination .ant-pagination-item-active
  {
     font-weight: 600; 
      background: rgba(0, 0, 0, 0.02);
@@ -195,7 +195,7 @@
               -10.261px -10.261px 5.13px -11.971px #fff inset,
               13.681px 13.681px 7.696px -15.391px #fff inset;
 }
-:where(.css-dev-only-do-not-override-xepvsj).ant-pagination .ant-pagination-item {
+.ant-pagination .ant-pagination-item {
     display: inline-block;
     min-width: 32px;
     height: 32px;
@@ -219,7 +219,7 @@
 }
 
 
-:where(.css-dev-only-do-not-override-xepvsj).ant-pagination .ant-pagination-item a
+.ant-pagination .ant-pagination-item a
 
  {
     display: block;
@@ -227,7 +227,7 @@
     color: #000; 
 }
 
-:where(.css-dev-only-do-not-override-xepvsj).ant-btn-variant-outlined, :where(.css-dev-only-do-not-override-xepvsj).ant-btn-variant-dashed
+.ant-btn-variant-outlined, .ant-btn-variant-dashed
 
  {
     border-color: #d9d9d9;

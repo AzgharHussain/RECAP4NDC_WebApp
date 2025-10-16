@@ -225,11 +225,24 @@ const PatrolIncidentLogs = () => {
       dataIndex: "p_image_urls",
       key: "p_image_urls",
       render: (images) => (
+        // <Button
+        //   icon={<EyeOutlined />}
+        //   onClick={() => showModal(images)} // Open the modal with the images
+        //   style={{ border: "none", backgroundColor: "transparent" }}
+        // />
+        
         <Button
-          icon={<EyeOutlined />}
-          onClick={() => showModal(images)} // Open the modal with the images
-          style={{ border: "none", backgroundColor: "transparent" }}
-        />
+                  style={{
+                    borderRadius: "4.618px",
+                    border: "1.961px solid rgba(255, 255, 255, 0.23)",
+                    background: "rgba(116, 190, 0, 0.40)",
+                    color: "#000",
+                  }}
+                  icon={<EyeOutlined />}
+                onClick={() => showModal(images)}
+                >
+                  {language === "gu" ? "દેખાવ" : "View"}
+                </Button>
       ),
     },
   ];
