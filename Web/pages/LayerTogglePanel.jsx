@@ -97,13 +97,31 @@ const LeftSidebar = ({ showDistrictLayer, setShowDistrictLayer,showCoupeLayer,se
         {openSections.forest && (
           <div className="section-content">
        <div className="date-input-container">
-  <input type="date" className="input-field" placeholder="Select From Date" value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}/>
-  <input type="date" className="input-field" placeholder="Select To Date" value={toDate}
-                onChange={(e) => setToDate(e.target.value)}/>
-  <div className="filter-icon" onClick={handleFilterClick}>
+ <input
+  type="date"
+  className="input-field"
+  value={fromDate}
+  onChange={(e) => {
+    const newFrom = e.target.value;
+    setFromDate(newFrom);
+    onFilter({ fromDate: newFrom, toDate }); // auto trigger
+  }}
+/>
+
+<input
+  type="date"
+  className="input-field"
+  value={toDate}
+  onChange={(e) => {
+    const newTo = e.target.value;
+    setToDate(newTo);
+    onFilter({ fromDate, toDate: newTo }); // auto trigger
+  }}
+/>
+
+  {/* <div className="filter-icon" onClick={handleFilterClick}>
     <img src="../assets/filter.png" alt="Filter" />
-  </div>
+  </div> */}
 </div>
 
        <div className="section-content">
