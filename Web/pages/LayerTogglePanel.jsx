@@ -45,10 +45,10 @@ const LeftSidebar = ({ showDistrictLayer, setShowDistrictLayer,showCoupeLayer,se
     block: "Block",
     compartment: "Compartment",
     fieldData: "Field Data",
-    selectPatrollingIncident: "Select Patrolling / Incident",
+    // selectPatrollingIncident: "Select Patrolling / Incident",
     patrollingRoute: "Patrolling Route",
-    incidentMarkers: "Incident Markers",
-    fieldData: "Field Data",  // Added Field Data in English
+    // incidentMarkers: "Incident Markers",
+    // fieldData: "Field Data",  // Added Field Data in English
      boundaries: "Boundaries",  // Added Boundaries in English
   },
   gu: {
@@ -70,10 +70,10 @@ const LeftSidebar = ({ showDistrictLayer, setShowDistrictLayer,showCoupeLayer,se
     block: "ખંડ",
     compartment: "વિભાગ નંબર",
     fieldData: "મેદાનની માહિતી",
-    selectPatrollingIncident: "પેટ્રોલિંગ / ઘટના પસંદ કરો",
+    // selectPatrollingIncident: "પેટ્રોલિંગ / ઘટના પસંદ કરો",
     patrollingRoute: "પેટ્રોલિંગ માર્ગ",
-    incidentMarkers: "ઘટના નિશાન",
-    fieldData: "મેદાનની માહિતી",  // Updated Field Data translation in Gujarati
+    // incidentMarkers: "ઘટના નિશાન",
+    // fieldData: "મેદાનની માહિતી",  // Updated Field Data translation in Gujarati
      boundaries: "સીમાઓ", // Added Boundaries translation in Gujarati
   },
 };

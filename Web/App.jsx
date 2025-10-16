@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom"; // ✅ no BrowserRouter here
-import { LanguageProvider } from "./context/LanguageContext";  // ✅ import context
+import { LanguageProvider } from "./context/LanguageContext";  
+// ✅ import context
 
 // === Pages ===
 import Login from "./pages/Login";
