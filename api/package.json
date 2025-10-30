@@ -2,8 +2,11 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.js",
+  "type": "commonjs",
   "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "test": "mocha api.js"
   },
   "author": "",
@@ -12,6 +15,7 @@
     "@google/earthengine": "^1.6.4",
     "adm-zip": "^0.5.16",
     "axios": "^1.12.2",
+    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "fs": "^0.0.1-security",
@@ -29,6 +33,7 @@
   "devDependencies": {
     "chai": "^6.0.1",
     "mocha": "^11.7.2",
+    "nodemon": "^3.1.10",
     "supertest": "^7.1.4"
   }
 }
