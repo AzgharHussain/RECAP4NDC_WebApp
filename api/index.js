@@ -6,16 +6,31 @@ const path = require('path');
 const fs = require('fs');
 
 
+// Initialize Express app
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+
 // Initialize Sequelize with your database credentials
 const sequelize = new Sequelize(
-    'Recap4NDC', // Database name
+    'recapnew', // Database name
     'postgres', // Username
-    'DB@$ecure#25', // Password
+    'pass@123', // Password
     {
         host: 'localhost',
         dialect: 'postgres',
     }
 );
+
+module.exports = { sequelize };
+
+const dropdownApisRouter = require('./routers/dropdownapis');
+app.use('/api/dropdown', dropdownApisRouter);
+
+
 
 // Function to connect to the database
 const dbConnect = async () => {
@@ -28,12 +43,7 @@ const dbConnect = async () => {
     }
 };
 
-// Initialize Express app
-const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
 
 // Set up Multer for file uploads
 const uploadDirectory = path.join(__dirname, '..', 'Incidentimage'); // __dirname refers to the current directory of server.js
@@ -345,6 +355,9 @@ app.get('/api/working-circles', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+
+
 
 
 
