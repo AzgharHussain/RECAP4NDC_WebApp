@@ -25,18 +25,29 @@ body {
 }
 
 .layout {
-  overflow-y:hidden;
+  display: flex;
+  flex-direction: column;
+ 
+  background: 
+    linear-gradient(180deg, rgba(48, 144, 89, 0.85) -6.02%, rgba(234, 194, 147, 0.85) 51.41%, rgba(54, 117, 165, 0.85) 86.7%),
+    url("../assets/Background.png") no-repeat center center;
+  overflow-y: hidden; /* Ensure content scrolls if necessary */
 }
 
 .dashboard-container {
-  display: flex;
+ display: flex;
   flex-direction: column;
   color: #004d00;
   padding: 20px;
+  overflow-y: auto; /* Allow scroll when content overflows */
+
+ 
 }
 
+
+
 .heading-container {
-  display: flex;
+ display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 30px;
@@ -45,7 +56,7 @@ body {
 
 .main-heading {
   font-weight: 700;
-  color: #009245;
+  color: #000;
   margin-right: 20px;
 }
 
@@ -87,7 +98,7 @@ button {
 /* Chart Card Styling */
 .chart-card {
   backdrop-filter: blur(10px);
-  padding: 20px;
+  padding: 1px;
   flex: 1 1 48%;
   min-width: 300px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -99,7 +110,7 @@ button {
 
 .chart-card h3 {
   text-align: center;
-  color: #228B22;
+  color: #000;
   font-weight: 600;
   margin-bottom: 10px;
 }
@@ -140,7 +151,7 @@ button {
 
 /* Recharts styling */
 .recharts-wrapper .recharts-cartesian-axis-tick-value tspan {
-  fill: #fff; /* X-axis and Y-axis labels */
+  fill: #000; /* X-axis and Y-axis labels */
 }
 
 .recharts-tooltip-wrapper {
@@ -148,5 +159,134 @@ button {
 }
 
 .recharts-legend-item-text {
-  color: #fff !important;
+  color:#000 !important;
+}
+
+
+
+
+:where(.css-dev-only-do-not-override-xepvsj).ant-select-dropdown .ant-select-item {
+    position: relative;
+    display: block;
+    min-height: 32px;
+    padding: 5px 12px;
+    color: white;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 1.5714285714285714;
+    box-sizing: border-box;
+    cursor: pointer;
+ 
+    border-radius: 4px;
+}
+
+
+
+/* ===========================
+   📱 Mobile / Small Screens
+   =========================== */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 10px;
+    max-height: unset;
+    overflow: visible;
+  }
+
+  .heading-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    padding: 0;
+  }
+
+  .filters .filter-item,
+  .filters .ant-picker,
+  .filters .ant-select,
+  .filters button {
+    width: 100% !important;
+  }
+
+  .FilterIcon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .chart-card .recharts-wrapper {
+    width: 300px !important;
+    height: 180px !important;
+    margin: 0 auto !important;
+  }
+
+  .chart-card svg {
+    transform: scale(0.75); /* Shrink the entire chart */
+    transform-origin: center;
+  }
+
+  .chart-card text {
+    font-size: 18px !important;
+  }
+
+  .recharts-legend-wrapper {
+    position: relative !important;
+    margin-top: 25px !important;
+    text-align: center !important;
+  }
+
+  .chart-card .recharts-legend-wrapper {
+    position: absolute !important;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 100px; /* Adjust if needed */
+    text-align: left;
+  }
+
+  .chart-card .recharts-legend-wrapper ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chart-card .recharts-legend-wrapper li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #000;
+    font-weight: 500;
+  }
+
+  .chart-card .recharts-legend-wrapper li span {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 250px;
+  }
+
+  .charts-grid {
+    flex-direction: column; /* Stack charts vertically */
+    align-items: center;    /* Center charts */
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-container {
+    max-height: unset;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 1024px) {
+  .dashboard-container {
+    max-height: 1200px;
+    overflow-y: auto;
+  }
 }
