@@ -4,6 +4,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const patrolRoutes = require('./routers/patrolRoutes');
 
 // ===========================================================
 // 🧩 DATABASE CONNECTION (PostgreSQL + Sequelize)
@@ -19,25 +20,40 @@ const fs = require('fs');
 //   }
 // );
 
+
+
+
+
 const sequelize = new Sequelize(
-    'Recap4NDC', // Database name
-    'postgres', // Username
-    'DB@$ecure#25', // Password
-    {
-        host: '68.178.167.39',
-        dialect: 'postgres',
+  'Recap4NDC', // Database name
+  'postgres', // Username
+  'DB@$ecure#25', // Password
+  {
+    host: '68.178.167.39',
+    dialect: 'postgres',
+    logging: console.log, // Enable logging to see SQL queries
+    dialectOptions: {
+      ssl: false, // Disable SSL since server doesn't support it
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
     }
+  }
 );
 
-const dbConnect = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Database connection successful.');
-  } catch (error) {
-    console.error('❌ Database connection failed:', error);
-    process.exit(1);
-  }
-};
+// Test connection
+sequelize.authenticate()
+  .then(() => {
+    console.log('✅ Database connection established successfully.');
+  })
+  .catch(err => {
+    console.error('❌ Unable to connect to the database:', err);
+  });
+
+
 
 // ===========================================================
 // ⚙️ EXPRESS APP SETUP
@@ -79,6 +95,11 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+
+app.use(express.json({ limit: '50mb' })); // For parsing application/json
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+app.use('/api', patrolRoutes);
 
 // ===========================================================
 // ✅ TEST ROUTE
@@ -252,6 +273,6 @@ app.get('/api/patrols-by-user', async (req, res) => {
 // ===========================================================
 const PORT = 5000;
 app.listen(PORT, async () => {
-  await dbConnect();
+
   console.log(`🚀 Server running on port ${PORT}`);
 });
