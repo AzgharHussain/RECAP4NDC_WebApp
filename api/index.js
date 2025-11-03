@@ -217,7 +217,7 @@ app.get('/api/incidents-with-images', async (req, res) => {
 
     const processed = results.map(row => ({
       ...row,
-      image_urls: row.image_urls && row.image_urls[0] === null ? [] : row.image_urls
+      image_urls_: row.image_urls && row.image_urls[0] === null ? [] : row.image_urls
     }));
 
     res.json(processed);
@@ -248,7 +248,7 @@ app.get('/api/patrols-by-user', async (req, res) => {
 });
 
 // ===========================================================
-// 🚀 START SERVER
+// 🚀 START SERVER 
 // ===========================================================
 const PORT = 5000;
 app.listen(PORT, async () => {
