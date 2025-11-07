@@ -319,7 +319,7 @@ router.get('/get-divisions', async (req, res) => {
         break;
       case 2: // Territorial Forest
         myquery = `
-        SELECT DISTINCT "Division" 
+        SELECT DISTINCT "Division"  AS "DIVISION"
           FROM public."Teritorial Circle_Division_Boundary"
           ORDER BY "Division";
         `;  
@@ -397,12 +397,12 @@ router.post('/hierarchy', async (req, res) => {
         myquery = `
         
 			SELECT DISTINCT
-            tcdb."Division",
-            tcrb."Range",
+            tcdb."Division" as "DIVISION",
+            tcrb."Range" as "RANGE",
             
-            tcrdb."Round",
+            tcrdb."Round" as "ROUND",
            
-            tcbb."Beat",
+            tcbb."Beat" as "BEAT",
            
             tcvb."Village",
             tcvb."Village_id",
