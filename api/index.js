@@ -5,6 +5,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const patrolRoutes = require('./routers/patrolRoutes');
+const dropdownapis = require('./routers/dropdownapis');
+
+const { sequelize, testConnection } = require('./config/database');
 
 // ===========================================================
 // 🧩 DATABASE CONNECTION (PostgreSQL + Sequelize)
@@ -24,37 +27,37 @@ const patrolRoutes = require('./routers/patrolRoutes');
 
 
 
-const sequelize = new Sequelize(
-  'Recap4NDC', // Database name
-  'postgres', // Username
-  'DB@$ecure#25', // Password
-  {
-    host: '68.178.167.39',
-    dialect: 'postgres',
-    logging: console.log, // Enable logging to see SQL queries
-    dialectOptions: {
-      ssl: false, // Disable SSL since server doesn't support it
-    },
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    }
-  }
-);
+// const sequelize = new Sequelize(
+//   'Recap4NDC', // Database name
+//   'postgres', // Username
+//   'DB@$ecure#25', // Password
+//   {
+//     host: '68.178.167.39',
+//     dialect: 'postgres',
+//     logging: console.log, // Enable logging to see SQL queries
+//     dialectOptions: {
+//       ssl: false, // Disable SSL since server doesn't support it
+//     },
+//     pool: {
+//       max: 5,
+//       min: 0,
+//       acquire: 30000,
+//       idle: 10000
+//     }
+//   }
+// );
 
-// Test connection
-sequelize.authenticate()
-  .then(() => {
-    console.log('✅ Database connection established successfully.');
-  })
-  .catch(err => {
-    console.error('❌ Unable to connect to the database:', err);
-  });
+// // Test connection
+// sequelize.authenticate()
+//   .then(() => {
+//     console.log('✅ Database connection established successfully.');
+//   })
+//   .catch(err => {
+//     console.error('❌ Unable to connect to the database:', err);
+//   });
 
 
-
+// module.exports = sequelize ;
 // ===========================================================
 // ⚙️ EXPRESS APP SETUP
 // ===========================================================
@@ -100,6 +103,7 @@ app.use(express.json({ limit: '50mb' })); // For parsing application/json
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use('/api', patrolRoutes);
+app.use('/api', dropdownapis);
 
 // ===========================================================
 // ✅ TEST ROUTE
