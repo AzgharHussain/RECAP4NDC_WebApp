@@ -3,7 +3,7 @@ const router = express.Router();
 const { sequelize } = require('../config/ndvidatabase');
 
 // Define the API endpoint to fetch NDVI change data
-router.get('/ndvi-change', async (req, res) => {
+router.post('/ndvi-change', async (req, res) => {
     const {tableName} = req.body
     try {
         const query = `
