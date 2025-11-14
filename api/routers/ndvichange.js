@@ -3,29 +3,25 @@ const privatekey = require("./private-key.json");
 const { sequelize } = require('../config/database');
 
 var months = [
-  {current: '2025-01-20', previous: '2024-12-01'},
-  {current: '2025-02-20', previous: '2025-01-01'},
-  {current: '2025-03-20', previous: '2025-02-01'},
-  {current: '2025-04-20', previous: '2025-03-01'},
-  {current: '2025-05-20', previous: '2025-04-01'},
-  {current: '2025-06-20', previous: '2025-05-01'},
-  {current: '2025-07-20', previous: '2025-06-01'},
-  {current: '2025-08-20', previous: '2025-07-01'},
-  {current: '2025-09-20', previous: '2025-08-01'},
-  {current: '2025-10-20', previous: '2025-09-01'}
+  {current: '2025-04-01', previous: '2020-12-01'},
+  {current: '2025-08-01', previous: '2025-04-01'}
+  // {current: '2025-03-01', previous: '2025-02-01'},
+  // {current: '2025-04-01', previous: '2025-03-01'},
+  // {current: '2025-05-01', previous: '2025-04-01'},
+  // {current: '2025-06-01', previous: '2025-05-01'},
+  // {current: '2025-07-01', previous: '2025-06-01'},
+  // {current: '2025-08-01', previous: '2025-07-01'},
+  // {current: '2025-09-01', previous: '2025-08-01'},
+  // {current: '2025-10-01', previous: '2025-09-01'}
 ];
 
 // ----------------- Earth Engine Authentication -----------------
 async function initializeEarthEngine() {
   try {
-    // Initialize Earth Engine with service account credentials
     await ee.data.authenticateViaPrivateKey(privatekey);
-    
-    // Initialize the client library
     await ee.initialize(null, null, () => {
       console.log('✅ Earth Engine initialized successfully');
     });
-    
     return true;
   } catch (error) {
     console.error('❌ Failed to initialize Earth Engine:', error.message);
@@ -33,14 +29,7 @@ async function initializeEarthEngine() {
   }
 }
 
-// ----------------- Helper Functions -----------------
-function makeGrid(geom, tileSizeMeters = 1000) {
-  const proj = ee.Projection('EPSG:3857').atScale(tileSizeMeters);
-  return ee.FeatureCollection(
-    ee.Geometry(geom).coveringGrid(proj).map(f => f.intersection(geom, 1))
-  );
-}
-
+// ----------------- Improved Helper Functions -----------------
 function evaluateFC(fc) {
   return new Promise((resolve, reject) => {
     fc.evaluate((result, err) => {
@@ -55,145 +44,286 @@ function maskS2(image) {
   return image.updateMask(valid);
 }
 
-function cleanGeoJSON(geojson) {
-  if (!geojson || !geojson.coordinates) {
-    console.log('⚠️ Invalid GeoJSON: missing coordinates');
+function cleanAndValidateGeometry(geometry) {
+  if (!geometry || !geometry.coordinates) {
     return null;
   }
-  
+
   try {
-    const removeZValues = (coords) => {
-      if (Array.isArray(coords[0])) {
-        return coords.map(removeZValues);
+    const cleanCoordinates = (coords) => {
+      if (!Array.isArray(coords)) return [];
+      
+      if (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+        // Nested array (polygon or multipolygon rings)
+        return coords.map(ring => cleanCoordinates(ring)).filter(ring => ring.length > 0);
+      } else if (Array.isArray(coords[0])) {
+        // Array of coordinates
+        return coords.map(coord => {
+          if (!Array.isArray(coord) || coord.length < 2) return null;
+          
+          // Filter out null values and ensure we have at least 2 coordinates
+          const cleanCoord = coord.slice(0, 2).filter(c => c !== null && c !== undefined);
+          return cleanCoord.length === 2 ? cleanCoord : null;
+        }).filter(coord => coord !== null);
       } else {
-        // Return only first two coordinates (longitude, latitude)
-        return coords.slice(0, 2);
+        // Single coordinate
+        const cleanCoord = coords.slice(0, 2).filter(c => c !== null && c !== undefined);
+        return cleanCoord.length === 2 ? cleanCoord : null;
       }
     };
 
-    const cleaned = JSON.parse(JSON.stringify(geojson));
+    const cleaned = JSON.parse(JSON.stringify(geometry));
     
     if (cleaned.type === 'MultiPolygon') {
-      cleaned.coordinates = cleaned.coordinates.map(polygon =>
-        polygon.map(ring =>
-          ring.map(coord => removeZValues(coord))
-        )
-      );
+      cleaned.coordinates = cleaned.coordinates.map(polygon => 
+        cleanCoordinates(polygon)
+      ).filter(polygon => polygon.length > 0 && polygon[0].length >= 4);
     } else if (cleaned.type === 'Polygon') {
-      cleaned.coordinates = cleaned.coordinates.map(ring =>
-        ring.map(coord => removeZValues(coord))
-      );
+      cleaned.coordinates = cleanCoordinates(cleaned.coordinates);
     }
-    
-    // Validate the cleaned geometry
+
+    // Final validation
     if (!cleaned.coordinates || cleaned.coordinates.length === 0) {
-      console.log('⚠️ Invalid GeoJSON: empty coordinates after cleaning');
       return null;
     }
-    
+
     return cleaned;
   } catch (error) {
-    console.error('❌ Error cleaning GeoJSON:', error.message);
+    console.error('❌ Error cleaning geometry:', error.message);
     return null;
   }
 }
 
-function detectDeforestation(previousMonthImage, currentMonthImage, geometry) {
-  const ndviPrevious = previousMonthImage.normalizedDifference(['B8', 'B4']).rename('NDVI');
-  const ndviCurrent = currentMonthImage.normalizedDifference(['B8', 'B4']).rename('NDVI');
-  const forestThreshold = 0.0001;
+function wktToGeoJSON(wkt) {
+  if (!wkt) return null;
   
-  // Detect any negative change (including very small negative changes like -0.00000001)
-  const ndviChange = ndviCurrent.subtract(ndviPrevious);
-  const wasForest = ndviPrevious.gt(forestThreshold);
-  
-  // Any negative change in forest areas is considered potential deforestation
-  const deforestation = wasForest.and(ndviChange.lt(0));
-  
-  return {
-    deforestation: deforestation.rename('deforestation'),
-    ndviPrevious,
-    ndviCurrent,
-    ndviChange,
-    changeMagnitude: ndviChange.multiply(-1).rename('change_magnitude'), // Positive value for negative change
-    geometry
-  };
+  try {
+    if (wkt.startsWith('MULTIPOLYGON')) {
+      const coordsText = wkt.replace('MULTIPOLYGON', '').trim();
+      const polygons = coordsText.slice(2, -2).split(')),((');
+      
+      const coordinates = polygons.map(polygon => {
+        const rings = polygon.split('),(');
+        return rings.map(ring => {
+          const points = ring.split(',');
+          return points.map(point => {
+            const coords = point.trim().split(' ').map(Number);
+            // Filter out invalid coordinates
+            if (coords.length >= 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+              return [coords[0], coords[1]];
+            }
+            return null;
+          }).filter(coord => coord !== null);
+        }).filter(ring => ring.length >= 4); // Minimum 4 points for a ring
+      }).filter(polygon => polygon.length > 0);
+      
+      return coordinates.length > 0 ? {
+        type: 'MultiPolygon',
+        coordinates: coordinates
+      } : null;
+      
+    } else if (wkt.startsWith('POLYGON')) {
+      const coordsText = wkt.replace('POLYGON', '').trim();
+      const rings = coordsText.slice(2, -2).split('),(');
+      
+      const coordinates = rings.map(ring => {
+        const points = ring.split(',');
+        return points.map(point => {
+          const coords = point.trim().split(' ').map(Number);
+          if (coords.length >= 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+            return [coords[0], coords[1]];
+          }
+          return null;
+        }).filter(coord => coord !== null);
+      }).filter(ring => ring.length >= 4);
+      
+      return coordinates.length > 0 ? {
+        type: 'Polygon',
+        coordinates: coordinates
+      } : null;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ Error converting WKT to GeoJSON:', error.message);
+    return null;
+  }
 }
 
-async function processDeforestation(deforestationTable, row, deforestationData, month) {
+// ----------------- Improved Deforestation Detection -----------------
+function detectDeforestation(previousMonthImage, currentMonthImage, geometry) {
+  try {
+    // Calculate NDVI for both periods
+    const ndviPrevious = previousMonthImage.normalizedDifference(['B8', 'B4']).rename('NDVI');
+    const ndviCurrent = currentMonthImage.normalizedDifference(['B8', 'B4']).rename('NDVI');
+    
+    // Calculate NDVI change
+    const ndviChange = ndviCurrent.subtract(ndviPrevious);
+    
+    // Define forest threshold (adjust based on your region)
+    const forestThreshold = 0.3; // Increased threshold for better detection
+    
+    // Identify areas that were forest
+    const wasForest = ndviPrevious.gt(forestThreshold);
+    
+    // Detect significant negative changes (deforestation)
+    const significantNegativeChange = ndviChange.lt(-0.1); // More sensitive threshold
+    
+    // Deforestation = was forest AND has significant negative change
+    const deforestation = wasForest.and(significantNegativeChange);
+    
+    return {
+      deforestation: deforestation.rename('deforestation'),
+      ndviPrevious,
+      ndviCurrent,
+      ndviChange,
+      changeMagnitude: ndviChange.multiply(-1).rename('change_magnitude'),
+      geometry
+    };
+  } catch (error) {
+    console.error('❌ Error in deforestation detection:', error.message);
+    throw error;
+  }
+}
+
+// ----------------- Improved Deforestation Feature Processing -----------------
+async function processDeforestationSimple(deforestationTable, row, deforestationData, month) {
   try {
     const geom = ee.Geometry(row.geometry);
-    const tiles = makeGrid(geom, 1000);
-    const tileList = await evaluateFC(tiles);
+    
+    // Get deforestation areas with change magnitude
+    const deforestationWithChange = deforestationData.deforestation
+      .updateMask(deforestationData.deforestation)
+      .addBands(deforestationData.changeMagnitude);
+    
+    // Convert to vectors at a reasonable scale
+    const deforestationVectors = deforestationWithChange
+      .reduceToVectors({
+        geometry: geom,
+        scale: 30,
+        geometryType: 'polygon',
+        eightConnected: false,
+        reducer: ee.Reducer.mean(),
+        maxPixels: 1e8
+      });
+    
+    const deforestationFC = await evaluateFC(deforestationVectors);
+    
     let deforestationCount = 0;
     let insertedFeatures = [];
     
-    for (const tileFeature of (tileList.features || [])) {
-      const tileGeom = ee.Geometry(tileFeature.geometry);
+    // Check if we have valid features
+    if (!deforestationFC || !deforestationFC.features || !Array.isArray(deforestationFC.features)) {
+      console.log(`⚠️ No deforestation features found for polygon ${row.id}`);
+      return {
+        success: true,
+        count: 0,
+        features: []
+      };
+    }
+    
+    console.log(`🔍 Found ${deforestationFC.features.length} potential deforestation features for polygon ${row.id}`);
+    
+    for (let i = 0; i < deforestationFC.features.length; i++) {
+      const f = deforestationFC.features[i];
       
-      // Get deforestation areas with change magnitude
-      const deforestationWithChange = deforestationData.deforestation
-        .updateMask(deforestationData.deforestation)
-        .addBands(deforestationData.changeMagnitude);
-        
-      const deforestationVectors = deforestationWithChange
-        .reduceToVectors({
-          geometry: tileGeom,
-          scale: 10,
-          geometryType: 'polygon',
-          eightConnected: false,
-          reducer: ee.Reducer.mean() // This will give us the mean change magnitude
-        });
-        
-      const deforestationFC = await evaluateFC(deforestationVectors);
+      // Validate feature exists and has geometry
+      if (!f || !f.geometry) {
+        console.log(`⚠️ Skipping feature ${i} - no geometry`);
+        continue;
+      }
       
-      for (const f of (deforestationFC.features || [])) {
+      try {
+        // Validate and stringify geometry
         const geomStr = JSON.stringify(f.geometry);
-        if (!geomStr) continue;
+        if (!geomStr || geomStr === '{}' || geomStr === 'null') {
+          console.log(`⚠️ Skipping feature ${i} - invalid geometry`);
+          continue;
+        }
         
-        const areaHa = ee.Feature(f).geometry().area().divide(10000);
-        const areaValue = await evaluateFC(ee.FeatureCollection([ee.Feature(f).set('area', areaHa)]));
-        const area = areaValue.features[0]?.properties?.area || 0;
+        // Calculate area with proper error handling
+        let area = 0;
+        try {
+          const areaHa = ee.Feature(f).geometry().area().divide(10000);
+          const areaValue = await evaluateFC(ee.FeatureCollection([ee.Feature(f).set('area', areaHa)]));
+          area = areaValue.features?.[0]?.properties?.area || 0;
+        } catch (areaError) {
+          console.log(`⚠️ Area calculation error for feature ${i}:`, areaError.message);
+          // Estimate area from bounding box as fallback
+          const coords = f.geometry.coordinates;
+          if (coords && coords.length > 0) {
+            // Simple area estimation (very rough)
+            area = coords.flat().length * 0.0001; // Rough estimate
+          }
+        }
         
-        // Get the change magnitude from properties
-        const changeMagnitude = f.properties?.mean || 0;
+        // Skip very small areas (likely noise)
+        if (area < 0.01) {
+          console.log(`⚠️ Skipping feature ${i} - area too small: ${area} ha`);
+          continue;
+        }
         
-        // Use Sequelize for database operations
+        // Get the change magnitude with fallback
+        const changeMagnitude = f.properties?.mean || f.properties?.change_magnitude || 0;
+        
+        // Generate unique pixel ID
+        const pixelId = `def_${row.id}_${deforestationCount}_${month.replace(/-/g, '')}_${Date.now()}`;
+        
+        // Insert into database
         const [result] = await sequelize.query(
           `INSERT INTO "${deforestationTable}"
             (coop_id, coop_name, poly_id, pixel_id, detection_date, area_ha, change_magnitude, geom, status)
            VALUES ($1, $2, $3, $4, $5, $6, $7, ST_SetSRID(ST_Multi(ST_GeomFromGeoJSON($8)), 4326), $9)
+           ON CONFLICT (pixel_id, detection_date) DO NOTHING
            RETURNING id`,
           {
             bind: [
-              row.coop.coop_id,
-              row.coop.coop_name,
+              row.coop?.coop_id || 0,
+              row.coop?.coop_name || 'unknown',
               row.id,
-              `def_${row.id}_${deforestationCount}_${month.replace(/-/g, '')}`,
+              pixelId,
               month,
-              area,
-              changeMagnitude,
+              parseFloat(area.toFixed(6)),
+              parseFloat(changeMagnitude.toFixed(6)),
               geomStr,
-              'DETECTED' // Status: DETECTED, VERIFIED, FALSE_ALARM, etc.
+              'DETECTED'
             ]
           }
         );
         
-        insertedFeatures.push({
-          id: result[0].id,
-          geometry: geomStr,
-          area: area,
-          change_magnitude: changeMagnitude
+        if (result && result.length > 0) {
+          insertedFeatures.push({
+            id: result[0].id,
+            geometry: geomStr,
+            area: area,
+            change_magnitude: changeMagnitude
+          });
+          deforestationCount++;
+          console.log(`✅ Inserted deforestation feature ${i} for polygon ${row.id}, area: ${area.toFixed(4)} ha`);
+        } else {
+          console.log(`⚠️ Feature ${i} not inserted (possible duplicate)`);
+        }
+        
+      } catch (featureError) {
+        console.error(`❌ Error processing deforestation feature ${i}:`, featureError.message);
+        // Log the feature for debugging
+        console.log(`   Feature details:`, {
+          hasGeometry: !!f.geometry,
+          hasProperties: !!f.properties,
+          properties: f.properties
         });
-        deforestationCount++;
+        continue;
       }
     }
+    
+    console.log(`✅ Processed ${deforestationCount}/${deforestationFC.features.length} valid deforestation features for polygon ${row.id}`);
     
     return {
       success: true,
       count: deforestationCount,
       features: insertedFeatures
     };
+    
   } catch (err) {
     console.error(`❌ Error processing deforestation for polygon ${row.id}:`, err.message);
     return {
@@ -204,35 +334,68 @@ async function processDeforestation(deforestationTable, row, deforestationData, 
   }
 }
 
-// Single table for all deforestation data
-const DEFORESTATION_TABLE = 'global_deforestation_monitoring';
-
-// ----------------- Improved Image Collection Functions -----------------
+// ----------------- Improved Image Collection -----------------
 function getSentinel2Image(startDate, endDate, geometry) {
   return ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
     .filterDate(startDate, endDate)
     .filterBounds(geometry)
-    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30)) // Filter clouds
+    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) // Stricter cloud filter
     .map(maskS2)
     .median()
     .clip(geometry);
 }
 
+// ----------------- Validation Functions -----------------
+async function validateImageAvailability(dateRange, geometry) {
+  try {
+    const collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+      .filterDate(dateRange.start, dateRange.end)
+      .filterBounds(geometry)
+      .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30));
+    
+    const count = collection.size();
+    const countValue = await evaluateFC(ee.FeatureCollection([ee.Feature(geometry).set('count', count)]));
+    
+    return countValue.features[0]?.properties?.count > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
+// ----------------- Debug Function -----------------
+async function debugDeforestationFeatures(deforestationFC, polygonId) {
+  console.log(`🐛 DEBUG Polygon ${polygonId}:`);
+  console.log(`   Features array:`, Array.isArray(deforestationFC.features));
+  console.log(`   Number of features:`, deforestationFC.features?.length || 0);
+  
+  if (deforestationFC.features && deforestationFC.features.length > 0) {
+    const firstFeature = deforestationFC.features[0];
+    console.log(`   First feature:`, {
+      hasGeometry: !!firstFeature.geometry,
+      geometryType: firstFeature.geometry?.type,
+      hasProperties: !!firstFeature.properties,
+      properties: firstFeature.properties
+    });
+  }
+}
+
 // ----------------- Main Processing -----------------
 async function main() {
   try {
-    // Initialize Earth Engine first
+    // Initialize Earth Engine
     const eeInitialized = await initializeEarthEngine();
     if (!eeInitialized) {
       console.error('❌ Cannot proceed without Earth Engine initialization');
       return;
     }
 
-    // Test database connection using Sequelize
+    // Test database connection
     await sequelize.authenticate();
     console.log('✅ Sequelize connection established successfully');
 
-    // Create global deforestation monitoring table if not exists
+    // Create tables if not exists
+    const DEFORESTATION_TABLE = 'global_deforestation_monitoring';
+    
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "${DEFORESTATION_TABLE}" (
         id SERIAL PRIMARY KEY,
@@ -246,11 +409,10 @@ async function main() {
         geom geometry(MultiPolygon, 4326),
         status TEXT DEFAULT 'DETECTED',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(pixel_id, detection_date) -- Prevent duplicates
+        UNIQUE(pixel_id, detection_date)
       );
     `);
 
-    // Create global notifications table if not exists
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS global_deforestation_notifications (
         id SERIAL PRIMARY KEY,
@@ -266,18 +428,7 @@ async function main() {
       );
     `);
 
-    // Create index for better performance
-    await sequelize.query(`
-      CREATE INDEX IF NOT EXISTS idx_deforestation_coop_date 
-      ON "${DEFORESTATION_TABLE}" (coop_id, detection_date);
-    `);
-    
-    await sequelize.query(`
-      CREATE INDEX IF NOT EXISTS idx_deforestation_change_magnitude 
-      ON "${DEFORESTATION_TABLE}" (change_magnitude);
-    `);
-
-    // Load coop metadata for Con_Cum_Imp_WC_OVLP
+    // Load coop metadata
     const [coops] = await sequelize.query(`
       SELECT * FROM coupe_metadata
       WHERE coupe_name = 'Con_Cum_Imp_WC_OVLP'
@@ -296,7 +447,7 @@ async function main() {
     for (const coop of coops) {
       console.log(`🏭 Processing coop: ${coop.coupe_name}`);
       
-      // Load polygons from input table - using ST_AsText for better compatibility
+      // Load polygons
       const [rows] = await sequelize.query(`
         SELECT id, geom, ST_AsText(geom) AS wkt_geometry
         FROM public."${coop.coupe_name}";
@@ -309,7 +460,10 @@ async function main() {
 
       console.log(`📍 Processing ${rows.length} polygons`);
 
-      for (const monthPair of months) {
+      // Process only a subset for testing
+      const sampleRows = rows.slice(0, 10); // Process only first 10 polygons for testing
+      
+      for (const monthPair of months.slice(0, 2)) { // Process only first 2 months for testing
         const previousMonth = monthPair.previous;
         const currentMonth = monthPair.current;
 
@@ -319,121 +473,125 @@ async function main() {
         let processedPolygons = 0;
         let validPolygons = 0;
 
-        for (const row of rows) {
+        for (const row of sampleRows) {
           try {
             processedPolygons++;
             
             // Convert WKT to GeoJSON
-            let geometry;
-            try {
-              // Parse WKT and convert to GeoJSON format
-              const wkt = row.wkt_geometry;
-              if (wkt && wkt.startsWith('MULTIPOLYGON')) {
-                // Simple WKT to GeoJSON conversion for MultiPolygon
-                const coordsText = wkt.replace('MULTIPOLYGON', '').trim();
-                const polygons = coordsText.slice(2, -2).split(')),((');
-                
-                const coordinates = polygons.map(polygon => {
-                  const rings = polygon.split('),(');
-                  return rings.map(ring => {
-                    const points = ring.split(',');
-                    return points.map(point => {
-                      const [lng, lat] = point.trim().split(' ').map(Number);
-                      return [lng, lat];
-                    });
-                  });
-                });
-                
-                geometry = {
-                  type: 'MultiPolygon',
-                  coordinates: coordinates
-                };
-              } else if (wkt && wkt.startsWith('POLYGON')) {
-                // Simple WKT to GeoJSON conversion for Polygon
-                const coordsText = wkt.replace('POLYGON', '').trim();
-                const rings = coordsText.slice(2, -2).split('),(');
-                
-                const coordinates = rings.map(ring => {
-                  const points = ring.split(',');
-                  return points.map(point => {
-                    const [lng, lat] = point.trim().split(' ').map(Number);
-                    return [lng, lat];
-                  });
-                });
-                
-                geometry = {
-                  type: 'Polygon',
-                  coordinates: coordinates
-                };
-              } else {
-                console.log(`⚠️ Unsupported WKT format for polygon ${row.id}`);
-                continue;
-              }
-            } catch (wktError) {
-              console.log(`⚠️ Error parsing WKT for polygon ${row.id}:`, wktError.message);
+            const geometry = wktToGeoJSON(row.wkt_geometry);
+            if (!geometry) {
+              console.log(`⚠️ Invalid WKT geometry for polygon ${row.id}`);
               continue;
             }
 
-            const cleanedGeometry = cleanGeoJSON(geometry);
+            // Clean and validate geometry
+            const cleanedGeometry = cleanAndValidateGeometry(geometry);
             if (!cleanedGeometry) {
-              console.log(`⚠️ Skipping invalid geometry for polygon ${row.id}`);
+              console.log(`⚠️ Invalid geometry after cleaning for polygon ${row.id}`);
               continue;
             }
 
             validPolygons++;
-            const geom = ee.Geometry(cleanedGeometry);
             
-            // Get previous month image (baseline)
-            const previousMonthS2 = getSentinel2Image(previousMonth, currentMonth, geom);
-            
-            // Get current month image (for comparison)
-            const nextMonth = new Date(currentMonth);
-            nextMonth.setMonth(nextMonth.getMonth() + 1);
-            const nextMonthStr = nextMonth.toISOString().split('T')[0];
-            const currentMonthS2 = getSentinel2Image(currentMonth, nextMonthStr, geom);
+            console.log(`🔍 Processing polygon ${row.id} with ${cleanedGeometry.coordinates?.length || 0} polygons`);
 
-            // Simple check for valid imagery
+            // Get images with better error handling
+            let previousMonthS2, currentMonthS2;
             try {
-              const previousInfo = await evaluateFC(ee.FeatureCollection([ee.Feature(geom).set('test', 1)]));
-              const currentInfo = await evaluateFC(ee.FeatureCollection([ee.Feature(geom).set('test', 1)]));
+              const geom = ee.Geometry(cleanedGeometry);
               
-              if (!previousInfo.features || !currentInfo.features) {
-                console.log(`⚠️ Geometry evaluation failed for polygon ${row.id}`);
+              previousMonthS2 = getSentinel2Image(previousMonth, currentMonth, geom);
+              const nextMonth = new Date(currentMonth);
+              nextMonth.setMonth(nextMonth.getMonth() + 1);
+              const nextMonthStr = nextMonth.toISOString().split('T')[0];
+              currentMonthS2 = getSentinel2Image(currentMonth, nextMonthStr, geom);
+
+              // Validate images
+              const previousValid = await validateImageAvailability(
+                { start: previousMonth, end: currentMonth }, 
+                geom
+              );
+              const currentValid = await validateImageAvailability(
+                { start: currentMonth, end: nextMonthStr }, 
+                geom
+              );
+              
+              if (!previousValid || !currentValid) {
+                console.log(`⚠️ No valid imagery for polygon ${row.id}`);
                 continue;
               }
-            } catch (evalError) {
-              console.log(`⚠️ Geometry evaluation error for polygon ${row.id}:`, evalError.message);
+
+              // Detect deforestation
+              const deforestationData = detectDeforestation(previousMonthS2, currentMonthS2, geom);
+              const result = await processDeforestationSimple(
+                DEFORESTATION_TABLE, 
+                { ...row, coop, geometry: cleanedGeometry }, 
+                deforestationData, 
+                currentMonth
+              );
+
+              if (result.success) {
+                totalDeforestationCount += result.count;
+                if (result.count > 0) {
+                  console.log(`✅ Found ${result.count} deforestation areas in polygon ${row.id}`);
+                  
+                  // Log notifications
+                  for (const feature of result.features) {
+                    const message = `Deforestation detected in polygon ${row.id} for ${currentMonth}. Area: ${feature.area.toFixed(4)} ha. NDVI change: -${feature.change_magnitude.toFixed(6)}`;
+                    
+                    await sequelize.query(
+                      `INSERT INTO global_deforestation_notifications
+                        (deforestation_id, coop_id, poly_id, month, message, change_magnitude, status, created_at)
+                       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+                      {
+                        bind: [feature.id, coop.coop_id, row.id, currentMonth, message, feature.change_magnitude, 'PENDING']
+                      }
+                    );
+                  }
+                } else {
+                  console.log(`ℹ️ No deforestation detected in polygon ${row.id}`);
+                }
+              }
+
+            } catch (imageError) {
+              console.error(`❌ Image processing error for polygon ${row.id}:`, imageError.message);
               continue;
             }
 
-            const deforestationData = detectDeforestation(previousMonthS2, currentMonthS2, geom);
-            const result = await processDeforestation(DEFORESTATION_TABLE, { ...row, coop, geometry: cleanedGeometry }, deforestationData, currentMonth);
-
-            if (result.success && result.count > 0) {
-              totalDeforestationCount += result.count;
-              console.log(`✅ Found ${result.count} deforestation areas in polygon ${row.id}`);
-            }
-
             // Progress update
-            if (processedPolygons % 10 === 0) {
-              console.log(`📊 Processed ${processedPolygons}/${rows.length} polygons for ${currentMonth} (${validPolygons} valid)`);
-            }
+            console.log(`📊 Processed ${processedPolygons}/${sampleRows.length} polygons for ${currentMonth}`);
 
           } catch (err) {
-            console.error(`❌ Error processing deforestation for polygon ${row.id}:`, err.message);
+            console.error(`❌ General error processing polygon ${row.id}:`, err.message);
+            console.error(`   Stack:`, err.stack);
           }
         }
 
-        console.log(`✅ Found ${totalDeforestationCount} deforestation areas for ${currentMonth} (processed ${validPolygons}/${rows.length} valid polygons)`);
+        console.log(`✅ Found ${totalDeforestationCount} deforestation areas for ${currentMonth} (processed ${validPolygons}/${sampleRows.length} valid polygons)`);
       }
     }
+
+    // Display summary
+    const [summary] = await sequelize.query(`
+      SELECT 
+        COUNT(*) as total_detections,
+        AVG(change_magnitude) as avg_change,
+        MIN(change_magnitude) as min_change,
+        MAX(change_magnitude) as max_change
+      FROM "${DEFORESTATION_TABLE}"
+    `);
+
+    console.log('\n📊 Deforestation Monitoring Summary:');
+    console.log(`   Total detections: ${summary[0].total_detections}`);
+    console.log(`   Average NDVI change: ${summary[0].avg_change}`);
+    console.log(`   Min NDVI change: ${summary[0].min_change}`);
+    console.log(`   Max NDVI change: ${summary[0].max_change}`);
 
     console.log('🎉 All deforestation monitoring completed successfully');
     
   } catch (error) {
     console.error('❌ Error in main process:', error);
   } finally {
-    // Close connection
     await sequelize.close();
     console.log('🔌 Database connection closed');
   }

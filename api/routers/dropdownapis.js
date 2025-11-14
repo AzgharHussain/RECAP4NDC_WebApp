@@ -300,7 +300,7 @@ router.post('/coupes', async (req, res) => {
   }
 });
 
-router.get('/get-divisions', async (req, res) => {
+router.post('/get-divisions', async (req, res) => {
   try {
   const { forest_id } = req.body;
 
