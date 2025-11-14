@@ -1,7 +1,7 @@
 const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize(
-  'Recap4NDC', // Database name
+  'Recap4NDC_One', // Database name
   'postgres', // Username
   'P$DB@25%$#!09', // Password
   {

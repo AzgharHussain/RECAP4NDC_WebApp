@@ -1049,6 +1049,7 @@ padding: 20px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
+  
 }
 
 
@@ -1355,8 +1356,7 @@ color: #000;
 .map-wrapper {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* Full height */
-  width: 100%; /* Full width */
+ 
 }
 
 /* Adjust map header */
