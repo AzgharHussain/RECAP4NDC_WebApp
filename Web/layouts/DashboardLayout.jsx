@@ -259,7 +259,7 @@ export default function DashboardLayout() {
           </ul>
         </aside>
 
-        {/* Page content */}
+        
         <main className="content">
           <Outlet />
         </main>

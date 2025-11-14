@@ -552,8 +552,38 @@ const handleToolSidebarClick = (toolName) => {
     link.href = canvas.toDataURL("image/png");
     link.click();
   };
+
+
+  const fetchUser = async () => {
+  try {
+    const token = Cookies.get("token");
+    const id = Cookies.get("id");
+    
+    if (!token || !id) {
+      navigate("");
+      return;
+    }
+
+    const response = await axios.get(`http://68.178.167.39:5000/api/tnc-users/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
+    setuserdata(response.data);
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    // Handle error - maybe redirect to login
+    Cookies.remove("token");
+    Cookies.remove("role");
+    Cookies.remove("id");
+    navigate("");
+  }
+};
   return (
-    <div className="map-wrapper" >
+    <div
+     className="map-wrapper" 
+    >
       <div className="map-layout">
         <div className="map-top-left">
 <aside className="left-sidebar">
@@ -707,7 +737,7 @@ const handleToolSidebarClick = (toolName) => {
         </Suspense>
         )}
 
-        <div className="main-container" ref={mapWrapperRef} style={{ height: `calc(90vh - ${headerHeight}px)` }}>
+        <div className="main-container" ref={mapWrapperRef}>
   {/* Toggle Layer Panel button */}
       <button
         title="Layers Panel"
@@ -726,7 +756,7 @@ const handleToolSidebarClick = (toolName) => {
         </svg>
       </button>
          {showLayerTogglePanel && (
-            <div className="leftpanel-container" style={{ overflow: "auto" }}>
+            <div className="leftpanel-container">
               <Suspense fallback={<div>Loading...</div>}>
                 <LayerTogglePanel
                   showStateLayer={showStateLayer}
@@ -753,7 +783,11 @@ const handleToolSidebarClick = (toolName) => {
             <MapContainer
               center={position}
               zoom={7.8}
-              style={{ height: "100%", width: "83vw" }}
+              style={{ 
+  height: "92vh", 
+  width: "43vw",
+  
+}}
               whenCreated={(mapInstance) => {
                 mapRef.current = mapInstance;
                 mapInstance.rotate = true;

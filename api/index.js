@@ -8,6 +8,7 @@ const patrolRoutes = require('./routers/patrolRoutes');
 const dropdownapis = require('./routers/dropdownapis');
 
 const { sequelize, testConnection } = require('./config/database');
+const NdviRouter =require("./routers/ndviRouter")
 
 // ===========================================================
 // 🧩 DATABASE CONNECTION (PostgreSQL + Sequelize)
@@ -106,6 +107,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use('/api', patrolRoutes);
 app.use('/api', dropdownapis);
+app.use('/api', NdviRouter)
 
 // ===========================================================
 // ✅ TEST ROUTE
