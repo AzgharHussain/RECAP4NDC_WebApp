@@ -165,7 +165,7 @@ button {
 
 
 
-:where(.css-dev-only-do-not-override-xepvsj).ant-select-dropdown .ant-select-item {
+.ant-select-dropdown .ant-select-item {
     position: relative;
     display: block;
     min-height: 32px;
