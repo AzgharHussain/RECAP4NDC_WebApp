@@ -7,17 +7,8 @@ router.post('/ndvi-change', async (req, res) => {
     const {tableName} = req.body
     try {
         const query = `
-            SELECT
-                jan_ndvi,
-                feb_ndvi,
-                ndvi_change,
-                change_category,
-                ST_AsGeoJSON(intersection_geom) AS intersection_geom,
-                ST_AsGeoJSON(centroid) AS centroid,
-                longitude,
-                latitude,
-                notification_sent
-            FROM public."${tableName}";
+           SELECT "jan_NDVI", "feb_NDVI", "NDVI_change", change_category, geom, centroid, longitude, latitude, notification_sent
+	FROM public."${tableName}";
         `;
 
         // Execute the query using Sequelize
