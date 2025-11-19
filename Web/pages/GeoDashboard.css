@@ -1276,8 +1276,8 @@ color: #000;
 .main-container {
   display: flex;
   flex-direction: row;
-  width: 110vw;
   
+  height: 40vh !important;
 }
 
 /* Leaflet scale control */

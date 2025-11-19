@@ -738,8 +738,8 @@ const handleToolSidebarClick = (toolName) => {
         )}
 
         <div className="main-container" ref={mapWrapperRef}>
-  {/* Toggle Layer Panel button */}
-      <button
+  
+      {/* <button
         title="Layers Panel"
         type="button"
         onClick={() => setShowLayerTogglePanel((p) => !p)}
@@ -754,9 +754,9 @@ const handleToolSidebarClick = (toolName) => {
                 strokeLinecap="round"
               />
         </svg>
-      </button>
-         {showLayerTogglePanel && (
-            <div className="leftpanel-container">
+      </button> */}
+         {/* {showLayerTogglePanel && ( */}
+            <div>
               <Suspense fallback={<div>Loading...</div>}>
                 <LayerTogglePanel
                   showStateLayer={showStateLayer}
@@ -775,19 +775,20 @@ const handleToolSidebarClick = (toolName) => {
                   showIncidentLayer={showIncidentLayer}
                   setShowIncidentLayer={(v) => handleLayerToggle("incidentLayer", v)}
                   onFilter={handleFilter}
+                  mapRef={mapRef}
                 />
               </Suspense>
             </div>
-          )}
+          {/* )} */}
      <div style={{ display: "flex", width: "auto", height: "auto" }}>
             <MapContainer
               center={position}
               zoom={7.8}
-              style={{ 
-  height: "92vh", 
-  width: "43vw",
-  
+          style={{
+  height: "92vh",
+  width:  "66vw" ,
 }}
+
               whenCreated={(mapInstance) => {
                 mapRef.current = mapInstance;
                 mapInstance.rotate = true;
@@ -963,7 +964,7 @@ const handleToolSidebarClick = (toolName) => {
       </div>       
         </div>
         {/* Legend panel */}
-        {showLegend && (
+        {/* {showLegend && (
           <div
             className="map-legend"
             style={{
@@ -1031,7 +1032,7 @@ const handleToolSidebarClick = (toolName) => {
 
             </ul>
           </div>
-        )}
+        )} */}
      
         {activetoolone === "Edit" && (
           <Suspense fallback={<div>Loading...</div>}>

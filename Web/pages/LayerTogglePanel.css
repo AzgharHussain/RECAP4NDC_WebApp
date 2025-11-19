@@ -1,9 +1,20 @@
 .leftpanel {
-font-family: "Arial", sans-serif;
+  font-family: "Arial", sans-serif;
+  height: 92vh;
+  overflow-x: auto;
+  padding: 10px;
+  scrollbar-width: none; /* For Firefox */
+  -ms-overflow-style: none; /* For Internet Explorer and Edge */
 }
+
+.leftpanel::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Opera */
+}
+
 
 .sidebar-title {
   color: #000;
+  font-size: 14px;
 }
 
 .sidebar-section {
@@ -16,7 +27,7 @@ font-family: "Arial", sans-serif;
   display: flex;
   justify-content: space-between;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 400;
   
   color: #000;
  
