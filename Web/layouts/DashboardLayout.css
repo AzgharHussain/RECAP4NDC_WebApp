@@ -66,7 +66,7 @@ box-shadow: -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, -9.53px -9.53px 4.7
   -ms-overflow-style: none; /* IE and Edge *//* Adjust to ensure it takes up full height except for the header */
 }
 
-.content::-webkit-scrollbar {
+.layout-body::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
 }
 

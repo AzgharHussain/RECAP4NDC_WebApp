@@ -114,7 +114,7 @@ const PatrolIncidentLogs = () => {
   const fetchPatrolData = async () => {
     try {
       const response = await fetch(
-        "http://68.178.167.39:5000/api/patrols-by-user?user_id=1"
+        "http://68.178.167.39:5000/api/patrol-info?user_id=1"
       );
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
