@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   PieChart,
   Pie,
@@ -10,22 +10,14 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
-import { DatePicker, Select, Table } from "antd";
+import { Select, Table } from "antd";
 import { useLanguage } from "../context/LanguageContext";
 import "./Dashboard.css";
 import filterIcon from "../assets/filter.png";
+import { API_BASE_URL } from "../config";
 
 const { Option } = Select;
-const { Column } = Table;
-
-// Global chart size configuration for consistent PieCharts
-const PIE_CHART_SIZE = {
-  width: "100%",
-  height: 260,
-  outerRadius: 90,
-};
 
 // A custom tooltip component to style the tooltip in the BarChart.
 const CustomTooltip = ({ active, payload, label }) => {
@@ -41,10 +33,9 @@ const CustomTooltip = ({ active, payload, label }) => {
         }}
       >
         <p className="label">{`${label}`}</p>
-        <p
-          className="intro"
-          style={{ color: "#339af0" }}
-        >{`${payload[0].name}: ${payload[0].value}`}</p>
+        <p className="intro" style={{ color: "#339af0" }}>
+          {`${payload[0].name}: ${payload[0].value}`}
+        </p>
       </div>
     );
   }
@@ -53,15 +44,33 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 // 🎨 Color Palette for charts
 const COLORS = [
-  "#59a14f", "#f44336", "#607d8b", "#795548", "#c2185b", "#8bc34a",
-  "#2196f3", "#e91e63", "#009688", "#edc949", "#9c755f", "#bab0ac",
-  "#af7aa1", "#ff9da7", "#76b7b2", "#f0a5bc", "#ff6361", "#3f51b5",
-  "#00bcd4", "#4caf50", "#ffeb3b", "#9e9e9e", "#673ab7",
+  "#59a14f",
+  "#f44336",
+  "#607d8b",
+  "#795548",
+  "#c2185b",
+  "#8bc34a",
+  "#2196f3",
+  "#e91e63",
+  "#009688",
+  "#edc949",
+  "#9c755f",
+  "#bab0ac",
+  "#af7aa1",
+  "#ff9da7",
+  "#76b7b2",
+  "#f0a5bc",
+  "#ff6361",
+  "#3f51b5",
+  "#00bcd4",
+  "#4caf50",
+  "#ffeb3b",
+  "#9e9e9e",
+  "#673ab7",
 ];
 
 export default function Dashboard() {
   const { language } = useLanguage();
-
   const text = {
     en: {
       overview: "Overview",
@@ -75,7 +84,7 @@ export default function Dashboard() {
       observationIssues: "Observation Issues Reported",
       totalArea: "Total Area of Forest Change",
       noForestData: "No forest change data available.",
-      noPatrolData: "No patrol data available for the selected period.",
+      noPatrolData: "No patrol data available for the selected filters.",
       noIncidentData: "No incident data available for the selected period.",
       noIssueData: "No issue type data available.",
       loading: "Loading...",
@@ -88,6 +97,15 @@ export default function Dashboard() {
       endLocation: "End Location",
       patrolId: "Patrol ID",
       noTableData: "No patrol data available",
+      dayPatrolling: "Day Patrolling",
+      nightPatrolling: "Night Patrolling",
+      beatChecking: "Beat Checking",
+      allForests: "All Forest Types",
+      selectForest: "Select Forest Type",
+      allPatrolTypes: "All Patrol Types",
+      selectPatrolType: "Select Patrol Type",
+      selectDivision: "Select Division",
+      selectRange: "Select Range",
     },
     gu: {
       overview: "સારાંશ",
@@ -101,7 +119,7 @@ export default function Dashboard() {
       observationIssues: "અવલોકન મુદ્દા નોંધાયા",
       totalArea: "વન આવરણમાં કુલ ફેરફાર વિસ્તાર",
       noForestData: "વન ફેરફારના ડેટા ઉપલબ્ધ નથી.",
-      noPatrolData: "પસંદ કરેલા સમયગાળા માટે પેટ્રોલિંગ ડેટા ઉપલબ્ધ નથી.",
+      noPatrolData: "પસંદ કરેલા ફિલ્ટર્સ માટે પેટ્રોલિંગ ડેટા ઉપલબ્ધ નથી.",
       noIncidentData: "પસંદ કરેલા સમયગાળા માટે ઘટનાઓનો ડેટા ઉપલબ્ધ નથી.",
       noIssueData: "મુદ્દાના પ્રકારનો ડેટા ઉપલબ્ધ નથી.",
       loading: "લોડ થઈ રહ્યું છે...",
@@ -114,213 +132,450 @@ export default function Dashboard() {
       endLocation: "સમાપ્તિનું સ્થાન",
       patrolId: "પેટ્રોલ આઈડી",
       noTableData: "પેટ્રોલ ડેટા ઉપલબ્ધ નથી",
+      dayPatrolling: "દિવસ પેટ્રોલિંગ",
+      nightPatrolling: "રાત્રિ પેટ્રોલિંગ",
+      beatChecking: "બીટ ચેકિંગ",
+      allForests: "બધા વન પ્રકાર",
+      selectForest: "વન પ્રકાર પસંદ કરો",
+      allPatrolTypes: "બધા પેટ્રોલ પ્રકાર",
+      selectPatrolType: "પેટ્રોલ પ્રકાર પસંદ કરો",
+      selectDivision: "ડિવિઝન પસંદ કરો",
+      selectRange: "રેન્જ પસંદ કરો",
     },
   };
 
-  const [fromDate, setFromDate] = useState(null);
-  const [toDate, setToDate] = useState(null);
-  const [patrolData, setPatrolData] = useState([]);
-  const [incidentsData, setIncidentsData] = useState([]);
-  const [loadingPatrols, setLoadingPatrols] = useState(false);
-  const [loadingIncidents, setLoadingIncidents] = useState(false);
-  const [loadingIssues, setLoadingIssues] = useState(false);
-  const [issueTypeData, setIssueTypeData] = useState([]);
+  // Data and filter states
+  const [rawPatrolsData, setRawPatrolsData] = useState([]);
+  const [patrolDataLoading, setPatrolDataLoading] = useState(false);
+
+  const [forestTypes, setForestTypes] = useState([]);
+  const [divisions, setDivisions] = useState([]);
+  const [ranges, setRanges] = useState([]);
+  const [patrollingTypes, setPatrollingTypes] = useState([]);
+
+  const [selectedForest, setSelectedForest] = useState("all");
+  const [selectedDivision, setSelectedDivision] = useState("all");
+  const [selectedRange, setSelectedRange] = useState("all");
+  const [selectedPatrolType, setSelectedPatrolType] = useState("all");
+
   const [forestChangeData, setForestChangeData] = useState([]);
   const [loadingForest, setLoadingForest] = useState(false);
-  const [rawPatrolsData, setRawPatrolsData] = useState([]); // Store raw patrols data for table
+
   const [tableLoading, setTableLoading] = useState(false);
 
-  // Fetch patrol data with a loading state
+  // Utility to attempt many possible keys when filtering unknown payload structures
+  const matchesValue = (item, candidates, selectedVal) => {
+    if (!selectedVal || selectedVal === "all") return true;
+    
+    for (const key of candidates) {
+      if (item == null) continue;
+      const val = item[key];
+      if (val == null) continue;
+      
+      // Normalize both values for comparison
+      const normalizedVal = String(val).toLowerCase().trim();
+      const normalizedSelected = String(selectedVal).toLowerCase().trim();
+      
+      // Exact match
+      if (normalizedVal === normalizedSelected) return true;
+      
+      // Allow partial matching for text fields
+      if (normalizedVal.includes(normalizedSelected) || normalizedSelected.includes(normalizedVal)) {
+        return true;
+      }
+      
+      // Numeric match
+      if (!Number.isNaN(Number(selectedVal)) && Number(val) === Number(selectedVal)) return true;
+    }
+    return false;
+  };
+
+  // Improved patrol type matching function
+  const matchesPatrolType = (patrolItem, selectedType) => {
+    if (!selectedType || selectedType === "all") return true;
+    
+    // Get the patrol type from the item using various possible keys
+    const patrolTypeValue = patrolItem.type_name || patrolItem.type || patrolItem.patrol_type || "";
+    const patrolTypeId = patrolItem.type_id || patrolItem.patrol_type_id;
+    
+    // If selectedType is a number (ID), check against both ID and name
+    if (!isNaN(selectedType)) {
+      const selectedPatrolType = patrollingTypes.find(t => 
+        String(t.id) === String(selectedType) || 
+        String(t.type_id) === String(selectedType)
+      );
+      
+      if (selectedPatrolType) {
+        const selectedName = selectedPatrolType.type_name || selectedPatrolType.name;
+        // Compare both ID and name
+        return String(patrolTypeId) === String(selectedType) || 
+               patrolTypeValue.toString().toLowerCase().trim() === 
+               selectedName.toString().toLowerCase().trim();
+      }
+      return false;
+    }
+    
+    // If selectedType is a string, do direct comparison
+    return patrolTypeValue.toString().toLowerCase().trim() === 
+           selectedType.toString().toLowerCase().trim();
+  };
+
+  // Fetch patrols once (no date filters anymore). Filtering will be applied on client side.
   useEffect(() => {
-    const fetchPatrolData = async () => {
-      setLoadingPatrols(true);
+    const fetchPatrols = async () => {
+      setPatrolDataLoading(true);
       setTableLoading(true);
       try {
-        const res = await fetch(
-          "http://68.178.167.39:5000/api/patrols-by-user?user_id=1"
+        const res = await fetch(`${API_BASE_URL}/api/patrol-info`);
+        const json = await res.json();
+        const data = json?.data || json || [];
+        console.log("Fetched patrol data:", data);
+        console.log("Available patrol types in data:", 
+          [...new Set(data.map(p => 
+            p.type_name || p.type || p.patrol_type || "Unknown"
+          ))]
         );
-        const patrols = await res.json();
-        console.log("Patrols API response :", patrols);
-        
-        // Store raw data for table
-        setRawPatrolsData(patrols);
-
-        let filtered = patrols;
-
-        if (fromDate && toDate) {
-          filtered = patrols.filter((item) => {
-            const d = new Date(item.start_time);
-            return d >= fromDate.toDate() && d <= toDate.toDate();
-          });
-        } else if (fromDate) {
-          filtered = patrols.filter((item) => {
-            const d = new Date(item.start_time);
-            return d >= fromDate.toDate();
-          });
-        } else if (toDate) {
-          filtered = patrols.filter((item) => {
-            const d = new Date(item.start_time);
-            return d <= toDate.toDate();
-          });
-        }
-
-        // Group by month for chart
-        const monthlyMap = {};
-        filtered.forEach((p) => {
-          const d = new Date(p.start_time);
-          const month = d.toLocaleString("default", { month: "short", year: "numeric" });
-          monthlyMap[month] = (monthlyMap[month] || 0) + 1;
-        });
-
-        const chartData = Object.keys(monthlyMap)
-          .map((month) => ({ name: month, value: monthlyMap[month] }))
-          .sort((a, b) => new Date(a.name) - new Date(b.name));
-
-        setPatrolData(chartData);
-      } catch (error) {
-        console.error("Error fetching patrol data:", error);
-        setPatrolData([]);
+        setRawPatrolsData(data);
+      } catch (err) {
+        console.error("Error fetching patrol data:", err);
         setRawPatrolsData([]);
       } finally {
-        setLoadingPatrols(false);
+        setPatrolDataLoading(false);
         setTableLoading(false);
       }
     };
+    fetchPatrols();
+  }, []);
 
-    fetchPatrolData();
-  }, [fromDate, toDate]);
+  // Fetch forest types and patrolling types on mount
+  useEffect(() => {
+    const fetchForestTypes = async () => {
+      try {
+        setLoadingForest(true);
+        const response = await fetch(`${API_BASE_URL}/api/forest-types`);
+        const data = await response.json();
+        setForestTypes(data?.data || data || []);
+      } catch (error) {
+        console.error("Error fetching forest types:", error);
+        setForestTypes([]);
+      } finally {
+        setLoadingForest(false);
+      }
+    };
 
-  // Format date for table display
+    const fetchPatrollingTypes = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/patrolling-types`);
+        const data = await response.json();
+        console.log("Fetched patrolling types:", data);
+        setPatrollingTypes(data?.data || data || []);
+      } catch (error) {
+        console.error("Error fetching patrolling types:", error);
+        setPatrollingTypes([]);
+      }
+    };
+
+    fetchForestTypes();
+    fetchPatrollingTypes();
+  }, []);
+
+  // Fetch divisions when a forest type is chosen (dependent select)
+  const fetchDivisions = async (forestId) => {
+    if (!forestId || forestId === "all") {
+      setDivisions([]);
+      setRanges([]);
+      return;
+    }
+    try {
+      setLoadingForest(true);
+      const response = await fetch(`${API_BASE_URL}/api/get-divisions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ forest_id: forestId }),
+      });
+      const data = await response.json();
+      setDivisions(data?.data || data || []);
+    } catch (error) {
+      console.error("Error fetching divisions:", error);
+      setDivisions([]);
+    } finally {
+      setLoadingForest(false);
+    }
+  };
+
+  // Fetch ranges when a division is chosen (dependent select)
+  const fetchRanges = async (divisionId) => {
+    if (!divisionId || divisionId === "all") {
+      setRanges([]);
+      return;
+    }
+    try {
+      setLoadingForest(true);
+      const response = await fetch(`${API_BASE_URL}/api/get-ranges`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ division_id: divisionId }),
+      });
+      const data = await response.json();
+      setRanges(data?.data || data || []);
+    } catch (error) {
+      console.error("Error fetching ranges:", error);
+      // Fallback: extract ranges from patrol data
+      const rangesFromData = rawPatrolsData
+        .filter(patrol => {
+          const divisionCandidates = ["division_id", "divisionId", "division_name", "divisionName"];
+          return matchesValue(patrol, divisionCandidates, divisionId);
+        })
+        .reduce((uniqueRanges, patrol) => {
+          const rangeCandidates = ["range", "range_id", "rangeId", "range_name", "rangeName"];
+          for (const key of rangeCandidates) {
+            if (patrol[key]) {
+              const rangeValue = patrol[key];
+              if (!uniqueRanges.some(r => r.id === rangeValue || r.name === rangeValue)) {
+                uniqueRanges.push({ id: rangeValue, name: rangeValue });
+              }
+              break;
+            }
+          }
+          return uniqueRanges;
+        }, []);
+      setRanges(rangesFromData);
+    } finally {
+      setLoadingForest(false);
+    }
+  };
+
+  // when user selects forest, load divisions
+  useEffect(() => {
+    if (selectedForest && selectedForest !== "all") {
+      fetchDivisions(selectedForest);
+      setSelectedDivision("all"); // reset division on forest change
+      setSelectedRange("all"); // reset range on forest change
+    } else {
+      setDivisions([]);
+      setRanges([]);
+      setSelectedDivision("all");
+      setSelectedRange("all");
+    }
+  }, [selectedForest]);
+
+  // when user selects division, load ranges
+  useEffect(() => {
+    if (selectedDivision && selectedDivision !== "all") {
+      fetchRanges(selectedDivision);
+      setSelectedRange("all"); // reset range on division change
+    } else {
+      setRanges([]);
+      setSelectedRange("all");
+    }
+  }, [selectedDivision]);
+
+  // Filter rawPatrolsData according to selects
+  const filteredPatrols = useMemo(() => {
+    if (!rawPatrolsData || !rawPatrolsData.length) return [];
+    
+    return rawPatrolsData.filter((p) => {
+      // Guess multiple candidate keys because backend shape can vary
+      const forestCandidates = ["forest_id", "forestId", "forest_type_id", "forest_type", "forest_type_name", "forestName"];
+      const divisionCandidates = ["division_id", "divisionId", "division_name", "divisionName"];
+      const rangeCandidates = ["range", "range_id", "rangeId", "range_name", "rangeName"];
+
+      const forestMatches = matchesValue(p, forestCandidates, selectedForest);
+      const divisionMatches = matchesValue(p, divisionCandidates, selectedDivision);
+      const rangeMatches = matchesValue(p, rangeCandidates, selectedRange);
+      
+      // Use the specialized function for patrol types
+      const patrolTypeMatches = matchesPatrolType(p, selectedPatrolType);
+
+      return forestMatches && divisionMatches && rangeMatches && patrolTypeMatches;
+    });
+  }, [rawPatrolsData, selectedForest, selectedDivision, selectedRange, selectedPatrolType, patrollingTypes]);
+
+  // Build monthly chart data from filteredPatrols
+  const patrolChartData = useMemo(() => {
+    const monthlyMap = {};
+    filteredPatrols.forEach((p) => {
+      const d = new Date(p.start_time || p.started_at || p.created_at || p.startTime);
+      if (isNaN(d)) return;
+      const month = d.toLocaleString("default", { month: "short", year: "numeric" });
+      monthlyMap[month] = (monthlyMap[month] || 0) + 1;
+    });
+    const chartData = Object.keys(monthlyMap)
+      .map((month) => ({ name: month, value: monthlyMap[month] }))
+      .sort((a, b) => new Date(a.name) - new Date(b.name));
+    return chartData;
+  }, [filteredPatrols]);
+
+  // Debug effect to monitor filtering
+  useEffect(() => {
+    console.log("=== FILTER DEBUGGING ===");
+    console.log("Selected Filters:", {
+      forest: selectedForest,
+      division: selectedDivision,
+      range: selectedRange,
+      patrolType: selectedPatrolType
+    });
+    console.log("Total raw patrols:", rawPatrolsData.length);
+    console.log("Filtered patrols count:", filteredPatrols.length);
+    console.log("Available patrol types in filtered data:", 
+      [...new Set(filteredPatrols.map(p => 
+        p.type_name || p.type || p.patrol_type || "Unknown"
+      ))]
+    );
+    
+    // Log table counts
+    console.log("Day patrols:", dayPatrollingData.length);
+    console.log("Night patrols:", nightPatrollingData.length);
+    console.log("Beat checking:", beatCheckingData.length);
+  }, [selectedForest, selectedDivision, selectedRange, selectedPatrolType, filteredPatrols]);
+
+  // Prepare table data helpers
   const formatDate = (dateString) => {
+    if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleDateString(language === 'gu' ? 'gu-IN' : 'en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (isNaN(date)) return dateString;
+    return date.toLocaleDateString(language === "gu" ? "gu-IN" : "en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
-  // Format location coordinates
   const formatLocation = (location) => {
-    if (!location) return '-';
-    // If it's already in coordinate format, return as is
-    if (location.includes(',')) return location;
+    if (!location) return "-";
     return location;
   };
 
-  // Prepare table data
-  const tableData = rawPatrolsData.map((patrol, index) => ({
-    key: patrol.patrol_id || index,
-    patrolId: patrol.patrol_id,
-    officerName: patrol.patrol_officer_name,
-    startTime: formatDate(patrol.start_time),
-    endTime: formatDate(patrol.end_time),
-    distance: parseFloat(patrol.distance_kms || 0).toFixed(2),
-    startLocation: formatLocation(patrol.start_location),
-    endLocation: formatLocation(patrol.end_location),
-    rawData: patrol // Keep raw data for reference
-  }));
+  const prepareTableData = (data) =>
+    data.map((patrol, index) => ({
+      key: patrol.patrol_id || patrol.id || index,
+      patrolId: patrol.patrol_id || patrol.id || "-",
+      officerName: patrol.patrol_officer_name || patrol.officer_name || patrol.officer || "-",
+      startTime: formatDate(patrol.start_time || patrol.startTime || patrol.started_at),
+      endTime: formatDate(patrol.end_time || patrol.endTime || patrol.ended_at),
+      distance: parseFloat(patrol.distance_kms || patrol.distance || 0).toFixed(2),
+      startLocation: formatLocation(patrol.start_location || patrol.startLocation),
+      endLocation: formatLocation(patrol.end_location || patrol.endLocation),
+      rawData: patrol,
+    }));
+
+  // split filtered patrols by patrol type name (using common keys)
+  const dayPatrollingData = filteredPatrols.filter((p) =>
+    (p.type_name || p.type || p.patrol_type || "").toString().toLowerCase().includes("day")
+  );
+  const nightPatrollingData = filteredPatrols.filter((p) =>
+    (p.type_name || p.type || p.patrol_type || "").toString().toLowerCase().includes("night")
+  );
+  const beatCheckingData = filteredPatrols.filter((p) =>
+    (p.type_name || p.type || p.patrol_type || "").toString().toLowerCase().includes("beat")
+  );
+
+  const dayPatrollingTableData = prepareTableData(dayPatrollingData);
+  const nightPatrollingTableData = prepareTableData(nightPatrollingData);
+  const beatCheckingTableData = prepareTableData(beatCheckingData);
 
   // Table columns configuration
   const columns = [
     {
       title: text[language].patrolId,
-      dataIndex: 'patrolId',
-      key: 'patrolId',
+      dataIndex: "patrolId",
+      key: "patrolId",
       width: 100,
-      sorter: (a, b) => a.patrolId - b.patrolId,
+      sorter: (a, b) => {
+        const na = Number(a.patrolId) || 0;
+        const nb = Number(b.patrolId) || 0;
+        return na - nb;
+      },
     },
     {
       title: text[language].officerName,
-      dataIndex: 'officerName',
-      key: 'officerName',
+      dataIndex: "officerName",
+      key: "officerName",
       width: 150,
     },
     {
       title: text[language].startTime,
-      dataIndex: 'startTime',
-      key: 'startTime',
+      dataIndex: "startTime",
+      key: "startTime",
       width: 180,
-      sorter: (a, b) => new Date(a.rawData.start_time) - new Date(b.rawData.start_time),
+      sorter: (a, b) => new Date(a.rawData?.start_time || a.rawData?.started_at || 0) - new Date(b.rawData?.start_time || b.rawData?.started_at || 0),
     },
     {
       title: text[language].endTime,
-      dataIndex: 'endTime',
-      key: 'endTime',
+      dataIndex: "endTime",
+      key: "endTime",
       width: 180,
-      sorter: (a, b) => new Date(a.rawData.end_time) - new Date(b.rawData.end_time),
+      sorter: (a, b) => new Date(a.rawData?.end_time || a.rawData?.ended_at || 0) - new Date(b.rawData?.end_time || b.rawData?.ended_at || 0),
     },
     {
       title: text[language].distance,
-      dataIndex: 'distance',
-      key: 'distance',
+      dataIndex: "distance",
+      key: "distance",
       width: 120,
       sorter: (a, b) => parseFloat(a.distance) - parseFloat(b.distance),
-      render: (distance) => `${distance} km`
+      render: (distance) => `${distance} km`,
     },
     {
       title: text[language].startLocation,
-      dataIndex: 'startLocation',
-      key: 'startLocation',
+      dataIndex: "startLocation",
+      key: "startLocation",
       width: 200,
       ellipsis: true,
     },
     {
       title: text[language].endLocation,
-      dataIndex: 'endLocation',
-      key: 'endLocation',
+      dataIndex: "endLocation",
+      key: "endLocation",
       width: 200,
       ellipsis: true,
     },
   ];
 
-  // Rest of your existing useEffect hooks and chart code remains the same...
-  // [Keep all your existing useEffect hooks for incidents, issues, forest change here]
-
-  const isPatrolDataEmpty = patrolData.length === 0 || patrolData[0].value === 0;
+  const isPatrolDataEmpty = patrolChartData.length === 0 || patrolChartData[0]?.value === 0;
 
   return (
     <div className="dashboard-container">
       <div className="heading-container">
         <h3 className="main-heading">{text[language].overview}</h3>
-        <div className="filters">
-          {/* Your existing filter components */}
-          <div className="filter-item">
-            <DatePicker
-              value={fromDate}
-              onChange={setFromDate}
-              placeholder={text[language].selectFromDate}
+        <div className="filters" style={{ alignItems: "center" }}>
+          {/* Forest type select */}
+          <div className="filter-item" style={{ minWidth: 200 }}>
+            <Select
+              value={selectedForest}
+              onChange={setSelectedForest}
+              placeholder={text[language].selectForest}
               style={{
-                width: "200px",
+                width: "100%",
                 color: "#fff",
                 border: "2.21px solid rgba(255, 255, 255, 0.23)",
                 background: "rgba(255, 255, 255, 0.02)",
-                boxShadow:
-                  "-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset",
+                boxShadow: "-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset",
               }}
-            />
+            >
+              <Option value="all">{text[language].allForests}</Option>
+              {forestTypes.map((forest) => {
+                const id = forest.forest_id ?? forest.id ?? forest.value ?? forest.key;
+                const name = forest.forest_type_name ?? forest.name ?? forest.label ?? forest.forest_name;
+                return (
+                  <Option key={id || name} value={id || name}>
+                    {name || id}
+                  </Option>
+                );
+              })}
+            </Select>
           </div>
-          <DatePicker
-            value={toDate}
-            onChange={setToDate}
-            placeholder={text[language].selectToDate}
-            style={{
-              width: "200px",
-              color: "#fff",
-              border: "2.21px solid rgba(255, 255, 255, 0.23)",
-              background: "rgba(255, 255, 255, 0.02)",
-              boxShadow:
-                "-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset, 13.681px 13.681px 7.696px -15.391px #FFF inset",
-            }}
-          />
-          {/* Your existing division and range selects */}
-          <div className="filter-item">
+
+          {/* Division select */}
+          <div className="filter-item" style={{ minWidth: 200 }}>
             <Select
-              defaultValue="all"
+              value={selectedDivision}
+              onChange={setSelectedDivision}
+              placeholder={text[language].selectDivision}
+              disabled={!selectedForest || selectedForest === "all" || divisions.length === 0}
               style={{
-                width: "200px",
+                width: "100%",
                 color: "#fff",
                 border: "2.21px solid rgba(255, 255, 255, 0.23)",
                 background: "rgba(255, 255, 255, 0.02)",
@@ -328,15 +583,27 @@ export default function Dashboard() {
               }}
             >
               <Option value="all">{text[language].allDivisions}</Option>
-              <Option value="north">{language === "gu" ? "ઉત્તર વિભાગ" : "North Division"}</Option>
-              <Option value="south">{language === "gu" ? "દક્ષિણ વિભાગ" : "South Division"}</Option>
+              {divisions.map((division) => {
+                const id = division.division_id ?? division.id ?? division.value ?? division.key;
+                const name = division.division_name ?? division.name ?? division.label;
+                return (
+                  <Option key={id || name} value={id || name}>
+                    {name || id}
+                  </Option>
+                );
+              })}
             </Select>
           </div>
-          <div className="filter-item">
+
+          {/* Range select */}
+          <div className="filter-item" style={{ minWidth: 200 }}>
             <Select
-              defaultValue="all"
+              value={selectedRange}
+              onChange={setSelectedRange}
+              placeholder={text[language].selectRange}
+              disabled={!selectedDivision || selectedDivision === "all" || ranges.length === 0}
               style={{
-                width: "200px",
+                width: "100%",
                 color: "#fff",
                 border: "2.21px solid rgba(255, 255, 255, 0.23)",
                 background: "rgba(255, 255, 255, 0.02)",
@@ -344,37 +611,87 @@ export default function Dashboard() {
               }}
             >
               <Option value="all">{text[language].allRanges}</Option>
-              <Option value="range1">{language === "gu" ? "રેન્જ ૧" : "Range 1"}</Option>
-              <Option value="range2">{language === "gu" ? "રેન્જ ૨" : "Range 2"}</Option>
+              {ranges.map((range) => {
+                const id = range.range_id ?? range.id ?? range.value ?? range.key;
+                const name = range.range_name ?? range.name ?? range.label;
+                return (
+                  <Option key={id || name} value={id || name}>
+                    {name || id}
+                  </Option>
+                );
+              })}
             </Select>
           </div>
-          <button>
+
+          {/* Patrolling type select */}
+          <div className="filter-item" style={{ minWidth: 200 }}>
+            <Select
+              value={selectedPatrolType}
+              onChange={setSelectedPatrolType}
+              placeholder={text[language].selectPatrolType}
+              style={{
+                width: "100%",
+                color: "#fff",
+                border: "2.21px solid rgba(255, 255, 255, 0.23)",
+                background: "rgba(255, 255, 255, 0.02)",
+                boxShadow: "-10.261px -10.261px 5.13px -11.971px #B3B3B3 inset",
+              }}
+            >
+              <Option value="all">{text[language].allPatrolTypes}</Option>
+              {patrollingTypes.map((t) => {
+                const id = t.type_id ?? t.id ?? t.value ?? t.key;
+                const name = t.type_name ?? t.name ?? t.label;
+                
+                return (
+                  <Option key={id || name} value={id || name}>
+                    {name || id}
+                  </Option>
+                );
+              })}
+            </Select>
+          </div>
+
+          <button
+            onClick={() => {
+              // reset all filters
+              setSelectedForest("all");
+              setSelectedDivision("all");
+              setSelectedRange("all");
+              setSelectedPatrolType("all");
+            }}
+            style={{
+              marginLeft: 8,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+            }}
+            title="Reset filters"
+          >
             <img src={filterIcon} alt="Filter Icon" className="FilterIcon" />
           </button>
         </div>
       </div>
 
-      {/* Your existing charts grid */}
+      {/* Charts grid */}
       <div className="charts-grid">
         {/* Forest Cover Change Chart */}
         <div className="chart-card" style={{ textAlign: "center" }}>
           <h3 style={{ marginBottom: "8px", color: "#000", fontWeight: 600 }}>
             {text[language].forestChange}
           </h3>
-          <div style={{
-            width: "100%",
-            height: "1.5px",
-            backgroundColor: "rgba(255, 255, 255, 0.13)",
-            margin: "0 0 -15px 0",
-            borderRadius: "2px",
-            boxShadow:
-              "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
-              "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
-              "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
-              "12.064px 12.064px 6.786px -13.572px #FFF inset",
-            border: "0.949px solid rgba(255, 255, 255, 0.30)",
-          }}></div>
-
+          <div
+            style={{
+              width: "100%",
+              height: "1.5px",
+              backgroundColor: "rgba(255, 255, 255, 0.13)",
+              margin: "0 0 -15px 0",
+              borderRadius: "2px",
+              boxShadow:
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "12.064px 12.064px 6.786px -13.572px #FFF inset",
+              border: "0.949px solid rgba(255, 255, 255, 0.30)",
+            }}
+          ></div>
           {loadingForest ? (
             <div className="loading-state">{text[language].loading}</div>
           ) : forestChangeData.length === 0 ? (
@@ -402,9 +719,7 @@ export default function Dashboard() {
                       />
                     ))}
                     <Label
-                      value={forestChangeData
-                        .reduce((acc, cur) => acc + cur.value, 0)
-                        .toLocaleString()}
+                      value={forestChangeData.reduce((acc, cur) => acc + (cur.value || 0), 0).toLocaleString()}
                       position="center"
                       style={{
                         fontSize: "26px",
@@ -414,7 +729,9 @@ export default function Dashboard() {
                     />
                   </Pie>
                   <Tooltip
-                    formatter={(value) => `${value.toFixed(2)}%`}
+                    formatter={(value) =>
+                      typeof value === "number" ? `${value.toFixed(2)}%` : value
+                    }
                     contentStyle={{
                       backgroundColor: "rgba(255,255,255,0.85)",
                       border: "1px solid #ddd",
@@ -434,39 +751,32 @@ export default function Dashboard() {
         {/* Patrolling Count Chart */}
         <div className="chart-card" style={{ textAlign: "center" }}>
           <h3>{text[language].totalPatrols}</h3>
-          <div style={{
-            width: "100%",
-            height: "1.5px",
-            backgroundColor: "rgba(255, 255, 255, 0.13)",
-            margin: "0 0 10px 0",
-            borderRadius: "2px",
-            boxShadow:
-              "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
-              "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
-              "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
-              "12.064px 12.064px 6.786px -13.572px #FFF inset",
-            border: "0.949px solid rgba(255, 255, 255, 0.30)",
-          }}></div>
-          {loadingPatrols ? (
+          <div
+            style={{
+              width: "100%",
+              height: "1.5px",
+              backgroundColor: "rgba(255, 255, 255, 0.13)",
+              margin: "0 0 10px 0",
+              borderRadius: "2px",
+              boxShadow:
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "12.064px 12.064px 6.786px -13.572px #FFF inset",
+              border: "0.949px solid rgba(255, 255, 255, 0.30)",
+            }}
+          ></div>
+          {patrolDataLoading ? (
             <div className="loading-state">{text[language].loading}</div>
           ) : isPatrolDataEmpty ? (
             <div className="no-data-state">{text[language].noPatrolData}</div>
           ) : (
             <>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={patrolData}>
-                  <XAxis
-                    dataKey="name"
-                    stroke="#fff"
-                    interval={0}
-                    angle={-30}
-                    textAnchor="end"
-                    height={60}
-                  />
+                <BarChart data={patrolChartData}>
+                  <XAxis dataKey="name" stroke="#fff" interval={0} angle={-30} textAnchor="end" height={60} />
                   <YAxis stroke="#000" />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="value">
-                    {patrolData.map((entry, index) => (
+                    {patrolChartData.map((entry, index) => (
                       <Cell key={`cell-bar-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Bar>
@@ -480,38 +790,38 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Patrols Data Table Section */}
-      <div className="table-section">
-        <div className="chart-card">
+      {/* Patrols Data Tables Section */}
+      <div className="tables-section">
+        {/* Day Patrolling Table */}
+        <div className="table-card">
           <h3 style={{ marginBottom: "16px", color: "#000", fontWeight: 600 }}>
-            {text[language].patrolDetails}
+            {text[language].dayPatrolling}
           </h3>
-          <div style={{
-            width: "100%",
-            height: "1.5px",
-            backgroundColor: "rgba(255, 255, 255, 0.13)",
-           
-            borderRadius: "2px",
-            boxShadow:
-              "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
-              "12.064px 12.064px 6.786px -13.572px #FFF inset",
-            border: "0.949px solid rgba(255, 255, 255, 0.30)",
-          }}></div>
-          
+          <div
+            style={{
+              width: "100%",
+              height: "1.5px",
+              backgroundColor: "rgba(255, 255, 255, 0.13)",
+              borderRadius: "2px",
+              boxShadow:
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "12.064px 12.064px 6.786px -13.572px #FFF inset",
+              border: "0.949px solid rgba(255, 255, 255, 0.30)",
+            }}
+          ></div>
           {tableLoading ? (
             <div className="loading-state">{text[language].loading}</div>
-          ) : tableData.length === 0 ? (
+          ) : dayPatrollingTableData.length === 0 ? (
             <div className="no-data-state">{text[language].noTableData}</div>
           ) : (
             <Table
-              dataSource={tableData}
+              dataSource={dayPatrollingTableData}
               columns={columns}
               pagination={{
-                pageSize: 10,
+                pageSize: 5,
                 showSizeChanger: true,
                 showQuickJumper: true,
-                showTotal: (total, range) => 
-                  `${range[0]}-${range[1]} of ${total} ${text[language].patrolDetails}`,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} ${text[language].patrolDetails}`,
               }}
               scroll={{ x: 1000 }}
               size="middle"
@@ -522,261 +832,88 @@ export default function Dashboard() {
             />
           )}
         </div>
-      </div>
 
-      {/* Issue Type Chart - Change Pie to Bar */}
-      <div className="charts-grid">
-        {/* 🟢 Incidents — Donut with center total and % legend */}
-          {/* <div className="chart-card" style={{ textAlign: "center" }}>
-            <h3>{text[language].totalIncidents}</h3>
-            <div
-              style={{
-                width: "100%",
-                height: "1.5px",
-                backgroundColor: "rgba(255, 255, 255, 0.13)",
-                margin: "0 0 -15px 0",
-                borderRadius: "2px",
-                boxShadow:
-                  "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
-                  "12.064px 12.064px 6.786px -13.572px #FFF inset",
-                border: "0.949px solid rgba(255, 255, 255, 0.30)",
-              }}
-            ></div>
-
-            {loadingIncidents ? (
-              <div className="loading-state">{text[language].loading}</div>
-            ) : incidentsData.length === 0 ? (
-              <div className="no-data-state">
-                {text[language].noIncidentData}
-              </div>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={incidentsData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={70}
-                      outerRadius={100}
-                      startAngle={90}
-                      endAngle={-270}
-                      labelLine={false}
-                      label={false}
-                    >
-                      {incidentsData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-
-                     
-                      <Label
-                        value={incidentsData
-                          .reduce((acc, cur) => acc + cur.value, 0)
-                          .toLocaleString()}
-                        position="center"
-                        style={{
-                          fontSize: "26px",
-                          fontWeight: "bold",
-                          fill: "#333",
-                        }}
-                      />
-                    </Pie>
-
-                   
-                    <Legend
-                      layout="vertical"
-                      align="right"
-                      verticalAlign="middle"
-                      wrapperStyle={{
-                        marginRight: "25px",
-                      }}
-                      content={({ payload }) => {
-                        const total = incidentsData.reduce(
-                          (sum, item) => sum + item.value,
-                          0
-                        );
-                        return (
-                          <ul
-                            style={{
-                              listStyle: "none",
-                              margin: 0,
-                              padding: 0,
-                              textAlign: "left",
-                            }}
-                          >
-                            {payload.map((entry, index) => {
-                              const item = incidentsData.find(
-                                (d) => d.name === entry.value
-                              );
-                              const percent = ((item?.value / total) * 100).toFixed(0);
-                              return (
-                                <li
-                                  key={`item-${index}`}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    marginBottom: 6,
-                                    color: "#000",
-                                    fontSize: 14,
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  <span
-                                    style={{
-                                      display: "inline-block",
-                                      width: 12,
-                                      height: 12,
-                                      borderRadius: "50%",
-                                      backgroundColor: entry.color,
-                                      marginRight: 8,
-                                    }}
-                                  ></span>
-                                  {`${entry.value} - ${percent}%`}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        );
-                      }}
-                    />
-
-                    <Tooltip
-                      formatter={(value, name) => [`${value}`, `${name}`]}
-                      contentStyle={{
-                        backgroundColor: "rgba(255,255,255,0.85)",
-                        border: "1px solid #ddd",
-                        borderRadius: "6px",
-                        color: "#000",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-
-                
-                <p
-                  style={{
-                    marginTop: "-10px",
-                    fontSize: "16px",
-                    color: "#333",
-                    fontWeight: 500,
-                  }}
-                >
-                  {text[language].totalIncidents}
-                </p>
-              </>
-            )}
-          </div> */}
-
-        {/* 🟢 Observation Issues Reported — with right-side round legend */}
-{/* 🟢 Observation Issues Reported — Bar Chart with working Legend */}
-{/* <div className="chart-card" style={{ textAlign: "center" }}>
-  <h3>{text[language].observationIssues}</h3>
-
-  <div
-    style={{
-      width: "100%",
-      height: "1.5px",
-      backgroundColor: "rgba(255, 255, 255, 0.13)",
-      margin: "0 0 10px 0",
-      borderRadius: "2px",
-      boxShadow:
-        "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
-        "12.064px 12.064px 6.786px -13.572px #FFF inset",
-      border: "0.949px solid rgba(255, 255, 255, 0.30)",
-    }}
-  ></div>
-
-  {loadingIssues ? (
-    <div className="loading-state">{text[language].loading}</div>
-  ) : issueTypeData.length === 0 ? (
-    <div className="no-data-state">{text[language].noIssueData}</div>
-  ) : (
-    <>
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart
-          data={issueTypeData}
-          margin={{ top: 10, right: 100, left: 0, bottom: 10 }}
-        >
-          <XAxis dataKey="name" stroke="#000" />
-          <YAxis stroke="#000" />
-          <Tooltip content={<CustomTooltip />} />
-
-          <Bar dataKey="value" barSize={60}>
-            {issueTypeData.map((entry, index) => (
-              <Cell
-                key={`cell-bar-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
-            ))}
-          </Bar>
-
-          
-          <Legend
-            layout="vertical"
-            align="right"
-            verticalAlign="middle"
-            wrapperStyle={{
-              right: 10,
-              fontSize: "13px",
-              lineHeight: "1.5",
-              color: "#000",
+        {/* Night Patrolling Table */}
+        <div className="table-card">
+          <h3 style={{ marginBottom: "16px", color: "#000", fontWeight: 600 }}>
+            {text[language].nightPatrolling}
+          </h3>
+          <div
+            style={{
+              width: "100%",
+              height: "1.5px",
+              backgroundColor: "rgba(255, 255, 255, 0.13)",
+              borderRadius: "2px",
+              boxShadow:
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "12.064px 12.064px 6.786px -13.572px #FFF inset",
+              border: "0.949px solid rgba(255, 255, 255, 0.30)",
             }}
-            content={() => (
-              <ul
-                style={{
-                  listStyle: "none",
-                  margin: 0,
-                  padding: 0,
-                  textAlign: "left",
-                }}
-              >
-                {issueTypeData.map((item, index) => (
-                  <li
-                    key={index}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      marginBottom: 6,
-                      color: "#000",
-                      fontSize: 14,
-                      fontWeight: 500,
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: 12,
-                        height: 12,
-                        borderRadius: "50%", // 🟢 round marker
-                        backgroundColor: COLORS[index % COLORS.length],
-                        marginRight: 8,
-                      }}
-                    ></span>
-                    {item.name}
-                  </li>
-                ))}
-              </ul>
-            )}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+          ></div>
+          {tableLoading ? (
+            <div className="loading-state">{text[language].loading}</div>
+          ) : nightPatrollingTableData.length === 0 ? (
+            <div className="no-data-state">{text[language].noTableData}</div>
+          ) : (
+            <Table
+              dataSource={nightPatrollingTableData}
+              columns={columns}
+              pagination={{
+                pageSize: 5,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} ${text[language].patrolDetails}`,
+              }}
+              scroll={{ x: 1000 }}
+              size="middle"
+              style={{
+                background: "rgba(255, 255, 255, 0.02)",
+                borderRadius: "8px",
+              }}
+            />
+          )}
+        </div>
 
-    
-      <p
-        style={{
-          marginTop: "5px",
-          fontSize: "16px",
-          color: "#333",
-          fontWeight: 500,
-        }}
-      >
-        {text[language].observationIssues}
-      </p>
-    </>
-  )}
-</div> */}
-
-
+        {/* Beat Checking Table */}
+        <div className="table-card">
+          <h3 style={{ marginBottom: "16px", color: "#000", fontWeight: 600 }}>
+            {text[language].beatChecking}
+          </h3>
+          <div
+            style={{
+              width: "100%",
+              height: "1.5px",
+              backgroundColor: "rgba(255, 255, 255, 0.13)",
+              borderRadius: "2px",
+              boxShadow:
+                "-9.048px -9.048px 4.524px -10.556px #B3B3B3 inset, " +
+                "12.064px 12.064px 6.786px -13.572px #FFF inset",
+              border: "0.949px solid rgba(255, 255, 255, 0.30)",
+            }}
+          ></div>
+          {tableLoading ? (
+            <div className="loading-state">{text[language].loading}</div>
+          ) : beatCheckingTableData.length === 0 ? (
+            <div className="no-data-state">{text[language].noTableData}</div>
+          ) : (
+            <Table
+              dataSource={beatCheckingTableData}
+              columns={columns}
+              pagination={{
+                pageSize: 5,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} ${text[language].patrolDetails}`,
+              }}
+              scroll={{ x: 1000 }}
+              size="middle"
+              style={{
+                background: "rgba(255, 255, 255, 0.02)",
+                borderRadius: "8px",
+              }}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
