@@ -68,7 +68,7 @@ router.post('/ranges', async (req, res) => {
   try {
     const { forest_id, DIVISION } = req.body;
     
-    if (!forest_id || !division_code) {
+    if (!forest_id || !DIVISION) {
       return res.status(400).json({ error: 'forest_id and DIVISION are required' });
     }
 
@@ -78,7 +78,7 @@ router.post('/ranges', async (req, res) => {
          myquery = `
           SELECT DISTINCT "RANGE", "RGcode"
           FROM public."Wildlife_Circle_Range_Boundary"
-          WHERE "DVcode" = :DIVISION
+          WHERE "DIVISION" = :DIVISION
           ORDER BY "RANGE"
         `;
         break;
@@ -86,7 +86,7 @@ router.post('/ranges', async (req, res) => {
          myquery = `
           SELECT DISTINCT "RANGE", "RGcode"
           FROM public."Teritorial_Circle_Range_Boundary"
-          WHERE "DVcode" = :DIVISION
+          WHERE "DIVISION" = :DIVISION
           ORDER BY "RANGE"
         `;
         break;
@@ -94,7 +94,7 @@ router.post('/ranges', async (req, res) => {
         myquery = `
           SELECT DISTINCT "RANGE", "RGcode"
           FROM public."Social_Forestry_Range_Boundary"
-          WHERE "DVcode" = :DIVISION
+          WHERE "DIVISION" = :DIVISION
           ORDER BY "RANGE"
         `;
         break;
@@ -102,7 +102,7 @@ router.post('/ranges', async (req, res) => {
         return res.status(400).json({ error: 'Invalid forest_id' });
     }
 
-    const result = await executeQuery( myquery, { division_code });
+    const result = await executeQuery( myquery, { DIVISION });
     res.json(result);
   } catch (error) {
     console.error('Error fetching ranges:', error);
@@ -115,7 +115,7 @@ router.post('/rounds', async (req, res) => {
   try {
     const { forest_id, range } = req.body;
     
-    if (!forest_id || !range_code) {
+    if (!forest_id || !range) {
       return res.status(400).json({ error: 'forest_id and range are required' });
     }
 
@@ -125,7 +125,7 @@ router.post('/rounds', async (req, res) => {
          myquery = `
           SELECT DISTINCT "ROUND", "RDcode"
           FROM public."Wildlife_Circle_Round_Boundary"
-          WHERE "RGcode" = :range
+          WHERE "RANGE" = :range
           ORDER BY "ROUND"
         `;
         break;
@@ -133,7 +133,7 @@ router.post('/rounds', async (req, res) => {
          myquery = `
           SELECT DISTINCT "ROUND", "RDcode"
           FROM public."Teritorial_Circle_Round_Boundary"
-          WHERE "RGcode" = :range
+          WHERE "RANGE" = :range
           ORDER BY "ROUND"
         `;
         break;
@@ -141,7 +141,7 @@ router.post('/rounds', async (req, res) => {
          myquery = `
           SELECT DISTINCT "ROUND", "RDcode"
           FROM public."Social_Forestry_Round_Boundary"
-          WHERE "RGcode" = :range
+          WHERE "RANGE" = :range
           ORDER BY "ROUND"
         `;
         break;
@@ -149,7 +149,7 @@ router.post('/rounds', async (req, res) => {
         return res.status(400).json({ error: 'Invalid forest_id' });
     }
 
-    const result = await executeQuery( myquery, { range_code });
+    const result = await executeQuery( myquery, {  range });
     res.json(result);
   } catch (error) {
     console.error('Error fetching rounds:', error);
@@ -160,10 +160,10 @@ router.post('/rounds', async (req, res) => {
 // Get beats based on round code and forest type
 router.post('/beats', async (req, res) => {
   try {
-    const { forest_id, round_code } = req.body;
+    const { forest_id, round} = req.body;
     
-    if (!forest_id || !round_code) {
-      return res.status(400).json({ error: 'forest_id and round_code are required' });
+    if (!forest_id || !round) {
+      return res.status(400).json({ error: 'forest_id and round are required' });
     }
 
     let  myquery;
@@ -172,7 +172,7 @@ router.post('/beats', async (req, res) => {
          myquery = `
           SELECT DISTINCT "BEAT", "BTcode"
           FROM public."Wildlife_Circle_Beat_Boundary"
-          WHERE "RDcode" = :round_code
+          WHERE "ROUND" = :round
           ORDER BY "BEAT"
         `;
         break;
@@ -180,7 +180,7 @@ router.post('/beats', async (req, res) => {
          myquery = `
           SELECT DISTINCT "BEAT", "BTcode"
           FROM public."Teritorial_Circle_Beat_Boundary"
-          WHERE "RDcode" = :round_code
+          WHERE "ROUND" = :round
           ORDER BY "BEAT"
         `;
         break;
@@ -188,7 +188,7 @@ router.post('/beats', async (req, res) => {
          myquery = `
           SELECT DISTINCT "BEAT", "BTcode"
           FROM public."Social_Forestry_Beat_Boundary"
-          WHERE "RDcode" = :round_code
+          WHERE "ROUND" = :round
           ORDER BY "BEAT"
         `;
         break;
@@ -196,7 +196,7 @@ router.post('/beats', async (req, res) => {
         return res.status(400).json({ error: 'Invalid forest_id' });
     }
 
-    const result = await executeQuery( myquery, { round_code });
+    const result = await executeQuery( myquery, { round });
     res.json(result);
   } catch (error) {
     console.error('Error fetching beats:', error);
@@ -219,7 +219,7 @@ router.post('/villages', async (req, res) => {
          myquery = `
           SELECT DISTINCT "Village", "Village_Id"
           FROM public."Wildlife_Circle_Village_Boundary"
-          WHERE "BTcode" = :beat
+          WHERE "BEAT" = :beat
           ORDER BY "Village"
         `;
         break;
@@ -227,7 +227,7 @@ router.post('/villages', async (req, res) => {
          myquery = `
           SELECT DISTINCT "Village", "Village_Id"
           FROM public."Teritorial_Circle_Village_Boundary"
-          WHERE "BTcode" = :beat
+          WHERE "BEAT" = :beat
           ORDER BY "Village"
         `;
         break;
@@ -235,7 +235,7 @@ router.post('/villages', async (req, res) => {
          myquery = `
           SELECT DISTINCT "Village", "Village_Id"
           FROM public."Social_Forestry_Village_Boundary"
-          WHERE "BTcode" = :beat
+          WHERE "BEAT" = :beat
           ORDER BY "Village"
         `;
         break;
@@ -243,7 +243,7 @@ router.post('/villages', async (req, res) => {
         return res.status(400).json({ error: 'Invalid forest_id' });
     }
 
-    const result = await executeQuery( myquery, { beat_code });
+    const result = await executeQuery( myquery, { beat });
     res.json(result);
   } catch (error) {
     console.error('Error fetching villages:', error);

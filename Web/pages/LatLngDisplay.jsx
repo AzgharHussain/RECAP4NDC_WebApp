@@ -24,18 +24,18 @@ const LatLngDisplay = () => {
 
   return (
     <div className="lat-lng-display"
-    //  style={{
-    //   position: 'absolute',
-    //   bottom: '10px',
-    //   left: '10px',
-    //   zIndex: 1000,
-    //   backgroundColor: 'white',
-    //   padding: '5px 10px',
-    //   borderRadius: '4px',
-    //   boxShadow: '0 0 5px rgba(0,0,0,0.3)',
-    //   fontFamily: 'Arial, sans-serif',
-    //   fontSize: '14px'
-    // }}
+     style={{
+      position: 'absolute',
+      bottom: '3%',
+      left: '28%',
+      zIndex: 1000,
+      backgroundColor: 'white',
+      padding: '5px 10px',
+      borderRadius: '4px',
+      boxShadow: '0 0 5px rgba(0,0,0,0.3)',
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '14px'
+    }}
     >
      {directions.lat},  {directions.lng}
     </div>
