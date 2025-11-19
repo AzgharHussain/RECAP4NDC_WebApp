@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Input, DatePicker, Modal } from "antd";
+import { Table, Button, Input, DatePicker, Modal, Image, Select } from "antd";
 import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
 import "./PatrolIncidentLogs.css";
 import exportIcon from "../assets/excel.png";
@@ -7,9 +7,8 @@ import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import noDataImage from "../assets/no-data.png";
-import { useLanguage } from "../context/LanguageContext"; // Import language context
-
-// ✅ Leaflet imports
+import { useLanguage } from "../context/LanguageContext";
+import { API_BASE_URL } from "../config";
 import {
   MapContainer,
   TileLayer,
@@ -20,19 +19,8 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 
-// ✅ force map to resize after modal opens
-function ResizeMapOnShow({ coords }) {
-  const map = useMap();
-  useEffect(() => {
-    setTimeout(() => {
-      map.invalidateSize();
-      if (coords && coords.length > 1) {
-        map.fitBounds(L.latLngBounds(coords), { padding: [50, 50] });
-      }
-    }, 700);
-  }, [map, coords]);
-  return null;
-}
+const { Option } = Select;
+
 const startIcon = new L.Icon({
   iconUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
@@ -48,17 +36,30 @@ const endIcon = new L.Icon({
   popupAnchor: [0, -12],
 });
 
+function ResizeMapOnShow({ coords }) {
+  const map = useMap();
+  useEffect(() => {
+    setTimeout(() => {
+      map.invalidateSize();
+      if (coords && coords.length > 1) {
+        map.fitBounds(L.latLngBounds(coords), { padding: [50, 50] });
+      }
+    }, 700);
+  }, [map, coords]);
+  return null;
+}
+
 function PatrolMap({ patrol }) {
-  if (!patrol?.geom?.coordinates?.length) {
+  if (!patrol?.geom) {
     return <p>No route available</p>;
   }
-
-  const routeCoords = patrol.geom.coordinates.map(([lat, lng]) => [lat, lng]);
-
+  const routeCoords = patrol.geom
+    .split(",")
+    .map((coord) => coord.trim().split(" ").map(Number))
+    .map(([lat, lng]) => [lat, lng]);
   const start = routeCoords[0];
   const end = routeCoords[routeCoords.length - 1] || start;
-
-  const initialZoom = 22;
+  const initialZoom = 15;
 
   return (
     <MapContainer
@@ -68,16 +69,13 @@ function PatrolMap({ patrol }) {
       scrollWheelZoom={true}
     >
       <ResizeMapOnShow coords={routeCoords} />
-
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-        url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-
       <Marker position={start} icon={startIcon}>
         <Popup>Start</Popup>
       </Marker>
-
       {routeCoords.length > 1 && (
         <>
           <Marker position={end} icon={endIcon}>
@@ -85,11 +83,10 @@ function PatrolMap({ patrol }) {
           </Marker>
           <Polyline
             positions={routeCoords}
-            pathOptions={{ color: "white", weight: 3, opacity: 1 }}
+            pathOptions={{ color: "blue", weight: 3, opacity: 1 }}
           />
         </>
       )}
-
       {routeCoords.length === 1 && (
         <Popup position={start}>Only one location point logged.</Popup>
       )}
@@ -102,27 +99,24 @@ const PatrolIncidentLogs = () => {
   const [searchText, setSearchText] = useState("");
   const [startFilter, setStartFilter] = useState(null);
   const [endFilter, setEndFilter] = useState(null);
+  const [typeFilter, setTypeFilter] = useState("");
   const [filteredData, setFilteredData] = useState([]);
   const [selectedPatrol, setSelectedPatrol] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-
-  const { language } = useLanguage(); // Get current language (either 'en' or 'gu')
-
-  // ✅ for map view
-  const [selectedRoute, setSelectedRoute] = useState(null);
+  const { language } = useLanguage();
 
   const fetchPatrolData = async () => {
     try {
       const response = await fetch(
-        "http://68.178.167.39:5000/api/patrol-info?user_id=1"
+        `${API_BASE_URL}/api/patrol-info?user_id=1`
       );
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      let formattedData = Array.isArray(data)
-        ? data
-        : data && typeof data === "object"
-        ? [data]
+      console.log("Fetched Patrol data:", data);
+      let formattedData = Array.isArray(data.data)
+        ? data.data
+        : data.data && typeof data.data === "object"
+        ? [data.data]
         : [];
       formattedData = formattedData.map((item, index) => ({
         key: item.patrol_id || index,
@@ -149,7 +143,6 @@ const PatrolIncidentLogs = () => {
     return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
   };
 
-  // ✅ Filtering logic
   useEffect(() => {
     let data = patrolData;
     if (searchText.trim() !== "") {
@@ -168,16 +161,17 @@ const PatrolIncidentLogs = () => {
         dayjs(item.end_time).isSame(endFilter, "day")
       );
     }
+    if (typeFilter) {
+      data = data.filter((item) => item.type_name === typeFilter);
+    }
     setFilteredData(data);
-  }, [searchText, startFilter, endFilter, patrolData]);
+  }, [searchText, startFilter, endFilter, typeFilter, patrolData]);
 
-  // ✅ Export to Excel handler
   const handleExport = () => {
     if (!filteredData.length) {
-      alert("No data to export");
+      alert(language === "gu" ? "નિકાસ કરવા માટે કોઈ ડેટા નથી" : "No data to export");
       return;
     }
-
     const exportData = filteredData.map((item) => ({
       "Patrol ID": item.patrol_id,
       "Officer Name": item.patrol_officer_name,
@@ -188,8 +182,8 @@ const PatrolIncidentLogs = () => {
       "Start Location": item.start_location,
       "End Location": item.end_location,
       "Distance (Kms)": item.distance_kms,
+      "Patrolling Type": item.type_name || (language === "gu" ? "ઉપલબ્ધ નથી" : "N/A"),
     }));
-
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Patrol Logs");
@@ -215,6 +209,13 @@ const PatrolIncidentLogs = () => {
       sorter: (a, b) =>
         a.patrol_officer_name.localeCompare(b.patrol_officer_name),
       align: "center",
+    },
+    {
+      title: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrolling Type",
+      dataIndex: "type_name",
+      key: "type_name",
+      align: "center",
+      render: (text) => text || (language === "gu" ? "ઉપલબ્ધ નથી" : "N/A"),
     },
     {
       title: language === "gu" ? "પેટ્રોલિંગ શરૂ થવાની તારીખ" : "Patrol Start Date",
@@ -299,7 +300,11 @@ const PatrolIncidentLogs = () => {
           </h3>
           <div className="filters">
             <Input
-              placeholder={language === "gu" ? "અધિકારીના નામ પ્રમાણે શોધો" : "Search by Officer Name"}
+              placeholder={
+                language === "gu"
+                  ? "અધિકારીના નામ પ્રમાણે શોધો"
+                  : "Search by Officer Name"
+              }
               style={{
                 width: "200px",
                 background: "rgba(255, 255, 255, 0.2)",
@@ -314,7 +319,11 @@ const PatrolIncidentLogs = () => {
               }
             />
             <DatePicker
-              placeholder={language === "gu" ? "શરૂઆતની તારીખથી શોધો" : "Search by Start Date"}
+              placeholder={
+                language === "gu"
+                  ? "શરૂઆતની તારીખથી શોધો"
+                  : "Search by Start Date"
+              }
               style={{
                 width: "200px",
                 border: "2.21px solid rgba(255, 255, 255, 0.23)",
@@ -324,7 +333,9 @@ const PatrolIncidentLogs = () => {
               onChange={(date) => setStartFilter(date)}
             />
             <DatePicker
-              placeholder={language === "gu" ? "સમાપ્ત તારીખથી શોધો" : "Search by End Date"}
+              placeholder={
+                language === "gu" ? "સમાપ્ત તારીખથી શોધો" : "Search by End Date"
+              }
               style={{
                 width: "200px",
                 color: "#fff",
@@ -334,6 +345,20 @@ const PatrolIncidentLogs = () => {
               value={endFilter}
               onChange={(date) => setEndFilter(date)}
             />
+            <Select
+              placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકારથી શોધો" : "Search by Patrolling Type"}
+              style={{
+                width: "200px",
+                border: "2.21px solid rgba(255, 255, 255, 0.23)",
+                background: "rgba(255, 255, 255, 0.02)",
+              }}
+              value={typeFilter}
+              onChange={(value) => setTypeFilter(value)}
+            >
+              <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
+              <Option value="Day patrolling">{language === "gu" ? "દિવસ પેટ્રોલિંગ" : "Day Patrolling"}</Option>
+              <Option value="Night patrolling">{language === "gu" ? "રાત પેટ્રોલિંગ" : "Night Patrolling"}</Option>
+            </Select>
             <Button className="btn-Export" onClick={handleExport}>
               {language === "gu" ? "નિકાસ કરો" : "Export"}
               <img src={exportIcon} alt="Export Icon" className="btn-icon" />
@@ -362,8 +387,6 @@ const PatrolIncidentLogs = () => {
           }}
         />
       </div>
-
-      {/* Map display */}
       <Modal
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
@@ -371,11 +394,35 @@ const PatrolIncidentLogs = () => {
         width={800}
         title={
           selectedPatrol
-            ? `${language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"} - ${selectedPatrol.patrol_officer_name} (${language === "gu" ? "અંતર" : "Distance"}: ${selectedPatrol.distance_kms} km)`
-            : language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"
+            ? `${language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"} - ${
+                selectedPatrol.patrol_officer_name
+              } (${language === "gu" ? "અંતર" : "Distance"}: ${
+                selectedPatrol.distance_kms
+              } km)`
+            : language === "gu"
+            ? "પેટ્રોલ માર્ગ"
+            : "Patrol Route"
         }
       >
-        {selectedPatrol && <PatrolMap patrol={selectedPatrol} />}
+        {selectedPatrol && (
+          <>
+            <div style={{ marginBottom: 16 }}>
+              <h4>{language === "gu" ? "શરૂઆતની છબી" : "Start Image"}</h4>
+              <Image
+                src={selectedPatrol.start_image}
+                alt="Start Location"
+                style={{ maxHeight: 200 }}
+              />
+              <h4>{language === "gu" ? "અંતિમ છબી" : "End Image"}</h4>
+              <Image
+                src={selectedPatrol.end_image}
+                alt="End Location"
+                style={{ maxHeight: 200 }}
+              />
+            </div>
+            <PatrolMap patrol={selectedPatrol} />
+          </>
+        )}
       </Modal>
     </div>
   );
