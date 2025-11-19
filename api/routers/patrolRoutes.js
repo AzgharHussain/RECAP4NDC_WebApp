@@ -9,7 +9,7 @@ const router = express.Router();
 const client = new Client({
   host: '68.178.167.39',
   user: 'postgres',
-  password: 'DB@$ecure#25',
+  password: 'P$DB@25%$#!09',
   port: 5432,
   database: 'Recap4NDC'
 });

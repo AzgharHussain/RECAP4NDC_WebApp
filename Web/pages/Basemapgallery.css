@@ -1,8 +1,8 @@
 /* Basemapgallery.css */
 .basemap-deck {
-  position: absolute;
-  bottom: 14%;
-  left: 38%;
+  position: fixed;
+  bottom: 4%;
+  left: 44%;
   z-index: 1000;
   width: 100px;
   height: 50px;

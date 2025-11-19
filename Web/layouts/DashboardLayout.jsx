@@ -184,7 +184,7 @@ export default function DashboardLayout() {
                      {text[language].patrollingLogs}
                     </NavLink>
                   </li>
-                  <li>
+                  {/* <li>
                     <NavLink
                       to="/petrolling-incident/incident"
                       className={`menu-item ${
@@ -197,10 +197,10 @@ export default function DashboardLayout() {
                         alt="Incident Logs"
                         className="menu-image"
                       />{" "}
-                      {/* Incident image */}
+                     
                       {text[language].incidentLogs}
                     </NavLink>
-                  </li>
+                  </li> */}
                 </ul>
               )}
             </li>

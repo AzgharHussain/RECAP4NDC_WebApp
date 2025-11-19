@@ -70,7 +70,7 @@ const SearchControlWithInput = () => {
       style={{
         position: "absolute",
         top: "10px",
-        left: "30%",
+        left: "5%",
         zIndex: 1000,
         backgroundColor: "#fff",
         padding: "6px",
