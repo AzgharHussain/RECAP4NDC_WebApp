@@ -541,7 +541,7 @@ export default function Dashboard() {
         <h3 className="main-heading">{text[language].overview}</h3>
         <div className="filters" style={{ alignItems: "center" }}>
           {/* Forest type select */}
-          <div className="filter-item" style={{ minWidth: 200 }}>
+          {/* <div className="filter-item" style={{ minWidth: 200 }}>
             <Select
               value={selectedForest}
               onChange={setSelectedForest}
@@ -565,10 +565,10 @@ export default function Dashboard() {
                 );
               })}
             </Select>
-          </div>
+          </div> */}
 
           {/* Division select */}
-          <div className="filter-item" style={{ minWidth: 200 }}>
+          {/* <div className="filter-item" style={{ minWidth: 200 }}>
             <Select
               value={selectedDivision}
               onChange={setSelectedDivision}
@@ -593,10 +593,10 @@ export default function Dashboard() {
                 );
               })}
             </Select>
-          </div>
+          </div> */}
 
           {/* Range select */}
-          <div className="filter-item" style={{ minWidth: 200 }}>
+          {/* <div className="filter-item" style={{ minWidth: 200 }}>
             <Select
               value={selectedRange}
               onChange={setSelectedRange}
@@ -621,7 +621,7 @@ export default function Dashboard() {
                 );
               })}
             </Select>
-          </div>
+          </div> */}
 
           {/* Patrolling type select */}
           <div className="filter-item" style={{ minWidth: 200 }}>
