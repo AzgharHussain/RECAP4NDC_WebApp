@@ -33,8 +33,9 @@ router.post('/patrol-post', upload.fields([
 ]), async (req, res) => {
   const pat_data = req.body;
   // Check required fields
-  for (let key of Object.keys(pat_data)) {
-    if (!pat_data[key]) return res.status(400).json({ error: `Missing field: ${key}` });
+  const requiredFields = ['patrol_officer_name', 'start_time', 'end_time', 'start_location', 'end_location', 'distance_kms', 'geom', 'user_id', 'patrolling_type_id', 'number_of_staff'];
+  for (let field of requiredFields) {
+    if (!pat_data[field]) return res.status(400).json({ error: `Missing field: ${field}` });
   }
   if (!req.files || (!req.files.start_image && !req.files.end_image)) {
     return res.status(400).json({ error: 'Files missing' });
@@ -44,9 +45,10 @@ router.post('/patrol-post', upload.fields([
     const query1 = `
       INSERT INTO patrols (
         patrol_officer_name, start_time, end_time,
-        start_location, end_location, distance_kms, geom, user_id, patrolling_type_id
+        start_location, end_location, distance_kms, geom, 
+        user_id, patrolling_type_id, number_of_staff
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING patrol_id;
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING patrol_id;
     `;
     const result = await client.query(query1, [
       pat_data.patrol_officer_name,
@@ -57,7 +59,8 @@ router.post('/patrol-post', upload.fields([
       pat_data.distance_kms,
       pat_data.geom,
       pat_data.user_id,
-      pat_data.patrolling_type_id
+      pat_data.patrolling_type_id,
+      pat_data.number_of_staff
     ]);
     const patrol_id = result.rows[0].patrol_id;
 
@@ -178,7 +181,6 @@ router.get('/patrols/:patrol_id/images/:image_type', async (req, res) => {
   }
 });
 
-
 // GET all patrolling types
 router.get('/patrolling-types', async (req, res) => {
   try {
@@ -197,6 +199,5 @@ router.get('/patrolling-types', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch patrolling types' });
   }
 });
-
 
 module.exports = router;
