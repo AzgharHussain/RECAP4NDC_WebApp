@@ -109,7 +109,7 @@ async function sendNotification(firebaseToken, record) {
     data: {
       id: String(id),
       change_category,
-      ndvi_change: String(ndvi_change),
+      // ndvi_change: String(ndvi_change),
       latitude: String(latitude || ""),
       longitude: String(longitude || ""),
       degraded_forest_Layer_N,

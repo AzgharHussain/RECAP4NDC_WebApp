@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { FaChevronDown, FaChevronUp, FaLayerGroup } from "react-icons/fa";
 import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
@@ -324,8 +325,6 @@ const GEOSERVER_WMS = "https://www.gisfy.co.in:8443/geoserver/wms";
       boundaries: "સીમાઓ",
     },
   };
-
-
 const getLayerName = (layer) => layer.Name || layer.layer || layer;
 
 const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
@@ -334,6 +333,30 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
   const [opacity, setOpacity] = useState({});
   const [openGroups, setOpenGroups] = useState({});
   const [isLayerLoading, setIsLayerLoading] = useState(false);
+  const layerCounterRef = useRef(0);
+  
+  // Generate unique IDs for groups and layers on mount
+  const [groupIds, setGroupIds] = useState({});
+  const [layerIds, setLayerIds] = useState({});
+
+useEffect(() => {
+  const groupIdMap = {};
+  const layerIdMap = {};
+
+  layersData.groups.forEach((group, groupIndex) => {
+    const groupId = uuidv4();
+    groupIdMap[groupIndex] = groupId;
+
+    group.layerList.forEach((layer, layerIndex) => {
+      const layerName = getLayerName(layer);
+      layerIdMap[`${groupIndex}-${layerName}`] = uuidv4();
+    });
+  });
+
+  setGroupIds(groupIdMap);
+  setLayerIds(layerIdMap);
+}, []);
+
 
   // Initialize open groups
   useEffect(() => {
@@ -344,10 +367,58 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
     setOpenGroups(initialOpenState);
   }, []);
 
- 
+
+
+  const LegendControl = L.Control.extend({
+  onAdd: function (map) {
+    this._div = L.DomUtil.create("div", "legend-control");
+    this.update();
+    return this._div;
+  },
+
+  update: function (layerNames = []) {
+    if (!this._div) return;
+
+    // Clear previous content
+    this._div.innerHTML = "<h4>Legend</h4>";
+
+    // Fetch and display legend for each layer
+    layerNames.forEach((layerName) => {
+      const legendUrl = `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${layerName}`;
+      const img = document.createElement("img");
+      img.src = legendUrl;
+      img.alt = `${layerName} legend`;
+      img.style.marginRight = "10px";
+      this._div.appendChild(img);
+      this._div.appendChild(document.createTextNode(layerName));
+      this._div.appendChild(document.createElement("br"));
+    });
+  },
+});
+
+// Add the legend control to your map
+useEffect(() => {
+  if (mapRef.current) {
+    const legendControl = new LegendControl({ position: "bottomright" });
+    mapRef.current.addControl(legendControl);
+
+    // Update legend whenever addedLayers changes
+    const layerNames = Object.keys(addedLayers);
+    legendControl.update(layerNames);
+
+    // Cleanup
+    return () => {
+      mapRef.current?.removeControl(legendControl);
+    };
+  }
+}, [mapRef, addedLayers]);
+
 
   // Calculate z-index
-  const calculateZIndex = (layerName, currentLayers) => 1000 + Object.keys(currentLayers).length;
+  const calculateZIndex = () => {
+    layerCounterRef.current += 1;
+    return 1000 + layerCounterRef.current;
+  };
 
   // Create WMS layer
   const createLayer = (layerName, layerLabel, zIndex) => {
@@ -359,6 +430,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
         version: "1.3.0",
         zIndex,
         attribution: `© ${layerLabel}`,
+        tiled: true
       });
     } catch (error) {
       console.error(`Error creating layer ${layerName}:`, error);
@@ -367,89 +439,89 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
   };
 
   // Layer manager
-  const layerManager = useCallback(
-    {
-      addLayer: async (layerName, layerLabel) => {
-        if (!mapRef.current) {
-          console.error("[addLayer] Map reference not initialized.");
-          return null;
-        }
+  const layerManager = {
+    addLayer: async (layerName, layerLabel) => {
+      if (!mapRef.current) {
+        console.error("[addLayer] Map reference not initialized.");
+        return null;
+      }
 
-        setIsLayerLoading(true);
-        try {
-          const zIndex = calculateZIndex(layerName, addedLayers);
-          const newLayer = createLayer(layerName, layerLabel, zIndex);
-          if (!newLayer) throw new Error("Layer creation failed");
+      setIsLayerLoading(true);
+      try {
+        const zIndex = calculateZIndex();
+        const newLayer = createLayer(layerName, layerLabel, zIndex);
+        if (!newLayer) throw new Error("Layer creation failed");
 
-          newLayer.addTo(mapRef.current);
-          return new Promise((resolve) => {
-            const timeout = setTimeout(() => {
-              console.warn(`[addLayer] Timeout while loading "${layerName}" (15s)`);
-              setIsLayerLoading(false);
-              resolve(newLayer);
-            }, 995000);
+        newLayer.addTo(mapRef.current);
+        
+        return new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            console.warn(`[addLayer] Timeout while loading "${layerName}" (15s)`);
+            setIsLayerLoading(false);
+            resolve(newLayer);
+          }, 995000);
 
-            newLayer.on("load", () => {
-              console.log(`[addLayer] Layer "${layerName}" fully loaded`);
-              clearTimeout(timeout);
-              setIsLayerLoading(false);
-              resolve(newLayer);
-            });
-
-            newLayer.on("tileerror", (error) => {
-              console.warn(`[addLayer] Tile error in "${layerName}"`, error);
-              clearTimeout(timeout);
-              setIsLayerLoading(false);
-              resolve(newLayer);
-            });
+          newLayer.on("load", () => {
+            console.log(`[addLayer] Layer "${layerName}" fully loaded`);
+            clearTimeout(timeout);
+            setIsLayerLoading(false);
+            resolve(newLayer);
           });
-        } catch (error) {
-          console.error("[addLayer] Error adding layer:", error);
-          setIsLayerLoading(false);
-          throw error;
-        }
-      },
 
-      removeLayer: async (layerName) => {
-        const layer = addedLayers[layerName];
-        if (layer && mapRef.current?.hasLayer(layer)) {
-          return new Promise((resolve) => {
-            mapRef.current.removeLayer(layer);
-            layer.off();
-            setTimeout(() => resolve(true), 0);
+          newLayer.on("tileerror", (error) => {
+            console.warn(`[addLayer] Tile error in "${layerName}"`, error);
+            clearTimeout(timeout);
+            setIsLayerLoading(false);
+            resolve(newLayer);
           });
-        }
-        return Promise.resolve(false);
-      },
-
-      setLayerOpacity: (layerName, opacityValue) => {
-        const layer = addedLayers[layerName];
-        if (layer && mapRef.current?.hasLayer(layer)) {
-          layer.setOpacity(opacityValue);
-        }
-      },
+        });
+      } catch (error) {
+        console.error("[addLayer] Error adding layer:", error);
+        setIsLayerLoading(false);
+        throw error;
+      }
     },
-    [mapRef, addedLayers]
-  );
+
+    removeLayer: async (layerName) => {
+      const layer = addedLayers[layerName];
+      if (layer && mapRef.current?.hasLayer(layer)) {
+        return new Promise((resolve) => {
+          mapRef.current.removeLayer(layer);
+          layer.off();
+          setTimeout(() => resolve(true), 0);
+        });
+      }
+      return Promise.resolve(false);
+    },
+
+    setLayerOpacity: (layerName, opacityValue) => {
+      const layer = addedLayers[layerName];
+      if (layer && mapRef.current?.hasLayer(layer)) {
+        layer.setOpacity(opacityValue);
+      }
+    },
+  };
 
   // Toggle layer
   const toggleLayer = useCallback(
     async (layerName, layerLabel) => {
-      const previousBasemap = activeBasemap;
       try {
         if (addedLayers[layerName]) {
+          // Remove the layer if it exists
           await layerManager.removeLayer(layerName);
           setAddedLayers((prev) => {
-            const { [layerName]: _, ...rest } = prev;
+            const { [layerName]: removedLayer, ...rest } = prev;
             return rest;
           });
           setOpacity((prev) => {
-            const { [layerName]: _, ...rest } = prev;
+            const { [layerName]: removedOpacity, ...rest } = prev;
             return rest;
           });
         } else {
+          // Add the new layer without affecting existing layers
           const layer = await layerManager.addLayer(layerName, layerLabel);
           if (!layer) throw new Error(`Failed to add layer: ${layerName}`);
+          
           const layerOpacity = 0.7;
           setAddedLayers((prev) => ({ ...prev, [layerName]: layer }));
           setOpacity((prev) => ({ ...prev, [layerName]: layerOpacity }));
@@ -457,11 +529,10 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
         }
       } catch (err) {
         console.error(`Layer toggle failed for ${layerName}:`, err);
-        setActiveBasemap(previousBasemap);
         setIsLayerLoading(false);
       }
     },
-    [addedLayers, layerManager, setActiveBasemap, activeBasemap]
+    [addedLayers, layerManager]
   );
 
   // Toggle group
@@ -480,8 +551,8 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
   );
 
   // Cleanup on unmount
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    return () => {
       const map = mapRef?.current;
       if (map) {
         Object.values(addedLayers).forEach((layer) => {
@@ -492,11 +563,10 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
           }
         });
       }
-    },
-    [mapRef, addedLayers]
-  );
+    };
+  }, [mapRef, addedLayers]);
 
-  // LayerGroup component
+  // LayerGroup component with UUID keys
   const LayerGroup = React.memo(
     ({
       group,
@@ -509,6 +579,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
       handleOpacityChange,
       icon,
       loadingLayers,
+      groupId,
     }) => {
       return (
         <div className="layer-group">
@@ -531,24 +602,20 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
             {group.layerList.map((layer, index) => {
               const layerName = getLayerName(layer);
               const isChecked = !!addedLayers[layerName];
-              const isDisabled = loadingLayers && !isChecked;
+              const layerId = layerIds[`${idx}-${layerName}`] || uuidv4();
 
               return (
-                <div key={`${group.title}-${layerName}-${index}`} className="layer-item">
+                <div key={layerId} className="layer-item">
                   <label className="layer-label-container">
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => toggleLayer(layerName, layer.Layer)}
-                      disabled={isDisabled}
                     />
                     <span
-                      className={`layer-label ${isChecked ? "layer-label-bold" : ""} ${
-                        isDisabled ? "layer-label-disabled" : ""
-                      }`}
+                      className={`layer-label ${isChecked ? "layer-label-bold" : ""}`}
                     >
                       {layer.Layer}
-                      {isDisabled && <span className="loading-dots">...</span>}
                     </span>
                   </label>
 
@@ -583,21 +650,22 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
         {text[language].exploreData}
       </h3>
       <div className="layer-groups-container">
-        {layersData.groups.map((group, idx) => (
-          <LayerGroup
-            key={`${group.title}-${idx}`}
-            group={group}
-            idx={idx}
-            openGroups={openGroups}
-            toggleGroup={toggleGroup}
-            addedLayers={addedLayers}
-            toggleLayer={toggleLayer}
-            opacity={opacity}
-            handleOpacityChange={handleOpacityChange}
-            icon={<FaLayerGroup />}
-            loadingLayers={isLayerLoading}
-          />
-        ))}
+      {layersData.groups.map((group, idx) => (
+  <LayerGroup
+    key={groupIds[idx]} // Use UUID for group key
+    group={group}
+    idx={idx}
+    openGroups={openGroups}
+    toggleGroup={toggleGroup}
+    addedLayers={addedLayers}
+    toggleLayer={toggleLayer}
+    opacity={opacity}
+    handleOpacityChange={handleOpacityChange}
+    icon={<FaLayerGroup />}
+    loadingLayers={isLayerLoading}
+    groupId={groupIds[idx]}
+  />
+))}
       </div>
       {isLayerLoading && (
         <div className="global-loading-indicator">
