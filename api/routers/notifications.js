@@ -47,6 +47,8 @@ client.connect()
 // 3. NDVI Table Name
 // ----------------------------------------------------
 const degraded_forest_Layer = `"2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI_Change"`;
+
+const degraded_forest_Layer_N=`2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI_Change`;
 const parts = degraded_forest_Layer.replace(/"/g, '').split('_');
 const coupe_name = parts.slice(1, -2).join('_');
 
@@ -110,7 +112,7 @@ async function sendNotification(firebaseToken, record) {
       ndvi_change: String(ndvi_change),
       latitude: String(latitude || ""),
       longitude: String(longitude || ""),
-      degraded_forest_Layer,
+      degraded_forest_Layer_N,
       coupe_name,
       date
     }
