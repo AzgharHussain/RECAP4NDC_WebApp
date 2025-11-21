@@ -7,7 +7,7 @@ router.post('/ndvi-change', async (req, res) => {
     const {tableName} = req.body
     try {
         const query = `
-           SELECT "jan_NDVI", "feb_NDVI", "NDVI_change", change_category, geom, centroid, longitude, latitude, notification_sent
+           SELECT *
 	FROM public."${tableName}";
         `;
 

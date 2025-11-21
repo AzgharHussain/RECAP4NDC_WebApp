@@ -698,27 +698,7 @@ const handleToolSidebarClick = (toolName) => {
     <i className="bi bi-house-fill" />
   </button>
 
-      <button
-        className="legend-toggle-btn"
-        onClick={toggleLegend}
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          padding: "10px",  
-          cursor: "pointer",
-          borderRadius: "16.606px",
-          background: "transparent",  // Hide the background
-          border: "none",  // Remove the border
-          boxShadow: "none", // Remove the box shadow if needed
-        }}
-      >
-         <img
-                src={legendIcon}
-                alt="Legend"
-                style={{ width: "30px", height: "30px" }}
-              />
-      </button>
+      
 </aside>
         </div>      
           {/* <SearchControlWithInput mapRef={mapRef} />        */}

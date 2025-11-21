@@ -368,10 +368,30 @@ useEffect(() => {
   }, []);
 
 
+const LegendControl = L.Control.extend({
+  options: {
+    position: 'bottomright'
+  },
 
-  const LegendControl = L.Control.extend({
   onAdd: function (map) {
     this._div = L.DomUtil.create("div", "legend-control");
+    
+    // Apply styles programmatically
+    Object.assign(this._div.style, {
+      position: "fixed",
+      bottom: "20px",
+      right: "20px",
+      padding: "10px",
+      cursor: "pointer",
+      borderRadius: "16.606px",
+      background: "transparent",
+      border: "none",
+      boxShadow: "none",
+      zIndex: "1000",
+      backgroundColor: "white", // Added for visibility, remove if you want completely transparent
+      minWidth: "150px"
+    });
+    
     this.update();
     return this._div;
   },
@@ -380,21 +400,38 @@ useEffect(() => {
     if (!this._div) return;
 
     // Clear previous content
-    this._div.innerHTML = "<h4>Legend</h4>";
+    this._div.innerHTML = "<h4 style='margin: 0 0 10px 0;'>Legend</h4>";
 
     // Fetch and display legend for each layer
     layerNames.forEach((layerName) => {
       const legendUrl = `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${layerName}`;
+      
+      const legendItem = document.createElement("div");
+      legendItem.style.display = "flex";
+      legendItem.style.alignItems = "center";
+      legendItem.style.marginBottom = "5px";
+      
       const img = document.createElement("img");
       img.src = legendUrl;
       img.alt = `${layerName} legend`;
       img.style.marginRight = "10px";
-      this._div.appendChild(img);
-      this._div.appendChild(document.createTextNode(layerName));
-      this._div.appendChild(document.createElement("br"));
+      img.style.width = "20px";
+      img.style.height = "20px";
+      
+      const label = document.createElement("span");
+      label.textContent = layerName;
+      label.style.fontSize = "12px";
+      
+      legendItem.appendChild(img);
+      legendItem.appendChild(label);
+      this._div.appendChild(legendItem);
     });
   },
 });
+
+// Usage:
+// const legendControl = new LegendControl().addTo(map);
+// legendControl.update(['layer1', 'layer2', 'layer3']);
 
 // Add the legend control to your map
 useEffect(() => {
@@ -412,8 +449,6 @@ useEffect(() => {
     };
   }
 }, [mapRef, addedLayers]);
-
-
   // Calculate z-index
   const calculateZIndex = () => {
     layerCounterRef.current += 1;
@@ -564,7 +599,7 @@ useEffect(() => {
         });
       }
     };
-  }, [mapRef, addedLayers]);
+  }, [mapRef]);
 
   // LayerGroup component with UUID keys
   const LayerGroup = React.memo(
@@ -643,7 +678,23 @@ useEffect(() => {
     }
   );
 
-  return (
+  return (<> 
+  
+  {/* <div
+    style={{
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          padding: "10px",  
+          cursor: "pointer",
+          borderRadius: "16.606px",
+          background: "transparent",  // Hide the background
+          border: "none",  // Remove the border
+          boxShadow: "none", // Remove the box shadow if needed
+          zIndex: 1000,
+        }}>
+          ashhgkuyjktsdfvu777777777
+ </div> */}
     <aside className="leftpanel">
       <h3 className="sidebar-title">
         <FaLayerGroup style={{ marginRight: "8px" }} />
@@ -674,6 +725,7 @@ useEffect(() => {
         </div>
       )}
     </aside>
+     </>
   );
 };
 
