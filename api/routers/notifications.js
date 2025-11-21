@@ -30,11 +30,11 @@ try {
 // 2. Postgres Connection
 // ----------------------------------------------------
 const client = new Client({
-  host: 'localhost',
+  host: '68.178.167.39',
   user: 'postgres',
-  password: 'pass@123',
+  password: 'P$DB@25%$#!09',
   port: 5432,
-  database: 'recapnew'
+  database: 'Recap4NDC_new'
 });
 
 client.connect()
@@ -47,6 +47,8 @@ client.connect()
 // 3. NDVI Table Name
 // ----------------------------------------------------
 const degraded_forest_Layer = `"2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI_Change"`;
+
+const degraded_forest_Layer_N=`2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI_Change`;
 const parts = degraded_forest_Layer.replace(/"/g, '').split('_');
 const coupe_name = parts.slice(1, -2).join('_');
 
@@ -107,10 +109,10 @@ async function sendNotification(firebaseToken, record) {
     data: {
       id: String(id),
       change_category,
-      ndvi_change: String(ndvi_change),
+      // ndvi_change: String(ndvi_change),
       latitude: String(latitude || ""),
       longitude: String(longitude || ""),
-      degraded_forest_Layer,
+      degraded_forest_Layer_N,
       coupe_name,
       date
     }
@@ -160,11 +162,11 @@ router.post("/send-notifications", upload.none(), async (req, res) => {
 
     // Fetch pending NDVI records
     const q = `
-      SELECT id, jan_ndvi, feb_ndvi, ndvi_change, change_category,
-             latitude, longitude
+     SELECT "jan_NDVI", "feb_NDVI", "NDVI_change", change_category, geom, centroid, longitude, latitude, notification_sent, id
+
       FROM public.${degraded_forest_Layer}
       WHERE notification_sent = FALSE
-      ORDER BY ndvi_change DESC
+      ORDER BY "NDVI_change" DESC
       LIMIT 1
     `;
 

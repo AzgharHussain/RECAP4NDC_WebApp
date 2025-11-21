@@ -40,7 +40,7 @@ export default function DashboardLayout() {
       uploadCoupe: "Upload Coupe Boundaries",
       viewCoupe: "View Coupe Boundaries",
       coupeLog: "Coupe Observation Log",
-      patrollingIncident: "Patrolling and Incident Logs",
+      patrollingIncident: "Patrolling",
     },
     gu: {
       overview: "સારાંશ",
@@ -51,7 +51,7 @@ export default function DashboardLayout() {
       uploadCoupe: "કૂપ બાઉન્ડરી અપલોડ કરો",
       viewCoupe: "કૂપ બાઉન્ડરી જુઓ",
       coupeLog: "કૂપ અવલોકન લોગ",
-      patrollingIncident: "પેટ્રોલિંગ અને ઘટનાઓના લોગ્સ",
+      patrollingIncident: "પેટ્રોલિંગ",
     },
   };
 
