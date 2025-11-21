@@ -18,9 +18,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-
 const { Option } = Select;
-
 const startIcon = new L.Icon({
   iconUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
@@ -28,14 +26,12 @@ const startIcon = new L.Icon({
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
 });
-
 const endIcon = new L.Icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
   iconSize: [25, 25],
   iconAnchor: [12, 12],
   popupAnchor: [0, -12],
 });
-
 function ResizeMapOnShow({ coords }) {
   const map = useMap();
   useEffect(() => {
@@ -48,7 +44,6 @@ function ResizeMapOnShow({ coords }) {
   }, [map, coords]);
   return null;
 }
-
 function PatrolMap({ patrol }) {
   if (!patrol?.geom) {
     return <p>No route available</p>;
@@ -60,7 +55,6 @@ function PatrolMap({ patrol }) {
   const start = routeCoords[0];
   const end = routeCoords[routeCoords.length - 1] || start;
   const initialZoom = 15;
-
   return (
     <MapContainer
       style={{ height: "400px", width: "100%" }}
@@ -93,7 +87,6 @@ function PatrolMap({ patrol }) {
     </MapContainer>
   );
 }
-
 const PatrolIncidentLogs = () => {
   const [patrolData, setPatrolData] = useState([]);
   const [searchText, setSearchText] = useState("");
@@ -104,7 +97,6 @@ const PatrolIncidentLogs = () => {
   const [selectedPatrol, setSelectedPatrol] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { language } = useLanguage();
-
   const fetchPatrolData = async () => {
     try {
       const response = await fetch(
@@ -128,11 +120,9 @@ const PatrolIncidentLogs = () => {
       setPatrolData([]);
     }
   };
-
   useEffect(() => {
     fetchPatrolData();
   }, []);
-
   const formatDateTime = (datetime) => {
     const date = new Date(datetime);
     const day = String(date.getDate()).padStart(2, "0");
@@ -142,7 +132,6 @@ const PatrolIncidentLogs = () => {
     const minutes = String(date.getMinutes()).padStart(2, "0");
     return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
   };
-
   useEffect(() => {
     let data = patrolData;
     if (searchText.trim() !== "") {
@@ -167,130 +156,264 @@ const PatrolIncidentLogs = () => {
     setFilteredData(data);
   }, [searchText, startFilter, endFilter, typeFilter, patrolData]);
 
-  const handleExport = () => {
-    if (!filteredData.length) {
-      alert(language === "gu" ? "નિકાસ કરવા માટે કોઈ ડેટા નથી" : "No data to export");
-      return;
-    }
-    const exportData = filteredData.map((item) => ({
-      "Patrol ID": item.patrol_id,
-      "Officer Name": item.patrol_officer_name,
-      "Patrol Start Date": formatDateTime(item.start_time).date,
-      "Patrol Start Time": formatDateTime(item.start_time).time,
-      "Patrol End Date": formatDateTime(item.end_time).date,
-      "Patrol End Time": formatDateTime(item.end_time).time,
-      "Start Location": item.start_location,
-      "End Location": item.end_location,
-      "Distance (Kms)": item.distance_kms,
-      "Patrolling Type": item.type_name || (language === "gu" ? "ઉપલબ્ધ નથી" : "N/A"),
-    }));
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Patrol Logs");
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    saveAs(
-      new Blob([wbout], { type: "application/octet-stream" }),
-      "Patrol_Incident_Logs.xlsx"
-    );
-  };
+const getOfficerSummary = (records) => {
+  if (!records.length) return null;
 
-  const columns = [
+  const totalPatrols = records.length;
+  const avgStaff = (
+    records.reduce((sum, r) => sum + (r.number_of_staff || 0), 0) / totalPatrols
+  ).toFixed(2);
+
+  const avgHours = (
+    records.reduce((sum, r) => {
+      const start = new Date(r.start_time);
+      const end = new Date(r.end_time);
+      return sum + (end - start) / (1000 * 60 * 60);
+    }, 0) / totalPatrols
+  ).toFixed(2);
+
+  const avgDistance = (
+    records.reduce((sum, r) => sum + (parseFloat(r.distance_kms) || 0), 0) /
+    totalPatrols
+  ).toFixed(2);
+
+  return {
+    totalPatrols,
+    avgStaff,
+    avgHours,
+    avgDistance,
+  };
+};
+
+
+const calculateSummary = (items) => {
+  if (!items.length) {
+    return [
+      {
+        label: "Total Patrols",
+        value: 0,
+      },
+      {
+        label: "Average Staff",
+        value: 0,
+      },
+      {
+        label: "Average Hours",
+        value: 0,
+      },
+      {
+        label: "Average Distance (km)",
+        value: 0,
+      },
+    ];
+  }
+
+  const totalPatrols = items.length;
+
+  const avgStaff =
+    items.reduce((sum, item) => sum + (item.number_of_staff || 0), 0) /
+    totalPatrols;
+
+  const avgHours =
+    items.reduce((sum, item) => {
+      const start = new Date(item.start_time);
+      const end = new Date(item.end_time);
+      const hours = (end - start) / (1000 * 60 * 60);
+      return sum + hours;
+    }, 0) / totalPatrols;
+
+  const avgDistance =
+    items.reduce(
+      (sum, item) => sum + parseFloat(item.distance_kms || 0),
+      0
+    ) / totalPatrols;
+
+  return [
+    { label: "Total Patrols", value: totalPatrols },
+    { label: "Average Staff", value: avgStaff.toFixed(2) },
+    { label: "Average Hours", value: avgHours.toFixed(2) },
+    { label: "Average Distance (km)", value: avgDistance.toFixed(2) },
+  ];
+};
+
+
+const handleExport = () => {
+  if (!filteredData.length) {
+    alert(language === "gu" ? "નિકાસ કરવા માટે કોઈ ડેટા નથી" : "No data to export");
+    return;
+  }
+
+  const exportData = filteredData.map((item) => ({
+    "Patrol ID": item.patrol_id,
+    "Officer Name": item.patrol_officer_name,
+    "Patrol Start Date": formatDateTime(item.start_time).date,
+    "Patrol Start Time": formatDateTime(item.start_time).time,
+    "Patrol End Date": formatDateTime(item.end_time).date,
+    "Patrol End Time": formatDateTime(item.end_time).time,
+    "Start Location": item.start_location,
+    "End Location": item.end_location,
+    "Distance (Kms)": item.distance_kms,
+    "Patrolling Type": item.type_name || (language === "gu" ? "ઉપલબ્ધ નથી" : "N/A"),
+  }));
+
+  const wb = XLSX.utils.book_new();
+
+  // Main sheet
+  const mainSheet = XLSX.utils.json_to_sheet(exportData);
+  XLSX.utils.book_append_sheet(wb, mainSheet, "Patrol Logs");
+
+  // Split by type
+  const dayData = filteredData.filter((i) => i.type_name === "Day patrolling");
+  const nightData = filteredData.filter((i) => i.type_name === "Night patrolling");
+  const beatData = filteredData.filter((i) => i.type_name === "Beat checking");
+
+  // Summary sheets
+  const daySummary = XLSX.utils.json_to_sheet(calculateSummary(dayData));
+  const nightSummary = XLSX.utils.json_to_sheet(calculateSummary(nightData));
+  const beatSummary = XLSX.utils.json_to_sheet(calculateSummary(beatData));
+
+  XLSX.utils.book_append_sheet(wb, daySummary, "Day Patrolling Summary");
+  XLSX.utils.book_append_sheet(wb, nightSummary, "Night Patrolling Summary");
+  XLSX.utils.book_append_sheet(wb, beatSummary, "Beat Checking Summary");
+
+  // Export
+  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  saveAs(
+    new Blob([wbout], { type: "application/octet-stream" }),
+    "Patrol_Incident_Logs.xlsx"
+  );
+};
+
+  // Group data by patrol type
+  const groupedData = filteredData.reduce((acc, item) => {
+    const type = item.type_name || "Unknown";
+    if (!acc[type]) {
+      acc[type] = [];
+    }
+    acc[type].push(item);
+    return acc;
+  }, {});
+  // Define patrol types
+ // Define patrol types
+const patrolTypes = ["Day patrolling", "Night patrolling", "Beat checking"];
+
+const columns = patrolTypes.map((type) => ({
+  title:
+    language === "gu"
+      ? type === "Day patrolling"
+        ? "દિવસ પેટ્રોલિંગ"
+        : type === "Night patrolling"
+        ? "રાત પેટ્રોલિંગ"
+        : "બીટ ચેકિંગ"
+      : type,
+  key: type,
+  align: "center",
+  children: [
     {
       title: language === "gu" ? "પેટ્રોલિંગ આઈડી" : "Patrol ID",
       dataIndex: "patrol_id",
-      key: "patrol_id",
-      sorter: (a, b) => a.patrol_id - b.patrol_id,
+      key: `${type}_patrol_id`,
       align: "center",
+      render: (_, record) => (record.type_name === type ? record.patrol_id : ""),
     },
     {
       title: language === "gu" ? "અધિકારીનું નામ" : "Officer Name",
       dataIndex: "patrol_officer_name",
-      key: "patrol_officer_name",
-      sorter: (a, b) =>
-        a.patrol_officer_name.localeCompare(b.patrol_officer_name),
+      key: `${type}_officer`,
       align: "center",
+      render: (_, record) =>
+        record.type_name === type ? record.patrol_officer_name : "",
     },
     {
-      title: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrolling Type",
-      dataIndex: "type_name",
-      key: "type_name",
+      title: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date",
+      key: `${type}_start_date`,
       align: "center",
-      render: (text) => text || (language === "gu" ? "ઉપલબ્ધ નથી" : "N/A"),
-    },
-    {
-      title: language === "gu" ? "પેટ્રોલિંગ શરૂ થવાની તારીખ" : "Patrol Start Date",
-      dataIndex: "start_time",
-      key: "start_date",
-      render: (text) => formatDateTime(text).date,
+      render: (_, record) =>
+        record.type_name === type
+          ? formatDateTime(record.start_time).date
+          : "",
       sorter: (a, b) => new Date(a.start_time) - new Date(b.start_time),
-      align: "center",
     },
     {
-      title: language === "gu" ? "પેટ્રોલિંગ શરૂ થવાનો સમય" : "Patrol Start Time",
-      dataIndex: "start_time",
-      key: "start_time",
-      render: (text) => formatDateTime(text).time,
+      title: language === "gu" ? "શરૂઆતનો સમય" : "Start Time",
+      key: `${type}_start_time`,
       align: "center",
+      render: (_, record) =>
+        record.type_name === type
+          ? formatDateTime(record.start_time).time
+          : "",
     },
     {
-      title: language === "gu" ? "પેટ્રોલિંગ પૂર્ણ થવાની તારીખ" : "Patrol End Date",
-      dataIndex: "end_time",
-      key: "end_date",
-      render: (text) => formatDateTime(text).date,
+      title: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date",
+      key: `${type}_end_date`,
+      align: "center",
+      render: (_, record) =>
+        record.type_name === type
+          ? formatDateTime(record.end_time).date
+          : "",
       sorter: (a, b) => new Date(a.end_time) - new Date(b.end_time),
-      align: "center",
     },
     {
-      title: language === "gu" ? "પેટ્રોલિંગ પૂર્ણ થવાનો સમય" : "Patrol End Time",
-      dataIndex: "end_time",
-      key: "end_time",
-      render: (text) => formatDateTime(text).time,
+      title: language === "gu" ? "સમાપ્તિ સમય" : "End Time",
+      key: `${type}_end_time`,
       align: "center",
+      render: (_, record) =>
+        record.type_name === type
+          ? formatDateTime(record.end_time).time
+          : "",
     },
     {
-      title: language === "gu" ? "શરૂઆતનું સ્થાન" : "Starting Point Location",
-      dataIndex: "start_location",
-      key: "start_location",
+      title: language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location",
+      key: `${type}_start_location`,
       align: "center",
+      render: (_, record) =>
+        record.type_name === type ? record.start_location : "",
     },
     {
-      title: language === "gu" ? "અંતિમ સ્થાન" : "End Point Location",
-      dataIndex: "end_location",
-      key: "end_location",
+      title: language === "gu" ? "અંતિમ સ્થાન" : "End Location",
+      key: `${type}_end_location`,
       align: "center",
+      render: (_, record) =>
+        record.type_name === type ? record.end_location : "",
     },
     {
-      title: language === "gu" ? "અંતર" : "Distance (in Kms)",
-      dataIndex: "distance_kms",
-      key: "distance_kms",
-      sorter: (a, b) => parseFloat(a.distance_kms) - parseFloat(b.distance_kms),
+      title: language === "gu" ? "અંતર" : "Distance (km)",
+      key: `${type}_distance`,
       align: "center",
+      render: (_, record) =>
+        record.type_name === type ? record.distance_kms : "",
+      sorter: (a, b) =>
+        parseFloat(a.distance_kms) - parseFloat(b.distance_kms),
     },
     {
       title: language === "gu" ? "રસ્તો" : "Route",
-      dataIndex: "geom",
-      key: "geom",
-      render: (_, record) => (
-        <Button
-          style={{
-            borderRadius: "4.618px",
-            border: "1.961px solid rgba(255, 255, 255, 0.23)",
-            background: "rgba(116, 190, 0, 0.40)",
-            color: "#000",
-          }}
-          icon={<EyeOutlined />}
-          onClick={() => {
-            setSelectedPatrol(record);
-            setIsModalVisible(true);
-          }}
-        >
-          {language === "gu" ? "દેખાવ" : "View"}
-        </Button>
-      ),
+      key: `${type}_route`,
       align: "center",
+      render: (_, record) =>
+        record.type_name === type ? (
+          <Button
+            style={{
+              borderRadius: "4.618px",
+              border: "1.961px solid rgba(255, 255, 255, 0.23)",
+              background: "rgba(116, 190, 0, 0.40)",
+              color: "#000",
+            }}
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setSelectedPatrol(record);
+              setIsModalVisible(true);
+            }}
+          >
+            {language === "gu" ? "દેખાવ" : "View"}
+          </Button>
+        ) : "",
     },
-  ];
+  ],
+}));
 
+
+  // Flatten the data for the table - each row represents one patrol record
+  const tableData = filteredData;
   return (
     <div className="container">
       <div className="section">
@@ -358,6 +481,7 @@ const PatrolIncidentLogs = () => {
               <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
               <Option value="Day patrolling">{language === "gu" ? "દિવસ પેટ્રોલિંગ" : "Day Patrolling"}</Option>
               <Option value="Night patrolling">{language === "gu" ? "રાત પેટ્રોલિંગ" : "Night Patrolling"}</Option>
+              <Option value="Beat checking">{language === "gu" ? "બીટ ચેકિંગ" : "Beat Checking"}</Option>
             </Select>
             <Button className="btn-Export" onClick={handleExport}>
               {language === "gu" ? "નિકાસ કરો" : "Export"}
@@ -368,9 +492,10 @@ const PatrolIncidentLogs = () => {
         <Table
           className="transparent-table"
           columns={columns}
-          dataSource={filteredData}
+          dataSource={tableData}
           pagination={{ pageSize: 5 }}
           bordered
+          scroll={{ x: 'max-content' }}
           locale={{
             emptyText: (
               <div style={{ textAlign: "center", padding: "50px 0" }}>
@@ -427,5 +552,4 @@ const PatrolIncidentLogs = () => {
     </div>
   );
 };
-
 export default PatrolIncidentLogs;
