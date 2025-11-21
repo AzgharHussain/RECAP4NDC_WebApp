@@ -9,6 +9,7 @@ const dropdownapis = require('./routers/dropdownapis');
 
 const { sequelize, testConnection } = require('./config/database');
 const NdviRouter =require("./routers/ndviRouter")
+const notifications = require('./routers/notifications');
 
 // ===========================================================
 // 🧩 DATABASE CONNECTION (PostgreSQL + Sequelize)
@@ -81,6 +82,7 @@ if (!fs.existsSync(incidentImageDir)) fs.mkdirSync(incidentImageDir, { recursive
 // Serve images statically
 app.use('/Patrolimage', express.static(patrolImageDir));
 app.use('/Incidentimage', express.static(incidentImageDir));
+app.use('/api', notifications);
 
 // ===========================================================
 // 📦 MULTER STORAGE SETUP (Dynamic folder selection)

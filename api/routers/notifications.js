@@ -1,311 +1,261 @@
-const { sequelize } = require('../config/database');
-const admin = require('firebase-admin');
+const express = require('express');
+const { Client } = require('pg');
+const multer = require('multer');
+const admin = require("firebase-admin");
+const { DATE } = require('sequelize');
 
-// Initialize Firebase Admin SDK
-let firebaseInitialized = false;
+const router = express.Router();
+const upload = multer();
+
+
+// ----------------------------------------------------
+// 1. Initialize Firebase Admin SDK
+// ----------------------------------------------------
 try {
-  const privateKey = require('./private-key.json');
-  admin.initializeApp({
-    credential: admin.credential.cert(privateKey),
-  });
-  firebaseInitialized = true;
-  console.log('✅ Firebase Admin SDK initialized');
-} catch (error) {
-  console.log('❌ Firebase Admin SDK initialization failed:', error.message);
-  process.exit(1);
+  const serviceAccount = require("./recap4ndc-ad332-d882dbe98b5e.json");
+
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log("🔥 Firebase Admin initialized");
+  }
+} catch (err) {
+  console.error("❌ Firebase service account missing:", err);
 }
 
-async function sendFCMNotification(fcmToken, message) {
+
+
+// ----------------------------------------------------
+// 2. Postgres Connection
+// ----------------------------------------------------
+const client = new Client({
+  host: 'localhost',
+  user: 'postgres',
+  password: 'pass@123',
+  port: 5432,
+  database: 'recapnew'
+});
+
+client.connect()
+  .then(() => console.log("🟢 Database connected"))
+  .catch(err => console.error("🔴 DB connection failed:", err));
+
+
+
+// ----------------------------------------------------
+// 3. NDVI Table Name
+// ----------------------------------------------------
+const degraded_forest_Layer = `"2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI_Change"`;
+const parts = degraded_forest_Layer.replace(/"/g, '').split('_');
+const coupe_name = parts.slice(1, -2).join('_');
+
+const date = degraded_forest_Layer.match(/"(\d{4}-\d{2}-\d{2})_/)[1]; // "2025-02-01"
+const dateObj = new Date(date);
+const monthFull = dateObj.toLocaleString('default', { month: 'long' }).toUpperCase(); // "FEBRUARY"
+
+
+// ----------------------------------------------------
+// 4. Helper: Send Notification using Firebase Admin
+// ----------------------------------------------------
+async function sendNotification(firebaseToken, record) {
+
+  const {
+    id,
+    jan_ndvi,
+    feb_ndvi,
+    ndvi_change,
+    change_category,
+    latitude,
+    longitude
+  } = record;
+
+
+
+  // Create title & body
+  let title = `NDVI Alert For ${monthFull}`;
+  let body = `Coupe Name: ${coupe_name}`;
+
+  switch (change_category) {
+    case 'significant_decrease':
+      title = '🚨 Significant Vegetation Decrease';
+      body = `NDVI dropped from ${jan_ndvi} to ${feb_ndvi}`;
+      break;
+
+    case 'moderate_decrease':
+      title = '⚠️ Moderate Vegetation Decrease';
+      body = `NDVI decreased from ${jan_ndvi} to ${feb_ndvi}`;
+      break;
+
+    case 'significant_increase':
+      title = '🌱 Significant Vegetation Improvement';
+      body = `NDVI increased from ${jan_ndvi} to ${feb_ndvi}`;
+      break;
+
+    case 'moderate_increase':
+      title = '📈 Moderate Vegetation Improvement';
+      body = `NDVI improved from ${jan_ndvi} to ${feb_ndvi}`;
+      break;
+  }
+//  body += ` - ${coupe_name}`;
+  const message = {
+    token: firebaseToken,
+    notification: {
+      title,
+       body
+    },
+    data: {
+      id: String(id),
+      change_category,
+      ndvi_change: String(ndvi_change),
+      latitude: String(latitude || ""),
+      longitude: String(longitude || ""),
+      degraded_forest_Layer,
+      coupe_name,
+      date
+    }
+  };
+
   try {
-    await admin.messaging().send({
-      token: fcmToken,
-      notification: {
-        title: 'Deforestation Alert!',
-        body: message,
-      },
-    });
-    console.log('✅ FCM notification sent successfully');
+    const response = await admin.messaging().send(message);
+    return { success: true, messageId: response };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+
+
+// ----------------------------------------------------
+// 5. Update notification_sent flag
+// ----------------------------------------------------
+async function setNotificationSent(id) {
+  try {
+    await client.query(
+      `UPDATE public.${degraded_forest_Layer} SET notification_sent = TRUE WHERE id = $1`,
+      [id]
+    );
     return true;
   } catch (err) {
-    console.error('❌ Error sending FCM notification:', err.message);
     return false;
   }
 }
 
-async function getFCMTokensForCoopUsers(coopId) {
+
+
+// ----------------------------------------------------
+// 6. API: Send NDVI Notifications
+// ----------------------------------------------------
+router.post("/send-notifications", upload.none(), async (req, res) => {
   try {
-    // Get all users associated with this coop
-    const [users] = await sequelize.query(`
-      SELECT u.id, u.fcm_token, u.email, u.name 
-      FROM users u
-      INNER JOIN user_coops uc ON u.id = uc.user_id
-      WHERE uc.coop_id = $1 
-      AND u.fcm_token IS NOT NULL
-      AND u.fcm_token != ''
-      AND u.notifications_enabled = true
-    `, {
-      bind: [coopId]
-    });
-    
-    if (users.length > 0) {
-      console.log(`📱 Found ${users.length} users with FCM tokens for coop ${coopId}`);
-      return users.map(user => ({
-        token: user.fcm_token,
-        userId: user.id,
-        email: user.email,
-        name: user.name
-      }));
+    const firebase_token = (req.body.firebase_token || "").trim();
+    const user_id = (req.body.user_id || "").trim();
+
+    if (!firebase_token || !user_id) {
+      return res.status(400).json({
+        success: false,
+        error: "firebase_token and user_id required"
+      });
     }
-    
-    console.log(`⚠️ No users with FCM tokens found for coop ${coopId}`);
-    return [];
-  } catch (err) {
-    console.error(`❌ Error getting FCM tokens for coop ${coopId}:`, err.message);
-    return [];
-  }
-}
 
-async function processPendingNotifications() {
-  try {
-    // Get pending notifications
-    const [pendingNotifications] = await sequelize.query(`
-      SELECT id, coop_id, poly_id, month, message 
-      FROM global_deforestation_notifications 
-      WHERE status = 'PENDING'
-      ORDER BY created_at ASC
-      LIMIT 50
-    `);
+    // Fetch pending NDVI records
+    const q = `
+      SELECT id, jan_ndvi, feb_ndvi, ndvi_change, change_category,
+             latitude, longitude
+      FROM public.${degraded_forest_Layer}
+      WHERE notification_sent = FALSE
+      ORDER BY ndvi_change DESC
+      LIMIT 1
+    `;
 
-    console.log(`📨 Processing ${pendingNotifications.length} pending notifications`);
+    const result = await client.query(q);
+    const records = result.rows;
 
-    let totalSent = 0;
-    let totalFailed = 0;
-    
-    for (const notification of pendingNotifications) {
-      console.log(`\n🔔 Processing notification for coop ${notification.coop_id}, polygon ${notification.poly_id}`);
-      
-      // Get all users with FCM tokens for this coop
-      const usersWithTokens = await getFCMTokensForCoopUsers(notification.coop_id);
-      
-      if (usersWithTokens.length === 0) {
-        console.log(`❌ No users to notify for coop ${notification.coop_id}`);
-        await updateNotificationStatus([notification.id], 'FAILED');
-        totalFailed++;
-        continue;
-      }
+    if (records.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No pending NDVI notifications"
+      });
+    }
 
-      let sentCount = 0;
-      let failedCount = 0;
-      const userResults = [];
+    const successList = [];
+    const failedList = [];
 
-      // Send notification to each user
-      for (const user of usersWithTokens) {
-        try {
-          const sent = await sendFCMNotification(user.token, notification.message);
-          if (sent) {
-            sentCount++;
-            userResults.push({
-              userId: user.userId,
-              status: 'SENT',
-              email: user.email
-            });
-            console.log(`✅ Notification sent to user: ${user.email}`);
-          } else {
-            failedCount++;
-            userResults.push({
-              userId: user.userId,
-              status: 'FAILED',
-              email: user.email
-            });
-            console.log(`❌ Failed to send to user: ${user.email}`);
-          }
-        } catch (err) {
-          failedCount++;
-          userResults.push({
-            userId: user.userId,
-            status: 'FAILED',
-            email: user.email,
-            error: err.message
-          });
-          console.error(`❌ Error sending to user ${user.email}:`, err.message);
-        }
-      }
+    for (const record of records) {
+      const sendRes = await sendNotification(firebase_token, record);
 
-      // Log user notification results
-      await logUserNotificationResults(notification.id, userResults);
-
-      // Update main notification status based on results
-      if (sentCount > 0) {
-        await updateNotificationStatus([notification.id], 'SENT');
-        console.log(`✅ Successfully sent to ${sentCount} users for notification ${notification.id}`);
-        totalSent++;
+      if (sendRes.success) {
+        await setNotificationSent(record.id);
+        successList.push({
+          id: record.id,
+          change_category: record.change_category
+        });
       } else {
-        await updateNotificationStatus([notification.id], 'FAILED');
-        console.log(`❌ Failed to send to all users for notification ${notification.id}`);
-        totalFailed++;
+        failedList.push({
+          id: record.id,
+          error: sendRes.error
+        });
       }
     }
 
-    console.log(`\n📊 Notification Summary:`);
-    console.log(`   ✅ Successfully processed: ${totalSent} notifications`);
-    console.log(`   ❌ Failed: ${totalFailed} notifications`);
-    
-    return { sent: totalSent, failed: totalFailed };
-  } catch (err) {
-    console.error('❌ Error processing pending notifications:', err.message);
-    return { sent: 0, failed: 0 };
-  }
-}
+    res.json({
+      success: true,
+      summary: {
+        total: records.length,
+        sent: successList.length,
+        failed: failedList.length
+      },
+      successful: successList,
+      failed: failedList
+    });
 
-async function logUserNotificationResults(notificationId, userResults) {
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+
+
+// ----------------------------------------------------
+// 7. Test FCM with simple message
+// ----------------------------------------------------
+router.post("/test-fcm", upload.none(), async (req, res) => {
   try {
-    for (const result of userResults) {
-      await sequelize.query(
-        `INSERT INTO user_notification_logs 
-         (notification_id, user_id, status, user_email, error_message, created_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())`,
-        {
-          bind: [
-            notificationId,
-            result.userId,
-            result.status,
-            result.email,
-            result.error || null
-          ]
-        }
-      );
+    const firebase_token = (req.body.firebase_token || "").trim();
+
+    if (!firebase_token) {
+      return res.status(400).json({ success: false, error: "firebase_token required" });
     }
-    console.log(`📝 Logged ${userResults.length} user notification results`);
-  } catch (err) {
-    console.error('❌ Error logging user notification results:', err.message);
-  }
-}
 
-async function updateNotificationStatus(notificationIds, status) {
-  try {
-    if (!notificationIds.length) return;
-    
-    const placeholders = notificationIds.map((_, i) => `$${i + 1}`).join(',');
-    await sequelize.query(
-      `UPDATE global_deforestation_notifications 
-       SET status = $${notificationIds.length + 1}, updated_at = NOW()
-       WHERE id IN (${placeholders})`,
-      {
-        bind: [...notificationIds, status]
+    const message = {
+      token: firebase_token,
+      notification: {
+        title: "Test Notification",
+        body: "This is a test FCM message"
       }
-    );
-    
-    console.log(`✅ Updated ${notificationIds.length} notifications to status: ${status}`);
-  } catch (err) {
-    console.error('❌ Error updating notification status:', err.message);
-  }
-}
+    };
 
-async function createNotificationTables() {
-  try {
-    // Create user notification logs table if not exists
-    await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS user_notification_logs (
-        id SERIAL PRIMARY KEY,
-        notification_id INTEGER REFERENCES global_deforestation_notifications(id),
-        user_id INTEGER,
-        user_email TEXT,
-        status TEXT,
-        error_message TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+    const response = await admin.messaging().send(message);
 
-    // Create index for better performance
-    await sequelize.query(`
-      CREATE INDEX IF NOT EXISTS idx_user_notification_logs_notification_id 
-      ON user_notification_logs(notification_id);
-    `);
-
-    console.log('✅ Notification tables created/verified');
-  } catch (err) {
-    console.error('❌ Error creating notification tables:', err.message);
-  }
-}
-
-async function getNotificationStats() {
-  try {
-    const [stats] = await sequelize.query(`
-      SELECT 
-        status,
-        COUNT(*) as count
-      FROM global_deforestation_notifications 
-      GROUP BY status
-    `);
-
-    const [userStats] = await sequelize.query(`
-      SELECT 
-        status,
-        COUNT(*) as count
-      FROM user_notification_logs 
-      GROUP BY status
-    `);
-
-    console.log('\n📊 Notification Statistics:');
-    console.log('   Global Notifications:');
-    stats.forEach(stat => {
-      console.log(`     ${stat.status}: ${stat.count}`);
+    res.json({
+      success: true,
+      messageId: response
     });
 
-    console.log('   User Delivery:');
-    userStats.forEach(stat => {
-      console.log(`     ${stat.status}: ${stat.count}`);
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
     });
-
-    return { global: stats, user: userStats };
-  } catch (err) {
-    console.error('❌ Error getting notification stats:', err.message);
-    return { global: [], user: [] };
   }
-}
+});
 
-// Main execution
-async function main() {
-  try {
-    // Test database connection
-    await sequelize.authenticate();
-    console.log('✅ Database connection established');
 
-    // Create necessary tables
-    await createNotificationTables();
 
-    // Process pending notifications
-    const result = await processPendingNotifications();
+module.exports = router;
 
-    // Show final statistics
-    await getNotificationStats();
-
-    console.log(`\n🎉 Notification service completed`);
-    console.log(`   Total notifications processed: ${result.sent + result.failed}`);
-    console.log(`   Successfully sent: ${result.sent}`);
-    console.log(`   Failed: ${result.failed}`);
-
-  } catch (err) {
-    console.error('❌ Notification service failed:', err);
-    process.exit(1);
-  } finally {
-    await sequelize.close();
-    console.log('🔌 Database connection closed');
-  }
-}
-
-// Run the service
-if (require.main === module) {
-  main().then(() => {
-    process.exit(0);
-  });
-}
-
-module.exports = {
-  processPendingNotifications,
-  getFCMTokensForCoopUsers,
-  updateNotificationStatus,
-  getNotificationStats
-};
 
 
