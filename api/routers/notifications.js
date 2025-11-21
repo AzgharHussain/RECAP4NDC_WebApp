@@ -30,11 +30,11 @@ try {
 // 2. Postgres Connection
 // ----------------------------------------------------
 const client = new Client({
-  host: 'localhost',
+  host: '68.178.167.39',
   user: 'postgres',
-  password: 'pass@123',
+  password: 'P$DB@25%$#!09',
   port: 5432,
-  database: 'recapnew'
+  database: 'Recap4NDC_new'
 });
 
 client.connect()
@@ -160,11 +160,11 @@ router.post("/send-notifications", upload.none(), async (req, res) => {
 
     // Fetch pending NDVI records
     const q = `
-      SELECT id, jan_ndvi, feb_ndvi, ndvi_change, change_category,
-             latitude, longitude
+     SELECT "jan_NDVI", "feb_NDVI", "NDVI_change", change_category, geom, centroid, longitude, latitude, notification_sent, id
+
       FROM public.${degraded_forest_Layer}
       WHERE notification_sent = FALSE
-      ORDER BY ndvi_change DESC
+      ORDER BY "NDVI_change" DESC
       LIMIT 1
     `;
 

@@ -201,38 +201,167 @@ const LeftSidebar = ({
   };
 
   // Create or get existing WMS tile layer for a name
-  const getOrCreateLayer = (map, layerName, zIndex = 1000) => {
-    if (!layerName || !map) return null;
-    if (layersRef.current[layerName]) return layersRef.current[layerName];
+ // Create or get existing WMS tile layer for a name
+const getOrCreateLayer = (map, layerName, zIndex = 1000) => {
+  if (!layerName || !map) return null;
+  
+  // Show loader
+  showLoader(true);
+  
+  if (layersRef.current[layerName]) {
+    // If layer already exists, just show it and zoom to bounds
+    const existingLayer = layersRef.current[layerName];
+    map.addLayer(existingLayer);
+    zoomToLayerBounds(map, layerName, existingLayer);
+    return existingLayer;
+  }
 
-    const tile = L.tileLayer.wms(GEOSERVER_WMS, {
-      layers: layerName,
-      format: "image/png",
-      transparent: true,
-      version: "1.1.1",
-      isDynamic: true,
-      attribution: "",
-    });
-    tile.setZIndex(zIndex);
+  const tile = L.tileLayer.wms(GEOSERVER_WMS, {
+    layers: layerName,
+    format: "image/png",
+    transparent: true,
+    version: "1.1.1",
+    isDynamic: true,
+    attribution: "",
+  });
+  tile.setZIndex(zIndex);
 
-    // when tile finishes first load, zoom to its bounds (non-blocking)
-    const onLoad = async () => {
-      try {
-        const bounds = await getLayerBoundsFromCapabilities(layerName);
-        if (bounds && map && map.fitBounds) {
-          // small timeout so tiles are visible when we fit
-          setTimeout(() => map.fitBounds(bounds, { maxZoom: 17 }), 50);
-        }
-      } catch (e) {
-        // ignore
-      } finally {
-        tile.off("load", onLoad);
+  // Track loading state
+  let isLoading = true;
+  let hasLoaded = false;
+
+  // Show loader when tiles start loading
+  tile.on('loading', () => {
+    isLoading = true;
+    showLoader(true);
+  });
+
+  // Handle tile load completion
+  const onLoad = async () => {
+    if (hasLoaded) return; // Prevent multiple calls
+    
+    isLoading = false;
+    hasLoaded = true;
+    
+    try {
+      const bounds = await getLayerBoundsFromCapabilities(layerName);
+      if (bounds && map && map.fitBounds) {
+        // Small timeout so tiles are visible when we fit
+        setTimeout(() => {
+          map.fitBounds(bounds, { maxZoom: 17 });
+          // Hide loader after zoom animation
+          setTimeout(() => showLoader(false), 300);
+        }, 50);
+      } else {
+        showLoader(false);
       }
-    };
-    tile.on("load", onLoad);
-    layersRef.current[layerName] = tile;
-    return tile;
+    } catch (e) {
+      console.error('Error loading layer bounds:', e);
+      showLoader(false);
+    } finally {
+      tile.off("load", onLoad);
+      tile.off("loading", onLoad);
+    }
   };
+
+  // Also handle tile load errors
+  const onError = () => {
+    isLoading = false;
+    showLoader(false);
+    tile.off("load", onLoad);
+    tile.off("loading", onLoad);
+    console.error(`Failed to load layer: ${layerName}`);
+  };
+
+  tile.on("load", onLoad);
+  tile.on("tileerror", onError);
+
+  layersRef.current[layerName] = tile;
+  return tile;
+};
+
+// Helper function to zoom to layer bounds
+const zoomToLayerBounds = async (map, layerName, layer) => {
+  showLoader(true);
+  try {
+    const bounds = await getLayerBoundsFromCapabilities(layerName);
+    if (bounds && map && map.fitBounds) {
+      setTimeout(() => {
+        map.fitBounds(bounds, { maxZoom: 17 });
+        setTimeout(() => showLoader(false), 300);
+      }, 50);
+    } else {
+      showLoader(false);
+    }
+  } catch (e) {
+    console.error('Error zooming to layer bounds:', e);
+    showLoader(false);
+  }
+};
+
+// Loader management functions
+const showLoader = (show) => {
+  // Create or get loader element
+  let loader = document.getElementById('map-loader');
+  
+  if (!loader && show) {
+    loader = document.createElement('div');
+    loader.id = 'map-loader';
+    loader.innerHTML = `
+      <div style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      ">
+        <div class="spinner" style="
+          width: 20px;
+          height: 20px;
+          border: 2px solid transparent;
+          border-top: 2px solid white;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        "></div>
+        Loading layer...
+      </div>
+    `;
+    
+    // Add CSS animation
+    if (!document.querySelector('#loader-styles')) {
+      const style = document.createElement('style');
+      style.id = 'loader-styles';
+      style.textContent = `
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    // Add to map container or body
+    const mapContainer = document.querySelector('.leaflet-container');
+    if (mapContainer) {
+      mapContainer.style.position = 'relative';
+      mapContainer.appendChild(loader);
+    } else {
+      document.body.appendChild(loader);
+    }
+  } else if (loader && !show) {
+    loader.remove();
+  }
+};
+
+
+
 
   // Remove layer by name if exists
   const removeLayerByName = (map, layerName) => {
@@ -245,18 +374,8 @@ const LeftSidebar = ({
     delete layersRef.current[layerName];
   };
 
-  // Build layer names for NDVI/NDWI/CHANGE from selectedCoupe and year
-  const resolveNdwiLayerName = (coupe, year) => {
-    if (!coupe) return null;
-    // if coupe is workspace:layer -> derive workspace and local name
-    const parts = coupe.split(":");
-    if (parts.length === 2) {
-      const [workspace, local] = parts;
-      return `${workspace}:${local}_ndwi_${year}`;
-    }
-    // fallback to a guessed workspace prefix; modify if needed
-    return `${coupe}_ndwi_${year}`;
-  };
+  
+
 
   // Preferred NDVI/Change layer names (these were hardcoded in your original)
   const NDVI_LAYER_NAME = "2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI";
@@ -272,6 +391,7 @@ const LeftSidebar = ({
 
     // Determine desired layers and the order (zIndex)
     const desired = [];
+    console.log(selectedCoupe)
 
     if (showCoupeLayer && selectedCoupe) {
       desired.push({ name: selectedCoupe, z: 1100 });
@@ -297,6 +417,7 @@ const LeftSidebar = ({
 
     // Add desired layers (if not already present)
     for (const d of desired) {
+      console.log("Adding layer:", d.name, "with zIndex:", d.z);
       if (!layersRef.current[d.name]) {
         const layer = getOrCreateLayer(map, d.name, d.z);
         if (layer) layer.addTo(map);
