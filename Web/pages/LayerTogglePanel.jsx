@@ -1,47 +1,281 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaLayerGroup } from "react-icons/fa";
 import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
-import ForestHierarchyDropdowns from "./dropdown";
 import L from "leaflet";
 
 const GEOSERVER_WMS = "https://www.gisfy.co.in:8443/geoserver/wms";
-const CAPABILITIES_URL = `${GEOSERVER_WMS}?service=WMS&version=1.3.0&request=GetCapabilities`;
-const LEGEND_BASE = `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&FORMAT=image/png&VERSION=1.0.0&TRANSPARENT=true&WIDTH=20&HEIGHT=200&LAYER=`;
 
-const LeftSidebar = ({
-  mapRef,
-  showDistrictLayer,
-  setShowDistrictLayer,
-  setShowPatrollingLayer,
-  showPatrollingLayer,
-  showIncidentLayer,
-  setShowIncidentLayer,
-  onFilter,
-}) => {
-  const { language } = useLanguage();
+   const layersData = {
+  groups: [
+    {
+      title: "Gujarat State Boundaries",
+      layerList: [
+        { Name: "Gujarat_Forest_Area_Boundary_March_2023", Layer: "Gujarat Forest Area Boundary" },
+       
+        { Name: "Gujarat_State_Boundary", Layer: "Gujarat State Boundary" },
+      ]
+    },
+ {
+      title: "Territorial Circle Boundaries",
+      layerList: [
+        { Name: "Teritorial Circle_Beat_Boundary", Layer: "Territorial Circle Beat Boundary" },
+        { Name: "Teritorial Circle_Division_Boundary", Layer: "Territorial Circle Division Boundary" },
+        { Name: "Teritorial Circle_Range_Boundary", Layer: "Territorial Circle Range Boundary" },
+        { Name: "Teritorial Circle_Round_Boundary", Layer: "Territorial Circle Round Boundary" },
+        { Name: "Teritorial Circle_Village_Boundary", Layer: "Territorial Circle Village Boundary" },
+        { Name: "Teritorial_Circle_Boundary", Layer: "Territorial Circle Boundary" },
+      ]
+    },{
+      title: "Wildlife Circle Boundaries",
+      layerList: [
+        { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat Boundary" },
+        { Name: "Wildlife_Circle_Boundary", Layer: "Wildlife Circle Boundary" },
+        { Name: "Wildlife_Circle_Division_Boundary", Layer: "Wildlife Circle Division Boundary" },
+        { Name: "Wildlife_Circle_Range_Boundary", Layer: "Wildlife Circle Range Boundary" },
+        { Name: "Wildlife_Circle_Round_Boundary", Layer: "Wildlife Circle Round Boundary" },
+        { Name: "Wildlife_Circle_Village_Boundary", Layer: "Wildlife Circle Village Boundary" },
+      ]
+    },
+      
+    {
+      title:"social Forestry Boundaries",
+      layerList:[
+       { Name: "Gujarat_Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat Boundary" },
+        { Name: "Gujarat_Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle Boundary" },
+        { Name: "Gujarat_Social_Forestry_Range_Boundary", Layer: "Social Forestry Range Boundary" },
+        { Name: "Gujarat_Social_Forestry_Round_Boundary", Layer: "Social Forestry Round Boundary" },
+        { Name: "Gujarat_Social_Forestry_Village_Boundary", Layer: "Social Forestry Village Boundary" },
+      ]
+    },
+    {
+      title: "Banaskantha",
+      layerList: [
+        { Name: "Banaskantha_Con_Cum_Imp_WC_OVLP", Layer: "Banaskantha Con Cum Imp WC OVLP" },
+        { Name: "Banaskantha_DesDev_WL_WC", Layer: "Banaskantha DesDev WL WC" },
+        { Name: "Banaskantha_RWD_WC_final", Layer: "Banaskantha RWD WC Final" },
+        { Name: "Banaskantha_Wild Life_WC", Layer: "Banaskantha Wildlife WC" },
+      ]
+    },
+    {
+      title: "Banni",
+      layerList: [
+        { Name: "Banni Forest", Layer: "Banni Forest" },
+      ]
+    },
+    {
+      title: "Baria",
+      layerList: [
+        { Name: "Baria_DEV_AFF COUPE", Layer: "Baria Dev Aff Coupe" },
+        { Name: "Baria_DEV_DEV&CON W.C COUPE", Layer: "Baria Dev Dev&Con W.C Coupe" },
+        { Name: "Baria_Danpur_AFF W.C COUPE", Layer: "Baria Danpur Aff W.C Coupe" },
+        { Name: "Baria_Danpur_BIO W.C COUPE", Layer: "Baria Danpur Bio W.C Coupe" },
+        { Name: "Baria_Danpur_DEV&CON W.C COUPE", Layer: "Baria Danpur Dev&Con W.C Coupe" },
+        { Name: "Baria_Danpur_Rev", Layer: "Baria Danpur Revenue" },
+        { Name: "Baria_Dev_Revenue", Layer: "Baria Dev Revenue" },
+      ]
+    },
+    {
+      title: "Bharuch",
+      layerList: [
+        { Name: "Bharuch_Coupe_joined", Layer: "Bharuch Coupe Joined" },
+      ]
+    },
+    {
+      title: "Bhavnagar",
+      layerList: [
+        { Name: "Bhavnagar_coupes", Layer: "Bhavnagar Coupes" },
+        { Name: "Bhavnagr_Shetrunjay_Ranges", Layer: "Bhavnagar Shetrunjay Ranges" },
+        { Name: "Bhavnagr_Shetrunjay_WL_Divi", Layer: "Bhavnagar Shetrunjay WL Divi" },
+      ]
+    },
+    {
+      title: "Chhotaudepur",
+      layerList: [
+        { Name: "Chhotaudepur_CUD_Coupe_bdn", Layer: "Chhotaudepur CUD Coupe BDN" },
+      ]
+    },
+    {
+      title: "Dohad",
+      layerList: [
+        { Name: "DOHAD_AFFORESTATION W.C COUPE", Layer: "Dohad Afforestation W.C Coupe" },
+        { Name: "DOHAD_D_DEVELOPMENT&CONSERVATION COUPE", Layer: "Dohad Dev&Conservation Coupe" },
+        { Name: "DOHAD_GRASSBIR W.C COUPE", Layer: "Dohad Grassbir W.C Coupe" },
+        { Name: "DOHAD_PRO", Layer: "Dohad Pro" },
+        { Name: "DOHAD_REVENUE", Layer: "Dohad Revenue" },
+      ]
+    },
+    {
+      title: "Fatepura",
+      layerList: [
+        { Name: "FATEPURA_AFFORESTATION W.C _COUPE", Layer: "Fatepura Afforestation W.C Coupe" },
+        { Name: "FATEPURA_Revenu_Boundary", Layer: "Fatepura Revenue Boundary" },
+      ]
+    },
+    {
+      title: "Gandhinagar",
+      layerList: [
+        { Name: "Gandhinagar_MM_Coupe", Layer: "Gandhinagar MM Coupe" },
+      ]
+    },
+    {
+      title: "Garbada",
+      layerList: [
+        { Name: "Garbada_Afforestation_Coupe", Layer: "Garbada Afforestation Coupe" },
+        { Name: "Garbada_Develop &Conser Coupe", Layer: "Garbada Develop &Conser Coupe" },
+        { Name: "Garbada_GR W.C COUPE", Layer: "Garbada GR W.C Coupe" },
+        { Name: "Garbada_Revenue", Layer: "Garbada Revenue" },
+      ]
+    },
+    {
+      title: "Jamnagar",
+      layerList: [
+        { Name: "Jamnagar_coupes", Layer: "Jamnagar Coupes" },
+      ]
+    },
+    {
+      title: "Jhalod",
+      layerList: [
+        { Name: "Jhalod_AFFORESTATION W.C_COUPE", Layer: "Jhalod Afforestation W.C Coupe" },
+        { Name: "Jhalod_GRASSBIR W.C COUPE", Layer: "Jhalod Grassbir W.C Coupe" },
+        { Name: "Jhalod_J_DEVELO&CON W.C COUPE", Layer: "Jhalod Dev&Con W.C Coupe" },
+        { Name: "Jhalod_Revenue", Layer: "Jhalod Revenue" },
+      ]
+    },
+    {
+      title: "Junagadh",
+      layerList: [
+        { Name: "Junagadh coupes", Layer: "Junagadh Coupes" },
+      ]
+    },
+    {
+      title: "Kanjeta",
+      layerList: [
+        { Name: "Kanjeta_AFF W.C COUPE", Layer: "Kanjeta Aff W.C Coupe" },
+        { Name: "Kanjeta_DEVELOPMENT&CONSERVATION W.C COUPE", Layer: "Kanjeta Dev&Conservation W.C Coupe" },
+        { Name: "Kanjeta_Revenue", Layer: "Kanjeta Revenue" },
+      ]
+    },
+    {
+      title: "Limkheda",
+      layerList: [
+        { Name: "Limkhed_Revenue", Layer: "Limkhed Revenue" },
+        { Name: "Limkheda_DEVELOPMENT&CONSERVATION W.C COUPE", Layer: "Limkheda Dev&Conservation W.C Coupe" },
+        { Name: "Limkheda_L_AFFORESTATION W.C COUPE", Layer: "Limkheda Afforestation W.C Coupe" },
+        { Name: "Limkheda_L_GRASSBIR W.C COUPE", Layer: "Limkheda Grassbir W.C Coupe" },
+      ]
+    },
+    {
+      title: "Mahisagar",
+      layerList: [
+        { Name: "Mahisagar_all_Coupe_FF", Layer: "Mahisagar All Coupe FF" },
+      ]
+    },
+    {
+      title: "Merged Layers",
+      layerList: [
+        { Name: "Merged2", Layer: "Merged 2" },
+        { Name: "Merged_coupes", Layer: "Merged Coupes" },
+      ]
+    },
+    {
+      title: "Morbi",
+      layerList: [
+        { Name: "Morbi_coupe_map", Layer: "Morbi Coupe Map" },
+      ]
+    },
+    {
+      title: "Narmada",
+      layerList: [
+        { Name: "Narmada_CP_FS2_compt4_RRB", Layer: "Narmada CP FS2 Compt4 RRB" },
+      ]
+    },
+    {
+      title: "Raampura",
+      layerList: [
+        { Name: "Raaampura_R_AFFORESTATION COUPE", Layer: "Raampura Afforestation Coupe" },
+        { Name: "Rampura_R_GRASSBIR COUPE", Layer: "Rampura Grassbir Coupe" },
+        { Name: "Rampura_Revenue", Layer: "Rampura Revenue" },
+      ]
+    },
+    {
+      title: "Randhikpur",
+      layerList: [
+        { Name: "Randhikpur_RAN_AFFO W.C COUPE", Layer: "Randhikpur Affo W.C Coupe" },
+        { Name: "Randhikpur_RAN_DEV&CON W.C COUPE", Layer: "Randhikpur Dev&Con W.C Coupe" },
+        { Name: "Randhikpur_RAN_GRASSBIR W.C COUPE", Layer: "Randhikpur Grassbir W.C Coupe" },
+        { Name: "Randhikpur_REVENUE", Layer: "Randhikpur Revenue" },
+      ]
+    },
+    {
+      title: "Sagtala",
+      layerList: [
+        { Name: "SAGTALA_BIODI W.C COUPE", Layer: "Sagtala Biodi W.C Coupe" },
+        { Name: "SAGTALA_DEV&CON W.C COUPE", Layer: "Sagtala Dev&Con W.C Coupe" },
+      ]
+    },
+    {
+      title: "Sabarkantha",
+      layerList: [
+        { Name: "Sabarkantha_North_Aravalli", Layer: "Sabarkantha North Aravalli" },
+        { Name: "Sabarkantha_South_Aravalli", Layer: "Sabarkantha South Aravalli" },
+      ]
+    },
+    {
+      title: "Sanjeli",
+      layerList: [
+        { Name: "Sanjeli_AFFORESTATION W.C _COUPE", Layer: "Sanjeli Afforestation W.C Coupe" },
+        { Name: "Sanjeli_DEVELO&CON W.C COUPE", Layer: "Sanjeli Dev&Con W.C Coupe" },
+        { Name: "Sanjeli_G.S.F.D.C.AREA", Layer: "Sanjeli GSFDC Area" },
+        { Name: "Sanjeli_GRASSBIR W.C COUPE", Layer: "Sanjeli Grassbir W.C Coupe" },
+        { Name: "Sanjeli_Revenu_Boundary", Layer: "Sanjeli Revenue Boundary" },
+      ]
+    },
+    {
+      title: "Sarjumi",
+      layerList: [
+        { Name: "Sarjumi_AFFORESTATION W.C COUPE", Layer: "Sarjumi Afforestation W.C Coupe" },
+        { Name: "Sarjumi_DEV&CON W.C COUPE", Layer: "Sarjumi Dev&Con W.C Coupe" },
+        { Name: "Sarjumi_GRASSBIR W.C COUPE", Layer: "Sarjumi Grassbir W.C Coupe" },
+        { Name: "Sarjumi_REVENUE", Layer: "Sarjumi Revenue" },
+      ]
+    },
+    {
+      title: "Surat",
+      layerList: [
+        { Name: "Surat_all_Range_Coupe", Layer: "Surat All Range Coupe" },
+      ]
+    },
+    {
+      title: "Surendranagar",
+      layerList: [
+        { Name: "Surendranagar_coupe", Layer: "Surendranagar Coupe" },
+      ]
+    },
+   
+    {
+      title: "Vansi",
+      layerList: [
+        { Name: "Vansi_AFF W.C COUPE", Layer: "Vansi Aff W.C Coupe" },
+        { Name: "Vansi_BIO W.C COUPE", Layer: "Vansi Bio W.C Coupe" },
+        { Name: "Vansi_DEV&CON W.C  COUPE", Layer: "Vansi Dev&Con W.C Coupe" },
+        { Name: "Vansi_Revenue", Layer: "Vansi Revenue" },
+      ]
+    },
+    {
+      title: "Vyara",
+      layerList: [
+        { Name: "Vyara_MM_Coupe_Boundary", Layer: "Vyara MM Coupe Boundary" },
+      ]
+    },
+    
+  ]
+}
 
-  const [selectedYear, setSelectedYear] = useState("2025");
-  const [showNdviLayer, setShowNdviLayer] = useState(false);
-  const [showNdwiLayer, setShowNdwiLayer] = useState(false);
-  const [showChangeLayer, setShowChangeLayer] = useState(false);
-  const [showCoupeLayer, setShowCoupeLayer] = useState(false);
 
-  const [openSections, setOpenSections] = useState({
-    forest: true,
-    boundaries: true,
-    field: true,
-  });
 
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [selectedCoupe, setSelectedCoupe] = useState(null);
 
-  // refs to store created layers and capabilities cache
-  const layersRef = useRef({}); // { layerKey: L.TileLayer.WMS }
-  const capabilitiesRef = useRef(null);
-  const legendControlRef = useRef(null);
-  const mapAddedLegend = useRef(false);
+
 
   // Text content
   const text = {
@@ -91,536 +325,288 @@ const LeftSidebar = ({
     },
   };
 
-  const toggleSection = (section) =>
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
 
-  const handleFilterClick = () => {
-    if (!fromDate && !toDate) return;
-    onFilter({ fromDate, toDate });
-  };
+const getLayerName = (layer) => layer.Name || layer.layer || layer;
 
-  // Utility: fetch and cache capabilities
-  const ensureCapabilities = useCallback(async () => {
-    if (capabilitiesRef.current) return capabilitiesRef.current;
-    try {
-      const res = await fetch(CAPABILITIES_URL);
-      const textDoc = await res.text();
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(textDoc, "text/xml");
-      capabilitiesRef.current = xml;
-      return xml;
-    } catch (err) {
-      console.error("GetCapabilities failed:", err);
-      return null;
-    }
+const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
+  const { language } = useLanguage();
+  const [addedLayers, setAddedLayers] = useState({});
+  const [opacity, setOpacity] = useState({});
+  const [openGroups, setOpenGroups] = useState({});
+  const [isLayerLoading, setIsLayerLoading] = useState(false);
+
+  // Initialize open groups
+  useEffect(() => {
+    const initialOpenState = {};
+    layersData.groups.forEach((_, idx) => {
+      initialOpenState[idx] = false;
+    });
+    setOpenGroups(initialOpenState);
   }, []);
 
-  // Utility: find bounding box for a layer from capabilities xml
-  const getLayerBoundsFromCapabilities = async (layerName) => {
-    const xml = await ensureCapabilities();
-    if (!xml) return null;
-    const layers = xml.getElementsByTagName("Layer");
-    for (let i = 0; i < layers.length; i++) {
-      const nameEl = layers[i].getElementsByTagName("Name")[0];
-      if (!nameEl) continue;
-      const name = nameEl.textContent;
-      if (name === layerName) {
-        // try EX_GeographicBoundingBox (WMS 1.3.0) or LatLonBoundingBox (1.1.1)
-        const ex = layers[i].getElementsByTagName("EX_GeographicBoundingBox")[0];
-        if (ex) {
-          const west = parseFloat(ex.getElementsByTagName("westBoundLongitude")[0].textContent);
-          const east = parseFloat(ex.getElementsByTagName("eastBoundLongitude")[0].textContent);
-          const south = parseFloat(ex.getElementsByTagName("southBoundLatitude")[0].textContent);
-          const north = parseFloat(ex.getElementsByTagName("northBoundLatitude")[0].textContent);
-          return [[south, west], [north, east]];
-        }
-        const latlon = layers[i].getElementsByTagName("LatLonBoundingBox")[0];
-        if (latlon) {
-          const minx = parseFloat(latlon.getAttribute("minx"));
-          const miny = parseFloat(latlon.getAttribute("miny"));
-          const maxx = parseFloat(latlon.getAttribute("maxx"));
-          const maxy = parseFloat(latlon.getAttribute("maxy"));
-          return [[miny, minx], [maxy, maxx]];
-        }
-        // fallback: any BoundingBox with CRS=EPSG:4326
-        const bboxes = layers[i].getElementsByTagName("BoundingBox");
-        for (let j = 0; j < bboxes.length; j++) {
-          const bb = bboxes[j];
-          const crs = bb.getAttribute("CRS") || bb.getAttribute("SRS");
-          if (crs && (crs.includes("4326") || crs.toLowerCase().includes("epsg"))) {
-            const minx = parseFloat(bb.getAttribute("minx") || bb.getAttribute("minx"));
-            const miny = parseFloat(bb.getAttribute("miny") || bb.getAttribute("miny"));
-            const maxx = parseFloat(bb.getAttribute("maxx") || bb.getAttribute("maxx"));
-            const maxy = parseFloat(bb.getAttribute("maxy") || bb.getAttribute("maxy"));
-            return [[miny, minx], [maxy, maxx]];
-          }
-        }
-      }
-    }
-    return null;
-  };
+ 
 
-  // Create a legend control and add to map if not already
-  const ensureLegendControl = (map) => {
-    if (!map || !map._container) return;
-    if (legendControlRef.current) return legendControlRef.current;
-    const control = L.control({ position: "bottomright" });
-    control.onAdd = function () {
-      const container = L.DomUtil.create("div", "wms-legend-container");
-      container.style.background = "rgba(255,255,255,0.9)";
-      container.style.padding = "6px";
-      container.style.borderRadius = "4px";
-      container.style.boxShadow = "0 1px 4px rgba(0,0,0,0.3)";
-      container.style.maxWidth = "220px";
-      const img = L.DomUtil.create("img", "wms-legend-image", container);
-      img.style.maxWidth = "200px";
-      img.style.display = "none";
-      img.id = "wms-legend-image";
-      return container;
-    };
-    control.addTo(map);
-    legendControlRef.current = control;
-    mapAddedLegend.current = true;
-    return control;
-  };
+  // Calculate z-index
+  const calculateZIndex = (layerName, currentLayers) => 1000 + Object.keys(currentLayers).length;
 
-  const updateLegend = (map, layerName) => {
-    if (!map) return;
-    const control = ensureLegendControl(map);
-    if (!control) return;
-    const img = map.getContainer().querySelector("#wms-legend-image");
-    if (!img) return;
-    if (!layerName) {
-      img.style.display = "none";
-      img.src = "";
-      return;
-    }
-    const legendUrl = LEGEND_BASE + encodeURIComponent(layerName);
-    img.src = legendUrl;
-    img.style.display = "block";
-  };
-
-  // Create or get existing WMS tile layer for a name
- // Create or get existing WMS tile layer for a name
-const getOrCreateLayer = (map, layerName, zIndex = 1000) => {
-  if (!layerName || !map) return null;
-  
-  // Show loader
-  showLoader(true);
-  
-  if (layersRef.current[layerName]) {
-    // If layer already exists, just show it and zoom to bounds
-    const existingLayer = layersRef.current[layerName];
-    map.addLayer(existingLayer);
-    zoomToLayerBounds(map, layerName, existingLayer);
-    return existingLayer;
-  }
-
-  const tile = L.tileLayer.wms(GEOSERVER_WMS, {
-    layers: layerName,
-    format: "image/png",
-    transparent: true,
-    version: "1.1.1",
-    isDynamic: true,
-    attribution: "",
-  });
-  tile.setZIndex(zIndex);
-
-  // Track loading state
-  let isLoading = true;
-  let hasLoaded = false;
-
-  // Show loader when tiles start loading
-  tile.on('loading', () => {
-    isLoading = true;
-    showLoader(true);
-  });
-
-  // Handle tile load completion
-  const onLoad = async () => {
-    if (hasLoaded) return; // Prevent multiple calls
-    
-    isLoading = false;
-    hasLoaded = true;
-    
+  // Create WMS layer
+  const createLayer = (layerName, layerLabel, zIndex) => {
     try {
-      const bounds = await getLayerBoundsFromCapabilities(layerName);
-      if (bounds && map && map.fitBounds) {
-        // Small timeout so tiles are visible when we fit
-        setTimeout(() => {
-          map.fitBounds(bounds, { maxZoom: 17 });
-          // Hide loader after zoom animation
-          setTimeout(() => showLoader(false), 300);
-        }, 50);
-      } else {
-        showLoader(false);
-      }
-    } catch (e) {
-      console.error('Error loading layer bounds:', e);
-      showLoader(false);
-    } finally {
-      tile.off("load", onLoad);
-      tile.off("loading", onLoad);
+      return L.tileLayer.wms(GEOSERVER_WMS, {
+        layers: layerName,
+        format: "image/png",
+        transparent: true,
+        version: "1.3.0",
+        zIndex,
+        attribution: `© ${layerLabel}`,
+      });
+    } catch (error) {
+      console.error(`Error creating layer ${layerName}:`, error);
+      return null;
     }
   };
 
-  // Also handle tile load errors
-  const onError = () => {
-    isLoading = false;
-    showLoader(false);
-    tile.off("load", onLoad);
-    tile.off("loading", onLoad);
-    console.error(`Failed to load layer: ${layerName}`);
-  };
-
-  tile.on("load", onLoad);
-  tile.on("tileerror", onError);
-
-  layersRef.current[layerName] = tile;
-  return tile;
-};
-
-// Helper function to zoom to layer bounds
-const zoomToLayerBounds = async (map, layerName, layer) => {
-  showLoader(true);
-  try {
-    const bounds = await getLayerBoundsFromCapabilities(layerName);
-    if (bounds && map && map.fitBounds) {
-      setTimeout(() => {
-        map.fitBounds(bounds, { maxZoom: 17 });
-        setTimeout(() => showLoader(false), 300);
-      }, 50);
-    } else {
-      showLoader(false);
-    }
-  } catch (e) {
-    console.error('Error zooming to layer bounds:', e);
-    showLoader(false);
-  }
-};
-
-// Loader management functions
-const showLoader = (show) => {
-  // Create or get loader element
-  let loader = document.getElementById('map-loader');
-  
-  if (!loader && show) {
-    loader = document.createElement('div');
-    loader.id = 'map-loader';
-    loader.innerHTML = `
-      <div style="
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0,0,0,0.7);
-        color: white;
-        padding: 20px;
-        border-radius: 8px;
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      ">
-        <div class="spinner" style="
-          width: 20px;
-          height: 20px;
-          border: 2px solid transparent;
-          border-top: 2px solid white;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        "></div>
-        Loading layer...
-      </div>
-    `;
-    
-    // Add CSS animation
-    if (!document.querySelector('#loader-styles')) {
-      const style = document.createElement('style');
-      style.id = 'loader-styles';
-      style.textContent = `
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+  // Layer manager
+  const layerManager = useCallback(
+    {
+      addLayer: async (layerName, layerLabel) => {
+        if (!mapRef.current) {
+          console.error("[addLayer] Map reference not initialized.");
+          return null;
         }
-      `;
-      document.head.appendChild(style);
-    }
-    
-    // Add to map container or body
-    const mapContainer = document.querySelector('.leaflet-container');
-    if (mapContainer) {
-      mapContainer.style.position = 'relative';
-      mapContainer.appendChild(loader);
-    } else {
-      document.body.appendChild(loader);
-    }
-  } else if (loader && !show) {
-    loader.remove();
-  }
-};
 
-
-
-
-  // Remove layer by name if exists
-  const removeLayerByName = (map, layerName) => {
-    if (!map || !layersRef.current[layerName]) return;
-    try {
-      map.removeLayer(layersRef.current[layerName]);
-    } catch (e) {
-      // ignore if already removed
-    }
-    delete layersRef.current[layerName];
-  };
-
-  
-
-
-  // Preferred NDVI/Change layer names (these were hardcoded in your original)
-  const NDVI_LAYER_NAME = "2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI";
-  const CHANGE_LAYER_NAME = "2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI_Change";
-
-  // Main function that applies toggles: adds or removes appropriate layers
-  const applyLayers = useCallback(async () => {
-    const map = mapRef?.current;
-    if (!map) return;
-
-    // Ensure legend control exists
-    ensureLegendControl(map);
-
-    // Determine desired layers and the order (zIndex)
-    const desired = [];
-    console.log(selectedCoupe)
-
-    if (showCoupeLayer && selectedCoupe) {
-      desired.push({ name: selectedCoupe, z: 1100 });
-    }
-    if (showNdviLayer) {
-      desired.push({ name: NDVI_LAYER_NAME, z: 1150 });
-    }
-    if (showNdwiLayer && selectedCoupe) {
-      const ndwiName = resolveNdwiLayerName(selectedCoupe, selectedYear);
-      if (ndwiName) desired.push({ name: ndwiName, z: 1160 });
-    }
-    if (showChangeLayer) {
-      desired.push({ name: CHANGE_LAYER_NAME, z: 1170 });
-    }
-
-    // Remove layers that are not desired
-    Object.keys(layersRef.current).forEach((key) => {
-      const stillWanted = desired.find((d) => d.name === key);
-      if (!stillWanted) {
-        removeLayerByName(map, key);
-      }
-    });
-
-    // Add desired layers (if not already present)
-    for (const d of desired) {
-      console.log("Adding layer:", d.name, "with zIndex:", d.z);
-      if (!layersRef.current[d.name]) {
-        const layer = getOrCreateLayer(map, d.name, d.z);
-        if (layer) layer.addTo(map);
-      } else {
-        // ensure zIndex is correct
+        setIsLayerLoading(true);
         try {
-          layersRef.current[d.name].setZIndex(d.z);
-        } catch (e) {}
+          const zIndex = calculateZIndex(layerName, addedLayers);
+          const newLayer = createLayer(layerName, layerLabel, zIndex);
+          if (!newLayer) throw new Error("Layer creation failed");
+
+          newLayer.addTo(mapRef.current);
+          return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+              console.warn(`[addLayer] Timeout while loading "${layerName}" (15s)`);
+              setIsLayerLoading(false);
+              resolve(newLayer);
+            }, 995000);
+
+            newLayer.on("load", () => {
+              console.log(`[addLayer] Layer "${layerName}" fully loaded`);
+              clearTimeout(timeout);
+              setIsLayerLoading(false);
+              resolve(newLayer);
+            });
+
+            newLayer.on("tileerror", (error) => {
+              console.warn(`[addLayer] Tile error in "${layerName}"`, error);
+              clearTimeout(timeout);
+              setIsLayerLoading(false);
+              resolve(newLayer);
+            });
+          });
+        } catch (error) {
+          console.error("[addLayer] Error adding layer:", error);
+          setIsLayerLoading(false);
+          throw error;
+        }
+      },
+
+      removeLayer: async (layerName) => {
+        const layer = addedLayers[layerName];
+        if (layer && mapRef.current?.hasLayer(layer)) {
+          return new Promise((resolve) => {
+            mapRef.current.removeLayer(layer);
+            layer.off();
+            setTimeout(() => resolve(true), 0);
+          });
+        }
+        return Promise.resolve(false);
+      },
+
+      setLayerOpacity: (layerName, opacityValue) => {
+        const layer = addedLayers[layerName];
+        if (layer && mapRef.current?.hasLayer(layer)) {
+          layer.setOpacity(opacityValue);
+        }
+      },
+    },
+    [mapRef, addedLayers]
+  );
+
+  // Toggle layer
+  const toggleLayer = useCallback(
+    async (layerName, layerLabel) => {
+      const previousBasemap = activeBasemap;
+      try {
+        if (addedLayers[layerName]) {
+          await layerManager.removeLayer(layerName);
+          setAddedLayers((prev) => {
+            const { [layerName]: _, ...rest } = prev;
+            return rest;
+          });
+          setOpacity((prev) => {
+            const { [layerName]: _, ...rest } = prev;
+            return rest;
+          });
+        } else {
+          const layer = await layerManager.addLayer(layerName, layerLabel);
+          if (!layer) throw new Error(`Failed to add layer: ${layerName}`);
+          const layerOpacity = 0.7;
+          setAddedLayers((prev) => ({ ...prev, [layerName]: layer }));
+          setOpacity((prev) => ({ ...prev, [layerName]: layerOpacity }));
+          layer.setOpacity(layerOpacity);
+        }
+      } catch (err) {
+        console.error(`Layer toggle failed for ${layerName}:`, err);
+        setActiveBasemap(previousBasemap);
+        setIsLayerLoading(false);
       }
-    }
+    },
+    [addedLayers, layerManager, setActiveBasemap, activeBasemap]
+  );
 
-    // Update legend: prefer NDVI, then NDWI, then CHANGE, then coupe
-    let legendTarget = null;
-    if (showNdviLayer) legendTarget = NDVI_LAYER_NAME;
-    else if (showNdwiLayer) legendTarget = resolveNdwiLayerName(selectedCoupe, selectedYear);
-    else if (showChangeLayer) legendTarget = CHANGE_LAYER_NAME;
-    else if (showCoupeLayer) legendTarget = selectedCoupe;
+  // Toggle group
+  const toggleGroup = useCallback((idx) => {
+    setOpenGroups((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  }, []);
 
-    updateLegend(map, legendTarget);
-  }, [
-    mapRef,
-    showCoupeLayer,
-    showNdviLayer,
-    showNdwiLayer,
-    showChangeLayer,
-    selectedCoupe,
-    selectedYear,
-  ]);
+  // Handle opacity change
+  const handleOpacityChange = useCallback(
+    (e, layerName) => {
+      const newOpacity = parseFloat(e.target.value);
+      setOpacity((prev) => ({ ...prev, [layerName]: newOpacity }));
+      layerManager.setLayerOpacity(layerName, newOpacity);
+    },
+    [layerManager]
+  );
 
-  // React to toggles, year or coupe changes
-  useEffect(() => {
-    applyLayers();
-  }, [applyLayers]);
-
-  // Handle selection change from dropdown
-  const handleSelectionChange = (selectedValues) => {
-    if (selectedValues.coupe) {
-      setSelectedCoupe(selectedValues.coupe);
-    } else {
-      setSelectedCoupe(null);
-    }
-    // applyLayers will run due to effect dependency on selectedCoupe
-  };
-
-  // Cleanup on unmount: remove dynamic layers and legend
-  useEffect(() => {
-    return () => {
+  // Cleanup on unmount
+  useEffect(
+    () => () => {
       const map = mapRef?.current;
       if (map) {
-        Object.keys(layersRef.current).forEach((k) => {
+        Object.values(addedLayers).forEach((layer) => {
           try {
-            map.removeLayer(layersRef.current[k]);
-          } catch (e) {}
+            map.removeLayer(layer);
+          } catch (e) {
+            console.warn("Error removing layer during cleanup:", e);
+          }
         });
-        layersRef.current = {};
-        if (legendControlRef.current && map) {
-          try {
-            legendControlRef.current.remove();
-          } catch (e) {}
-          legendControlRef.current = null;
-        }
       }
-    };
-  }, [mapRef]);
+    },
+    [mapRef, addedLayers]
+  );
+
+  // LayerGroup component
+  const LayerGroup = React.memo(
+    ({
+      group,
+      idx,
+      openGroups,
+      toggleGroup,
+      addedLayers,
+      toggleLayer,
+      opacity,
+      handleOpacityChange,
+      icon,
+      loadingLayers,
+    }) => {
+      return (
+        <div className="layer-group">
+          <button
+            type="button"
+            className="group-title"
+            onClick={() => toggleGroup(idx)}
+            aria-expanded={openGroups[idx] ? "true" : "false"}
+          >
+            <span className="group-title-content">
+              {icon && <span style={{ marginRight: 8, fontSize: 18, color: "#0b9700" }}>{icon}</span>}
+              {group.title}
+            </span>
+            <span className="arrow-icon">
+              {openGroups[idx] ? <FaChevronUp /> : <FaChevronDown />}
+            </span>
+          </button>
+
+          <div className={`layer-list-wrapper ${openGroups[idx] ? "expanded" : "collapsed"}`}>
+            {group.layerList.map((layer, index) => {
+              const layerName = getLayerName(layer);
+              const isChecked = !!addedLayers[layerName];
+              const isDisabled = loadingLayers && !isChecked;
+
+              return (
+                <div key={`${group.title}-${layerName}-${index}`} className="layer-item">
+                  <label className="layer-label-container">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleLayer(layerName, layer.Layer)}
+                      disabled={isDisabled}
+                    />
+                    <span
+                      className={`layer-label ${isChecked ? "layer-label-bold" : ""} ${
+                        isDisabled ? "layer-label-disabled" : ""
+                      }`}
+                    >
+                      {layer.Layer}
+                      {isDisabled && <span className="loading-dots">...</span>}
+                    </span>
+                  </label>
+
+                  {isChecked && (
+                    <div className="opacity-control">
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={opacity[layerName] ?? 0.7}
+                        onChange={(e) => handleOpacityChange(e, layerName)}
+                      />
+                      <span className="opacity-value">
+                        {Math.round((opacity[layerName] ?? 0.7) * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+  );
 
   return (
     <aside className="leftpanel">
       <h3 className="sidebar-title">
-        <img src="../assets/Explor1.png" alt="Icon" style={{ width: "20px", marginRight: "8px" }} />
+        <FaLayerGroup style={{ marginRight: "8px" }} />
         {text[language].exploreData}
       </h3>
-
-      {/* Forest Cover Change */}
-      <div className="sidebar-section">
-        <div className="section-header" onClick={() => toggleSection("forest")}>
-          <img src="../assets/forest.png" alt="Forest Icon" style={{ width: "20px", marginRight: "8px" }} />
-          <span>{text[language].forestCoverChange}</span>
-          {openSections.forest ? <FaChevronUp /> : <FaChevronDown />}
-        </div>
-
-        {openSections.forest && (
-          <div className="section-content">
-            <div>
-              <ForestHierarchyDropdowns language={language} onSelectionChange={handleSelectionChange} />
-            </div>
-
-            <div className="section-content">
-              <label className="green-label">{text[language].selectLayer}</label>
-              <div className="checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    className="checkbox"
-                    checked={showCoupeLayer}
-                    onChange={() => setShowCoupeLayer((prev) => !prev)}
-                  />
-                  {text[language].coupe}
-                </label>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    className="checkbox"
-                    checked={showNdviLayer}
-                    onChange={() => setShowNdviLayer((prev) => !prev)}
-                  />
-                  {text[language].ndvi}
-                </label>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    className="checkbox"
-                    checked={showNdwiLayer}
-                    onChange={() => setShowNdwiLayer((prev) => !prev)}
-                  />
-                  {text[language].ndwi}
-                </label>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    className="checkbox"
-                    checked={showChangeLayer}
-                    onChange={() => setShowChangeLayer((prev) => !prev)}
-                  />
-                  {text[language].ndviChange}
-                </label>
-              </div>
-
-              <div className="year-selection" style={{ marginTop: "10px" }}>
-                <label className="green-label">Select Year</label>
-                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="year-select">
-                  <option value="2023">2023</option>
-                  <option value="2024">2024</option>
-                  <option value="2025">2025</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="layer-groups-container">
+        {layersData.groups.map((group, idx) => (
+          <LayerGroup
+            key={`${group.title}-${idx}`}
+            group={group}
+            idx={idx}
+            openGroups={openGroups}
+            toggleGroup={toggleGroup}
+            addedLayers={addedLayers}
+            toggleLayer={toggleLayer}
+            opacity={opacity}
+            handleOpacityChange={handleOpacityChange}
+            icon={<FaLayerGroup />}
+            loadingLayers={isLayerLoading}
+          />
+        ))}
       </div>
-
-      {/* Boundaries */}
-      <div className="sidebar-section">
-        <div className="section-header" onClick={() => toggleSection("boundaries")}>
-          <img src="../assets/Boundry.png" alt="Boundaries Icon" style={{ width: "20px", marginRight: "8px" }} />
-          <span>{text[language].boundaries}</span>
-          {openSections.boundaries ? <FaChevronUp /> : <FaChevronDown />}
+      {isLayerLoading && (
+        <div className="global-loading-indicator">
+          <div className="loading-spinner"></div>
+          <span>Loading layer...</span>
         </div>
-
-        {openSections.boundaries && (
-          <div className="section-content">
-            <label className="green-label">{text[language].selectBoundaries}</label>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input type="checkbox" checked={showDistrictLayer} onChange={() => setShowDistrictLayer((p) => !p)} />
-                {text[language].district}
-              </label>
-              <label className="checkbox-label">
-                <input type="checkbox" />
-                {text[language].division}
-              </label>
-              <label className="checkbox-label">
-                <input type="checkbox" />
-                {text[language].range}
-              </label>
-              <label className="checkbox-label">
-                <input type="checkbox" />
-                {text[language].block}
-              </label>
-              <label className="checkbox-label">
-                <input type="checkbox" />
-                {text[language].compartment}
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Field Data */}
-      <div className="sidebar-section">
-        <div className="section-header" onClick={() => toggleSection("field")}>
-          <img src="../assets/field.png" alt="Field Data Icon" style={{ width: "20px", marginRight: "8px" }} />
-          <span>{text[language].fieldData}</span>
-          {openSections.field ? <FaChevronUp /> : <FaChevronDown />}
-        </div>
-
-        {openSections.field && (
-          <div className="section-content">
-            <label className="green-label">{text[language].selectPatrollingIncident}</label>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input type="checkbox" checked={showPatrollingLayer} onChange={() => setShowPatrollingLayer((p) => !p)} />
-                {text[language].patrollingRoute}
-              </label>
-              <label className="checkbox-label">
-                <input type="checkbox" checked={showIncidentLayer} onChange={(e) => setShowIncidentLayer(e.target.checked)} />
-                {text[language].incidentMarkers}
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </aside>
   );
 };
 
-export default LeftSidebar;
+export default LayerTogglePanel;
