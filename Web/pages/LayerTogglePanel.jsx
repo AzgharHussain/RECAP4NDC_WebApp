@@ -7,17 +7,16 @@ import L from "leaflet";
 
 const GEOSERVER_WMS = "https://www.gisfy.co.in:8443/geoserver/wms";
 
-   const layersData = {
+const layersData = {
   groups: [
     {
       title: "Gujarat State Boundaries",
       layerList: [
         { Name: "Gujarat_Forest_Area_Boundary_March_2023", Layer: "Gujarat Forest Area Boundary" },
-       
         { Name: "Gujarat_State_Boundary", Layer: "Gujarat State Boundary" },
       ]
     },
- {
+    {
       title: "Territorial Circle Boundaries",
       layerList: [
         { Name: "Teritorial Circle_Beat_Boundary", Layer: "Territorial Circle Beat Boundary" },
@@ -27,7 +26,8 @@ const GEOSERVER_WMS = "https://www.gisfy.co.in:8443/geoserver/wms";
         { Name: "Teritorial Circle_Village_Boundary", Layer: "Territorial Circle Village Boundary" },
         { Name: "Teritorial_Circle_Boundary", Layer: "Territorial Circle Boundary" },
       ]
-    },{
+    },
+    {
       title: "Wildlife Circle Boundaries",
       layerList: [
         { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat Boundary" },
@@ -38,11 +38,10 @@ const GEOSERVER_WMS = "https://www.gisfy.co.in:8443/geoserver/wms";
         { Name: "Wildlife_Circle_Village_Boundary", Layer: "Wildlife Circle Village Boundary" },
       ]
     },
-      
     {
-      title:"social Forestry Boundaries",
-      layerList:[
-       { Name: "Gujarat_Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat Boundary" },
+      title: "Social Forestry Boundaries",
+      layerList: [
+        { Name: "Gujarat_Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat Boundary" },
         { Name: "Gujarat_Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle Boundary" },
         { Name: "Gujarat_Social_Forestry_Range_Boundary", Layer: "Social Forestry Range Boundary" },
         { Name: "Gujarat_Social_Forestry_Round_Boundary", Layer: "Social Forestry Round Boundary" },
@@ -253,7 +252,6 @@ const GEOSERVER_WMS = "https://www.gisfy.co.in:8443/geoserver/wms";
         { Name: "Surendranagar_coupe", Layer: "Surendranagar Coupe" },
       ]
     },
-   
     {
       title: "Vansi",
       layerList: [
@@ -269,62 +267,57 @@ const GEOSERVER_WMS = "https://www.gisfy.co.in:8443/geoserver/wms";
         { Name: "Vyara_MM_Coupe_Boundary", Layer: "Vyara MM Coupe Boundary" },
       ]
     },
-    
   ]
-}
+};
 
+// Text content
+const text = {
+  en: {
+    exploreData: "Explore Data",
+    forestCoverChange: "Forest Cover Change",
+    selectLayer: "Select Layer:",
+    selectBoundaries: "Select Boundaries:",
+    selectPatrollingIncident: "Select Patrolling / Incident:",
+    district: "District",
+    coupe: "Coupe",
+    patrollingRoutes: "Patrolling Routes",
+    incidentMarkers: "Incident Markers",
+    filter: "Filter",
+    ndwi: "NDWI",
+    ndvi: "NDVI",
+    ndviChange: "NDVI Change",
+    division: "Division",
+    range: "Range",
+    block: "Block",
+    compartment: "Compartment",
+    fieldData: "Field Data",
+    patrollingRoute: "Patrolling Route",
+    boundaries: "Boundaries",
+  },
+  gu: {
+    exploreData: "ડેટા તપાસો",
+    forestCoverChange: "વન આવરણમાં ફેરફાર",
+    selectLayer: "લેયર પસંદ કરો:",
+    selectBoundaries: "સીમા પસંદ કરો:",
+    selectPatrollingIncident: "પેટ્રોલિંગ / ઘટના પસંદ કરો:",
+    district: "જિલ્લો",
+    coupe: "કૂપ",
+    patrollingRoutes: "પેટ્રોલિંગ માર્ગો",
+    incidentMarkers: "ઘટના ચિહ્નો",
+    filter: "ફિલ્ટર",
+    ndwi: "પાણી સૂચક",
+    ndvi: "હરિયાળી સૂચક",
+    ndviChange: "હરિયાળી સૂચક ફેરફાર",
+    division: "વિભાગ",
+    range: "વિસ્તાર",
+    block: "ખંડ",
+    compartment: "વિભાગ નંબર",
+    fieldData: "મેદાનની માહિતી",
+    patrollingRoute: "પેટ્રોલિંગ માર્ગ",
+    boundaries: "સીમાઓ",
+  },
+};
 
-
-
-
-
-  // Text content
-  const text = {
-    en: {
-      exploreData: "Explore Data",
-      forestCoverChange: "Forest Cover Change",
-      selectLayer: "Select Layer:",
-      selectBoundaries: "Select Boundaries:",
-      selectPatrollingIncident: "Select Patrolling / Incident:",
-      district: "District",
-      coupe: "Coupe",
-      patrollingRoutes: "Patrolling Routes",
-      incidentMarkers: "Incident Markers",
-      filter: "Filter",
-      ndwi: "NDWI",
-      ndvi: "NDVI",
-      ndviChange: "NDVI Change",
-      division: "Division",
-      range: "Range",
-      block: "Block",
-      compartment: "Compartment",
-      fieldData: "Field Data",
-      patrollingRoute: "Patrolling Route",
-      boundaries: "Boundaries",
-    },
-    gu: {
-      exploreData: "ડેટા તપાસો",
-      forestCoverChange: "વન આવરણમાં ફેરફાર",
-      selectLayer: "લેયર પસંદ કરો:",
-      selectBoundaries: "સીમા પસંદ કરો:",
-      selectPatrollingIncident: "પેટ્રોલિંગ / ઘટના પસંદ કરો:",
-      district: "જિલ્લો",
-      coupe: "કૂપ",
-      patrollingRoutes: "પેટ્રોલિંગ માર્ગો",
-      incidentMarkers: "ઘટના ચિહ્નો",
-      filter: "ફિલ્ટર",
-      ndwi: "પાણી સૂચક",
-      ndvi: "હરિયાળી સૂચક",
-      ndviChange: "હરિયાળી સૂચક ફેરફાર",
-      division: "વિભાગ",
-      range: "વિસ્તાર",
-      block: "ખંડ",
-      compartment: "વિભાગ નંબર",
-      fieldData: "મેદાનની માહિતી",
-      patrollingRoute: "પેટ્રોલિંગ માર્ગ",
-      boundaries: "સીમાઓ",
-    },
-  };
 const getLayerName = (layer) => layer.Name || layer.layer || layer;
 
 const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
@@ -339,24 +332,23 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
   const [groupIds, setGroupIds] = useState({});
   const [layerIds, setLayerIds] = useState({});
 
-useEffect(() => {
-  const groupIdMap = {};
-  const layerIdMap = {};
+  useEffect(() => {
+    const groupIdMap = {};
+    const layerIdMap = {};
 
-  layersData.groups.forEach((group, groupIndex) => {
-    const groupId = uuidv4();
-    groupIdMap[groupIndex] = groupId;
+    layersData.groups.forEach((group, groupIndex) => {
+      const groupId = uuidv4();
+      groupIdMap[groupIndex] = groupId;
 
-    group.layerList.forEach((layer, layerIndex) => {
-      const layerName = getLayerName(layer);
-      layerIdMap[`${groupIndex}-${layerName}`] = uuidv4();
+      group.layerList.forEach((layer, layerIndex) => {
+        const layerName = getLayerName(layer);
+        layerIdMap[`${groupIndex}-${layerName}`] = uuidv4();
+      });
     });
-  });
 
-  setGroupIds(groupIdMap);
-  setLayerIds(layerIdMap);
-}, []);
-
+    setGroupIds(groupIdMap);
+    setLayerIds(layerIdMap);
+  }, []);
 
   // Initialize open groups
   useEffect(() => {
@@ -367,88 +359,21 @@ useEffect(() => {
     setOpenGroups(initialOpenState);
   }, []);
 
+  const getLegendUrl = (layerName) => {
+    return `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${layerName}`;
+  };
 
-const LegendControl = L.Control.extend({
-  options: {
-    position: 'bottomright'
-  },
+  const getLayerTitle = (layerName) => {
+    for (const group of layersData.groups) {
+      for (const layer of group.layerList) {
+        if (layer.Name === layerName) {
+          return layer.Layer;
+        }
+      }
+    }
+    return layerName;
+  };
 
-  onAdd: function (map) {
-    this._div = L.DomUtil.create("div", "legend-control");
-    
-    // Apply styles programmatically
-    Object.assign(this._div.style, {
-      position: "fixed",
-      bottom: "20px",
-      right: "20px",
-      padding: "10px",
-      cursor: "pointer",
-      borderRadius: "16.606px",
-      background: "transparent",
-      border: "none",
-      boxShadow: "none",
-      zIndex: "1000",
-      backgroundColor: "white", // Added for visibility, remove if you want completely transparent
-      minWidth: "150px"
-    });
-    
-    this.update();
-    return this._div;
-  },
-
-  update: function (layerNames = []) {
-    if (!this._div) return;
-
-    // Clear previous content
-    this._div.innerHTML = "<h4 style='margin: 0 0 10px 0;'>Legend</h4>";
-
-    // Fetch and display legend for each layer
-    layerNames.forEach((layerName) => {
-      const legendUrl = `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${layerName}`;
-      
-      const legendItem = document.createElement("div");
-      legendItem.style.display = "flex";
-      legendItem.style.alignItems = "center";
-      legendItem.style.marginBottom = "5px";
-      
-      const img = document.createElement("img");
-      img.src = legendUrl;
-      img.alt = `${layerName} legend`;
-      img.style.marginRight = "10px";
-      img.style.width = "20px";
-      img.style.height = "20px";
-      
-      const label = document.createElement("span");
-      label.textContent = layerName;
-      label.style.fontSize = "12px";
-      
-      legendItem.appendChild(img);
-      legendItem.appendChild(label);
-      this._div.appendChild(legendItem);
-    });
-  },
-});
-
-// Usage:
-// const legendControl = new LegendControl().addTo(map);
-// legendControl.update(['layer1', 'layer2', 'layer3']);
-
-// Add the legend control to your map
-useEffect(() => {
-  if (mapRef.current) {
-    const legendControl = new LegendControl({ position: "bottomright" });
-    mapRef.current.addControl(legendControl);
-
-    // Update legend whenever addedLayers changes
-    const layerNames = Object.keys(addedLayers);
-    legendControl.update(layerNames);
-
-    // Cleanup
-    return () => {
-      mapRef.current?.removeControl(legendControl);
-    };
-  }
-}, [mapRef, addedLayers]);
   // Calculate z-index
   const calculateZIndex = () => {
     layerCounterRef.current += 1;
@@ -494,7 +419,7 @@ useEffect(() => {
             console.warn(`[addLayer] Timeout while loading "${layerName}" (15s)`);
             setIsLayerLoading(false);
             resolve(newLayer);
-          }, 995000);
+          }, 15000);
 
           newLayer.on("load", () => {
             console.log(`[addLayer] Layer "${layerName}" fully loaded`);
@@ -678,54 +603,78 @@ useEffect(() => {
     }
   );
 
-  return (<> 
-  
-  {/* <div
-    style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          padding: "10px",  
-          cursor: "pointer",
-          borderRadius: "16.606px",
-          background: "transparent",  // Hide the background
-          border: "none",  // Remove the border
-          boxShadow: "none", // Remove the box shadow if needed
-          zIndex: 1000,
-        }}>
-          ashhgkuyjktsdfvu777777777
- </div> */}
-    <aside className="leftpanel">
-      <h3 className="sidebar-title">
-        <FaLayerGroup style={{ marginRight: "8px" }} />
-        {text[language].exploreData}
-      </h3>
-      <div className="layer-groups-container">
-      {layersData.groups.map((group, idx) => (
-  <LayerGroup
-    key={groupIds[idx]} // Use UUID for group key
-    group={group}
-    idx={idx}
-    openGroups={openGroups}
-    toggleGroup={toggleGroup}
-    addedLayers={addedLayers}
-    toggleLayer={toggleLayer}
-    opacity={opacity}
-    handleOpacityChange={handleOpacityChange}
-    icon={<FaLayerGroup />}
-    loadingLayers={isLayerLoading}
-    groupId={groupIds[idx]}
-  />
-))}
-      </div>
-      {isLayerLoading && (
-        <div className="global-loading-indicator">
-          <div className="loading-spinner"></div>
-          <span>Loading layer...</span>
+  // Legend Component
+  const LegendPanel = () => {
+    const activeLayers = Object.keys(addedLayers);
+    
+    if (activeLayers.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="legend-panel">
+        <h4 className="legend-title">Layer Legends</h4>
+        <div className="legend-items-container">
+          {activeLayers.map((layerName) => (
+            <div key={layerName} className="legend-item">
+              <h5 className="legend-layer-title">{getLayerTitle(layerName)}</h5>
+              <div className="legend-image-container">
+                <img
+                  src={getLegendUrl(layerName)}
+                  alt={`${getLayerTitle(layerName)} legend`}
+                  className="legend-image"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.style.display = 'none';
+                    const fallback = document.createElement('div');
+                    fallback.className = 'legend-fallback';
+                    fallback.textContent = 'Legend not available';
+                    e.target.parentNode.appendChild(fallback);
+                  }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-    </aside>
-     </>
+      </div>
+    );
+  };
+
+  return (
+    <> 
+      <LegendPanel />
+      
+      <aside className="leftpanel">
+        <h3 className="sidebar-title">
+          <FaLayerGroup style={{ marginRight: "8px" }} />
+          {text[language].exploreData}
+        </h3>
+        <div className="layer-groups-container">
+          {layersData.groups.map((group, idx) => (
+            <LayerGroup
+              key={groupIds[idx]}
+              group={group}
+              idx={idx}
+              openGroups={openGroups}
+              toggleGroup={toggleGroup}
+              addedLayers={addedLayers}
+              toggleLayer={toggleLayer}
+              opacity={opacity}
+              handleOpacityChange={handleOpacityChange}
+              icon={<FaLayerGroup />}
+              loadingLayers={isLayerLoading}
+              groupId={groupIds[idx]}
+            />
+          ))}
+        </div>
+        {isLayerLoading && (
+          <div className="global-loading-indicator">
+            <div className="loading-spinner"></div>
+            <span>Loading layer...</span>
+          </div>
+        )}
+      </aside>
+    </>
   );
 };
 
