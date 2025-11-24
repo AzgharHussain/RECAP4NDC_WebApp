@@ -368,10 +368,9 @@ router.post('/hierarchy', async (req, res) => {
             wcbb."BEAT",
             
             wcvb."Village",
-            wcvb."Village_id",
-            cm.coupe_code,
-            cm.coupe_name,
-            cm.wildlife_village_id
+          
+            cm.coupe_name
+          
           FROM public."Wildlife_Circle_Division_Boundary" wcdb
           LEFT JOIN public."Wildlife_Circle_Range_Boundary" wcrb
             ON wcdb."DIVISION" = wcrb."DIVISION"
@@ -382,8 +381,8 @@ router.post('/hierarchy', async (req, res) => {
           LEFT JOIN public."Wildlife_Circle_Village_Boundary" wcvb
             ON wcbb."BEAT" = wcvb."BEAT"
           LEFT JOIN public.coupe_metadata cm
-            ON cm.wildlife_village_id::integer = wcvb."Village_id"
-          WHERE wcdb."DIVISION" = '${division_name}'
+            ON cm.wildlife_village = wcvb."Village"
+          WHERE wcdb."DIVISION" = '${division_name}' and  wildlife_village is not null
           ORDER BY
             wcdb."DIVISION",
             wcrb."RANGE",
@@ -405,10 +404,9 @@ router.post('/hierarchy', async (req, res) => {
             tcbb."Beat" as "BEAT",
            
             tcvb."Village",
-            tcvb."Village_id",
-            cm.coupe_code,
-            cm.coupe_name,
-            cm.territorial_village_id
+        
+            cm.coupe_name
+           
           FROM public."Teritorial Circle_Division_Boundary" tcdb
           LEFT JOIN public."Teritorial Circle_Range_Boundary" tcrb
             ON tcdb."Division" = tcrb."Division"
@@ -419,8 +417,8 @@ router.post('/hierarchy', async (req, res) => {
           LEFT JOIN public."Teritorial Circle_Village_Boundary" tcvb
             ON tcbb."Beat" = tcvb."Beat"
           LEFT JOIN public.coupe_metadata cm
-            ON cm.territorial_village_id::integer = tcvb."Village_id"
-          WHERE tcdb."Division" = '${division_name}'
+            ON cm.territorial_village = tcvb."Village"
+          WHERE tcdb."Division" = '${division_name}' and  territorial_village is not null
           ORDER BY
             tcdb."Division",
             tcrb."Range",
@@ -442,10 +440,9 @@ router.post('/hierarchy', async (req, res) => {
             sfbb."BEAT",
            
             sfvb."Village",
-            sfvb."Village_id",
-            cm.coupe_code,
-            cm.coupe_name,
-            cm.social_village_id
+          
+            cm.coupe_name
+           
           FROM public."Social_Forestry_Division_Boundary" sfdb
           LEFT JOIN public."Social_Forestry_Range_Boundary" sfrb
             ON sfdb."DIVISION" = sfrb."DIVISION"
@@ -456,8 +453,8 @@ router.post('/hierarchy', async (req, res) => {
           LEFT JOIN public."Social_Forestry_Village_Boundary" sfvb
             ON sfbb."BEAT" = sfvb."BEAT"
           LEFT JOIN public.coupe_metadata cm
-            ON cm.social_village_id::integer = sfvb."Village_id"
-          WHERE sfdb."DIVISION" = '${division_name}'
+            ON cm.social_village = sfvb."Village"
+          WHERE sfdb."DIVISION" = '${division_name}' and  social_village is not null
           ORDER BY
             sfdb."DIVISION",
             sfrb."RANGE",
