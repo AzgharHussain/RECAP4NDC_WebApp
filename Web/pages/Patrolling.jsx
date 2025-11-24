@@ -419,6 +419,18 @@ const handleExport = () => {
   // Apply comprehensive styling
   const range = XLSX.utils.decode_range(ws['!ref']);
   
+  // Define color scheme
+  const colors = {
+    title: "2F75B5",        // Dark Blue
+    mainHeader: "4472C4",   // Medium Blue
+    subHeader: "8FAADC",    // Light Blue
+    totals: "70AD47",       // Green
+    officerName: "F2F2F2",  // Light Gray
+    evenRow: "FFFFFF",      // White
+    oddRow: "F8F9FA",       // Very Light Gray
+    timestamp: "D9E1F2"     // Very Light Blue
+  };
+
   // Style all cells
   for (let R = range.s.r; R <= range.e.r; R++) {
     for (let C = range.s.c; C <= range.e.c; C++) {
@@ -444,27 +456,27 @@ const handleExport = () => {
         cell.s = {
           ...cell.s,
           font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "2F75B5" } },
+          fill: { fgColor: { rgb: colors.title } },
           alignment: { horizontal: "center", vertical: "center" }
         };
       }
 
-      // Main header row (Row 2)
+      // Main header row (Row 2) - Dark Blue Background
       if (R === 2) {
         cell.s = {
           ...cell.s,
           font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "2F75B5" } },
+          fill: { fgColor: { rgb: colors.mainHeader } },
           alignment: { horizontal: "center", vertical: "center" }
         };
       }
 
-      // Sub-header row (Row 3)
+      // Sub-header row (Row 3) - Light Blue Background
       if (R === 3) {
         cell.s = {
           ...cell.s,
           font: { bold: true, sz: 10, color: { rgb: "000000" } },
-          fill: { fgColor: { rgb: "BDD7EE" } },
+          fill: { fgColor: { rgb: colors.subHeader } },
           alignment: { horizontal: "center", vertical: "center" }
         };
       }
@@ -476,15 +488,15 @@ const handleExport = () => {
           cell.s = {
             ...cell.s,
             font: { bold: true, sz: 10 },
-            fill: { fgColor: { rgb: "F2F2F2" } },
+            fill: { fgColor: { rgb: colors.officerName } },
             alignment: { horizontal: "left", vertical: "center" }
           };
         } else {
-          // Alternate row coloring for data
+          // Alternate row coloring for data cells
           if (R % 2 === 0) {
-            cell.s.fill = { fgColor: { rgb: "FFFFFF" } };
+            cell.s.fill = { fgColor: { rgb: colors.evenRow } };
           } else {
-            cell.s.fill = { fgColor: { rgb: "F8F9FA" } };
+            cell.s.fill = { fgColor: { rgb: colors.oddRow } };
           }
         }
       }
@@ -494,7 +506,7 @@ const handleExport = () => {
         cell.s = {
           ...cell.s,
           font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "70AD47" } },
+          fill: { fgColor: { rgb: colors.totals } },
           alignment: { horizontal: "center", vertical: "center" }
         };
       }
@@ -505,14 +517,18 @@ const handleExport = () => {
           cell.s = {
             ...cell.s,
             font: { bold: true, italic: true, sz: 9 },
+            fill: { fgColor: { rgb: colors.timestamp } },
             alignment: { horizontal: "left", vertical: "center" }
           };
         } else if (C === 1) {
           cell.s = {
             ...cell.s,
             font: { italic: true, sz: 9 },
+            fill: { fgColor: { rgb: colors.timestamp } },
             alignment: { horizontal: "left", vertical: "center" }
           };
+        } else {
+          cell.s.fill = { fgColor: { rgb: colors.timestamp } };
         }
       }
     }
@@ -578,13 +594,13 @@ const handleExport = () => {
   // Style the detailed sheet
   const detailedRange = XLSX.utils.decode_range(detailedSheet['!ref']);
   
-  // Add header styling for detailed sheet
+  // Add header styling for detailed sheet with blue background
   for (let C = detailedRange.s.c; C <= detailedRange.e.c; C++) {
     const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
     if (detailedSheet[headerCell]) {
       detailedSheet[headerCell].s = {
         font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "4472C4" } },
+        fill: { fgColor: { rgb: colors.mainHeader } }, // Using the same blue as main header
         alignment: { horizontal: "center", vertical: "center" },
         border: {
           top: { style: "thin", color: { rgb: "000000" } },
@@ -614,7 +630,9 @@ const handleExport = () => {
         
         // Alternate row colors
         if (R % 2 === 0) {
-          detailedSheet[cell].s.fill = { fgColor: { rgb: "F8F9FA" } };
+          detailedSheet[cell].s.fill = { fgColor: { rgb: colors.oddRow } };
+        } else {
+          detailedSheet[cell].s.fill = { fgColor: { rgb: colors.evenRow } };
         }
       }
     }
