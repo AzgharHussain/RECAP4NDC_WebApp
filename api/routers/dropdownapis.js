@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 
-const { sequelize } = require('../config/database');
+const { sequelize } = require('../config/ndvidatabase');
 
 // Helper function to execute queries using Sequelize
 const executeQuery = async (myquery, params = []) => {
@@ -393,40 +393,42 @@ router.post('/hierarchy', async (req, res) => {
         `;
         break;
       case 2: // Territorial Forest
-        myquery = `
+      //   myquery = `
         
-			SELECT DISTINCT
-            tcdb."Division" as "DIVISION",
-            tcrb."Range" as "RANGE",
+			// SELECT DISTINCT
+      //       tcdb."Division" as "DIVISION",
+      //       tcrb."Range" as "RANGE",
             
-            tcrdb."Round" as "ROUND",
+      //       tcrdb."Round" as "ROUND",
            
-            tcbb."Beat" as "BEAT",
+      //       tcbb."Beat" as "BEAT",
            
-            tcvb."Village",
+      //       tcvb."Village",
         
-            cm.coupe_name
+      //       cm.coupe_name
            
-          FROM public."Teritorial Circle_Division_Boundary" tcdb
-          LEFT JOIN public."Teritorial Circle_Range_Boundary" tcrb
-            ON tcdb."Division" = tcrb."Division"
-          LEFT JOIN public."Teritorial Circle_Round_Boundary" tcrdb
-            ON tcrb."Range" = tcrdb."Range"
-          LEFT JOIN public."Teritorial Circle_Beat_Boundary" tcbb
-            ON tcrdb."Round" = tcbb."Round"
-          LEFT JOIN public."Teritorial Circle_Village_Boundary" tcvb
-            ON tcbb."Beat" = tcvb."Beat"
-          LEFT JOIN public.coupe_metadata cm
-            ON cm.territorial_village = tcvb."Village"
-          WHERE tcdb."Division" = '${division_name}' and  territorial_village is not null
-          ORDER BY
-            tcdb."Division",
-            tcrb."Range",
-            tcrdb."Round",
-            tcbb."Beat",
-            tcvb."Village",
-            cm.coupe_name
-        `;
+      //     FROM public."Teritorial Circle_Division_Boundary" tcdb
+      //     LEFT JOIN public."Teritorial Circle_Range_Boundary" tcrb
+      //       ON tcdb."Division" = tcrb."Division"
+      //     LEFT JOIN public."Teritorial Circle_Round_Boundary" tcrdb
+      //       ON tcrb."Range" = tcrdb."Range"
+      //     LEFT JOIN public."Teritorial Circle_Beat_Boundary" tcbb
+      //       ON tcrdb."Round" = tcbb."Round"
+      //     LEFT JOIN public."Teritorial Circle_Village_Boundary" tcvb
+      //       ON tcbb."Beat" = tcvb."Beat"
+      //     LEFT JOIN public.coupe_metadata cm
+      //       ON cm.territorial_village = tcvb."Village"
+      //     WHERE tcdb."Division" = '${division_name}' and  territorial_village is not null
+      //     ORDER BY
+      //       tcdb."Division",
+      //       tcrb."Range",
+      //       tcrdb."Round",
+      //       tcbb."Beat",
+      //       tcvb."Village",
+      //       cm.coupe_name
+      //   `;
+
+      myquery = `SELECT * FROM Teritorial_final_metadata where "DIVISION"='${division_name}';`;
         break;
       case 3: // Social Forestry
         myquery = `
