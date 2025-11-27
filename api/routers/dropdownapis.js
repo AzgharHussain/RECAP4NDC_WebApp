@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 
-const { sequelize } = require('../config/ndvidatabase');
+const { sequelize } = require('../config/database');
 
 // Helper function to execute queries using Sequelize
 const executeQuery = async (myquery, params = []) => {
