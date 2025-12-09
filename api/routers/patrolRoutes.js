@@ -1,8 +1,6 @@
 const express = require('express');
 const { Client } = require('pg');
 const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
 const router = express.Router();
 
 // PostgreSQL client
@@ -26,26 +24,22 @@ const upload = multer({
   }
 });
 
-// POST route for patrol
-router.post('/patrol-post', upload.fields([
-  { name: 'start_image', maxCount: 1 },
-  { name: 'end_image', maxCount: 1 }
-]), async (req, res) => {
+// POST route for patrol with multiple images and notes
+// POST route for patrol with multiple images (no notes)
+router.post('/patrol-post', upload.any(), async (req, res) => {
   const pat_data = req.body;
   // Check required fields
   const requiredFields = ['patrol_officer_name', 'start_time', 'end_time', 'start_location', 'end_location', 'distance_kms', 'geom', 'user_id', 'patrolling_type_id', 'number_of_staff'];
   for (let field of requiredFields) {
     if (!pat_data[field]) return res.status(400).json({ error: `Missing field: ${field}` });
   }
-  if (!req.files || (!req.files.start_image && !req.files.end_image)) {
-    return res.status(400).json({ error: 'Files missing' });
-  }
+
   try {
     // Insert patrol data
     const query1 = `
       INSERT INTO patrols (
         patrol_officer_name, start_time, end_time,
-        start_location, end_location, distance_kms, geom, 
+        start_location, end_location, distance_kms, geom,
         user_id, patrolling_type_id, number_of_staff
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING patrol_id;
@@ -64,21 +58,18 @@ router.post('/patrol-post', upload.fields([
     ]);
     const patrol_id = result.rows[0].patrol_id;
 
-    // Convert images to base64 and insert
-    const insertImage = async (fileArray, imageType) => {
-      if (!fileArray) return;
-      for (const file of fileArray) {
-        const base64Image = file.buffer.toString('base64');
-        const mimeType = file.mimetype;
-        await client.query(
-          `INSERT INTO patrol_team_images (image_data, image_type, patrol_id, image_category) VALUES ($1, $2, $3, $4)`,
-          [base64Image, mimeType, patrol_id, imageType]
-        );
-      }
-    };
-    // Insert start and end images with their types
-    await insertImage(req.files.start_image, 'start_image');
-    await insertImage(req.files.end_image, 'end_image');
+    // Insert images (no notes)
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
+      const base64Image = file.buffer.toString('base64');
+      const mimeType = file.mimetype;
+      await client.query(
+        `INSERT INTO patrol_images (image_data, image_type, patrol_id, image_category)
+         VALUES ($1, $2, $3, $4)`,
+        [base64Image, mimeType, patrol_id, `image_${i+1}`]
+      );
+    }
+
     res.json({ message: 'Data created successfully', patrol_id });
   } catch (err) {
     console.error(err);
@@ -86,31 +77,35 @@ router.post('/patrol-post', upload.fields([
   }
 });
 
-// GET all patrols
+// GET all patrols with images and notes
 router.get('/patrol-info', async (req, res) => {
   try {
     const query = `
       SELECT
         p.*,
         pt.type_name,
-        MAX(CASE WHEN i.image_category = 'start_image' THEN i.image_data END) AS start_image_data,
-        MAX(CASE WHEN i.image_category = 'start_image' THEN i.image_type END) AS start_image_type,
-        MAX(CASE WHEN i.image_category = 'end_image' THEN i.image_data END) AS end_image_data,
-        MAX(CASE WHEN i.image_category = 'end_image' THEN i.image_type END) AS end_image_type
+        json_agg(
+          json_build_object(
+            'image_id', pi.image_id,
+            'image_data', pi.image_data,
+            'image_type', pi.image_type,
+            'image_category', pi.image_category,
+            'note', pi.note
+          )
+        ) AS images
       FROM patrols p
-      LEFT JOIN patrol_team_images i ON p.patrol_id = i.patrol_id
+      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       GROUP BY p.patrol_id, pt.type_name
       ORDER BY p.patrol_id DESC;
     `;
     const result = await client.query(query);
-    // Format response with data URLs for easy frontend usage
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_image: patrol.start_image_data ?
-        `data:${patrol.start_image_type};base64,${patrol.start_image_data}` : null,
-      end_image: patrol.end_image_data ?
-        `data:${patrol.end_image_type};base64,${patrol.end_image_data}` : null
+      images: patrol.images.map(img => ({
+        ...img,
+        image_data: img.image_data ? `data:${img.image_type};base64,${img.image_data}` : null
+      }))
     }));
     res.json({ message: 'All patrols fetched successfully', data: formattedData });
   } catch (err) {
@@ -119,7 +114,7 @@ router.get('/patrol-info', async (req, res) => {
   }
 });
 
-// GET patrol by ID
+
 router.get('/patrols/:patrol_id', async (req, res) => {
   const { patrol_id } = req.params;
   try {
@@ -127,12 +122,17 @@ router.get('/patrols/:patrol_id', async (req, res) => {
       SELECT
         p.*,
         pt.type_name,
-        MAX(CASE WHEN i.image_category = 'start_image' THEN i.image_data END) AS start_image_data,
-        MAX(CASE WHEN i.image_category = 'start_image' THEN i.image_type END) AS start_image_type,
-        MAX(CASE WHEN i.image_category = 'end_image' THEN i.image_data END) AS end_image_data,
-        MAX(CASE WHEN i.image_category = 'end_image' THEN i.image_type END) AS end_image_type
+        json_agg(
+          json_build_object(
+            'image_id', pi.image_id,
+            'image_data', pi.image_data,
+            'image_type', pi.image_type,
+            'image_category', pi.image_category,
+            'note', pi.note
+          )
+        ) AS images
       FROM patrols p
-      LEFT JOIN patrol_team_images i ON p.patrol_id = i.patrol_id
+      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       WHERE p.patrol_id = $1
       GROUP BY p.patrol_id, pt.type_name;
@@ -142,42 +142,17 @@ router.get('/patrols/:patrol_id', async (req, res) => {
       return res.status(404).json({ message: 'Patrol not found' });
     }
     const patrol = result.rows[0];
-    // Format response with data URLs
     const formattedPatrol = {
       ...patrol,
-      start_image: patrol.start_image_data ?
-        `data:${patrol.start_image_type};base64,${patrol.start_image_data}` : null,
-      end_image: patrol.end_image_data ?
-        `data:${patrol.end_image_type};base64,${patrol.end_image_data}` : null
+      images: patrol.images.map(img => ({
+        ...img,
+        image_data: img.image_data ? `data:${img.image_type};base64,${img.image_data}` : null
+      }))
     };
     res.json({ message: 'Patrol fetched successfully', data: formattedPatrol });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch patrol' });
-  }
-});
-
-// Optional: Separate endpoint to get just images if needed
-router.get('/patrols/:patrol_id/images/:image_type', async (req, res) => {
-  const { patrol_id, image_type } = req.params;
-  try {
-    const query = `
-      SELECT image_data, image_type
-      FROM patrol_team_images
-      WHERE patrol_id = $1 AND image_category = $2
-      LIMIT 1;
-    `;
-    const result = await client.query(query, [patrol_id, image_type]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Image not found' });
-    }
-    const image = result.rows[0];
-    const imageBuffer = Buffer.from(image.image_data, 'base64');
-    res.set('Content-Type', image.image_type);
-    res.send(imageBuffer);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch image' });
   }
 });
 

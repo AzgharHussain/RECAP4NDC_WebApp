@@ -12,40 +12,42 @@ const layersData = {
     {
       title: "Gujarat State Boundaries",
       layerList: [
-        { Name: "Gujarat_Forest_Area_Boundary_March_2023", Layer: "Gujarat Forest Area Boundary" },
-        { Name: "Gujarat_State_Boundary", Layer: "Gujarat State Boundary" },
+        
+        { Name:"Gujarat_district", Layer: "District" },
+        { Name: "Gujarat_Forest_Area_Boundary_March_2023", Layer: "Forest Area" }
+      
       ]
     },
     {
-      title: "Territorial Circle Boundaries",
+      title: "Territorial Circle ",
       layerList: [
-        { Name: "Teritorial Circle_Beat_Boundary", Layer: "Territorial Circle Beat Boundary" },
-        { Name: "Teritorial Circle_Division_Boundary", Layer: "Territorial Circle Division Boundary" },
-        { Name: "Teritorial Circle_Range_Boundary", Layer: "Territorial Circle Range Boundary" },
-        { Name: "Teritorial Circle_Round_Boundary", Layer: "Territorial Circle Round Boundary" },
-        { Name: "Teritorial Circle_Village_Boundary", Layer: "Territorial Circle Village Boundary" },
-        { Name: "Teritorial_Circle_Boundary", Layer: "Territorial Circle Boundary" },
+        { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
+        { Name: "Teritorial_Circle_Division_Boundary", Layer: "Territorial Circle Division" },
+        { Name: "Teritorial_Circle_Range_Boundary", Layer: "Territorial Circle Range" },
+        { Name: "Teritorial_Circle_Round_Boundary", Layer: "Territorial Circle Round" },
+        { Name: "Teritorial_Circle_Village_Boundary", Layer: "Territorial Circle Village" },
+        { Name: "Teritorial_Circle_Boundary", Layer: "Territorial Circle" },
       ]
     },
     {
-      title: "Wildlife Circle Boundaries",
+      title: "Wildlife Circle ",
       layerList: [
-        { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat Boundary" },
-        { Name: "Wildlife_Circle_Boundary", Layer: "Wildlife Circle Boundary" },
-        { Name: "Wildlife_Circle_Division_Boundary", Layer: "Wildlife Circle Division Boundary" },
-        { Name: "Wildlife_Circle_Range_Boundary", Layer: "Wildlife Circle Range Boundary" },
-        { Name: "Wildlife_Circle_Round_Boundary", Layer: "Wildlife Circle Round Boundary" },
-        { Name: "Wildlife_Circle_Village_Boundary", Layer: "Wildlife Circle Village Boundary" },
+        { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat" },
+        { Name: "Wildlife_Circle_Boundary", Layer: "Wildlife Circle" },
+        { Name: "Wildlife_Circle_Division_Boundary", Layer: "Wildlife Circle Division" },
+        { Name: "Wildlife_Circle_Range_Boundary", Layer: "Wildlife Circle Range" },
+        { Name: "Wildlife_Circle_Round_Boundary", Layer: "Wildlife Circle Round" },
+        { Name: "Wildlife_Circle_Village_Boundary", Layer: "Wildlife Circle Village" },
       ]
     },
     {
-      title: "Social Forestry Boundaries",
+      title: "Social Forestry ",
       layerList: [
-        { Name: "Gujarat_Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat Boundary" },
-        { Name: "Gujarat_Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle Boundary" },
-        { Name: "Gujarat_Social_Forestry_Range_Boundary", Layer: "Social Forestry Range Boundary" },
-        { Name: "Gujarat_Social_Forestry_Round_Boundary", Layer: "Social Forestry Round Boundary" },
-        { Name: "Gujarat_Social_Forestry_Village_Boundary", Layer: "Social Forestry Village Boundary" },
+        { Name: "Gujarat_Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat" },
+        { Name: "Gujarat_Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle" },
+        { Name: "Gujarat_Social_Forestry_Range_Boundary", Layer: "Social Forestry Range" },
+        { Name: "Gujarat_Social_Forestry_Round_Boundary", Layer: "Social Forestry Round" },
+        { Name: "Gujarat_Social_Forestry_Village_Boundary", Layer: "Social Forestry Village" },
       ]
     },
     {
@@ -419,7 +421,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
             console.warn(`[addLayer] Timeout while loading "${layerName}" (15s)`);
             setIsLayerLoading(false);
             resolve(newLayer);
-          }, 15000);
+          }, 15999000);
 
           newLayer.on("load", () => {
             console.log(`[addLayer] Layer "${layerName}" fully loaded`);

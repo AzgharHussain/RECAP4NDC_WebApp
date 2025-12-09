@@ -739,22 +739,7 @@ const handleToolSidebarClick = (toolName) => {
             <div>
               <Suspense fallback={<div>Loading...</div>}>
                 <LayerTogglePanel
-                  showStateLayer={showStateLayer}
-                  setShowStateLayer={(v) => handleLayerToggle("stateLayer", v)}
-                  showDistrictLayer={showDistrictLayer}
-                  setShowDistrictLayer={(v) => handleLayerToggle("districtLayer", v)}
-                  showCoupeLayer={showCoupeLayer}
-                  setShowCoupeLayer={(v) => handleLayerToggle("coupeLayer", v)}
-                  showNdviLayer={showNdviLayer}
-                  setShowNdviLayer={(v) => handleLayerToggle("ndviLayer", v)}
-                  showNdwiLayer={showNdwiLayer}
-                  setShowNdwiLayer={(v) => handleLayerToggle("ndwiLayer", v)}
-                  setShowChangeLayer={(v) => handleLayerToggle("changeLayer", v)}
-                  showPatrollingLayer={showPatrollingLayer}
-                  setShowPatrollingLayer={(v) => handleLayerToggle("patrollingLayer", v)}
-                  showIncidentLayer={showIncidentLayer}
-                  setShowIncidentLayer={(v) => handleLayerToggle("incidentLayer", v)}
-                  onFilter={handleFilter}
+                 
                   mapRef={mapRef}
                 />
               </Suspense>
@@ -763,7 +748,7 @@ const handleToolSidebarClick = (toolName) => {
      <div style={{ display: "flex", width: "auto", height: "auto" }}>
             <MapContainer
               center={position}
-              zoom={7.8}
+              zoom={6.8}
           style={{
   height: "92vh",
   width:  "66vw" ,
@@ -785,7 +770,7 @@ const handleToolSidebarClick = (toolName) => {
 
               <WMSTileLayer
                 key="gujarat-difference"
-                url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                url="http://68.178.167.39:8081/geoserver/cite/wms"
                 layers="cite:Gujarat_difference"
                 format="image/png"
                 transparent={true}
@@ -795,7 +780,7 @@ const handleToolSidebarClick = (toolName) => {
 
               <WMSTileLayer
                 key="Gujarat_State"
-                url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                url="http://68.178.167.39:8081/geoserver/cite/wms"
                 layers="cite:Gujarat_State"
                 format="image/png"
                 transparent={true}
@@ -805,7 +790,7 @@ const handleToolSidebarClick = (toolName) => {
 
               <WMSTileLayer
                 key="tblIndia"
-                url="https://www.gisfy.co.in:8443/geoserver_tnc_agwl/cite/wms"
+                url="http://68.178.167.39:8081/geoserver/cite/wms"
                 layers="cite:tblIndia"
                 format="image/png"
                 transparent={true}
