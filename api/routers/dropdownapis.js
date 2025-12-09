@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 
-const { sequelize } = require('../config/database');
+const { sequelize } = require('../config/ndvidatabase');
 
 // Helper function to execute queries using Sequelize
 const executeQuery = async (myquery, params = []) => {
@@ -319,9 +319,9 @@ router.post('/get-divisions', async (req, res) => {
         break;
       case 2: // Territorial Forest
         myquery = `
-        SELECT DISTINCT "Division"  AS "DIVISION"
-          FROM public."Teritorial Circle_Division_Boundary"
-          ORDER BY "Division";
+        SELECT DISTINCT "DIVISION"  AS "DIVISION"
+          FROM public."teritorial_final_metadata_new"
+          ORDER BY "DIVISION";
         `;  
         break;
       case 3: // Social Forestry
@@ -428,7 +428,7 @@ router.post('/hierarchy', async (req, res) => {
       //       cm.coupe_name
       //   `;
 
-      myquery = `SELECT * FROM Teritorial_final_metadata where "DIVISION"='${division_name}';`;
+      myquery = `SELECT * FROM teritorial_final_metadata_new where "DIVISION"='${division_name}' and coupe_name is not null;`;
         break;
       case 3: // Social Forestry
         myquery = `

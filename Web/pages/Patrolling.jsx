@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Input, DatePicker, Modal, Image, Select, Tag } from "antd";
-import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
+import { Table, Button, Input, DatePicker, Modal, Image, Select, Tag, Card, Row, Col, Statistic, Progress, Typography } from "antd";
+import { SearchOutlined, EyeOutlined, TeamOutlined, ClockCircleOutlined, DashboardOutlined, CalendarOutlined } from "@ant-design/icons";
 import "./PatrolIncidentLogs.css";
 import exportIcon from "../assets/excel.png";
 import dayjs from "dayjs";
@@ -19,6 +19,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 
+const { Title, Text } = Typography;
 const { Option } = Select;
 
 const startIcon = new L.Icon({
@@ -96,6 +97,583 @@ function PatrolMap({ patrol }) {
   );
 }
 
+// New component for analysis dashboard
+const PatrolAnalysisDashboard = ({ patrolData, language }) => {
+  if (!patrolData || patrolData.length === 0) {
+    return null;
+  }
+
+  // Calculate statistics for each patrol type
+  const calculateTypeStats = (type) => {
+    const filtered = patrolData.filter(item => item.type_name === type);
+    if (filtered.length === 0) return null;
+
+    const totalPatrols = filtered.length;
+    const totalDistance = filtered.reduce((sum, item) => sum + parseFloat(item.distance_kms || 0), 0);
+    const totalStaff = filtered.reduce((sum, item) => sum + (item.number_of_staff || 1), 0);
+    const avgDistance = totalDistance / totalPatrols;
+    const avgStaff = totalStaff / totalPatrols;
+
+    // Calculate total hours
+    const totalHours = filtered.reduce((sum, item) => {
+      const start = new Date(item.start_time);
+      const end = new Date(item.end_time);
+      const hours = (end - start) / (1000 * 60 * 60);
+      return sum + hours;
+    }, 0);
+    const avgHours = totalHours / totalPatrols;
+
+    // Get top officer for this type
+    const officerStats = {};
+    filtered.forEach(item => {
+      const officer = item.patrol_officer_name;
+      officerStats[officer] = (officerStats[officer] || 0) + 1;
+    });
+    const topOfficer = Object.entries(officerStats).sort((a, b) => b[1] - a[1])[0];
+
+    return {
+      type,
+      totalPatrols,
+      totalDistance: totalDistance.toFixed(1),
+      avgDistance: avgDistance.toFixed(1),
+      avgHours: avgHours.toFixed(1),
+      avgStaff: avgStaff.toFixed(1),
+      topOfficer: topOfficer ? `${topOfficer[0]} (${topOfficer[1]} patrols)` : 'N/A'
+    };
+  };
+
+  const dayStats = calculateTypeStats("Day patrolling");
+  const nightStats = calculateTypeStats("Night patrolling");
+  const beatStats = calculateTypeStats("Beat checking");
+
+  // Overall statistics
+  const totalPatrols = patrolData.length;
+  const totalDistance = patrolData.reduce((sum, item) => sum + parseFloat(item.distance_kms || 0), 0);
+  const avgDistanceOverall = (totalDistance / totalPatrols).toFixed(1);
+  
+  // Calculate utilization percentage (assuming max 8 hours per day as standard)
+  const totalHours = patrolData.reduce((sum, item) => {
+    const start = new Date(item.start_time);
+    const end = new Date(item.end_time);
+    const hours = (end - start) / (1000 * 60 * 60);
+    return sum + hours;
+  }, 0);
+  
+  const utilizationPercentage = Math.min(100, (totalHours / (patrolData.length * 8)) * 100).toFixed(0);
+
+  // Get unique officers
+  const uniqueOfficers = [...new Set(patrolData.map(item => item.patrol_officer_name))];
+
+  // Patrol distribution
+  const dayPercentage = dayStats ? (dayStats.totalPatrols / totalPatrols * 100).toFixed(0) : 0;
+  const nightPercentage = nightStats ? (nightStats.totalPatrols / totalPatrols * 100).toFixed(0) : 0;
+  const beatPercentage = beatStats ? (beatStats.totalPatrols / totalPatrols * 100).toFixed(0) : 0;
+
+  const getTypeColor = (type) => {
+    switch (type) {
+      case "Day patrolling": return "#1890ff";
+      case "Night patrolling": return "#722ed1";
+      case "Beat checking": return "#52c41a";
+      default: return "#d9d9d9";
+    }
+  };
+
+  const getTypeDisplayName = (type) => {
+    if (language === "gu") {
+      switch (type) {
+        case "Day patrolling": return "દિવસ પેટ્રોલિંગ";
+        case "Night patrolling": return "રાત પેટ્રોલિંગ";
+        case "Beat checking": return "બીટ ચેકિંગ";
+        default: return type;
+      }
+    }
+    return type;
+  };
+
+  return (
+ <div style={{
+  margin: 4,
+  background: 'rgba(255, 255, 255, 0.1)',
+  backdropFilter: 'blur(10px)',
+  padding: 20,
+  borderRadius: 16,
+  border: '1px solid rgba(255, 255, 255, 0.2)',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+  position: 'relative',
+  overflow: 'hidden'
+}}>
+  {/* Glass overlay effect */}
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '1px',
+    background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)'
+  }} />
+  
+  <Title level={4} style={{ 
+    marginBottom: 20, 
+    color: '#fff',
+    fontWeight: 600,
+    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+  }}>
+    {language === "gu" ? "પેટ્રોલિંગ વિશ્લેષણ" : "Patrol Analysis"}
+  </Title>
+  
+  {/* Overall Statistics */}
+  <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+    {[
+      {
+        key: 'total',
+        value: totalPatrols,
+        title: language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols",
+        icon: <CalendarOutlined />,
+        color: 'rgba(56, 189, 248, 0.3)',
+        borderColor: 'rgba(56, 189, 248, 0.5)'
+      },
+      {
+        key: 'distance',
+        value: avgDistanceOverall,
+        title: language === "gu" ? "સરેરાશ અંતર" : "Average Distance",
+        suffix: "km",
+        icon: <DashboardOutlined />,
+        color: 'rgba(52, 211, 153, 0.3)',
+        borderColor: 'rgba(52, 211, 153, 0.5)'
+      },
+      {
+        key: 'officers',
+        value: uniqueOfficers.length,
+        title: language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers",
+        icon: <TeamOutlined />,
+        color: 'rgba(167, 139, 250, 0.3)',
+        borderColor: 'rgba(167, 139, 250, 0.5)'
+      },
+      {
+        key: 'utilization',
+        value: utilizationPercentage,
+        title: language === "gu" ? "ઉપયોગિતા" : "Utilization",
+        suffix: "%",
+        icon: <ClockCircleOutlined />,
+        color: 'rgba(251, 191, 36, 0.3)',
+        borderColor: 'rgba(251, 191, 36, 0.5)'
+      }
+    ].map((item, index) => (
+      <Col xs={24} sm={12} md={6} key={item.key}>
+        <div style={{
+          background: item.color,
+          backdropFilter: 'blur(12px)',
+          borderRadius: 12,
+          padding: 16,
+          border: `1px solid ${item.borderColor}`,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+          height: '100%',
+          transition: 'transform 0.2s',
+          ':hover': {
+            transform: 'translateY(-4px)'
+          }
+        }}>
+          <Statistic
+            title={
+              <span style={{ 
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '12px',
+                fontWeight: 500
+              }}>
+                {item.title}
+              </span>
+            }
+            value={item.value}
+            prefix={
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.2)',
+                marginRight: 8,
+                border: '1px solid rgba(255, 255, 255, 0.3)'
+              }}>
+                {React.cloneElement(item.icon, { 
+                  style: { 
+                    color: 'white',
+                    fontSize: '16px'
+                  } 
+                })}
+              </div>
+            }
+            suffix={item.suffix}
+            valueStyle={{ 
+              color: '#fff',
+              fontSize: '24px',
+              fontWeight: 600,
+              textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}
+          />
+        </div>
+      </Col>
+    ))}
+  </Row>
+
+  {/* Patrol Distribution */}
+  <div style={{ 
+    marginBottom: 24,
+    background: 'rgba(255, 255, 255, 0.08)',
+    backdropFilter: 'blur(12px)',
+    padding: 20,
+    borderRadius: 16,
+    border: '1px solid rgba(255, 255, 255, 0.15)'
+  }}>
+    <Text strong style={{ 
+      display: 'block', 
+      marginBottom: 16,
+      color: 'rgba(255, 255, 255, 0.95)',
+      fontSize: '16px'
+    }}>
+      {language === "gu" ? "પેટ્રોલિંગ વિતરણ" : "Patrol Distribution"}
+    </Text>
+    <Row gutter={8}>
+      {[
+        { type: "Day patrolling", percent: dayPercentage, color: '#38bdf8' },
+        { type: "Night patrolling", percent: nightPercentage, color: '#a78bfa' },
+        { type: "Beat checking", percent: beatPercentage, color: '#34d399' }
+      ].map((item) => (
+        <Col span={8} key={item.type}>
+          <div style={{ textAlign: 'center', padding: '0 8px' }}>
+            <div style={{
+              position: 'relative',
+              display: 'inline-block',
+              marginBottom: 8
+            }}>
+              <Progress
+                type="dashboard"
+                percent={parseInt(item.percent)}
+                strokeColor={item.color}
+                trailColor="rgba(255, 255, 255, 0.1)"
+                strokeWidth={8}
+                format={percent => (
+                  <div style={{
+                    color: '#fff',
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                  }}>
+                    {percent}%
+                  </div>
+                )}
+              />
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '80%',
+                height: '80%',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }} />
+            </div>
+            <Text style={{ 
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: '14px',
+              display: 'block',
+              marginTop: 8
+            }}>
+              {getTypeDisplayName(item.type)}
+            </Text>
+          </div>
+        </Col>
+      ))}
+    </Row>
+  </div>
+
+  {/* Detailed Type Analysis */}
+  <Row gutter={[16, 16]}>
+    {[
+      { stats: dayStats, type: "Day patrolling", color: '#38bdf8' },
+      { stats: nightStats, type: "Night patrolling", color: '#a78bfa' },
+      { stats: beatStats, type: "Beat checking", color: '#34d399' }
+    ].map(({ stats, type, color }, index) => {
+      if (!stats) return null;
+      
+      return (
+        <Col xs={24} md={8} key={type}>
+          <div style={{
+            background: `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.15)`,
+            backdropFilter: 'blur(12px)',
+            borderRadius: 16,
+            padding: 0,
+            border: `1px solid rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.3)`,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            height: '100%',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px',
+              background: `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.25)`,
+              borderBottom: `1px solid rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.4)`,
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <div style={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                backgroundColor: color,
+                marginRight: 12,
+                boxShadow: `0 0 12px ${color}`
+              }} />
+              <span style={{ 
+                color: 'rgba(255, 255, 255, 0.95)',
+                fontWeight: 600,
+                fontSize: '16px'
+              }}>
+                {getTypeDisplayName(type)}
+              </span>
+            </div>
+            
+            {/* Content */}
+            <div style={{ padding: 20 }}>
+              <div style={{ 
+                textAlign: 'center',
+                marginBottom: 20,
+                padding: '16px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: 12,
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <div style={{ 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '14px',
+                  marginBottom: 4
+                }}>
+                  {language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"}
+                </div>
+                <div style={{ 
+                  color: '#fff',
+                  fontSize: '32px',
+                  fontWeight: 'bold',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                }}>
+                  {stats.totalPatrols}
+                </div>
+              </div>
+              
+              <Row gutter={[12, 12]}>
+                {[
+                  { label: language === "gu" ? "સરેરાશ અંતર" : "Avg Distance", value: `${stats.avgDistance} km` },
+                  { label: language === "gu" ? "સરેરાશ સમય" : "Avg Time", value: `${stats.avgHours} hrs` },
+                  { label: language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff", value: stats.avgStaff },
+                  { label: language === "gu" ? "કુલ અંતર" : "Total Distance", value: `${stats.totalDistance} km` }
+                ].map((item, idx) => (
+                  <Col span={12} key={idx}>
+                    <div style={{
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: 8,
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      height: '100%'
+                    }}>
+                      <div style={{ 
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '12px',
+                        marginBottom: 4
+                      }}>
+                        {item.label}
+                      </div>
+                      <div style={{ 
+                        color: '#fff',
+                        fontSize: '16px',
+                        fontWeight: 600
+                      }}>
+                        {item.value}
+                      </div>
+                    </div>
+                  </Col>
+                ))}
+              </Row>
+              
+              {/* Top Officer */}
+              {stats.topOfficer && (
+                <div style={{
+                  marginTop: 16,
+                  padding: '12px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: 8,
+                  border: '1px solid rgba(255, 255, 255, 0.08)'
+                }}>
+                  <div style={{ 
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontSize: '12px',
+                    marginBottom: 4
+                  }}>
+                    {language === "gu" ? "શ્રેષ્ઠ અધિકારી" : "Top Officer"}
+                  </div>
+                  <div style={{ 
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {stats.topOfficer}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Col>
+      );
+    })}
+  </Row>
+
+  {/* Additional Insights */}
+  {(dayStats || nightStats || beatStats) && (
+    <div style={{
+      marginTop: 16,
+      background: 'rgba(255, 255, 255, 0.08)',
+      backdropFilter: 'blur(12px)',
+      borderRadius: 16,
+      padding: 0,
+      border: '1px solid rgba(255, 255, 255, 0.15)',
+      overflow: 'hidden'
+    }}>
+      <div style={{
+        padding: '16px 20px',
+        background: 'rgba(255, 255, 255, 0.12)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <span style={{ 
+          color: 'rgba(255, 255, 255, 0.95)',
+          fontWeight: 600,
+          fontSize: '16px'
+        }}>
+          {language === "gu" ? "વધારાની જાણકારી" : "Additional Insights"}
+        </span>
+      </div>
+      
+      <div style={{ padding: 20 }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12}>
+            <div style={{
+              padding: '16px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: 12,
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              height: '100%'
+            }}>
+              <div style={{ 
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '14px',
+                marginBottom: 8
+              }}>
+                {language === "gu" ? "સૌથી વધુ પેટ્રોલિંગ" : "Most Active Type"}
+              </div>
+              {(() => {
+                const types = [
+                  { name: "Day patrolling", count: dayStats?.totalPatrols || 0 },
+                  { name: "Night patrolling", count: nightStats?.totalPatrols || 0 },
+                  { name: "Beat checking", count: beatStats?.totalPatrols || 0 }
+                ];
+                const mostActive = types.reduce((prev, current) => 
+                  prev.count > current.count ? prev : current
+                );
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: getTypeColor(mostActive.name),
+                      marginRight: 8,
+                      boxShadow: `0 0 8px ${getTypeColor(mostActive.name)}`
+                    }} />
+                    <span style={{ 
+                      color: '#fff',
+                      fontSize: '16px',
+                      fontWeight: 600
+                    }}>
+                      {getTypeDisplayName(mostActive.name)}
+                    </span>
+                    <span style={{ 
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      marginLeft: 8,
+                      fontSize: '14px'
+                    }}>
+                      ({mostActive.count} {language === "gu" ? "પેટ્રોલિંગ" : "patrols"})
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          </Col>
+          <Col xs={24} sm={12}>
+            <div style={{
+              padding: '16px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: 12,
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              height: '100%'
+            }}>
+              <div style={{ 
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '14px',
+                marginBottom: 8
+              }}>
+                {language === "gu" ? "સૌથી વધુ અંતર" : "Longest Distance Type"}
+              </div>
+              {(() => {
+                const types = [
+                  { name: "Day patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
+                  { name: "Night patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
+                  { name: "Beat checking", distance: parseFloat(beatStats?.totalDistance || 0) }
+                ];
+                const longestDistance = types.reduce((prev, current) => 
+                  prev.distance > current.distance ? prev : current
+                );
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: getTypeColor(longestDistance.name),
+                      marginRight: 8,
+                      boxShadow: `0 0 8px ${getTypeColor(longestDistance.name)}`
+                    }} />
+                    <span style={{ 
+                      color: '#fff',
+                      fontSize: '16px',
+                      fontWeight: 600
+                    }}>
+                      {getTypeDisplayName(longestDistance.name)}
+                    </span>
+                    <span style={{ 
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      marginLeft: 8,
+                      fontSize: '14px'
+                    }}>
+                      ({longestDistance.distance} km)
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          </Col>
+        </Row>
+      </div>
+    </div>
+  )}
+</div>
+  );
+};
+
 const PatrolIncidentLogs = () => {
   const [patrolData, setPatrolData] = useState([]);
   const [searchText, setSearchText] = useState("");
@@ -128,9 +706,11 @@ const PatrolIncidentLogs = () => {
       }));
       
       setPatrolData(formattedData);
+      setFilteredData(formattedData); // Initialize filteredData with all data
     } catch (error) {
       console.error("Error fetching Patrol data:", error);
       setPatrolData([]);
+      setFilteredData([]);
     }
   };
 
@@ -148,8 +728,9 @@ const PatrolIncidentLogs = () => {
     return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
   };
 
-  useEffect(() => {
-    let data = patrolData;
+  // Function to handle search
+  const handleSearch = () => {
+    let data = [...patrolData];
     
     if (searchText.trim() !== "") {
       const lower = searchText.toLowerCase();
@@ -175,6 +756,20 @@ const PatrolIncidentLogs = () => {
     }
     
     setFilteredData(data);
+  };
+
+  // Function to clear all filters
+  const clearAllFilters = () => {
+    setSearchText("");
+    setStartFilter(null);
+    setEndFilter(null);
+    setTypeFilter("");
+    setFilteredData(patrolData);
+  };
+
+  // Apply filters when any filter changes
+  useEffect(() => {
+    handleSearch();
   }, [searchText, startFilter, endFilter, typeFilter, patrolData]);
 
   const getTypeDisplayName = (type) => {
@@ -298,8 +893,6 @@ const PatrolIncidentLogs = () => {
     },
   ];
 
- 
-
 const handleExport = () => {
   if (!filteredData.length) {
     alert(language === "gu" ? "નિકાસ કરવા માટે કોઈ ડેટા નથી" : "No data to export");
@@ -349,7 +942,7 @@ const handleExport = () => {
       total,
       avgStaff: avgStaff.toFixed(1),
       avgHours: avgHours.toFixed(1),
-      avgDist: avgDist.toFixed(0) + 'km'
+      avgDist: avgDist.toFixed(1) + ' km'
     };
   };
 
@@ -358,22 +951,25 @@ const handleExport = () => {
     // Title row
     ['Officer Patrol Summary Report', '', '', '', '', '', '', '', '', '', '', '', ''],
     
+    // Report period info (empty for now, can be filled with filter dates)
+    ['Report Period:', '', '', '', '', '', '', '', '', '', '', '', ''],
+    
     // Empty row for spacing
     ['', '', '', '', '', '', '', '', '', '', '', '', ''],
     
-    // Header row
+    // Main header row with merged cells
     [
-      'Officer Name',
+      'Officer Details',
       'Day Patrolling', '', '', '',
       'Night Patrolling', '', '', '',
       'Beat Checking', '', '', ''
     ],
     // Sub-header row
     [
-      '',
-      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Dist',
-      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Dist',
-      'Total Checks', 'Avg Staff', 'Avg Hours', 'Avg Dist'
+      'Officer Name',
+      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Distance',
+      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Distance',
+      'Total Checks', 'Avg Staff', 'Avg Hours', 'Avg Distance'
     ]
   ];
 
@@ -386,13 +982,22 @@ const handleExport = () => {
 
     exportData.push([
       officerName,
-      dayStats.total, dayStats.avgStaff, dayStats.avgHours, dayStats.avgDist,
-      nightStats.total, nightStats.avgStaff, nightStats.avgHours, nightStats.avgDist,
-      beatStats.total, beatStats.avgStaff, beatStats.avgHours, beatStats.avgDist
+      dayStats.total > 0 ? dayStats.total : '-',
+      dayStats.total > 0 ? dayStats.avgStaff : '-',
+      dayStats.total > 0 ? dayStats.avgHours : '-',
+      dayStats.total > 0 ? dayStats.avgDist : '-',
+      nightStats.total > 0 ? nightStats.total : '-',
+      nightStats.total > 0 ? nightStats.avgStaff : '-',
+      nightStats.total > 0 ? nightStats.avgHours : '-',
+      nightStats.total > 0 ? nightStats.avgDist : '-',
+      beatStats.total > 0 ? beatStats.total : '-',
+      beatStats.total > 0 ? beatStats.avgStaff : '-',
+      beatStats.total > 0 ? beatStats.avgHours : '-',
+      beatStats.total > 0 ? beatStats.avgDist : '-'
     ]);
   });
 
-  // Calculate totals row
+  // Calculate totals
   const allOfficers = Object.keys(officers);
   const totalDayPatrols = allOfficers.reduce((sum, officer) => sum + officers[officer].dayPatrols.length, 0);
   const totalNightPatrols = allOfficers.reduce((sum, officer) => sum + officers[officer].nightPatrols.length, 0);
@@ -401,37 +1006,49 @@ const handleExport = () => {
   // Add empty row before totals
   exportData.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
   
-  // Add totals row
+  // Add grand totals row
   exportData.push([
-    'TOTAL',
+    'GRAND TOTAL',
     totalDayPatrols, '-', '-', '-',
     totalNightPatrols, '-', '-', '-',
     totalBeatChecks, '-', '-', '-'
   ]);
 
+  // Add summary row with officer count
+  exportData.push([
+    `Total Officers: ${allOfficers.length}`,
+    '', '', '', '',
+    '', '', '', '',
+    '', '', '', ''
+  ]);
+
   // Add timestamp
   exportData.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
-  exportData.push(['Report Generated:', new Date().toLocaleString(), '', '', '', '', '', '', '', '', '', '', '']);
+  exportData.push(['Report Generated On:', new Date().toLocaleString('en-IN'), '', '', '', '', '', '', '', '', '', '', '']);
 
+  // Create workbook
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(exportData);
   
-  // Apply comprehensive styling
+  // Get the range of the worksheet
   const range = XLSX.utils.decode_range(ws['!ref']);
   
-  // Define color scheme
+  // Define enhanced color scheme
   const colors = {
-    title: "2F75B5",        // Dark Blue
-    mainHeader: "4472C4",   // Medium Blue
-    subHeader: "8FAADC",    // Light Blue
-    totals: "70AD47",       // Green
-    officerName: "F2F2F2",  // Light Gray
-    evenRow: "FFFFFF",      // White
-    oddRow: "F8F9FA",       // Very Light Gray
-    timestamp: "D9E1F2"     // Very Light Blue
+    title: "2C3E50",        // Dark Blue-Black
+    subtitle: "34495E",     // Medium Blue-Black
+    mainHeader: "3498DB",   // Bright Blue
+    subHeader: "AED6F1",    // Very Light Blue
+    totals: "27AE60",       // Green
+    grandTotal: "2ECC71",   // Bright Green
+    officerName: "F8F9FA",  // Off White
+    evenRow: "FFFFFF",      // Pure White
+    oddRow: "F5F7FA",       // Very Light Gray-Blue
+    timestamp: "EBF5FB",    // Light Blue
+    borders: "BDC3C7"       // Gray for borders
   };
 
-  // Style all cells
+  // Apply comprehensive styling to all cells
   for (let R = range.s.r; R <= range.e.r; R++) {
     for (let C = range.s.c; C <= range.e.c; C++) {
       const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
@@ -442,73 +1059,178 @@ const handleExport = () => {
       // Default cell style
       cell.s = {
         border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
+          top: { style: "thin", color: { rgb: colors.borders } },
+          left: { style: "thin", color: { rgb: colors.borders } },
+          bottom: { style: "thin", color: { rgb: colors.borders } },
+          right: { style: "thin", color: { rgb: colors.borders } }
         },
-        alignment: { horizontal: "center", vertical: "center" },
-        font: { sz: 10 }
+        alignment: { 
+          horizontal: "center", 
+          vertical: "center",
+          wrapText: true
+        },
+        font: { 
+          sz: 10,
+          name: "Calibri"
+        }
       };
 
       // Title row (Row 0)
       if (R === 0) {
         cell.s = {
           ...cell.s,
-          font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
+          font: { 
+            bold: true, 
+            sz: 18, 
+            color: { rgb: "FFFFFF" },
+            name: "Calibri Light"
+          },
           fill: { fgColor: { rgb: colors.title } },
-          alignment: { horizontal: "center", vertical: "center" }
+          alignment: { 
+            horizontal: "center", 
+            vertical: "center"
+          }
         };
       }
 
-      // Main header row (Row 2) - Dark Blue Background
-      if (R === 2) {
-        cell.s = {
-          ...cell.s,
-          font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: colors.mainHeader } },
-          alignment: { horizontal: "center", vertical: "center" }
-        };
-      }
-
-      // Sub-header row (Row 3) - Light Blue Background
-      if (R === 3) {
-        cell.s = {
-          ...cell.s,
-          font: { bold: true, sz: 10, color: { rgb: "000000" } },
-          fill: { fgColor: { rgb: colors.subHeader } },
-          alignment: { horizontal: "center", vertical: "center" }
-        };
-      }
-
-      // Data rows (Row 4 to second last row - 3)
-      if (R >= 4 && R <= range.e.r - 3) {
-        // Officer name column (Column 0)
+      // Subtitle row (Row 1)
+      if (R === 1) {
         if (C === 0) {
           cell.s = {
             ...cell.s,
-            font: { bold: true, sz: 10 },
-            fill: { fgColor: { rgb: colors.officerName } },
-            alignment: { horizontal: "left", vertical: "center" }
+            font: { 
+              bold: true, 
+              sz: 11, 
+              color: { rgb: colors.title }
+            },
+            alignment: { 
+              horizontal: "left", 
+              vertical: "center"
+            }
           };
-        } else {
-          // Alternate row coloring for data cells
-          if (R % 2 === 0) {
-            cell.s.fill = { fgColor: { rgb: colors.evenRow } };
-          } else {
-            cell.s.fill = { fgColor: { rgb: colors.oddRow } };
-          }
+        } else if (C === 1) {
+          cell.s = {
+            ...cell.s,
+            font: { 
+              sz: 11, 
+              color: { rgb: colors.title }
+            },
+            alignment: { 
+              horizontal: "left", 
+              vertical: "center"
+            }
+          };
         }
       }
 
-      // Totals row (second last row - 2)
-      if (R === range.e.r - 2) {
+      // Main header row (Row 3) - Bright Blue
+      if (R === 3) {
         cell.s = {
           ...cell.s,
-          font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: colors.totals } },
-          alignment: { horizontal: "center", vertical: "center" }
+          font: { 
+            bold: true, 
+            sz: 12, 
+            color: { rgb: "FFFFFF" },
+            name: "Calibri"
+          },
+          fill: { fgColor: { rgb: colors.mainHeader } },
+          alignment: { 
+            horizontal: "center", 
+            vertical: "center"
+          }
         };
+      }
+
+      // Sub-header row (Row 4) - Light Blue
+      if (R === 4) {
+        cell.s = {
+          ...cell.s,
+          font: { 
+            bold: true, 
+            sz: 10, 
+            color: { rgb: "000000" }
+          },
+          fill: { fgColor: { rgb: colors.subHeader } },
+          alignment: { 
+            horizontal: "center", 
+            vertical: "center"
+          }
+        };
+      }
+
+      // Data rows (starting from Row 5)
+      if (R >= 5 && R <= range.e.r - 4) {
+        // Officer name column (Column 0) - Left aligned
+        if (C === 0) {
+          cell.s = {
+            ...cell.s,
+            font: { 
+              bold: true, 
+              sz: 10,
+              color: { rgb: colors.title }
+            },
+            fill: { fgColor: { rgb: colors.officerName } },
+            alignment: { 
+              horizontal: "left", 
+              vertical: "center",
+              indent: 1
+            }
+          };
+        } else {
+          // Numeric data cells - Right aligned for numbers
+          const cellValue = ws[cellAddress].v;
+          const isNumeric = !isNaN(cellValue) && cellValue !== '-' && cellValue !== '';
+          
+          if (isNumeric) {
+            cell.s.alignment = { 
+              horizontal: "right", 
+              vertical: "center"
+            };
+          }
+          
+          // Alternate row coloring
+          const isEvenRow = (R - 5) % 2 === 0;
+          cell.s.fill = { 
+            fgColor: { rgb: isEvenRow ? colors.evenRow : colors.oddRow } 
+          };
+        }
+      }
+
+      // Grand Totals row (second last row - 3)
+      if (R === range.e.r - 3) {
+        cell.s = {
+          ...cell.s,
+          font: { 
+            bold: true, 
+            sz: 11, 
+            color: { rgb: "FFFFFF" }
+          },
+          fill: { fgColor: { rgb: colors.grandTotal } },
+          alignment: { 
+            horizontal: "center", 
+            vertical: "center"
+          }
+        };
+      }
+
+      // Summary row (second last row - 2)
+      if (R === range.e.r - 2) {
+        if (C === 0) {
+          cell.s = {
+            ...cell.s,
+            font: { 
+              bold: true, 
+              italic: true,
+              sz: 10,
+              color: { rgb: colors.title }
+            },
+            alignment: { 
+              horizontal: "left", 
+              vertical: "center"
+            },
+            fill: { fgColor: { rgb: colors.timestamp } }
+          };
+        }
       }
 
       // Timestamp row (last row)
@@ -516,16 +1238,31 @@ const handleExport = () => {
         if (C === 0) {
           cell.s = {
             ...cell.s,
-            font: { bold: true, italic: true, sz: 9 },
+            font: { 
+              bold: true, 
+              italic: true,
+              sz: 9,
+              color: { rgb: colors.title }
+            },
             fill: { fgColor: { rgb: colors.timestamp } },
-            alignment: { horizontal: "left", vertical: "center" }
+            alignment: { 
+              horizontal: "left", 
+              vertical: "center"
+            }
           };
         } else if (C === 1) {
           cell.s = {
             ...cell.s,
-            font: { italic: true, sz: 9 },
+            font: { 
+              italic: true,
+              sz: 9,
+              color: { rgb: colors.title }
+            },
             fill: { fgColor: { rgb: colors.timestamp } },
-            alignment: { horizontal: "left", vertical: "center" }
+            alignment: { 
+              horizontal: "left", 
+              vertical: "center"
+            }
           };
         } else {
           cell.s.fill = { fgColor: { rgb: colors.timestamp } };
@@ -534,45 +1271,165 @@ const handleExport = () => {
     }
   }
 
-  // Merge cells for better layout
+  // Define cell merges for better layout
   ws['!merges'] = [
     // Title merge
     { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
     
+    // Report period merge
+    { s: { r: 1, c: 1 }, e: { r: 1, c: 12 } },
+    
     // Day Patrolling header merge
-    { s: { r: 2, c: 1 }, e: { r: 2, c: 4 } },
+    { s: { r: 3, c: 1 }, e: { r: 3, c: 4 } },
     // Night Patrolling header merge  
-    { s: { r: 2, c: 5 }, e: { r: 2, c: 8 } },
+    { s: { r: 3, c: 5 }, e: { r: 3, c: 8 } },
     // Beat Checking header merge
-    { s: { r: 2, c: 9 }, e: { r: 2, c: 12 } },
+    { s: { r: 3, c: 9 }, e: { r: 3, c: 12 } },
+    
+    // Officer count merge
+    { s: { r: range.e.r - 2, c: 0 }, e: { r: range.e.r - 2, c: 12 } },
     
     // Timestamp merge
     { s: { r: range.e.r, c: 1 }, e: { r: range.e.r, c: 12 } }
   ];
 
-  // Set column widths for better readability
+  // Set optimized column widths
   ws['!cols'] = [
-    { wch: 20 }, // Officer Name
-    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, // Day Patrolling
-    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, // Night Patrolling  
-    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }  // Beat Checking
+    { wch: 25 }, // Officer Name (wider for long names)
+    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, // Day Patrolling
+    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, // Night Patrolling  
+    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }  // Beat Checking
   ];
 
-  // Set row heights
+  // Set optimized row heights
   ws['!rows'] = [
-    { hpt: 30 }, // Title row
-    { hpt: 10 }, // Spacing row
-    { hpt: 25 }, // Main header
-    { hpt: 20 }, // Sub-header
+    { hpt: 35 }, // Title row (taller)
+    { hpt: 20 }, // Subtitle row
+    { hpt: 8 },  // Spacing row (smaller gap)
+    { hpt: 28 }, // Main header (taller)
+    { hpt: 22 }, // Sub-header
   ];
 
-  // Add more rows for data (you can extend this as needed)
-  for (let i = 4; i <= range.e.r; i++) {
+  // Set consistent row heights for data rows
+  for (let i = 5; i <= range.e.r; i++) {
     if (!ws['!rows']) ws['!rows'] = [];
     ws['!rows'][i] = { hpt: 20 };
   }
 
-  XLSX.utils.book_append_sheet(wb, ws, "Officer Patrol Summary");
+  // Add a summary sheet with key metrics
+  const summaryData = [
+    ['Patrol Summary Overview', '', '', ''],
+    ['', '', '', ''],
+    ['Metric', 'Day Patrolling', 'Night Patrolling', 'Beat Checking'],
+    ['Total Activities', totalDayPatrols, totalNightPatrols, totalBeatChecks],
+    ['Average Staff per Activity', 
+      calculateStats(Object.values(officers).flatMap(o => o.dayPatrols)).avgStaff || '-',
+      calculateStats(Object.values(officers).flatMap(o => o.nightPatrols)).avgStaff || '-',
+      calculateStats(Object.values(officers).flatMap(o => o.beatChecks)).avgStaff || '-'
+    ],
+    ['Average Hours per Activity',
+      calculateStats(Object.values(officers).flatMap(o => o.dayPatrols)).avgHours || '-',
+      calculateStats(Object.values(officers).flatMap(o => o.nightPatrols)).avgHours || '-',
+      calculateStats(Object.values(officers).flatMap(o => o.beatChecks)).avgHours || '-'
+    ],
+    ['', '', '', ''],
+    ['Total Officers:', allOfficers.length, '', ''],
+    ['Total Activities:', totalDayPatrols + totalNightPatrols + totalBeatChecks, '', ''],
+    ['', '', '', ''],
+    ['Report Generated:', new Date().toLocaleString('en-IN'), '', '']
+  ];
+
+  const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+  
+  // Style the summary sheet
+  const summaryRange = XLSX.utils.decode_range(summaryWs['!ref']);
+  for (let R = summaryRange.s.r; R <= summaryRange.e.r; R++) {
+    for (let C = summaryRange.s.c; C <= summaryRange.e.c; C++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!summaryWs[cellAddress]) continue;
+      
+      const cell = summaryWs[cellAddress];
+      cell.s = {
+        border: {
+          top: { style: "thin", color: { rgb: colors.borders } },
+          left: { style: "thin", color: { rgb: colors.borders } },
+          bottom: { style: "thin", color: { rgb: colors.borders } },
+          right: { style: "thin", color: { rgb: colors.borders } }
+        },
+        alignment: { 
+          horizontal: "center", 
+          vertical: "center",
+          wrapText: true
+        },
+        font: { sz: 10, name: "Calibri" }
+      };
+
+      if (R === 0) {
+        cell.s = {
+          ...cell.s,
+          font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: colors.title } },
+          alignment: { horizontal: "center", vertical: "center" }
+        };
+      } else if (R === 2) {
+        cell.s = {
+          ...cell.s,
+          font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: colors.mainHeader } }
+        };
+      } else if (R >= 3 && R <= 6) {
+        if (C === 0) {
+          cell.s = {
+            ...cell.s,
+            font: { bold: true },
+            alignment: { horizontal: "left", vertical: "center", indent: 1 }
+          };
+        }
+        // Alternate row coloring
+        if ((R - 3) % 2 === 0) {
+          cell.s.fill = { fgColor: { rgb: colors.evenRow } };
+        } else {
+          cell.s.fill = { fgColor: { rgb: colors.oddRow } };
+        }
+      } else if (R === 7 || R === 8) {
+        if (C === 0) {
+          cell.s = {
+            ...cell.s,
+            font: { bold: true, color: { rgb: colors.title } },
+            fill: { fgColor: { rgb: colors.subHeader } },
+            alignment: { horizontal: "left", vertical: "center" }
+          };
+        }
+      } else if (R === summaryRange.e.r) {
+        if (C === 0) {
+          cell.s = {
+            ...cell.s,
+            font: { bold: true, italic: true },
+            fill: { fgColor: { rgb: colors.timestamp } },
+            alignment: { horizontal: "left", vertical: "center" }
+          };
+        } else if (C === 1) {
+          cell.s = {
+            ...cell.s,
+            font: { italic: true },
+            fill: { fgColor: { rgb: colors.timestamp } },
+            alignment: { horizontal: "left", vertical: "center" }
+          };
+        }
+      }
+    }
+  }
+
+  // Set column widths for summary sheet
+  summaryWs['!cols'] = [
+    { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }
+  ];
+
+  // Add summary sheet
+  XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
+
+  // Add main officer summary sheet
+  XLSX.utils.book_append_sheet(wb, ws, "Officer Details");
 
   // Also keep the original detailed data in a separate sheet with better styling
   const detailedData = filteredData.map((item) => ({
@@ -585,7 +1442,7 @@ const handleExport = () => {
     "Patrol End Time": formatDateTime(item.end_time).time,
     "Start Location": item.start_location,
     "End Location": item.end_location,
-    "Distance (Kms)": item.distance_kms,
+    "Distance (Kms)": parseFloat(item.distance_kms || 0).toFixed(1),
     "Number of Staff": item.number_of_staff || 1
   }));
 
@@ -594,19 +1451,28 @@ const handleExport = () => {
   // Style the detailed sheet
   const detailedRange = XLSX.utils.decode_range(detailedSheet['!ref']);
   
-  // Add header styling for detailed sheet with blue background
+  // Style header row
   for (let C = detailedRange.s.c; C <= detailedRange.e.c; C++) {
     const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
     if (detailedSheet[headerCell]) {
       detailedSheet[headerCell].s = {
-        font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: colors.mainHeader } }, // Using the same blue as main header
-        alignment: { horizontal: "center", vertical: "center" },
+        font: { 
+          bold: true, 
+          sz: 11, 
+          color: { rgb: "FFFFFF" },
+          name: "Calibri"
+        },
+        fill: { fgColor: { rgb: colors.mainHeader } },
+        alignment: { 
+          horizontal: "center", 
+          vertical: "center",
+          wrapText: true
+        },
         border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
+          top: { style: "medium", color: { rgb: colors.mainHeader } },
+          left: { style: "medium", color: { rgb: colors.mainHeader } },
+          bottom: { style: "medium", color: { rgb: colors.mainHeader } },
+          right: { style: "medium", color: { rgb: colors.mainHeader } }
         }
       };
     }
@@ -619,20 +1485,34 @@ const handleExport = () => {
       if (detailedSheet[cell]) {
         detailedSheet[cell].s = {
           border: {
-            top: { style: "thin", color: { rgb: "D0D0D0" } },
-            left: { style: "thin", color: { rgb: "D0D0D0" } },
-            bottom: { style: "thin", color: { rgb: "D0D0D0" } },
-            right: { style: "thin", color: { rgb: "D0D0D0" } }
+            top: { style: "thin", color: { rgb: colors.borders } },
+            left: { style: "thin", color: { rgb: colors.borders } },
+            bottom: { style: "thin", color: { rgb: colors.borders } },
+            right: { style: "thin", color: { rgb: colors.borders } }
           },
-          alignment: { horizontal: "center", vertical: "center" },
-          font: { sz: 9 }
+          alignment: { 
+            horizontal: "center", 
+            vertical: "center"
+          },
+          font: { 
+            sz: 9,
+            name: "Calibri"
+          }
         };
         
         // Alternate row colors
         if (R % 2 === 0) {
-          detailedSheet[cell].s.fill = { fgColor: { rgb: colors.oddRow } };
-        } else {
           detailedSheet[cell].s.fill = { fgColor: { rgb: colors.evenRow } };
+        } else {
+          detailedSheet[cell].s.fill = { fgColor: { rgb: colors.oddRow } };
+        }
+        
+        // Right align numeric columns
+        if (C === 9 || C === 10) { // Distance and Staff columns
+          detailedSheet[cell].s.alignment = { 
+            horizontal: "right", 
+            vertical: "center"
+          };
         }
       }
     }
@@ -641,24 +1521,28 @@ const handleExport = () => {
   // Set column widths for detailed sheet
   detailedSheet['!cols'] = [
     { wch: 12 }, // Patrol ID
-    { wch: 20 }, // Officer Name
-    { wch: 15 }, // Patrol Type
-    { wch: 12 }, // Start Date
+    { wch: 22 }, // Officer Name
+    { wch: 18 }, // Patrol Type
+    { wch: 14 }, // Start Date
     { wch: 12 }, // Start Time
-    { wch: 12 }, // End Date
+    { wch: 14 }, // End Date
     { wch: 12 }, // End Time
-    { wch: 20 }, // Start Location
-    { wch: 20 }, // End Location
-    { wch: 12 }, // Distance
-    { wch: 12 }  // Number of Staff
+    { wch: 25 }, // Start Location
+    { wch: 25 }, // End Location
+    { wch: 14 }, // Distance
+    { wch: 14 }  // Number of Staff
   ];
 
-  XLSX.utils.book_append_sheet(wb, detailedSheet, "Detailed Patrol Data");
+  XLSX.utils.book_append_sheet(wb, detailedSheet, "Detailed Data");
+
+  // Generate filename with timestamp
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+  const filename = `Patrol_Report_${timestamp}.xlsx`;
 
   const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
   saveAs(
     new Blob([wbout], { type: "application/octet-stream" }),
-    `Officer_Patrol_Summary_${new Date().toISOString().split('T')[0]}.xlsx`
+    filename
   );
 };
 
@@ -679,13 +1563,20 @@ const handleExport = () => {
               style={{
                 width: "200px",
                 background: "rgba(255, 255, 255, 0.2)",
-                border: "none",
+                border: "1px solid #d9d9d9",
+                borderRadius: "4px",
               }}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
+              onPressEnter={handleSearch}
               suffix={
                 <SearchOutlined
-                  style={{ color: "rgba(0, 0, 0, 0.25)", fontSize: "16px" }}
+                  style={{ 
+                    color: "rgba(0, 0, 0, 0.45)", 
+                    fontSize: "16px",
+                    cursor: "pointer"
+                  }}
+                  onClick={handleSearch}
                 />
               }
             />
@@ -697,11 +1588,13 @@ const handleExport = () => {
               }
               style={{
                 width: "200px",
-                border: "2.21px solid rgba(255, 255, 255, 0.23)",
-                background: "rgba(255, 255, 255, 0.02)",
+                border: "1px solid #d9d9d9",
+                borderRadius: "4px",
+                background: "#fff",
               }}
               value={startFilter}
               onChange={(date) => setStartFilter(date)}
+              allowClear
             />
             <DatePicker
               placeholder={
@@ -709,28 +1602,44 @@ const handleExport = () => {
               }
               style={{
                 width: "200px",
-                color: "#fff",
-                border: "2.21px solid rgba(255, 255, 255, 0.23)",
-                background: "rgba(255, 255, 255, 0.02)",
+                border: "1px solid #d9d9d9",
+                borderRadius: "4px",
+                background: "#fff",
               }}
               value={endFilter}
               onChange={(date) => setEndFilter(date)}
+              allowClear
             />
             <Select
               placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકારથી શોધો" : "Search by Patrolling Type"}
               style={{
                 width: "200px",
-                border: "2.21px solid rgba(255, 255, 255, 0.23)",
-                background: "rgba(255, 255, 255, 0.02)",
+                border: "1px solid #d9d9d9",
+                borderRadius: "4px",
+                background: "#fff",
               }}
               value={typeFilter}
               onChange={(value) => setTypeFilter(value)}
+              allowClear
             >
               <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
               <Option value="Day patrolling">{language === "gu" ? "દિવસ પેટ્રોલિંગ" : "Day Patrolling"}</Option>
               <Option value="Night patrolling">{language === "gu" ? "રાત પેટ્રોલિંગ" : "Night Patrolling"}</Option>
               <Option value="Beat checking">{language === "gu" ? "બીટ ચેકિંગ" : "Beat Checking"}</Option>
             </Select>
+            
+            <Button 
+              onClick={clearAllFilters}
+              style={{
+                marginRight: "10px",
+                background: "#f5f5f5",
+                borderColor: "#d9d9d9",
+                color: "#000",
+              }}
+            >
+              {language === "gu" ? "ફિલ્ટર સાફ કરો" : "Clear Filters"}
+            </Button>
+            
             <Button className="btn-Export" onClick={handleExport}>
               {language === "gu" ? "નિકાસ કરો" : "Export"}
               <img src={exportIcon} alt="Export Icon" className="btn-icon" />
@@ -738,6 +1647,8 @@ const handleExport = () => {
           </div>
         </div>
         
+        {/* Analysis Dashboard - Shows statistics for current filtered data */}
+      
         <Table
           className="transparent-table"
           columns={columns}
@@ -745,6 +1656,10 @@ const handleExport = () => {
           pagination={{ pageSize: 5 }}
           bordered
           scroll={{ x: 'max-content' }}
+          onChange={(pagination, filters, sorter) => {
+            // Handle table sorting and filtering
+            console.log('Table changed:', { pagination, filters, sorter });
+          }}
           locale={{
             emptyText: (
               <div style={{ textAlign: "center", padding: "50px 0" }}>
@@ -756,6 +1671,14 @@ const handleExport = () => {
                 <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
                   {language === "gu" ? "કોઈ ડેટા ઉપલબ્ધ નથી" : "No data available"}
                 </div>
+                {(searchText || startFilter || endFilter || typeFilter) && (
+                  <Button 
+                    onClick={clearAllFilters}
+                    style={{ marginTop: "16px" }}
+                  >
+                    {language === "gu" ? "બધા ફિલ્ટર સાફ કરો" : "Clear All Filters"}
+                  </Button>
+                )}
               </div>
             ),
           }}
@@ -782,25 +1705,258 @@ const handleExport = () => {
         {selectedPatrol && (
           <>
             <div style={{ marginBottom: 16 }}>
-              <h4>{language === "gu" ? "શરૂઆતની છબી" : "Start Image"}</h4>
-              <Image
-                src={selectedPatrol.start_image}
-                alt="Start Location"
-                style={{ maxHeight: 200 }}
-              />
-              <h4>{language === "gu" ? "અંતિમ છબી" : "End Image"}</h4>
-              <Image
-                src={selectedPatrol.end_image}
-                alt="End Location"
-                style={{ maxHeight: 200 }}
-              />
+              {selectedPatrol.start_image && (
+                <>
+                  <h4>{language === "gu" ? "શરૂઆતની છબી" : "Start Image"}</h4>
+                  <Image
+                    src={selectedPatrol.start_image}
+                    alt="Start Location"
+                    style={{ maxHeight: 200, marginBottom: 16 }}
+                  />
+                </>
+              )}
+              {selectedPatrol.end_image && (
+                <>
+                  <h4>{language === "gu" ? "અંતિમ છબી" : "End Image"}</h4>
+                  <Image
+                    src={selectedPatrol.end_image}
+                    alt="End Location"
+                    style={{ maxHeight: 200 }}
+                  />
+                </>
+              )}
             </div>
             <PatrolMap patrol={selectedPatrol} />
           </>
         )}
       </Modal>
+        <PatrolAnalysisDashboard patrolData={filteredData} language={language} />
+        
     </div>
   );
 };
 
 export default PatrolIncidentLogs;
+
+
+
+
+
+
+//  <div style={{ margin: 4, backgroundColor: '#fafafa', padding: 20, borderRadius: 8 }}>
+//       <Title level={4} style={{ marginBottom: 20 }}>
+//         {language === "gu" ? "પેટ્રોલિંગ વિશ્લેષણ" : "Patrol Analysis"}
+//       </Title>
+      
+    
+//       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+//         <Col xs={24} sm={12} md={6}>
+//           <Card size="small">
+//             <Statistic
+//               title={language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"}
+//               value={totalPatrols}
+//               prefix={<CalendarOutlined />}
+//               valueStyle={{ color: '#1890ff' }}
+//             />
+//           </Card>
+//         </Col>
+//         <Col xs={24} sm={12} md={6}>
+//           <Card size="small">
+//             <Statistic
+//               title={language === "gu" ? "સરેરાશ અંતર" : "Average Distance"}
+//               value={avgDistanceOverall}
+//               suffix="km"
+//               prefix={<DashboardOutlined />}
+//               valueStyle={{ color: '#52c41a' }}
+//             />
+//           </Card>
+//         </Col>
+//         <Col xs={24} sm={12} md={6}>
+//           <Card size="small">
+//             <Statistic
+//               title={language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers"}
+//               value={uniqueOfficers.length}
+//               prefix={<TeamOutlined />}
+//               valueStyle={{ color: '#722ed1' }}
+//             />
+//           </Card>
+//         </Col>
+//         <Col xs={24} sm={12} md={6}>
+//           <Card size="small">
+//             <Statistic
+//               title={language === "gu" ? "ઉપયોગિતા" : "Utilization"}
+//               value={utilizationPercentage}
+//               suffix="%"
+//               prefix={<ClockCircleOutlined />}
+//               valueStyle={{ color: '#fa8c16' }}
+//             />
+//           </Card>
+//         </Col>
+//       </Row>
+
+     
+//       <div style={{ marginBottom: 24 }}>
+//         <Text strong style={{ display: 'block', marginBottom: 8 }}>
+//           {language === "gu" ? "પેટ્રોલિંગ વિતરણ" : "Patrol Distribution"}
+//         </Text>
+//         <Row gutter={8}>
+//           <Col span={8}>
+//             <div style={{ textAlign: 'center' }}>
+//               <Progress
+//                 type="dashboard"
+//                 percent={parseInt(dayPercentage)}
+//                 strokeColor="#1890ff"
+//                 format={percent => `${percent}%`}
+//               />
+//               <Text type="secondary">{getTypeDisplayName("Day patrolling")}</Text>
+//             </div>
+//           </Col>
+//           <Col span={8}>
+//             <div style={{ textAlign: 'center' }}>
+//               <Progress
+//                 type="dashboard"
+//                 percent={parseInt(nightPercentage)}
+//                 strokeColor="#722ed1"
+//                 format={percent => `${percent}%`}
+//               />
+//               <Text type="secondary">{getTypeDisplayName("Night patrolling")}</Text>
+//             </div>
+//           </Col>
+//           <Col span={8}>
+//             <div style={{ textAlign: 'center' }}>
+//               <Progress
+//                 type="dashboard"
+//                 percent={parseInt(beatPercentage)}
+//                 strokeColor="#52c41a"
+//                 format={percent => `${percent}%`}
+//               />
+//               <Text type="secondary">{getTypeDisplayName("Beat checking")}</Text>
+//             </div>
+//           </Col>
+//         </Row>
+//       </div>
+
+     
+//       <Row gutter={[16, 16]}>
+//         {[dayStats, nightStats, beatStats].map((stats, index) => {
+//           if (!stats) return null;
+          
+//           const types = ["Day patrolling", "Night patrolling", "Beat checking"];
+//           const type = types[index];
+          
+//           return (
+//             <Col xs={24} md={8} key={type}>
+//               <Card 
+//                 size="small" 
+//                 title={
+//                   <div style={{ display: 'flex', alignItems: 'center' }}>
+//                     <div style={{
+//                       width: 12,
+//                       height: 12,
+//                       borderRadius: '50%',
+//                       backgroundColor: getTypeColor(type),
+//                       marginRight: 8
+//                     }} />
+//                     <span>{getTypeDisplayName(type)}</span>
+//                   </div>
+//                 }
+//                 headStyle={{ backgroundColor: getTypeColor(type) + '10', borderBottomColor: getTypeColor(type) + '30' }}
+//               >
+//                 <Statistic
+//                   title={language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"}
+//                   value={stats.totalPatrols}
+//                   valueStyle={{ fontSize: '24px' }}
+//                 />
+//                 <Row style={{ marginTop: 12 }}>
+//                   <Col span={12}>
+//                     <Text type="secondary">{language === "gu" ? "સરેરાશ અંતર:" : "Avg Distance:"}</Text>
+//                     <br />
+//                     <Text strong>{stats.avgDistance} km</Text>
+//                   </Col>
+//                   <Col span={12}>
+//                     <Text type="secondary">{language === "gu" ? "સરેરાશ સમય:" : "Avg Time:"}</Text>
+//                     <br />
+//                     <Text strong>{stats.avgHours} hrs</Text>
+//                   </Col>
+//                 </Row>
+//                 <Row style={{ marginTop: 12 }}>
+//                   <Col span={12}>
+//                     <Text type="secondary">{language === "gu" ? "સરેરાશ સ્ટાફ:" : "Avg Staff:"}</Text>
+//                     <br />
+//                     <Text strong>{stats.avgStaff}</Text>
+//                   </Col>
+//                   <Col span={12}>
+//                     <Text type="secondary">{language === "gu" ? "શ્રેષ્ઠ અધિકારી:" : "Top Officer:"}</Text>
+//                     <br />
+//                     <Text strong style={{ fontSize: '12px' }}>{stats.topOfficer}</Text>
+//                   </Col>
+//                 </Row>
+//                 <div style={{ marginTop: 12 }}>
+//                   <Text type="secondary">{language === "gu" ? "કુલ અંતર:" : "Total Distance:"}</Text>
+//                   <br />
+//                   <Text strong>{stats.totalDistance} km</Text>
+//                 </div>
+//               </Card>
+//             </Col>
+//           );
+//         })}
+//       </Row>
+
+     
+//       {(dayStats || nightStats || beatStats) && (
+//         <Card 
+//           size="small" 
+//           style={{ marginTop: 16 }}
+//           title={language === "gu" ? "વધારાની જાણકારી" : "Additional Insights"}
+//         >
+//           <Row gutter={[16, 16]}>
+//             <Col xs={24} sm={12}>
+//               <div>
+//                 <Text strong>
+//                   {language === "gu" ? "સૌથી વધુ પેટ્રોલિંગ:" : "Most Active Type:"}
+//                 </Text>
+//                 <br />
+//                 {(() => {
+//                   const types = [
+//                     { name: "Day patrolling", count: dayStats?.totalPatrols || 0 },
+//                     { name: "Night patrolling", count: nightStats?.totalPatrols || 0 },
+//                     { name: "Beat checking", count: beatStats?.totalPatrols || 0 }
+//                   ];
+//                   const mostActive = types.reduce((prev, current) => 
+//                     prev.count > current.count ? prev : current
+//                   );
+//                   return (
+//                     <Text>
+//                       {getTypeDisplayName(mostActive.name)} ({mostActive.count} {language === "gu" ? "પેટ્રોલિંગ" : "patrols"})
+//                     </Text>
+//                   );
+//                 })()}
+//               </div>
+//             </Col>
+//             <Col xs={24} sm={12}>
+//               <div>
+//                 <Text strong>
+//                   {language === "gu" ? "સૌથી વધુ અંતર:" : "Longest Distance Type:"}
+//                 </Text>
+//                 <br />
+//                 {(() => {
+//                   const types = [
+//                     { name: "Day patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
+//                     { name: "Night patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
+//                     { name: "Beat checking", distance: parseFloat(beatStats?.totalDistance || 0) }
+//                   ];
+//                   const longestDistance = types.reduce((prev, current) => 
+//                     prev.distance > current.distance ? prev : current
+//                   );
+//                   return (
+//                     <Text>
+//                       {getTypeDisplayName(longestDistance.name)} ({longestDistance.distance} km)
+//                     </Text>
+//                   );
+//                 })()}
+//               </div>
+//             </Col>
+//           </Row>
+//         </Card>
+//       )}
+//     </div>

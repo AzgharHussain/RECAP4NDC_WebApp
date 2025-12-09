@@ -1,35 +1,91 @@
+// routers/mon2.js
 const ee = require('@google/earthengine');
-const privatekey = require("./private-key.json");
-const { sequelize } = require('../config/database');
+const fs = require('fs');
+const path = require('path');
+const wellknown = require('wellknown');
+const privatekey = require("./giz-gujarat-7624cd92559c.json");
+const { sequelize, testConnection } = require('./config/ndvidatabase');
 
-// 2025 months from January to October
-const months = [
-  '2025-01-01', '2025-02-01', '2025-03-01', '2025-04-01',
-  '2025-05-01', '2025-06-01', '2025-07-01', '2025-08-01',
-  '2025-09-01', '2025-10-01'
-];
+// Checkpoint file path
+const CHECKPOINT_FILE = path.join(__dirname, 'checkpoint.json');
 
-// Generate table names for each month
-const monthTables = months.map(month => {
-  const monthName = new Date(month).toLocaleString('en', { month: 'short' }).toLowerCase();
-  return `ndvi_${monthName}_2025`;
-});
+// Sleep helper
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-// ----------------- Earth Engine Authentication -----------------
-async function initializeEarthEngine() {
-  try {
-    await ee.data.authenticateViaPrivateKey(privatekey);
-    await ee.initialize(null, null, () => {
-      console.log('✅ Earth Engine initialized successfully');
-    });
-    return true;
-  } catch (error) {
-    console.error('❌ Failed to initialize Earth Engine:', error.message);
-    return false;
+// Retry helper with exponential backoff
+async function withRetry(fn, attempts = 5, baseDelay = 1000) {
+  let i = 0;
+  while (i < attempts) {
+    try {
+      return await fn();
+    } catch (err) {
+      i++;
+      const isLast = i >= attempts;
+      console.error(`Attempt ${i} failed: ${err && err.message ? err.message : err}.`);
+      if (isLast) throw err;
+      const backoff = baseDelay * Math.pow(2, i - 1);
+      console.log(`Retrying after ${backoff}ms...`);
+      await sleep(backoff);
+      // If sequelize connection seems closed, try re-authenticating
+      try {
+        await sequelize.authenticate();
+        console.log('✅ Re-authenticated to DB after failure.');
+      } catch (authErr) {
+        console.warn('⚠️ Re-authentication failed:', authErr.message || authErr);
+      }
+    }
   }
 }
 
-// ----------------- Helper Functions -----------------
+// Load checkpoint if exists
+function loadCheckpoint() {
+  try {
+    if (fs.existsSync(CHECKPOINT_FILE)) {
+      const data = JSON.parse(fs.readFileSync(CHECKPOINT_FILE, 'utf8'));
+      console.log('📌 Loaded checkpoint:', data);
+      return data;
+    }
+  } catch (err) {
+    console.warn('⚠️ Could not load checkpoint:', err.message);
+  }
+  return null;
+}
+
+// Save checkpoint
+function saveCheckpoint(data) {
+  try {
+    fs.writeFileSync(CHECKPOINT_FILE, JSON.stringify(data, null, 2));
+    console.log('💾 Checkpoint saved:', data);
+  } catch (err) {
+    console.error('❌ Failed to save checkpoint:', err.message);
+  }
+}
+
+// Clear checkpoint (call when processing is complete)
+function clearCheckpoint() {
+  try {
+    if (fs.existsSync(CHECKPOINT_FILE)) {
+      fs.unlinkSync(CHECKPOINT_FILE);
+      console.log('🧹 Checkpoint cleared');
+    }
+  } catch (err) {
+    console.warn('⚠️ Could not clear checkpoint:', err.message);
+  }
+}
+
+// ----------------- GRID MAKER -----------------
+function makeGrid(geom, tileSizeMeters) {
+  const proj = ee.Projection('EPSG:4326').atScale(tileSizeMeters);
+  return ee.FeatureCollection(
+    ee.Geometry(geom)
+      .coveringGrid(proj)
+      .map(f => f.intersection(geom, 1))
+  );
+}
+
+// ----------------- EE evaluate wrapper -----------------
 function evaluateFC(fc) {
   return new Promise((resolve, reject) => {
     fc.evaluate((result, err) => {
@@ -39,442 +95,428 @@ function evaluateFC(fc) {
   });
 }
 
-function maskS2(image) {
-  const valid = image.select(['B2', 'B3', 'B4', 'B8']).reduce(ee.Reducer.min()).gt(0);
-  return image.updateMask(valid);
+// ----------------- NDVI Mask Function -----------------
+function maskS2(img) {
+  return img.updateMask(
+    img.select(['B2','B3','B4','B8'])
+      .reduce(ee.Reducer.min())
+      .gt(0)
+  );
 }
 
-function cleanAndValidateGeometry(geometry) {
-  if (!geometry || !geometry.coordinates) {
-    return null;
+// ----------------- Sentinel-2 NDVI -----------------
+function getS2NDVI(start, end, geom) {
+  const s2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+    .filterDate(start, end)
+    .filterBounds(geom)
+    .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 80));
+
+  const emptyCollection = s2.size().eq(0);
+  const nullNdvi = ee.Image.constant(0)
+    .rename("NDVI")
+    .updateMask(ee.Image(0));
+
+  const median = s2.map(maskS2).median();
+  const hasBands = median.bandNames().size().gt(0);
+
+  const ndvi = ee.Algorithms.If(
+    emptyCollection.or(hasBands.not()),
+    nullNdvi,
+    median.normalizedDifference(["B8", "B4"]).rename("NDVI")
+  );
+
+  return ee.Image(ndvi);
+}
+
+// ----------------- Create table if not exists -----------------
+async function createTableIfNotExists(tableName) {
+  const idxName = `idx_${tableName.replace(/[^a-zA-Z0-9]/g, '_')}_geom`;
+  const sqlCreate = `
+    CREATE TABLE IF NOT EXISTS "${tableName}" (
+      id SERIAL PRIMARY KEY,
+      coop_name VARCHAR(255),
+      poly_id INTEGER,
+      valNdvi DECIMAL(10,6),
+      geom GEOMETRY(POLYGON, 4326),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+  const sqlIndex = `
+    CREATE INDEX IF NOT EXISTS "${idxName}"
+    ON "${tableName}" USING GIST (geom);
+  `;
+
+  await withRetry(() => sequelize.query(sqlCreate));
+  await withRetry(() => sequelize.query(sqlIndex));
+  console.log(`✅ Table '${tableName}' ensured to exist (and index).`);
+}
+
+// ----------------- Build bulk insert query -----------------
+function buildBulkInsert(table, rows) {
+  const values = [];
+  const params = [];
+  let paramIdx = 1;
+
+  for (const r of rows) {
+    const group = [
+      `$${paramIdx++}`, // coop_name
+      `$${paramIdx++}`, // poly_id
+      `$${paramIdx++}`, // valNdvi
+      `ST_GeomFromText($${paramIdx++}, 4326)` // wkt
+    ];
+    values.push(`(${group.join(',')})`);
+    params.push(r.coop_name, r.poly_id, r.valNdvi, r.wkt);
   }
-  try {
-    const cleanCoordinates = (coords) => {
-      if (!Array.isArray(coords)) return [];
 
-      if (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
-        return coords.map(ring => cleanCoordinates(ring)).filter(ring => ring.length > 0);
-      } else if (Array.isArray(coords[0])) {
-        return coords.map(coord => {
-          if (!Array.isArray(coord) || coord.length < 2) return null;
-          const cleanCoord = coord.slice(0, 2).filter(c => c !== null && c !== undefined);
-          return cleanCoord.length === 2 ? cleanCoord : null;
-        }).filter(coord => coord !== null);
-      } else {
-        const cleanCoord = coords.slice(0, 2).filter(c => c !== null && c !== undefined);
-        return cleanCoord.length === 2 ? cleanCoord : null;
-      }
-    };
-
-    const cleaned = JSON.parse(JSON.stringify(geometry));
-
-    if (cleaned.type === 'MultiPolygon') {
-      cleaned.coordinates = cleaned.coordinates.map(polygon =>
-        cleanCoordinates(polygon)
-      ).filter(polygon => polygon.length > 0 && polygon[0].length >= 4);
-    } else if (cleaned.type === 'Polygon') {
-      cleaned.coordinates = cleanCoordinates(cleaned.coordinates);
-    }
-
-    if (!cleaned.coordinates || cleaned.coordinates.length === 0) {
-      return null;
-    }
-    return cleaned;
-  } catch (error) {
-    console.error('❌ Error cleaning geometry:', error.message);
-    return null;
-  }
+  const sql = `INSERT INTO "${table}" (coop_name, poly_id, valNdvi, geom) VALUES ${values.join(', ')};`;
+  return { sql, params };
 }
 
-function wktToGeoJSON(wkt) {
-  if (!wkt) return null;
+// ----------------- Insert polygons into DB (batched + retries) -----------------
+async function insertPolygonsFromFile(ndviFC, table, coop, polyID, options = {}) {
+  if (!ndviFC?.features || ndviFC.features.length === 0) return 0;
+  const batchSize = options.batchSize || 200;
+  const delayBetweenBatches = options.delayBetweenBatches || 50;
 
-  try {
-    if (wkt.startsWith('MULTIPOLYGON')) {
-      const coordsText = wkt.replace('MULTIPOLYGON', '').trim();
-      const polygons = coordsText.slice(2, -2).split(')),((');
+  const rows = [];
+  for (const f of ndviFC.features) {
+    if (!f || !f.geometry) continue;
 
-      const coordinates = polygons.map(polygon => {
-        const rings = polygon.split('),(');
-        return rings.map(ring => {
-          const points = ring.split(',');
-          return points.map(point => {
-            const coords = point.trim().split(' ').map(Number);
-            if (coords.length >= 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-              return [coords[0], coords[1]];
-            }
-            return null;
-          }).filter(coord => coord !== null);
-        }).filter(ring => ring.length >= 4);
-      }).filter(polygon => polygon.length > 0);
-
-      return coordinates.length > 0 ? {
-        type: 'MultiPolygon',
-        coordinates: coordinates
-      } : null;
-
-    } else if (wkt.startsWith('POLYGON')) {
-      const coordsText = wkt.replace('POLYGON', '').trim();
-      const rings = coordsText.slice(2, -2).split('),(');
-
-      const coordinates = rings.map(ring => {
-        const points = ring.split(',');
-        return points.map(point => {
-          const coords = point.trim().split(' ').map(Number);
-          if (coords.length >= 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-            return [coords[0], coords[1]];
-          }
-          return null;
-        }).filter(coord => coord !== null);
-      }).filter(ring => ring.length >= 4);
-
-      return coordinates.length > 0 ? {
-        type: 'Polygon',
-        coordinates: coordinates
-      } : null;
-    }
-
-    return null;
-  } catch (error) {
-    console.error('❌ Error converting WKT to GeoJSON:', error.message);
-    return null;
-  }
-}
-
-// ----------------- NDVI Calculation -----------------
-function calculateNDVI(image) {
-  return image.normalizedDifference(['B8', 'B4']).rename('NDVI');
-}
-
-function getSentinel2Image(startDate, endDate, geometry) {
-  return ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-    .filterDate(startDate, endDate)
-    .filterBounds(geometry)
-    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))
-    .map(maskS2)
-    .median()
-    .clip(geometry);
-}
-
-// ----------------- Create Monthly Tables -----------------
-async function createMonthlyTables() {
-  console.log('🗃️ Creating monthly NDVI tables...');
-
-  for (let i = 0; i < months.length; i++) {
-    const tableName = monthTables[i];
-    const monthDate = months[i];
-
+    let wkt;
     try {
-      await sequelize.query(`
-        CREATE TABLE IF NOT EXISTS "${tableName}" (
-          id SERIAL PRIMARY KEY,
-          coop_id INTEGER,
-          coop_name TEXT,
-          poly_id INTEGER,
-          pixel_id TEXT,
-          month_date DATE,
-          ndvi_value FLOAT,
-          area_ha FLOAT,
-          geom geometry(Point, 4326),
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(pixel_id, month_date)
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_${tableName}_coop_id ON "${tableName}"(coop_id);
-        CREATE INDEX IF NOT EXISTS idx_${tableName}_poly_id ON "${tableName}"(poly_id);
-        CREATE INDEX IF NOT EXISTS idx_${tableName}_month_date ON "${tableName}"(month_date);
-        CREATE INDEX IF NOT EXISTS idx_${tableName}_geom ON "${tableName}" USING GIST(geom);
-      `);
-
-      console.log(`✅ Created table: ${tableName} for ${monthDate}`);
-    } catch (error) {
-      console.error(`❌ Error creating table ${tableName}:`, error.message);
+      wkt = wellknown.stringify(f.geometry);
+      if (!wkt) continue;
+    } catch (err) {
+      console.warn('Invalid geometry for feature, skipping', err && err.message);
+      continue;
     }
-  }
-}
 
-// ----------------- Pixel-wise NDVI Processing -----------------
-async function processNDVIPixels(ndviTable, row, ndviImage, month, scale = 10) {
-  try {
-    const geom = ee.Geometry(row.geometry);
+    const valNdvi = (typeof f.properties?.mean === 'number') ? (f.properties.mean / 1000.0) : null;
 
-    // Sample NDVI values at pixel level (10m scale)
-    const ndviSamples = ndviImage.sample({
-      region: geom,
-      scale: scale,
-      geometries: true,
-      tileScale: 1
+    rows.push({
+      coop_name: coop.coupe_name || 'unknown',
+      poly_id: polyID,
+      valNdvi: valNdvi,
+      wkt: wkt
     });
-
-    const ndviFC = await evaluateFC(ndviSamples);
-
-    let pixelCount = 0;
-    let insertedPixels = [];
-
-    if (!ndviFC || !ndviFC.features || !Array.isArray(ndviFC.features)) {
-      console.log(`⚠️ No NDVI pixels found for polygon ${row.id}`);
-      return {
-        success: true,
-        count: 0,
-        pixels: []
-      };
-    }
-
-    console.log(`🔍 Found ${ndviFC.features.length} NDVI pixels for polygon ${row.id}`);
-
-    for (let i = 0; i < ndviFC.features.length; i++) {
-      const pixel = ndviFC.features[i];
-
-      if (!pixel || !pixel.geometry) {
-        console.log(`⚠️ Skipping pixel ${i} - no geometry`);
-        continue;
-      }
-
-      try {
-        const ndviValue = pixel.properties?.NDVI;
-
-        if (ndviValue === null || ndviValue === undefined) {
-          console.log(`⚠️ Skipping pixel ${i} - no NDVI value`);
-          continue;
-        }
-
-        // Validate NDVI range
-        if (ndviValue < -1 || ndviValue > 1) {
-          console.log(`⚠️ Skipping pixel ${i} - invalid NDVI value: ${ndviValue}`);
-          continue;
-        }
-
-        const geomStr = JSON.stringify(pixel.geometry);
-        if (!geomStr || geomStr === '{}' || geomStr === 'null') {
-          console.log(`⚠️ Skipping pixel ${i} - invalid geometry`);
-          continue;
-        }
-
-        // Calculate pixel area (10m x 10m = 0.0001 ha)
-        const pixelArea = 0.0001;
-
-        // Generate unique pixel ID
-        const pixelId = `ndvi_${row.id}_${pixelCount}_${month.replace(/-/g, '')}_${Date.now()}`;
-
-        // Insert into the specific month's NDVI table
-        const [result] = await sequelize.query(
-          `INSERT INTO "${ndviTable}"
-            (coop_id, coop_name, poly_id, pixel_id, month_date, ndvi_value, area_ha, geom, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, ST_SetSRID(ST_GeomFromGeoJSON($8), 4326), NOW())
-           ON CONFLICT (pixel_id, month_date) DO NOTHING
-           RETURNING id`,
-          {
-            bind: [
-              row.coop?.coupe_code || 0,
-              row.coop?.coupe_name || 'unknown',
-              row.id,
-              pixelId,
-              month,
-              parseFloat(ndviValue.toFixed(6)),
-              pixelArea,
-              geomStr
-            ]
-          }
-        );
-
-        if (result && result.length > 0) {
-          insertedPixels.push({
-            id: result[0].id,
-            geometry: geomStr,
-            ndvi_value: ndviValue,
-            area: pixelArea
-          });
-          pixelCount++;
-
-          if (pixelCount % 100 === 0) {
-            console.log(`✅ Inserted ${pixelCount} NDVI pixels for polygon ${row.id}`);
-          }
-        }
-
-      } catch (pixelError) {
-        console.error(`❌ Error processing NDVI pixel ${i}:`, pixelError.message);
-        continue;
-      }
-    }
-
-    console.log(`✅ Processed ${pixelCount}/${ndviFC.features.length} valid NDVI pixels for polygon ${row.id}`);
-
-    return {
-      success: true,
-      count: pixelCount,
-      pixels: insertedPixels
-    };
-
-  } catch (err) {
-    console.error(`❌ Error processing NDVI pixels for polygon ${row.id}:`, err.message);
-    return {
-      success: false,
-      count: 0,
-      pixels: []
-    };
   }
+
+  if (rows.length === 0) return 0;
+
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const { sql, params } = buildBulkInsert(table, batch);
+
+    await withRetry(() => sequelize.query(sql, { bind: params, logging: false }));
+
+    inserted += batch.length;
+    await sleep(delayBetweenBatches);
+  }
+
+  return inserted;
 }
 
-// ----------------- Validation Function -----------------
-async function validateImageAvailability(dateRange, geometry) {
-  try {
-    const collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-      .filterDate(dateRange.start, dateRange.end)
-      .filterBounds(geometry)
-      .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 80));
-
-    const count = collection.size();
-    const countValue = await evaluateFC(ee.FeatureCollection([ee.Feature(geometry).set('count', count)]));
-
-    return countValue.features[0]?.properties?.count > 0;
-  } catch (error) {
-    return false;
-  }
+// Generate safe table name
+function generateTableName(coupeName, month, year) {
+  // Clean coupe name: remove special characters, replace spaces with underscores
+  const cleanCoupeName = coupeName
+    .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+    .replace(/\s+/g, '_')           // Replace spaces with underscores
+    .toLowerCase();
+  
+  // Get month abbreviation
+  const monthAbbr = new Date(month).toLocaleString('en', { month: 'short' }).toLowerCase();
+  
+  // Generate table name
+  return `ndvi_${cleanCoupeName}_${monthAbbr}_${year}`;
 }
 
-// ----------------- Main Processing -----------------
+// ----------------- MAIN -----------------
 async function main() {
-  try {
-    // Initialize Earth Engine
-    const eeInitialized = await initializeEarthEngine();
-    if (!eeInitialized) {
-      console.error('❌ Cannot proceed without Earth Engine initialization');
-      return;
-    }
+  // Load checkpoint if exists
+  const checkpoint = loadCheckpoint();
+  
+  // Initialize Earth Engine
+  await new Promise((resolve, reject) => {
+    ee.data.authenticateViaPrivateKey(privatekey, () => {
+      ee.initialize(null, null, resolve, reject);
+    }, reject);
+  });
+  console.log("✅ EE initialized");
 
-    // Test database connection
-    await sequelize.authenticate();
-    console.log('✅ Sequelize connection established successfully');
-
-    // Create monthly tables
-    await createMonthlyTables();
-
-    // Load coop metadata
-    const [coops] = await sequelize.query(`
-      SELECT * FROM coupe_metadata
-      WHERE coupe_name = 'Con_Cum_Imp_WC_OVLP'
-      LIMIT 1;
-    `);
-
-    if (coops.length === 0) {
-      console.log('⚠️ No coop metadata found for Con_Cum_Imp_WC_OVLP. Exiting.');
-      await sequelize.close();
-      return;
-    }
-
-    console.log(`🔍 Processing ${coops.length} coops`);
-    console.log(`📅 Processing ${months.length} months`);
-
-    for (const coop of coops) {
-      console.log(`🏭 Processing coop: ${coop.coupe_name}`);
-
-      // Load polygons
-      const [rows] = await sequelize.query(`
-        SELECT id, geom, ST_AsText(geom) AS wkt_geometry
-        FROM public."${coop.coupe_name}";
-      `);
-
-      if (rows.length === 0) {
-        console.log(`⚠️ No polygons found in table: ${coop.coupe_name}`);
-        continue;
-      }
-
-      console.log(`📍 Processing ${rows.length} polygons`);
-
-      // Process only a subset for testing (remove slice for full processing)
-      const sampleRows = rows.slice(0, 5);
-
-      // Process each month separately
-      for (let monthIndex = 0; monthIndex < months.length; monthIndex++) {
-        const month = months[monthIndex];
-        const tableName = monthTables[monthIndex];
-
-        console.log(`\n📅 Processing month: ${month} into table: ${tableName}`);
-
-        const nextMonth = new Date(month);
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        const nextMonthStr = nextMonth.toISOString().split('T')[0];
-
-        let totalPixelCount = 0;
-        let processedPolygons = 0;
-        let validPolygons = 0;
-
-        for (const row of sampleRows) {
-          try {
-            processedPolygons++;
-
-            // Convert WKT to GeoJSON
-            const geometry = wktToGeoJSON(row.wkt_geometry);
-            if (!geometry) {
-              console.log(`⚠️ Invalid WKT geometry for polygon ${row.id}`);
-              continue;
-            }
-
-            // Clean and validate geometry
-            const cleanedGeometry = cleanAndValidateGeometry(geometry);
-            if (!cleanedGeometry) {
-              console.log(`⚠️ Invalid geometry after cleaning for polygon ${row.id}`);
-              continue;
-            }
-
-            validPolygons++;
-
-            // Validate image availability for this month
-            const hasImages = await validateImageAvailability(
-              { start: month, end: nextMonthStr },
-              cleanedGeometry
-            );
-
-            if (!hasImages) {
-              console.log(`⚠️ No Sentinel-2 images available for polygon ${row.id} in ${month}`);
-              continue;
-            }
-
-            // Get and process NDVI image
-            const s2Image = getSentinel2Image(month, nextMonthStr, cleanedGeometry);
-            const ndviImage = calculateNDVI(s2Image);
-
-            // Process NDVI pixels for this specific month table
-            const result = await processNDVIPixels(
-              tableName,
-              { ...row, geometry: cleanedGeometry, coop },
-              ndviImage,
-              month
-            );
-
-            if (result.success) {
-              totalPixelCount += result.count;
-              console.log(`✅ Added ${result.count} pixels for polygon ${row.id} in ${tableName}`);
-            }
-
-          } catch (error) {
-            console.error(`❌ Error processing polygon ${row.id} for month ${month}:`, error.message);
-            continue;
-          }
-        }
-
-        console.log(`\n📊 Month ${month} Summary:`);
-        console.log(`   - Table: ${tableName}`);
-        console.log(`   - Processed polygons: ${processedPolygons}`);
-        console.log(`   - Valid polygons: ${validPolygons}`);
-        console.log(`   - Total pixels inserted: ${totalPixelCount}`);
-      }
-    }
-
-    console.log('\n🎉 All monthly NDVI processing completed!');
-    console.log('📋 Tables created:');
-    monthTables.forEach((table, index) => {
-      console.log(`   ${index + 1}. ${table} (${months[index]})`);
-    });
-
-    await sequelize.close();
-
-  } catch (error) {
-    console.error('❌ Fatal error in main process:', error.message);
-    await sequelize.close();
+  // Test DB connection
+  const ok = await testConnection();
+  if (!ok) {
+    console.error('Exiting: cannot connect to DB.');
     process.exit(1);
   }
+  console.log("✅ DB connected");
+
+  const months = [
+    '2025-01-01',  // January
+    '2025-02-01',  // February
+    '2025-03-01',  // March
+    '2025-04-01',  // April
+    '2025-05-01',  // May
+    '2025-06-01',  // June
+    '2025-07-01',  // July
+    '2025-08-01',  // August
+    '2025-09-01',  // September
+    '2025-10-01',  // October
+    '2025-11-01',  // November
+  ];
+  
+  const year = '2025';
+
+  // Load all coupes from metadata
+  const [allCoupes] = await sequelize.query(`
+    SELECT DISTINCT coupe_name FROM coupe_metadata
+    ORDER BY coupe_name;
+  `);
+  
+  if (!allCoupes || allCoupes.length === 0) {
+    throw new Error('No coupe metadata found in the database');
+  }
+
+  console.log(`Found ${allCoupes.length} coupes to process.`);
+
+  // Determine where to resume from checkpoint
+  let startCoupeIndex = 0;
+  let startMonthIndex = 0;
+  let startPolygonIndex = 0;
+  let startTileIndex = 0;
+
+  if (checkpoint) {
+    // Find coupe index
+    const coupeIndex = allCoupes.findIndex(c => 
+      c.coupe_name === checkpoint.coupeName
+    );
+    
+    if (coupeIndex !== -1) {
+      startCoupeIndex = coupeIndex;
+      startMonthIndex = months.indexOf(checkpoint.month) || 0;
+      startPolygonIndex = checkpoint.polygonIndex || 0;
+      startTileIndex = checkpoint.tileIndex || 0;
+      console.log(`🔄 Resuming from: Coupe ${checkpoint.coupeName}, Month ${checkpoint.month}, Polygon ${startPolygonIndex}, Tile ${startTileIndex}`);
+    }
+  }
+
+  // Process each coupe
+  for (let c = startCoupeIndex; c < allCoupes.length; c++) {
+    const coop = allCoupes[c];
+    const coopName = coop.coupe_name;
+    
+    console.log(`\n🌳 Processing coupe: ${coopName} (${c + 1}/${allCoupes.length})`);
+    
+    // Save checkpoint at start of each coupe
+    saveCheckpoint({
+      coupeName: coopName,
+      coupeIndex: c,
+      month: months[0],
+      polygonIndex: 0,
+      tileIndex: 0,
+      timestamp: new Date().toISOString()
+    });
+
+    // Generate table names for this coupe for all months
+    const monthTables = {};
+    for (const month of months) {
+      const tableName = generateTableName(coopName, month, year);
+      monthTables[month] = tableName;
+      await createTableIfNotExists(tableName);
+    }
+
+    // Check if polygon table exists for this coupe
+    try {
+      const [tableExists] = await sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = '${coopName}'
+        );
+      `);
+      
+      if (!tableExists[0].exists) {
+        console.error(`❌ Table '${coopName}' does not exist. Skipping this coupe.`);
+        continue;
+      }
+    } catch (err) {
+      console.error(`❌ Error checking table existence for '${coopName}':`, err.message);
+      continue;
+    }
+
+    // Fetch polygons for this coupe
+    const [rows] = await sequelize.query(`
+      SELECT id, ST_AsGeoJSON(geom) AS geomjson
+      FROM "${coopName}"
+      WHERE geom IS NOT NULL
+      ORDER BY id;
+    `);
+
+    const polygons = rows.filter(r => {
+      try {
+        if (!r.geomjson) return false;
+        JSON.parse(r.geomjson);
+        return true;
+      } catch (err) {
+        console.warn(`Skipping polygon ${r.id}: Invalid geometry`, err.message);
+        return false;
+      }
+    });
+
+    console.log(`📊 Found ${polygons.length} valid polygons for coupe ${coopName}.`);
+
+    // Process each month for this coupe
+    for (let m = (c === startCoupeIndex ? startMonthIndex : 0); m < months.length; m++) {
+      const month = months[m];
+      const table = monthTables[month];
+
+      const start = month;
+      const endObj = new Date(month);
+      endObj.setMonth(endObj.getMonth() + 1);
+      const end = endObj.toISOString().slice(0, 10);
+
+      console.log(`\n📅 Processing: ${month} → ${table}`);
+
+      // Process polygons for this month (starting from checkpoint if applicable)
+      for (let p = (c === startCoupeIndex && m === startMonthIndex ? startPolygonIndex : 0); p < polygons.length; p++) {
+        const row = polygons[p];
+        
+        // Save checkpoint at start of each polygon
+        saveCheckpoint({
+          coupeName: coopName,
+          coupeIndex: c,
+          month: month,
+          polygonId: row.id,
+          polygonIndex: p,
+          tileIndex: 0,
+          timestamp: new Date().toISOString()
+        });
+
+        try {
+          const geom = ee.Geometry(JSON.parse(row.geomjson));
+          const tiles = makeGrid(geom, 500);
+
+          const totalTiles = tiles.size().getInfo();
+          console.log(`🧩 Polygon ${row.id}: Total tiles: ${totalTiles}`);
+          
+          // Determine starting tile based on checkpoint
+          let startTile = 0;
+          if (checkpoint && 
+              checkpoint.coupeName === coopName && 
+              checkpoint.month === month && 
+              checkpoint.polygonId === row.id) {
+            startTile = checkpoint.tileIndex || 0;
+            console.log(`🔄 Resuming polygon ${row.id} from tile ${startTile}`);
+          }
+          
+          const BATCH_SIZE = 30;
+          let processedTiles = startTile;
+          
+          while (processedTiles < totalTiles) {
+            const tileBatch = await tiles
+              .toList(BATCH_SIZE, processedTiles)
+              .getInfo();
+            
+            const batchNumber = Math.floor(processedTiles / BATCH_SIZE) + 1;
+            const totalBatches = Math.ceil(totalTiles / BATCH_SIZE);
+            console.log(`   Processing batch ${batchNumber}/${totalBatches} (${tileBatch.length} tiles)`);
+            
+            for (const tileFeature of tileBatch) {
+              try {
+                const tileGeom = ee.Geometry(tileFeature.geometry);
+
+                const ndvi = getS2NDVI(start, end, tileGeom);
+                const ndviInt = ndvi.multiply(1000).toInt16();
+
+                const vectors = ndviInt.reduceToVectors({
+                  geometry: tileGeom,
+                  scale: 100,
+                  geometryType: "polygon",
+                  labelProperty: "mean",
+                  bestEffort: true,
+                  maxPixels: 1e8
+                });
+
+                const ndviFC = await evaluateFC(vectors);
+
+                const inserted = await insertPolygonsFromFile(ndviFC, table, 
+                  { coupe_name: coopName }, // Pass only coupe_name
+                  row.id, {
+                  batchSize: 100,
+                  delayBetweenBatches: 100
+                });
+
+                console.log(`     ↳ Tile ${processedTiles + 1}/${totalTiles}, polygons inserted: ${inserted}`);
+                
+                // Update checkpoint after each successful tile
+                saveCheckpoint({
+                  coupeName: coopName,
+                  coupeIndex: c,
+                  month: month,
+                  polygonId: row.id,
+                  polygonIndex: p,
+                  tileIndex: processedTiles + 1,
+                  timestamp: new Date().toISOString()
+                });
+                
+                await sleep(100);
+              } catch (tileErr) {
+                console.error('⚠️ Error processing tile (continuing to next):', tileErr && tileErr.message ? tileErr.message : tileErr);
+                
+                // Save checkpoint before retrying
+                saveCheckpoint({
+                  coupeName: coopName,
+                  coupeIndex: c,
+                  month: month,
+                  polygonId: row.id,
+                  polygonIndex: p,
+                  tileIndex: processedTiles,
+                  timestamp: new Date().toISOString(),
+                  error: tileErr.message
+                });
+                
+                try {
+                  await sequelize.authenticate();
+                  console.log('✅ DB re-authenticated after tile error.');
+                } catch (reAuthErr) {
+                  console.warn('Re-auth failed after tile error:', reAuthErr && reAuthErr.message ? reAuthErr.message : reAuthErr);
+                }
+              }
+              
+              processedTiles++;
+            }
+            
+            // Add longer delay between batches
+            if (processedTiles < totalTiles) {
+              console.log(`   ⏳ Waiting 2 seconds before next batch...`);
+              await sleep(2000);
+            }
+          }
+        } catch (geomErr) {
+          console.error(`❌ Error processing polygon ${row.id}:`, geomErr.message);
+          continue;
+        }
+      }
+      
+      // Reset polygon index for next month
+      startPolygonIndex = 0;
+    }
+    
+    // Reset month index for next coupe
+    startMonthIndex = 0;
+    
+    console.log(`\n✅ Completed processing for coupe: ${coopName}`);
+  }
+
+  // Clear checkpoint when done
+  clearCheckpoint();
+  console.log("\n🎉 All coupes processed successfully!");
+  await sequelize.close();
 }
 
-// Execute main function
-main().catch(console.error);
+main().catch(err => {
+  console.error('❌ Fatal error in main function:', err && err.message ? err.message : err);
+  process.exit(1);
+});

@@ -130,7 +130,7 @@ export default function DashboardLayout() {
         {/* Sidebar */}
         <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
           <ul>
-            <li>
+            {/* <li>
               <NavLink
                 to="/dashboard"
                 className={`menu-item ${isActiveLink("/dashboard") ? "active" : ""}`}
@@ -138,7 +138,7 @@ export default function DashboardLayout() {
               >
                 <FaThLarge className="icon" /> {text[language].overview}
               </NavLink>
-            </li>
+            </li> */}
             <li>
               <NavLink
                 to="/geo"
@@ -207,13 +207,13 @@ export default function DashboardLayout() {
 
 
             {/* Working Plan Areas Dropdown */}
-           <li className={`dropdown ${isWorkingPlanOpen ? "open" : ""}`}>
+           {/* <li className={`dropdown ${isWorkingPlanOpen ? "open" : ""}`}>
             <button
               className={`dropdown-toggle ${isWorkingPlanOpen ? "active" : ""}`}
-              onClick={() => setIsWorkingPlanOpen(!isWorkingPlanOpen)} // Toggle only Working Plan dropdown
+              onClick={() => setIsWorkingPlanOpen(!isWorkingPlanOpen)} 
             >
               <FaClipboardList className="icon" /> {text[language].workingPlan}
-              {/* ▼▲ icon toggle */}
+             
               {isWorkingPlanOpen ? <FaChevronUp /> : <FaChevronDown />}
             </button>
 
@@ -254,7 +254,7 @@ export default function DashboardLayout() {
                     </li>
                   </ul>
                 )}
-              </li>
+              </li> */}
 
           </ul>
         </aside>
