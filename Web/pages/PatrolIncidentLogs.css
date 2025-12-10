@@ -240,4 +240,15 @@
 
 
 
+.heading-container{
+  display: flex;
+  /* flex-direction: column; */
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px;
+}
 
+.filters{
+  display: flex;
+  gap: 10px;
+}

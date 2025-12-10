@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 
-const { sequelize } = require('../config/database');
+const { sequelize } = require('../config/ndvidatabase');
 
 // Helper function to execute queries using Sequelize
 const executeQuery = async (myquery, params = []) => {
@@ -319,9 +319,9 @@ router.post('/get-divisions', async (req, res) => {
         break;
       case 2: // Territorial Forest
         myquery = `
-        SELECT DISTINCT "Division"  AS "DIVISION"
-          FROM public."Teritorial Circle_Division_Boundary"
-          ORDER BY "Division";
+        SELECT DISTINCT "DIVISION"  AS "DIVISION"
+          FROM public."teritorial_final_metadata_new"
+          ORDER BY "DIVISION";
         `;  
         break;
       case 3: // Social Forestry
@@ -357,40 +357,42 @@ router.post('/hierarchy', async (req, res) => {
     let myquery;
     switch (parseInt(forest_id)) {
       case 1: // Wildlife Forest
-        myquery = `
-          SELECT DISTINCT
-            wcdb."DIVISION",
-          
-            wcrb."RANGE",
-          
-            wcrdb."ROUND",
-         
-            wcbb."BEAT",
+          // myquery = `
+          //   SELECT DISTINCT
+          //     wcdb."DIVISION",
             
-            wcvb."Village",
+          //     wcrb."RANGE",
+            
+          //     wcrdb."ROUND",
           
-            cm.coupe_name
-          
-          FROM public."Wildlife_Circle_Division_Boundary" wcdb
-          LEFT JOIN public."Wildlife_Circle_Range_Boundary" wcrb
-            ON wcdb."DIVISION" = wcrb."DIVISION"
-          LEFT JOIN public."Wildlife_Circle_Round_Boundary" wcrdb
-            ON wcrb."RANGE" = wcrdb."RANGE"
-          LEFT JOIN public."Wildlife_Circle_Beat_Boundary" wcbb
-            ON wcrdb."ROUND" = wcbb."ROUND"
-          LEFT JOIN public."Wildlife_Circle_Village_Boundary" wcvb
-            ON wcbb."BEAT" = wcvb."BEAT"
-          LEFT JOIN public.coupe_metadata cm
-            ON cm.wildlife_village = wcvb."Village"
-          WHERE wcdb."DIVISION" = '${division_name}' and  wildlife_village is not null
-          ORDER BY
-            wcdb."DIVISION",
-            wcrb."RANGE",
-            wcrdb."ROUND",
-            wcbb."BEAT",
-            wcvb."Village",
-            cm.coupe_name
-        `;
+          //     wcbb."BEAT",
+              
+          //     wcvb."Village",
+            
+          //     cm.coupe_name
+            
+          //   FROM public."Wildlife_Circle_Division_Boundary" wcdb
+          //   LEFT JOIN public."Wildlife_Circle_Range_Boundary" wcrb
+          //     ON wcdb."DIVISION" = wcrb."DIVISION"
+          //   LEFT JOIN public."Wildlife_Circle_Round_Boundary" wcrdb
+          //     ON wcrb."RANGE" = wcrdb."RANGE"
+          //   LEFT JOIN public."Wildlife_Circle_Beat_Boundary" wcbb
+          //     ON wcrdb."ROUND" = wcbb."ROUND"
+          //   LEFT JOIN public."Wildlife_Circle_Village_Boundary" wcvb
+          //     ON wcbb."BEAT" = wcvb."BEAT"
+          //   LEFT JOIN public.coupe_metadata cm
+          //     ON cm.wildlife_village = wcvb."Village"
+          //   WHERE wcdb."DIVISION" = '${division_name}' and  wildlife_village is not null
+          //   ORDER BY
+          //     wcdb."DIVISION",
+          //     wcrb."RANGE",
+          //     wcrdb."ROUND",
+          //     wcbb."BEAT",
+          //     wcvb."Village",
+          //     cm.coupe_name
+          // `;
+          myquery = `SELECT * FROM wildlife_final_metadata_new where "DIVISION"='${division_name}' and coupe_name is not null;`;
+
         break;
       case 2: // Territorial Forest
       //   myquery = `
@@ -428,7 +430,7 @@ router.post('/hierarchy', async (req, res) => {
       //       cm.coupe_name
       //   `;
 
-      myquery = `SELECT * FROM Teritorial_final_metadata where "DIVISION"='${division_name}';`;
+      myquery = `SELECT * FROM teritorial_final_metadata_new where "DIVISION"='${division_name}' and coupe_name is not null;`;
         break;
       case 3: // Social Forestry
         myquery = `
