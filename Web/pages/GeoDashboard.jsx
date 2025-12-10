@@ -605,14 +605,14 @@ const handleToolSidebarClick = (toolName) => {
   </button> */}
 
   {/* Search */}
- <button
+ {/* <button
   title="Search"
   type="button"
   onClick={() => handleToolSidebarClick("search")}
   className={activeToolSidebar === "search" ? "tool-button-active" : "tool-button"}
 >
   <i className="bi bi-search" />
-</button>
+</button> */}
 
 
   {/* Zoom In */}
@@ -668,7 +668,7 @@ const handleToolSidebarClick = (toolName) => {
     <span className="material-icons-outlined">straighten</span>
   </button>
 
-  <button
+  {/* <button
     title="Attribute Infomation"
     type="button"
     onClick={() => {
@@ -682,7 +682,7 @@ const handleToolSidebarClick = (toolName) => {
     className={activeToolSidebar === "info" ? "tool-button-active" : "tool-button"}
   >
    <FaInfoCircle />
-  </button>
+  </button> */}
 
 
   {/* Home */}

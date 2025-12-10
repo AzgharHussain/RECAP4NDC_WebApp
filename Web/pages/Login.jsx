@@ -35,7 +35,7 @@ function Login() {
   };
 
   const handleLogin = () => {
-    navigate("/dashboard");
+    navigate("/geo");
   };
 
   return (

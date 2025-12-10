@@ -59,14 +59,26 @@ router.post('/patrol-post', upload.any(), async (req, res) => {
     const patrol_id = result.rows[0].patrol_id;
 
     // Insert images (no notes)
+    // Insert images with custom categories
     for (let i = 0; i < req.files.length; i++) {
       const file = req.files[i];
       const base64Image = file.buffer.toString('base64');
       const mimeType = file.mimetype;
+
+      let imageCategory;
+
+      if (i === 0) {
+        imageCategory = 'start_image';
+      } else if (i === 1) {
+        imageCategory = 'end_image';
+      } else {
+        imageCategory = `image_${i - 1}`; // remaining images start from image_1
+      }
+
       await client.query(
         `INSERT INTO patrol_images (image_data, image_type, patrol_id, image_category)
          VALUES ($1, $2, $3, $4)`,
-        [base64Image, mimeType, patrol_id, `image_${i+1}`]
+        [base64Image, mimeType, patrol_id, imageCategory]
       );
     }
 
@@ -176,3 +188,4 @@ router.get('/patrolling-types', async (req, res) => {
 });
 
 module.exports = router;
+
