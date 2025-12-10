@@ -74,7 +74,7 @@ function PatrolMap({ patrol }) {
       <ResizeMapOnShow coords={routeCoords} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
       />
       <Marker position={start} icon={startIcon}>
         <Popup>Start</Popup>
@@ -171,9 +171,9 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
 
   const getTypeColor = (type) => {
     switch (type) {
-      case "Day patrolling": return "#1890ff";
-      case "Night patrolling": return "#722ed1";
-      case "Beat checking": return "#52c41a";
+      case "Day patrolling": return "#0084ffff";
+      case "Night patrolling": return "#6a00ffff";
+      case "Beat checking": return "#55ff00ff";
       default: return "#d9d9d9";
     }
   };
@@ -214,7 +214,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
   
   <Title level={4} style={{ 
     marginBottom: 20, 
-    color: '#fff',
+    color: '#000000ff',
     fontWeight: 600,
     textShadow: '0 2px 4px rgba(0,0,0,0.3)'
   }}>
@@ -238,26 +238,26 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
         title: language === "gu" ? "સરેરાશ અંતર" : "Average Distance",
         suffix: "km",
         icon: <DashboardOutlined />,
-        color: 'rgba(52, 211, 153, 0.3)',
-        borderColor: 'rgba(52, 211, 153, 0.5)'
+        color: 'rgba(0, 255, 162, 0.3)',
+        borderColor: 'rgba(0, 255, 162, 1)'
       },
       {
         key: 'officers',
         value: uniqueOfficers.length,
         title: language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers",
         icon: <TeamOutlined />,
-        color: 'rgba(167, 139, 250, 0.3)',
-        borderColor: 'rgba(167, 139, 250, 0.5)'
-      },
-      {
-        key: 'utilization',
-        value: utilizationPercentage,
-        title: language === "gu" ? "ઉપયોગિતા" : "Utilization",
-        suffix: "%",
-        icon: <ClockCircleOutlined />,
-        color: 'rgba(251, 191, 36, 0.3)',
-        borderColor: 'rgba(251, 191, 36, 0.5)'
+        color: 'rgba(64, 0, 255, 0.3)',
+        borderColor: 'rgba(64, 0, 255, 1)'
       }
+      // {
+      //   key: 'utilization',
+      //   value: utilizationPercentage,
+      //   title: language === "gu" ? "ઉપયોગિતા" : "Utilization",
+      //   suffix: "%",
+      //   icon: <ClockCircleOutlined />,
+      //   color: 'rgba(251, 191, 36, 0.3)',
+      //   borderColor: 'rgba(251, 191, 36, 0.5)'
+      // }
     ].map((item, index) => (
       <Col xs={24} sm={12} md={6} key={item.key}>
         <div style={{
@@ -265,6 +265,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
           backdropFilter: 'blur(12px)',
           borderRadius: 12,
           padding: 16,
+          
           border: `1px solid ${item.borderColor}`,
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
           height: '100%',
@@ -276,7 +277,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
           <Statistic
             title={
               <span style={{ 
-                color: 'rgba(255, 255, 255, 0.9)',
+                color: 'rgba(0, 0, 0, 0.9)',
                 fontSize: '12px',
                 fontWeight: 500
               }}>
@@ -292,9 +293,9 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 width: 32,
                 height: 32,
                 borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.2)',
+                background: 'rgba(0, 0, 0, 0.2)',
                 marginRight: 8,
-                border: '1px solid rgba(255, 255, 255, 0.3)'
+                border: '1px solid rgba(0, 0, 0, 0.3)'
               }}>
                 {React.cloneElement(item.icon, { 
                   style: { 
@@ -306,10 +307,10 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
             }
             suffix={item.suffix}
             valueStyle={{ 
-              color: '#fff',
+              color: '#000000ff',
               fontSize: '24px',
               fontWeight: 600,
-              textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
             }}
           />
         </div>
@@ -319,7 +320,8 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
 
   {/* Patrol Distribution */}
   <div style={{ 
-    marginBottom: 24,
+    marginTop: 44,
+    marginBottom: 44,
     background: 'rgba(255, 255, 255, 0.08)',
     backdropFilter: 'blur(12px)',
     padding: 20,
@@ -329,16 +331,16 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
     <Text strong style={{ 
       display: 'block', 
       marginBottom: 16,
-      color: 'rgba(255, 255, 255, 0.95)',
+      color: 'rgba(0, 0, 0, 0.95)',
       fontSize: '16px'
     }}>
       {language === "gu" ? "પેટ્રોલિંગ વિતરણ" : "Patrol Distribution"}
     </Text>
     <Row gutter={8}>
       {[
-        { type: "Day patrolling", percent: dayPercentage, color: '#38bdf8' },
-        { type: "Night patrolling", percent: nightPercentage, color: '#a78bfa' },
-        { type: "Beat checking", percent: beatPercentage, color: '#34d399' }
+        { type: "Day patrolling", percent: dayPercentage, color: '#00b3ffff' },
+        { type: "Night patrolling", percent: nightPercentage, color: '#4000ffff' },
+        { type: "Beat checking", percent: beatPercentage, color: '#00ffa2ff' }
       ].map((item) => (
         <Col span={8} key={item.type}>
           <div style={{ textAlign: 'center', padding: '0 8px' }}>
@@ -355,10 +357,10 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 strokeWidth={8}
                 format={percent => (
                   <div style={{
-                    color: '#fff',
+                    color: '#000000ff',
                     fontSize: '20px',
                     fontWeight: 'bold',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                    textShadow: '0 2px 4px rgba(185, 166, 166, 0.3)'
                   }}>
                     {percent}%
                   </div>
@@ -372,13 +374,13 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 width: '80%',
                 height: '80%',
                 borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'rgba(136, 108, 108, 0.05)',
                 backdropFilter: 'blur(4px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                border: '1px solid rgba(173, 159, 159, 0.1)'
               }} />
             </div>
             <Text style={{ 
-              color: 'rgba(255, 255, 255, 0.9)',
+              color: 'rgba(0, 0, 0, 0.9)',
               fontSize: '14px',
               display: 'block',
               marginTop: 8
@@ -394,9 +396,9 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
   {/* Detailed Type Analysis */}
   <Row gutter={[16, 16]}>
     {[
-      { stats: dayStats, type: "Day patrolling", color: '#38bdf8' },
-      { stats: nightStats, type: "Night patrolling", color: '#a78bfa' },
-      { stats: beatStats, type: "Beat checking", color: '#34d399' }
+      { stats: dayStats, type: "Day patrolling", color: '#00b3ffff' },
+      { stats: nightStats, type: "Night patrolling", color: '#4000ffff' },
+      { stats: beatStats, type: "Beat checking", color: '#00ffa2ff' }
     ].map(({ stats, type, color }, index) => {
       if (!stats) return null;
       
@@ -429,7 +431,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 boxShadow: `0 0 12px ${color}`
               }} />
               <span style={{ 
-                color: 'rgba(255, 255, 255, 0.95)',
+                color: 'rgba(0, 0, 0, 0.95)',
                 fontWeight: 600,
                 fontSize: '16px'
               }}>
@@ -448,14 +450,14 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 border: '1px solid rgba(255, 255, 255, 0.1)'
               }}>
                 <div style={{ 
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  color: 'rgba(0, 0, 0, 0.7)',
                   fontSize: '14px',
                   marginBottom: 4
                 }}>
                   {language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"}
                 </div>
                 <div style={{ 
-                  color: '#fff',
+                  color: '#000000ff',
                   fontSize: '32px',
                   fontWeight: 'bold',
                   textShadow: '0 2px 8px rgba(0,0,0,0.3)'
@@ -480,14 +482,14 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                       height: '100%'
                     }}>
                       <div style={{ 
-                        color: 'rgba(255, 255, 255, 0.7)',
+                        color: 'rgba(0, 0, 0, 0.7)',
                         fontSize: '12px',
                         marginBottom: 4
                       }}>
                         {item.label}
                       </div>
                       <div style={{ 
-                        color: '#fff',
+                        color: '#000000ff',
                         fontSize: '16px',
                         fontWeight: 600
                       }}>
@@ -508,14 +510,14 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                   border: '1px solid rgba(255, 255, 255, 0.08)'
                 }}>
                   <div style={{ 
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: 'rgba(0, 0, 0, 0.7)',
                     fontSize: '12px',
                     marginBottom: 4
                   }}>
                     {language === "gu" ? "શ્રેષ્ઠ અધિકારી" : "Top Officer"}
                   </div>
                   <div style={{ 
-                    color: '#fff',
+                    color: '#000000ff',
                     fontSize: '14px',
                     fontWeight: 500,
                     overflow: 'hidden',
@@ -550,7 +552,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
         borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
       }}>
         <span style={{ 
-          color: 'rgba(255, 255, 255, 0.95)',
+          color: 'rgba(0, 0, 0, 0.95)',
           fontWeight: 600,
           fontSize: '16px'
         }}>
@@ -569,7 +571,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
               height: '100%'
             }}>
               <div style={{ 
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'rgba(0, 0, 0, 0.7)',
                 fontSize: '14px',
                 marginBottom: 8
               }}>
@@ -595,14 +597,14 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                       boxShadow: `0 0 8px ${getTypeColor(mostActive.name)}`
                     }} />
                     <span style={{ 
-                      color: '#fff',
+                      color: '#000000ff',
                       fontSize: '16px',
                       fontWeight: 600
                     }}>
                       {getTypeDisplayName(mostActive.name)}
                     </span>
                     <span style={{ 
-                      color: 'rgba(255, 255, 255, 0.7)',
+                      color: 'rgba(0, 0, 0, 0.7)',
                       marginLeft: 8,
                       fontSize: '14px'
                     }}>
@@ -622,7 +624,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
               height: '100%'
             }}>
               <div style={{ 
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'rgba(0, 0, 0, 0.7)',
                 fontSize: '14px',
                 marginBottom: 8
               }}>
@@ -648,14 +650,14 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                       boxShadow: `0 0 8px ${getTypeColor(longestDistance.name)}`
                     }} />
                     <span style={{ 
-                      color: '#fff',
+                      color: '#000000ff',
                       fontSize: '16px',
                       fontWeight: 600
                     }}>
                       {getTypeDisplayName(longestDistance.name)}
                     </span>
                     <span style={{ 
-                      color: 'rgba(255, 255, 255, 0.7)',
+                      color: 'rgba(0, 0, 0, 0.7)',
                       marginLeft: 8,
                       fontSize: '14px'
                     }}>

@@ -357,40 +357,42 @@ router.post('/hierarchy', async (req, res) => {
     let myquery;
     switch (parseInt(forest_id)) {
       case 1: // Wildlife Forest
-        myquery = `
-          SELECT DISTINCT
-            wcdb."DIVISION",
-          
-            wcrb."RANGE",
-          
-            wcrdb."ROUND",
-         
-            wcbb."BEAT",
+          // myquery = `
+          //   SELECT DISTINCT
+          //     wcdb."DIVISION",
             
-            wcvb."Village",
+          //     wcrb."RANGE",
+            
+          //     wcrdb."ROUND",
           
-            cm.coupe_name
-          
-          FROM public."Wildlife_Circle_Division_Boundary" wcdb
-          LEFT JOIN public."Wildlife_Circle_Range_Boundary" wcrb
-            ON wcdb."DIVISION" = wcrb."DIVISION"
-          LEFT JOIN public."Wildlife_Circle_Round_Boundary" wcrdb
-            ON wcrb."RANGE" = wcrdb."RANGE"
-          LEFT JOIN public."Wildlife_Circle_Beat_Boundary" wcbb
-            ON wcrdb."ROUND" = wcbb."ROUND"
-          LEFT JOIN public."Wildlife_Circle_Village_Boundary" wcvb
-            ON wcbb."BEAT" = wcvb."BEAT"
-          LEFT JOIN public.coupe_metadata cm
-            ON cm.wildlife_village = wcvb."Village"
-          WHERE wcdb."DIVISION" = '${division_name}' and  wildlife_village is not null
-          ORDER BY
-            wcdb."DIVISION",
-            wcrb."RANGE",
-            wcrdb."ROUND",
-            wcbb."BEAT",
-            wcvb."Village",
-            cm.coupe_name
-        `;
+          //     wcbb."BEAT",
+              
+          //     wcvb."Village",
+            
+          //     cm.coupe_name
+            
+          //   FROM public."Wildlife_Circle_Division_Boundary" wcdb
+          //   LEFT JOIN public."Wildlife_Circle_Range_Boundary" wcrb
+          //     ON wcdb."DIVISION" = wcrb."DIVISION"
+          //   LEFT JOIN public."Wildlife_Circle_Round_Boundary" wcrdb
+          //     ON wcrb."RANGE" = wcrdb."RANGE"
+          //   LEFT JOIN public."Wildlife_Circle_Beat_Boundary" wcbb
+          //     ON wcrdb."ROUND" = wcbb."ROUND"
+          //   LEFT JOIN public."Wildlife_Circle_Village_Boundary" wcvb
+          //     ON wcbb."BEAT" = wcvb."BEAT"
+          //   LEFT JOIN public.coupe_metadata cm
+          //     ON cm.wildlife_village = wcvb."Village"
+          //   WHERE wcdb."DIVISION" = '${division_name}' and  wildlife_village is not null
+          //   ORDER BY
+          //     wcdb."DIVISION",
+          //     wcrb."RANGE",
+          //     wcrdb."ROUND",
+          //     wcbb."BEAT",
+          //     wcvb."Village",
+          //     cm.coupe_name
+          // `;
+          myquery = `SELECT * FROM wildlife_final_metadata_new where "DIVISION"='${division_name}' and coupe_name is not null;`;
+
         break;
       case 2: // Territorial Forest
       //   myquery = `

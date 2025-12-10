@@ -53,7 +53,7 @@ const layersData = {
     {
       title: "Banaskantha",
       layerList: [
-        { Name: "Banaskantha_Con_Cum_Imp_WC_OVLP", Layer: "Banaskantha Con Cum Imp WC OVLP" },
+        { Name: "Con_Cum_Imp_WC_OVLP", Layer: "Banaskantha Con Cum Imp WC OVLP" },
         { Name: "Banaskantha_DesDev_WL_WC", Layer: "Banaskantha DesDev WL WC" },
         { Name: "Banaskantha_RWD_WC_final", Layer: "Banaskantha RWD WC Final" },
         { Name: "Banaskantha_Wild Life_WC", Layer: "Banaskantha Wildlife WC" },
