@@ -96,7 +96,7 @@ router.get('/patrol-info', async (req, res) => {
       SELECT
         p.*,
         pt.type_name,
-        json_agg(
+         json_agg(
           json_build_object(
             'image_id', pi.image_id,
             'image_data', pi.image_data,
