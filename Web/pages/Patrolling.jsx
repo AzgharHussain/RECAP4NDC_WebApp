@@ -1687,51 +1687,146 @@ const handleExport = () => {
         />
       </div>
       
-      <Modal
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        width={800}
-        title={
-          selectedPatrol
-            ? `${language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"} - ${
-                selectedPatrol.patrol_officer_name
-              } (${language === "gu" ? "અંતર" : "Distance"}: ${
-                selectedPatrol.distance_kms
-              } km)`
-            : language === "gu"
-            ? "પેટ્રોલ માર્ગ"
-            : "Patrol Route"
-        }
-      >
-        {selectedPatrol && (
+<Modal
+  open={isModalVisible}
+  onCancel={() => setIsModalVisible(false)}
+  footer={null}
+  width={800}
+  title={
+    selectedPatrol
+      ? `${language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"} - ${
+          selectedPatrol.patrol_officer_name
+        } (${language === "gu" ? "અંતર" : "Distance"}: ${
+          selectedPatrol.distance_kms
+        } km)`
+      : language === "gu"
+      ? "પેટ્રોલ માર્ગ"
+      : "Patrol Route"
+  }
+>
+  {selectedPatrol && (
+    <>
+      {/* Display all images in a grid */}
+      <div style={{ marginBottom: 16 }}>
+        {selectedPatrol.images && selectedPatrol.images.length > 0 ? (
           <>
-            <div style={{ marginBottom: 16 }}>
-              {selectedPatrol.start_image && (
-                <>
-                  <h4>{language === "gu" ? "શરૂઆતની છબી" : "Start Image"}</h4>
-                  <Image
-                    src={selectedPatrol.start_image}
-                    alt="Start Location"
-                    style={{ maxHeight: 200, marginBottom: 16 }}
-                  />
-                </>
-              )}
-              {selectedPatrol.end_image && (
-                <>
-                  <h4>{language === "gu" ? "અંતિમ છબી" : "End Image"}</h4>
-                  <Image
-                    src={selectedPatrol.end_image}
-                    alt="End Location"
-                    style={{ maxHeight: 200 }}
-                  />
-                </>
-              )}
-            </div>
-            <PatrolMap patrol={selectedPatrol} />
+            <h4 style={{ marginBottom: 12 }}>
+              {language === "gu" ? "પેટ્રોલ છબીઓ" : "Patrol Images"} ({selectedPatrol.images.length})
+            </h4>
+            <Row gutter={[8, 8]}>
+              {selectedPatrol.images.map((image, index) => {
+                // Get display name for image based on category
+                const getImageLabel = () => {
+                  if (language === "gu") {
+                    switch(image.image_category) {
+                      case 'start_image': return 'શરૂઆતની છબી';
+                      case 'end_image': return 'અંતિમ છબી';
+                      default:
+                        if (image.image_category.startsWith('image_')) {
+                          const num = image.image_category.replace('image_', '');
+                          return `છબી ${num}`;
+                        }
+                        return `છબી ${index + 1}`;
+                    }
+                  } else {
+                    switch(image.image_category) {
+                      case 'start_image': return 'Start Image';
+                      case 'end_image': return 'End Image';
+                      default:
+                        if (image.image_category.startsWith('image_')) {
+                          const num = image.image_category.replace('image_', '');
+                          return `Image ${num}`;
+                        }
+                        return `Image ${index + 1}`;
+                    }
+                  }
+                };
+
+                return (
+                  <Col 
+                    xs={12} 
+                    sm={8} 
+                    md={6} 
+                    key={`image_${index}`}
+                  >
+                    <div style={{ 
+                      border: '1px solid #d9d9d9', 
+                      borderRadius: 4,
+                      padding: 4,
+                      height: '100%'
+                    }}>
+                      <Image
+                        src={image.image_data}
+                        alt={getImageLabel()}
+                        style={{ 
+                          width: '100%',
+                          height: 150,
+                          objectFit: 'cover',
+                          borderRadius: 2
+                        }}
+                        preview={{
+                          mask: (
+                            <div style={{ 
+                              color: '#fff',
+                              fontSize: 12,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              height: '100%'
+                            }}>
+                              {language === "gu" ? "જૂઓ" : "View"}
+                            </div>
+                          )
+                        }}
+                      />
+                      <div style={{ 
+                        fontSize: 10,
+                        color: '#666',
+                        marginTop: 4,
+                        padding: '0 2px',
+                        textAlign: 'center'
+                      }}>
+                        {getImageLabel()}
+                        {image.note && (
+                          <div style={{
+                            fontSize: 9,
+                            color: '#999',
+                            marginTop: 2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {image.note}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Col>
+                );
+              })}
+            </Row>
           </>
+        ) : (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: 20,
+            color: '#999'
+          }}>
+            {language === "gu" ? "કોઈ છબીઓ ઉપલબ્ધ નથી" : "No images available"}
+          </div>
         )}
-      </Modal>
+      </div>
+      
+      {/* Map section */}
+      <div style={{ marginTop: 24 }}>
+        <h4 style={{ marginBottom: 8 }}>
+          {language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"}
+        </h4>
+        <PatrolMap patrol={selectedPatrol} />
+      </div>
+    </>
+  )}
+</Modal>
         <PatrolAnalysisDashboard patrolData={filteredData} language={language} />
         
     </div>
