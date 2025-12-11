@@ -24,30 +24,48 @@ const upload = multer({
   }
 });
 
-// POST route for patrol with multiple images and notes
+
+
+function toUTC(dateValue) {
+  return new Date(dateValue).toISOString(); // Always UTC
+}
+
+function parseToUTC(dateValue) {
+  return new Date(dateValue).toISOString();
+}
+
+
+
+
 // POST route for patrol with multiple images (no notes)
 router.post('/patrol-post', upload.any(), async (req, res) => {
   const pat_data = req.body;
-  // Check required fields
+
   const requiredFields = ['patrol_officer_name', 'start_time', 'end_time', 'start_location', 'end_location', 'distance_kms', 'geom', 'user_id', 'patrolling_type_id', 'number_of_staff'];
+
   for (let field of requiredFields) {
-    if (!pat_data[field]) return res.status(400).json({ error: `Missing field: ${field}` });
+    if (!pat_data[field])
+      return res.status(400).json({ error: `Missing field: ${field}` });
   }
 
   try {
-    // Insert patrol data
+    const startUTC = parseToUTC(pat_data.start_time);
+    const endUTC = parseToUTC(pat_data.end_time);
+
     const query1 = `
       INSERT INTO patrols (
         patrol_officer_name, start_time, end_time,
         start_location, end_location, distance_kms, geom,
         user_id, patrolling_type_id, number_of_staff
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING patrol_id;
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING patrol_id;
     `;
+
     const result = await client.query(query1, [
       pat_data.patrol_officer_name,
-      pat_data.start_time,
-      pat_data.end_time,
+      startUTC,   // Insert UTC
+      endUTC,     // Insert UTC
       pat_data.start_location,
       pat_data.end_location,
       pat_data.distance_kms,
@@ -56,38 +74,36 @@ router.post('/patrol-post', upload.any(), async (req, res) => {
       pat_data.patrolling_type_id,
       pat_data.number_of_staff
     ]);
+
     const patrol_id = result.rows[0].patrol_id;
 
-    // Insert images (no notes)
-    // Insert images with custom categories
+    // Insert images
     for (let i = 0; i < req.files.length; i++) {
       const file = req.files[i];
       const base64Image = file.buffer.toString('base64');
-      const mimeType = file.mimetype;
 
-      let imageCategory;
-
-      if (i === 0) {
-        imageCategory = 'start_image';
-      } else if (i === 1) {
-        imageCategory = 'end_image';
-      } else {
-        imageCategory = `image_${i - 1}`; // remaining images start from image_1
-      }
+      const imageCategory =
+        i === 0 ? 'start_image' :
+        i === 1 ? 'end_image' :
+        `image_${i - 1}`;
 
       await client.query(
         `INSERT INTO patrol_images (image_data, image_type, patrol_id, image_category)
          VALUES ($1, $2, $3, $4)`,
-        [base64Image, mimeType, patrol_id, imageCategory]
+        [base64Image, file.mimetype, patrol_id, imageCategory]
       );
     }
 
     res.json({ message: 'Data created successfully', patrol_id });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Data insertion failed' });
   }
 });
+
+
+
 
 // GET all patrols with images and notes
 router.get('/patrol-info', async (req, res) => {
@@ -96,7 +112,7 @@ router.get('/patrol-info', async (req, res) => {
       SELECT
         p.*,
         pt.type_name,
-         json_agg(
+        json_agg(
           json_build_object(
             'image_id', pi.image_id,
             'image_data', pi.image_data,
@@ -111,16 +127,21 @@ router.get('/patrol-info', async (req, res) => {
       GROUP BY p.patrol_id, pt.type_name
       ORDER BY p.patrol_id DESC;
     `;
+
     const result = await client.query(query);
+
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
+      start_time: toUTC(patrol.start_time), // Convert to UTC
+      end_time: toUTC(patrol.end_time),
       images: patrol.images.map(img => ({
         ...img,
-       image_data: img.image_data || null
-
+        image_data: img.image_data || null
       }))
     }));
+
     res.json({ message: 'All patrols fetched successfully', data: formattedData });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch patrols' });
@@ -130,6 +151,7 @@ router.get('/patrol-info', async (req, res) => {
 
 router.get('/patrols/:patrol_id', async (req, res) => {
   const { patrol_id } = req.params;
+
   try {
     const query = `
       SELECT
@@ -150,24 +172,32 @@ router.get('/patrols/:patrol_id', async (req, res) => {
       WHERE p.patrol_id = $1
       GROUP BY p.patrol_id, pt.type_name;
     `;
+
     const result = await client.query(query, [patrol_id]);
-    if (result.rows.length === 0) {
+
+    if (result.rows.length === 0)
       return res.status(404).json({ message: 'Patrol not found' });
-    }
+
     const patrol = result.rows[0];
+
     const formattedPatrol = {
       ...patrol,
+      start_time: toUTC(patrol.start_time),
+      end_time: toUTC(patrol.end_time),
       images: patrol.images.map(img => ({
         ...img,
         image_data: img.image_data || null
       }))
     };
+
     res.json({ message: 'Patrol fetched successfully', data: formattedPatrol });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch patrol' });
   }
 });
+
 
 // GET all patrolling types
 router.get('/patrolling-types', async (req, res) => {
