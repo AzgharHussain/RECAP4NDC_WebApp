@@ -94,7 +94,13 @@ router.get('/patrol-info', async (req, res) => {
   try {
     const query = `
       SELECT
-        p.*,
+       
+       p.patrol_id,
+        p.patrol_officer_name, 
+         p.start_location, p.end_location, p.distance_kms, p.user_id, p.geom, p.patrolling_type_id, p.number_of_staff,
+
+        p.start_time::text AS start_time,
+  p.end_time::text AS end_time,
         pt.type_name,
          json_agg(
           json_build_object(
@@ -133,7 +139,12 @@ router.get('/patrols/:patrol_id', async (req, res) => {
   try {
     const query = `
       SELECT
-        p.*,
+        p.patrol_id,
+        p.patrol_officer_name, 
+         p.start_location, p.end_location, p.distance_kms, p.user_id, p.geom, p.patrolling_type_id, p.number_of_staff,
+
+        p.start_time::text AS start_time,
+  p.end_time::text AS end_time,
         pt.type_name,
         json_agg(
           json_build_object(
