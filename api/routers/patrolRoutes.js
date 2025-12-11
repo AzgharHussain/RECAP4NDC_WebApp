@@ -116,7 +116,8 @@ router.get('/patrol-info', async (req, res) => {
       ...patrol,
       images: patrol.images.map(img => ({
         ...img,
-        image_data: img.image_data ? `data:${img.image_type};base64,${img.image_data}` : null
+       image_data: img.image_data || null
+
       }))
     }));
     res.json({ message: 'All patrols fetched successfully', data: formattedData });
@@ -158,7 +159,7 @@ router.get('/patrols/:patrol_id', async (req, res) => {
       ...patrol,
       images: patrol.images.map(img => ({
         ...img,
-        image_data: img.image_data ? `data:${img.image_type};base64,${img.image_data}` : null
+        image_data: img.image_data || null
       }))
     };
     res.json({ message: 'Patrol fetched successfully', data: formattedPatrol });
