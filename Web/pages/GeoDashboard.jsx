@@ -739,7 +739,8 @@ const handleToolSidebarClick = (toolName) => {
             <div>
               <Suspense fallback={<div>Loading...</div>}>
                 <LayerTogglePanel
-                 
+                 activeToolSidebar={activeToolSidebar}
+                
                   mapRef={mapRef}
                 />
               </Suspense>
