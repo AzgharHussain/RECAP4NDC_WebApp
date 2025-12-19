@@ -19,6 +19,28 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 
+
+const Loader = () => {
+
+  console.log("loading")
+  return (
+    <div className="map-loader">
+      <div className="map-loader__radar">
+        <div className="map-loader__center">
+          <div className="map-loader__satellite"></div>
+          <div className="map-loader__pulse"></div>
+          <div className="map-loader__pulse delay-1"></div>
+          <div className="map-loader__pulse delay-2"></div>
+        </div>
+        <div className="map-loader__sweep"></div>
+      </div>
+      <div className="map-loader__message">Loading...</div>
+
+    </div>
+  );
+};
+
+
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -685,9 +707,11 @@ const PatrolIncidentLogs = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [selectedPatrol, setSelectedPatrol] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { language } = useLanguage();
 
   const fetchPatrolData = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/patrol-info?user_id=1`
@@ -714,6 +738,7 @@ const PatrolIncidentLogs = () => {
       setPatrolData([]);
       setFilteredData([]);
     }
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -895,6 +920,8 @@ const PatrolIncidentLogs = () => {
     },
   ];
 
+
+
 const handleExport = () => {
   if (!filteredData.length) {
     alert(language === "gu" ? "નિકાસ કરવા માટે કોઈ ડેટા નથી" : "No data to export");
@@ -944,7 +971,7 @@ const handleExport = () => {
       total,
       avgStaff: avgStaff.toFixed(1),
       avgHours: avgHours.toFixed(1),
-      avgDist: avgDist.toFixed(1) + ' km'
+      avgDist: avgDist.toFixed(0) + 'km'
     };
   };
 
@@ -953,25 +980,22 @@ const handleExport = () => {
     // Title row
     ['Officer Patrol Summary Report', '', '', '', '', '', '', '', '', '', '', '', ''],
     
-    // Report period info (empty for now, can be filled with filter dates)
-    ['Report Period:', '', '', '', '', '', '', '', '', '', '', '', ''],
-    
     // Empty row for spacing
     ['', '', '', '', '', '', '', '', '', '', '', '', ''],
     
-    // Main header row with merged cells
+    // Header row
     [
-      'Officer Details',
+      'Officer Name',
       'Day Patrolling', '', '', '',
       'Night Patrolling', '', '', '',
       'Beat Checking', '', '', ''
     ],
     // Sub-header row
     [
-      'Officer Name',
-      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Distance',
-      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Distance',
-      'Total Checks', 'Avg Staff', 'Avg Hours', 'Avg Distance'
+      '',
+      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Dist',
+      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Dist',
+      'Total Checks', 'Avg Staff', 'Avg Hours', 'Avg Dist'
     ]
   ];
 
@@ -984,22 +1008,13 @@ const handleExport = () => {
 
     exportData.push([
       officerName,
-      dayStats.total > 0 ? dayStats.total : '-',
-      dayStats.total > 0 ? dayStats.avgStaff : '-',
-      dayStats.total > 0 ? dayStats.avgHours : '-',
-      dayStats.total > 0 ? dayStats.avgDist : '-',
-      nightStats.total > 0 ? nightStats.total : '-',
-      nightStats.total > 0 ? nightStats.avgStaff : '-',
-      nightStats.total > 0 ? nightStats.avgHours : '-',
-      nightStats.total > 0 ? nightStats.avgDist : '-',
-      beatStats.total > 0 ? beatStats.total : '-',
-      beatStats.total > 0 ? beatStats.avgStaff : '-',
-      beatStats.total > 0 ? beatStats.avgHours : '-',
-      beatStats.total > 0 ? beatStats.avgDist : '-'
+      dayStats.total, dayStats.avgStaff, dayStats.avgHours, dayStats.avgDist,
+      nightStats.total, nightStats.avgStaff, nightStats.avgHours, nightStats.avgDist,
+      beatStats.total, beatStats.avgStaff, beatStats.avgHours, beatStats.avgDist
     ]);
   });
 
-  // Calculate totals
+  // Calculate totals row
   const allOfficers = Object.keys(officers);
   const totalDayPatrols = allOfficers.reduce((sum, officer) => sum + officers[officer].dayPatrols.length, 0);
   const totalNightPatrols = allOfficers.reduce((sum, officer) => sum + officers[officer].nightPatrols.length, 0);
@@ -1008,49 +1023,37 @@ const handleExport = () => {
   // Add empty row before totals
   exportData.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
   
-  // Add grand totals row
+  // Add totals row
   exportData.push([
-    'GRAND TOTAL',
+    'TOTAL',
     totalDayPatrols, '-', '-', '-',
     totalNightPatrols, '-', '-', '-',
     totalBeatChecks, '-', '-', '-'
   ]);
 
-  // Add summary row with officer count
-  exportData.push([
-    `Total Officers: ${allOfficers.length}`,
-    '', '', '', '',
-    '', '', '', '',
-    '', '', '', ''
-  ]);
-
   // Add timestamp
   exportData.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
-  exportData.push(['Report Generated On:', new Date().toLocaleString('en-IN'), '', '', '', '', '', '', '', '', '', '', '']);
+  exportData.push(['Report Generated:', new Date().toLocaleString(), '', '', '', '', '', '', '', '', '', '', '']);
 
-  // Create workbook
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(exportData);
   
-  // Get the range of the worksheet
+  // Apply comprehensive styling
   const range = XLSX.utils.decode_range(ws['!ref']);
   
-  // Define enhanced color scheme
+  // Define color scheme
   const colors = {
-    title: "2C3E50",        // Dark Blue-Black
-    subtitle: "34495E",     // Medium Blue-Black
-    mainHeader: "3498DB",   // Bright Blue
-    subHeader: "AED6F1",    // Very Light Blue
-    totals: "27AE60",       // Green
-    grandTotal: "2ECC71",   // Bright Green
-    officerName: "F8F9FA",  // Off White
-    evenRow: "FFFFFF",      // Pure White
-    oddRow: "F5F7FA",       // Very Light Gray-Blue
-    timestamp: "EBF5FB",    // Light Blue
-    borders: "BDC3C7"       // Gray for borders
+    title: "2F75B5",        // Dark Blue
+    mainHeader: "4472C4",   // Medium Blue
+    subHeader: "8FAADC",    // Light Blue
+    totals: "70AD47",       // Green
+    officerName: "F2F2F2",  // Light Gray
+    evenRow: "FFFFFF",      // White
+    oddRow: "F8F9FA",       // Very Light Gray
+    timestamp: "D9E1F2"     // Very Light Blue
   };
 
-  // Apply comprehensive styling to all cells
+  // Style all cells
   for (let R = range.s.r; R <= range.e.r; R++) {
     for (let C = range.s.c; C <= range.e.c; C++) {
       const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
@@ -1061,178 +1064,73 @@ const handleExport = () => {
       // Default cell style
       cell.s = {
         border: {
-          top: { style: "thin", color: { rgb: colors.borders } },
-          left: { style: "thin", color: { rgb: colors.borders } },
-          bottom: { style: "thin", color: { rgb: colors.borders } },
-          right: { style: "thin", color: { rgb: colors.borders } }
+          top: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
         },
-        alignment: { 
-          horizontal: "center", 
-          vertical: "center",
-          wrapText: true
-        },
-        font: { 
-          sz: 10,
-          name: "Calibri"
-        }
+        alignment: { horizontal: "center", vertical: "center" },
+        font: { sz: 10 }
       };
 
       // Title row (Row 0)
       if (R === 0) {
         cell.s = {
           ...cell.s,
-          font: { 
-            bold: true, 
-            sz: 18, 
-            color: { rgb: "FFFFFF" },
-            name: "Calibri Light"
-          },
+          font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
           fill: { fgColor: { rgb: colors.title } },
-          alignment: { 
-            horizontal: "center", 
-            vertical: "center"
-          }
+          alignment: { horizontal: "center", vertical: "center" }
         };
       }
 
-      // Subtitle row (Row 1)
-      if (R === 1) {
-        if (C === 0) {
-          cell.s = {
-            ...cell.s,
-            font: { 
-              bold: true, 
-              sz: 11, 
-              color: { rgb: colors.title }
-            },
-            alignment: { 
-              horizontal: "left", 
-              vertical: "center"
-            }
-          };
-        } else if (C === 1) {
-          cell.s = {
-            ...cell.s,
-            font: { 
-              sz: 11, 
-              color: { rgb: colors.title }
-            },
-            alignment: { 
-              horizontal: "left", 
-              vertical: "center"
-            }
-          };
-        }
+      // Main header row (Row 2) - Dark Blue Background
+      if (R === 2) {
+        cell.s = {
+          ...cell.s,
+          font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: colors.mainHeader } },
+          alignment: { horizontal: "center", vertical: "center" }
+        };
       }
 
-      // Main header row (Row 3) - Bright Blue
+      // Sub-header row (Row 3) - Light Blue Background
       if (R === 3) {
         cell.s = {
           ...cell.s,
-          font: { 
-            bold: true, 
-            sz: 12, 
-            color: { rgb: "FFFFFF" },
-            name: "Calibri"
-          },
-          fill: { fgColor: { rgb: colors.mainHeader } },
-          alignment: { 
-            horizontal: "center", 
-            vertical: "center"
-          }
-        };
-      }
-
-      // Sub-header row (Row 4) - Light Blue
-      if (R === 4) {
-        cell.s = {
-          ...cell.s,
-          font: { 
-            bold: true, 
-            sz: 10, 
-            color: { rgb: "000000" }
-          },
+          font: { bold: true, sz: 10, color: { rgb: "000000" } },
           fill: { fgColor: { rgb: colors.subHeader } },
-          alignment: { 
-            horizontal: "center", 
-            vertical: "center"
-          }
+          alignment: { horizontal: "center", vertical: "center" }
         };
       }
 
-      // Data rows (starting from Row 5)
-      if (R >= 5 && R <= range.e.r - 4) {
-        // Officer name column (Column 0) - Left aligned
+      // Data rows (Row 4 to second last row - 3)
+      if (R >= 4 && R <= range.e.r - 3) {
+        // Officer name column (Column 0)
         if (C === 0) {
           cell.s = {
             ...cell.s,
-            font: { 
-              bold: true, 
-              sz: 10,
-              color: { rgb: colors.title }
-            },
+            font: { bold: true, sz: 10 },
             fill: { fgColor: { rgb: colors.officerName } },
-            alignment: { 
-              horizontal: "left", 
-              vertical: "center",
-              indent: 1
-            }
+            alignment: { horizontal: "left", vertical: "center" }
           };
         } else {
-          // Numeric data cells - Right aligned for numbers
-          const cellValue = ws[cellAddress].v;
-          const isNumeric = !isNaN(cellValue) && cellValue !== '-' && cellValue !== '';
-          
-          if (isNumeric) {
-            cell.s.alignment = { 
-              horizontal: "right", 
-              vertical: "center"
-            };
+          // Alternate row coloring for data cells
+          if (R % 2 === 0) {
+            cell.s.fill = { fgColor: { rgb: colors.evenRow } };
+          } else {
+            cell.s.fill = { fgColor: { rgb: colors.oddRow } };
           }
-          
-          // Alternate row coloring
-          const isEvenRow = (R - 5) % 2 === 0;
-          cell.s.fill = { 
-            fgColor: { rgb: isEvenRow ? colors.evenRow : colors.oddRow } 
-          };
         }
       }
 
-      // Grand Totals row (second last row - 3)
-      if (R === range.e.r - 3) {
+      // Totals row (second last row - 2)
+      if (R === range.e.r - 2) {
         cell.s = {
           ...cell.s,
-          font: { 
-            bold: true, 
-            sz: 11, 
-            color: { rgb: "FFFFFF" }
-          },
-          fill: { fgColor: { rgb: colors.grandTotal } },
-          alignment: { 
-            horizontal: "center", 
-            vertical: "center"
-          }
+          font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: colors.totals } },
+          alignment: { horizontal: "center", vertical: "center" }
         };
-      }
-
-      // Summary row (second last row - 2)
-      if (R === range.e.r - 2) {
-        if (C === 0) {
-          cell.s = {
-            ...cell.s,
-            font: { 
-              bold: true, 
-              italic: true,
-              sz: 10,
-              color: { rgb: colors.title }
-            },
-            alignment: { 
-              horizontal: "left", 
-              vertical: "center"
-            },
-            fill: { fgColor: { rgb: colors.timestamp } }
-          };
-        }
       }
 
       // Timestamp row (last row)
@@ -1240,31 +1138,16 @@ const handleExport = () => {
         if (C === 0) {
           cell.s = {
             ...cell.s,
-            font: { 
-              bold: true, 
-              italic: true,
-              sz: 9,
-              color: { rgb: colors.title }
-            },
+            font: { bold: true, italic: true, sz: 9 },
             fill: { fgColor: { rgb: colors.timestamp } },
-            alignment: { 
-              horizontal: "left", 
-              vertical: "center"
-            }
+            alignment: { horizontal: "left", vertical: "center" }
           };
         } else if (C === 1) {
           cell.s = {
             ...cell.s,
-            font: { 
-              italic: true,
-              sz: 9,
-              color: { rgb: colors.title }
-            },
+            font: { italic: true, sz: 9 },
             fill: { fgColor: { rgb: colors.timestamp } },
-            alignment: { 
-              horizontal: "left", 
-              vertical: "center"
-            }
+            alignment: { horizontal: "left", vertical: "center" }
           };
         } else {
           cell.s.fill = { fgColor: { rgb: colors.timestamp } };
@@ -1273,165 +1156,45 @@ const handleExport = () => {
     }
   }
 
-  // Define cell merges for better layout
+  // Merge cells for better layout
   ws['!merges'] = [
     // Title merge
     { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
     
-    // Report period merge
-    { s: { r: 1, c: 1 }, e: { r: 1, c: 12 } },
-    
     // Day Patrolling header merge
-    { s: { r: 3, c: 1 }, e: { r: 3, c: 4 } },
+    { s: { r: 2, c: 1 }, e: { r: 2, c: 4 } },
     // Night Patrolling header merge  
-    { s: { r: 3, c: 5 }, e: { r: 3, c: 8 } },
+    { s: { r: 2, c: 5 }, e: { r: 2, c: 8 } },
     // Beat Checking header merge
-    { s: { r: 3, c: 9 }, e: { r: 3, c: 12 } },
-    
-    // Officer count merge
-    { s: { r: range.e.r - 2, c: 0 }, e: { r: range.e.r - 2, c: 12 } },
+    { s: { r: 2, c: 9 }, e: { r: 2, c: 12 } },
     
     // Timestamp merge
     { s: { r: range.e.r, c: 1 }, e: { r: range.e.r, c: 12 } }
   ];
 
-  // Set optimized column widths
+  // Set column widths for better readability
   ws['!cols'] = [
-    { wch: 25 }, // Officer Name (wider for long names)
-    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, // Day Patrolling
-    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, // Night Patrolling  
-    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 14 }  // Beat Checking
+    { wch: 20 }, // Officer Name
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, // Day Patrolling
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, // Night Patrolling  
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }  // Beat Checking
   ];
 
-  // Set optimized row heights
+  // Set row heights
   ws['!rows'] = [
-    { hpt: 35 }, // Title row (taller)
-    { hpt: 20 }, // Subtitle row
-    { hpt: 8 },  // Spacing row (smaller gap)
-    { hpt: 28 }, // Main header (taller)
-    { hpt: 22 }, // Sub-header
+    { hpt: 30 }, // Title row
+    { hpt: 10 }, // Spacing row
+    { hpt: 25 }, // Main header
+    { hpt: 20 }, // Sub-header
   ];
 
-  // Set consistent row heights for data rows
-  for (let i = 5; i <= range.e.r; i++) {
+  // Add more rows for data (you can extend this as needed)
+  for (let i = 4; i <= range.e.r; i++) {
     if (!ws['!rows']) ws['!rows'] = [];
     ws['!rows'][i] = { hpt: 20 };
   }
 
-  // Add a summary sheet with key metrics
-  const summaryData = [
-    ['Patrol Summary Overview', '', '', ''],
-    ['', '', '', ''],
-    ['Metric', 'Day Patrolling', 'Night Patrolling', 'Beat Checking'],
-    ['Total Activities', totalDayPatrols, totalNightPatrols, totalBeatChecks],
-    ['Average Staff per Activity', 
-      calculateStats(Object.values(officers).flatMap(o => o.dayPatrols)).avgStaff || '-',
-      calculateStats(Object.values(officers).flatMap(o => o.nightPatrols)).avgStaff || '-',
-      calculateStats(Object.values(officers).flatMap(o => o.beatChecks)).avgStaff || '-'
-    ],
-    ['Average Hours per Activity',
-      calculateStats(Object.values(officers).flatMap(o => o.dayPatrols)).avgHours || '-',
-      calculateStats(Object.values(officers).flatMap(o => o.nightPatrols)).avgHours || '-',
-      calculateStats(Object.values(officers).flatMap(o => o.beatChecks)).avgHours || '-'
-    ],
-    ['', '', '', ''],
-    ['Total Officers:', allOfficers.length, '', ''],
-    ['Total Activities:', totalDayPatrols + totalNightPatrols + totalBeatChecks, '', ''],
-    ['', '', '', ''],
-    ['Report Generated:', new Date().toLocaleString('en-IN'), '', '']
-  ];
-
-  const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-  
-  // Style the summary sheet
-  const summaryRange = XLSX.utils.decode_range(summaryWs['!ref']);
-  for (let R = summaryRange.s.r; R <= summaryRange.e.r; R++) {
-    for (let C = summaryRange.s.c; C <= summaryRange.e.c; C++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-      if (!summaryWs[cellAddress]) continue;
-      
-      const cell = summaryWs[cellAddress];
-      cell.s = {
-        border: {
-          top: { style: "thin", color: { rgb: colors.borders } },
-          left: { style: "thin", color: { rgb: colors.borders } },
-          bottom: { style: "thin", color: { rgb: colors.borders } },
-          right: { style: "thin", color: { rgb: colors.borders } }
-        },
-        alignment: { 
-          horizontal: "center", 
-          vertical: "center",
-          wrapText: true
-        },
-        font: { sz: 10, name: "Calibri" }
-      };
-
-      if (R === 0) {
-        cell.s = {
-          ...cell.s,
-          font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: colors.title } },
-          alignment: { horizontal: "center", vertical: "center" }
-        };
-      } else if (R === 2) {
-        cell.s = {
-          ...cell.s,
-          font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: colors.mainHeader } }
-        };
-      } else if (R >= 3 && R <= 6) {
-        if (C === 0) {
-          cell.s = {
-            ...cell.s,
-            font: { bold: true },
-            alignment: { horizontal: "left", vertical: "center", indent: 1 }
-          };
-        }
-        // Alternate row coloring
-        if ((R - 3) % 2 === 0) {
-          cell.s.fill = { fgColor: { rgb: colors.evenRow } };
-        } else {
-          cell.s.fill = { fgColor: { rgb: colors.oddRow } };
-        }
-      } else if (R === 7 || R === 8) {
-        if (C === 0) {
-          cell.s = {
-            ...cell.s,
-            font: { bold: true, color: { rgb: colors.title } },
-            fill: { fgColor: { rgb: colors.subHeader } },
-            alignment: { horizontal: "left", vertical: "center" }
-          };
-        }
-      } else if (R === summaryRange.e.r) {
-        if (C === 0) {
-          cell.s = {
-            ...cell.s,
-            font: { bold: true, italic: true },
-            fill: { fgColor: { rgb: colors.timestamp } },
-            alignment: { horizontal: "left", vertical: "center" }
-          };
-        } else if (C === 1) {
-          cell.s = {
-            ...cell.s,
-            font: { italic: true },
-            fill: { fgColor: { rgb: colors.timestamp } },
-            alignment: { horizontal: "left", vertical: "center" }
-          };
-        }
-      }
-    }
-  }
-
-  // Set column widths for summary sheet
-  summaryWs['!cols'] = [
-    { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }
-  ];
-
-  // Add summary sheet
-  XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
-
-  // Add main officer summary sheet
-  XLSX.utils.book_append_sheet(wb, ws, "Officer Details");
+  XLSX.utils.book_append_sheet(wb, ws, "Officer Patrol Summary");
 
   // Also keep the original detailed data in a separate sheet with better styling
   const detailedData = filteredData.map((item) => ({
@@ -1444,7 +1207,7 @@ const handleExport = () => {
     "Patrol End Time": formatDateTime(item.end_time).time,
     "Start Location": item.start_location,
     "End Location": item.end_location,
-    "Distance (Kms)": parseFloat(item.distance_kms || 0).toFixed(1),
+    "Distance (Kms)": item.distance_kms,
     "Number of Staff": item.number_of_staff || 1
   }));
 
@@ -1453,28 +1216,19 @@ const handleExport = () => {
   // Style the detailed sheet
   const detailedRange = XLSX.utils.decode_range(detailedSheet['!ref']);
   
-  // Style header row
+  // Add header styling for detailed sheet with blue background
   for (let C = detailedRange.s.c; C <= detailedRange.e.c; C++) {
     const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
     if (detailedSheet[headerCell]) {
       detailedSheet[headerCell].s = {
-        font: { 
-          bold: true, 
-          sz: 11, 
-          color: { rgb: "FFFFFF" },
-          name: "Calibri"
-        },
-        fill: { fgColor: { rgb: colors.mainHeader } },
-        alignment: { 
-          horizontal: "center", 
-          vertical: "center",
-          wrapText: true
-        },
+        font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: colors.mainHeader } }, // Using the same blue as main header
+        alignment: { horizontal: "center", vertical: "center" },
         border: {
-          top: { style: "medium", color: { rgb: colors.mainHeader } },
-          left: { style: "medium", color: { rgb: colors.mainHeader } },
-          bottom: { style: "medium", color: { rgb: colors.mainHeader } },
-          right: { style: "medium", color: { rgb: colors.mainHeader } }
+          top: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
         }
       };
     }
@@ -1487,34 +1241,20 @@ const handleExport = () => {
       if (detailedSheet[cell]) {
         detailedSheet[cell].s = {
           border: {
-            top: { style: "thin", color: { rgb: colors.borders } },
-            left: { style: "thin", color: { rgb: colors.borders } },
-            bottom: { style: "thin", color: { rgb: colors.borders } },
-            right: { style: "thin", color: { rgb: colors.borders } }
+            top: { style: "thin", color: { rgb: "D0D0D0" } },
+            left: { style: "thin", color: { rgb: "D0D0D0" } },
+            bottom: { style: "thin", color: { rgb: "D0D0D0" } },
+            right: { style: "thin", color: { rgb: "D0D0D0" } }
           },
-          alignment: { 
-            horizontal: "center", 
-            vertical: "center"
-          },
-          font: { 
-            sz: 9,
-            name: "Calibri"
-          }
+          alignment: { horizontal: "center", vertical: "center" },
+          font: { sz: 9 }
         };
         
         // Alternate row colors
         if (R % 2 === 0) {
-          detailedSheet[cell].s.fill = { fgColor: { rgb: colors.evenRow } };
-        } else {
           detailedSheet[cell].s.fill = { fgColor: { rgb: colors.oddRow } };
-        }
-        
-        // Right align numeric columns
-        if (C === 9 || C === 10) { // Distance and Staff columns
-          detailedSheet[cell].s.alignment = { 
-            horizontal: "right", 
-            vertical: "center"
-          };
+        } else {
+          detailedSheet[cell].s.fill = { fgColor: { rgb: colors.evenRow } };
         }
       }
     }
@@ -1523,33 +1263,31 @@ const handleExport = () => {
   // Set column widths for detailed sheet
   detailedSheet['!cols'] = [
     { wch: 12 }, // Patrol ID
-    { wch: 22 }, // Officer Name
-    { wch: 18 }, // Patrol Type
-    { wch: 14 }, // Start Date
+    { wch: 20 }, // Officer Name
+    { wch: 15 }, // Patrol Type
+    { wch: 12 }, // Start Date
     { wch: 12 }, // Start Time
-    { wch: 14 }, // End Date
+    { wch: 12 }, // End Date
     { wch: 12 }, // End Time
-    { wch: 25 }, // Start Location
-    { wch: 25 }, // End Location
-    { wch: 14 }, // Distance
-    { wch: 14 }  // Number of Staff
+    { wch: 20 }, // Start Location
+    { wch: 20 }, // End Location
+    { wch: 12 }, // Distance
+    { wch: 12 }  // Number of Staff
   ];
 
-  XLSX.utils.book_append_sheet(wb, detailedSheet, "Detailed Data");
-
-  // Generate filename with timestamp
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-  const filename = `Patrol_Report_${timestamp}.xlsx`;
+  XLSX.utils.book_append_sheet(wb, detailedSheet, "Detailed Patrol Data");
 
   const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
   saveAs(
     new Blob([wbout], { type: "application/octet-stream" }),
-    filename
+    `Officer_Patrol_Summary_${new Date().toISOString().split('T')[0]}.xlsx`
   );
 };
 
+
   return (
     <div className="container">
+      {isLoading && <Loader />}
       <div className="section">
         <div className="heading-container">
           <h3 className="main-heading">
@@ -1756,7 +1494,7 @@ const handleExport = () => {
                       height: '100%'
                     }}>
                       <Image
-                        src={image.image_data}
+                        src={`data:${image.image_type};base64,${image.image_data}`}
                         alt={getImageLabel()}
                         style={{ 
                           width: '100%',

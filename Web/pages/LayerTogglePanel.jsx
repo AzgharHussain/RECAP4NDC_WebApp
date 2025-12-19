@@ -1,9 +1,502 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef,useMemo, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { FaChevronDown, FaChevronUp, FaLayerGroup } from "react-icons/fa";
 import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
+import { debounce, set, size } from 'lodash';
+
+const Loader = () => {
+
+  console.log("loading")
+  return (
+    <div className="map-loader">
+      <div className="map-loader__radar">
+        <div className="map-loader__center">
+          <div className="map-loader__satellite"></div>
+          <div className="map-loader__pulse"></div>
+          <div className="map-loader__pulse delay-1"></div>
+          <div className="map-loader__pulse delay-2"></div>
+        </div>
+        <div className="map-loader__sweep"></div>
+      </div>
+      <div className="map-loader__message">Loading...</div>
+
+    </div>
+  );
+};
+
+
+const AttributePopup = React.memo(({ position, data, onClose }) => {
+  if (!position || !data) return null;
+
+console.log("AttributePopup data", data);
+
+
+  const features = data[0]?.features || [];
+  const layerName = data[0]?.layerName || 'Unknown Layer';
+  
+  const popupRef = useRef(null);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [popupPosition, setPopupPosition] = useState({
+    x: 465,
+    y: 110
+  });
+
+  // Format property keys
+  const formatKey = (key) => {
+    return key
+      .replace(/_/g, ' ')          // Replace underscores with spaces
+      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between camelCase
+      .replace(/\b\w/g, (char) => char.toUpperCase()) // Capitalize first letters
+      .trim();
+  };
+
+  // Format property values
+  const formatValue = (value,key) => {
+    if (value === null || value === undefined) return 'null';
+    if (typeof value === 'boolean') return value.toString();
+    if (typeof value === 'number') return value.toLocaleString();
+
+       if (key === 'suitabilityclass' && typeof value === 'string') {
+      if (value === 'Moderately Suitable') return 'Highly Suitable';
+      if (value === 'Highly Suitable') return 'Moderately Suitable';
+    }
+    console.log("key", key ,"value", value)
+    if(key === 'STANA2011' && typeof value === 'string'){
+      if(value === "Nct Of Delhi") return "NCT of Delhi"
+    }
+    
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) return `[${value.length} items]`;
+    if (typeof value === 'object') return `{${Object.keys(value).length} properties}`;
+    return value.toString();
+  };
+
+  // Handle drag start
+  const handleMouseDown = (e) => {
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+    
+    setIsDragging(true);
+    const rect = popupRef.current.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  // Handle dragging
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    
+    setPopupPosition({
+      x: Math.max(0, Math.min(e.clientX - dragOffset.x, window.innerWidth - 280)),
+      y: Math.max(0, Math.min(e.clientY - dragOffset.y, window.innerHeight - 320))
+    });
+  };
+
+const keyMappings = {
+  "STANA2011": "State Name",
+  "villna2011": "Village Name",
+  "DISTNA2011": "District Name",
+  "dist_upd": "District Name",
+  "stana2011": "State Name",
+  "distna2011": "District Name",
+  "SW_Index_2016": "Surface Water Availability Index",
+  "soc_gkg": "Soil Organic Carbon (g/kg)",
+  "Net_Groundwater_Available": "Net Groundwater Available (MCM)",
+  "Net_Groundwater_Category": "Net Groundwater Category",
+  "Water_Risk_Index": "Water Risk Index",
+  "precipitation_mm": "Precipitation (mm)",
+  "st_celsius": "Temperature (°C)", 
+ "Status_2020": "Status",
+"village_prec": "Precipitation (mm)",
+"descriptio": "Description"
+
+
+
+};
+
+
+
+  // Handle drag end
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Add event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, dragOffset]);
+
+  // Minimized view (just the header)
+  if (isMinimized) {
+    return (
+      <div
+        ref={popupRef}
+        className="attribute-popup-minimized"
+        style={{
+          position: 'fixed',
+          left: `${popupPosition.x}px`,
+          top: `${popupPosition.y}px`,
+          zIndex: 10000,
+          width: '200px',
+          backgroundColor: '#0B3C4D',
+         
+          boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          cursor: 'grab',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '8px 12px',
+          backdropFilter: 'blur(2px)',
+          transition: 'transform 0.2s',
+          transform: isDragging ? 'scale(1.02)' : 'none',
+          boxShadow: isDragging ? '0 6px 24px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.2)'
+        }}
+        onMouseDown={handleMouseDown}
+      >
+        <div>
+          <h4 style={{ 
+            margin: 0,
+            fontSize: '14px',
+            fontWeight: 600,
+            color: 'white',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '140px'
+          }}>{layerName}</h4>
+          <p style={{
+            margin: '2px 0 0',
+            fontSize: '11px',
+            color: 'rgba(255,255,255,0.7)',
+            fontWeight: 500
+          }}>{features.length} feature{features.length !== 1 ? 's' : ''}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button 
+            type="button" 
+            onClick={() => setIsMinimized(false)}
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '12px',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              ':hover': {
+                backgroundColor: 'rgba(255,255,255,0.25)',
+                transform: 'scale(1.1)'
+              }
+            }}
+            aria-label="Restore"
+          >
+            ↑
+          </button>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '12px',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              ':hover': {
+                backgroundColor: 'rgba(255,99,71,0.8)',
+                transform: 'scale(1.1)'
+              }
+            }}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Full view
+  return (
+    <div
+      ref={popupRef}
+      className="attribute-popup"
+      style={{
+        position: 'fixed',
+        left: `${popupPosition.x}px`,
+        top: `${popupPosition.y}px`,
+        zIndex: 10000,
+        width: '300px',
+        maxHeight: '400px',
+        background: 'linear-gradient(160deg, #0B3C4D 0%, #005D57 100%)',
+       
+        boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+        border: '1px solid rgba(255,255,255,0.1)',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        cursor: 'grab',
+        transition: 'transform 0.2s',
+        transform: isDragging ? 'scale(1.01)' : 'none',
+        boxShadow: isDragging ? '0 12px 36px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.2)'
+      }}
+      onMouseDown={handleMouseDown}
+    >
+      <div className="popup-header" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '10px 14px',
+        background: 'rgba(0,0,0,0.2)',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <div style={{ overflow: 'hidden' }}>
+          <h4 style={{ 
+            margin: 0,
+            fontSize: '15px',
+            fontWeight: 600,
+            color: 'white',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>{layerName}</h4>
+          <p style={{
+            margin: '3px 0 0',
+            fontSize: '11px',
+            color: 'rgba(255,255,255,0.7)',
+            fontWeight: 500
+          }}>{features.length} feature{features.length !== 1 ? 's' : ''}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button 
+            type="button" 
+            onClick={() => setIsMinimized(true)}
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '12px',
+              color: 'white',
+              padding: '6px 8px',
+              borderRadius: '5px',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              ':hover': {
+                backgroundColor: 'rgba(255,255,255,0.25)',
+                transform: 'translateY(-1px)'
+              }
+            }}
+            aria-label="Minimize"
+          >
+            ↓
+          </button>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '12px',
+              color: 'white',
+              padding: '6px 8px',
+              borderRadius: '5px',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              ':hover': {
+                backgroundColor: 'rgba(255,99,71,0.8)',
+                transform: 'translateY(-1px)'
+              }
+            }}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+      
+      <div className="popup-content" style={{ 
+        flex: 1,
+        overflowY: 'auto',
+        fontSize: '13px',
+        backgroundColor: 'white',
+        '&::-webkit-scrollbar': {
+          width: '8px'
+        },
+        '&::-webkit-scrollbar-track': {
+          background: '#f1f1f1'
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: '#ccc',
+          borderRadius: '4px'
+        },
+        '&::-webkit-scrollbar-thumb:hover': {
+          background: '#aaa'
+        }
+      }}>
+        {features.length === 0 ? (
+          <div style={{ 
+            padding: '20px',
+            textAlign: 'center',
+            color: '#666',
+            fontSize: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+        ℹ️ No feature at this location.<br/>
+         Try a nearby spot or zoom in further.
+           </div>
+        ) : (
+          features.map((feature, idx) => (
+            <div key={`feature-${idx}`} style={{ 
+              margin: '10px',
+              padding: '12px',
+              border: '1px solid #e8e8e8',
+              borderRadius: '8px',
+              backgroundColor: '#fff',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '10px',
+                paddingBottom: '8px',
+                borderBottom: '1px solid #f0f0f0'
+              }}>
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  backgroundColor: '#0B3C4D',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  flexShrink: 0
+                }}>
+                  {idx + 1}
+                </span>
+                <h5 style={{ 
+                  margin: 0,
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#333',
+                }}>
+                  Feature Properties
+                </h5>
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(100px, 1fr) 2fr',
+                gap: '6px',
+                fontSize: '12px'
+              }}>
+             {Object.entries(feature)
+  .filter(([key, value]) => {
+    // Filter out null/undefined values and other unwanted properties
+    return value !== null && 
+           value !== undefined && 
+           value !== '' &&
+           key !== '__proto__' && 
+           typeof value !== 'function';
+  })
+  .map(([key, value]) => {
+    const cleanKey = keyMappings[key] || formatKey(key);
+    const formattedValue = formatValue(value, key);
+    
+    return (
+      <React.Fragment key={key}>
+        <div style={{ 
+          padding: '4px 6px',
+          color: '#555',
+          fontWeight: 500,
+          backgroundColor: '#f9f9f9',
+          borderRadius: '4px',
+          wordBreak: 'break-word'
+        }}>
+          {cleanKey}
+        </div>
+        <div style={{ 
+          padding: '4px 6px',
+          wordBreak: 'break-word',
+          color: '#222',
+          backgroundColor: '#f9f9f9',
+          borderRadius: '4px',
+          fontFamily: typeof value === 'object' ? 'monospace' : 'inherit',
+          fontSize: typeof value === 'object' ? '11px' : '12px'
+        }}>
+          {typeof value === 'object' && value !== null ? (
+            <details>
+              <summary style={{ cursor: 'pointer' }}>
+                {formattedValue}
+              </summary>
+              <pre style={{
+                margin: '6px 0 0',
+                padding: '6px',
+                backgroundColor: '#f0f0f0',
+                borderRadius: '4px',
+                overflow: 'auto',
+                maxHeight: '150px',
+                whiteSpace: 'pre-wrap'
+              }}>
+                {JSON.stringify(value, null, 2)}
+              </pre>
+            </details>
+          ) : (
+            formattedValue
+          )}
+        </div>
+      </React.Fragment>
+    );
+  })}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+});
 
 const GEOSERVER_WMS = "https://www.gisfy.co.in:8443/geoserver/wms";
 
@@ -18,18 +511,7 @@ const layersData = {
       
       ]
     },
-    {
-      title: "Territorial Circle ",
-      layerList: [
-        { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
-        { Name: "Teritorial_Circle_Division_Boundary", Layer: "Territorial Circle Division" },
-        { Name: "Teritorial_Circle_Range_Boundary", Layer: "Territorial Circle Range" },
-        { Name: "Teritorial_Circle_Round_Boundary", Layer: "Territorial Circle Round" },
-        { Name: "Teritorial_Circle_Village_Boundary", Layer: "Territorial Circle Village" },
-        { Name: "Teritorial_Circle_Boundary", Layer: "Territorial Circle" },
-      ]
-    },
-    {
+      {
       title: "Wildlife Circle ",
       layerList: [
         { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat" },
@@ -43,13 +525,25 @@ const layersData = {
     {
       title: "Social Forestry ",
       layerList: [
-        { Name: "Gujarat_Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat" },
-        { Name: "Gujarat_Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle" },
-        { Name: "Gujarat_Social_Forestry_Range_Boundary", Layer: "Social Forestry Range" },
-        { Name: "Gujarat_Social_Forestry_Round_Boundary", Layer: "Social Forestry Round" },
-        { Name: "Gujarat_Social_Forestry_Village_Boundary", Layer: "Social Forestry Village" },
+        { Name: "Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat" },
+        { Name: "Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle" },
+        { Name: "Social_Forestry_Range_Boundary", Layer: "Social Forestry Range" },
+        { Name: "Social_Forestry_Round_Boundary", Layer: "Social Forestry Round" },
+        { Name: "Social_Forestry_Village_Boundary", Layer: "Social Forestry Village" },
       ]
     },
+    {
+      title: "Territorial Circle ",
+      layerList: [
+        { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
+        { Name: "Teritorial_Circle_Division_Boundary", Layer: "Territorial Circle Division" },
+        { Name: "Teritorial_Circle_Range_Boundary", Layer: "Territorial Circle Range" },
+        { Name: "Teritorial_Circle_Round_Boundary", Layer: "Territorial Circle Round" },
+        { Name: "Teritorial_Circle_Village_Boundary", Layer: "Territorial Circle Village" },
+      
+      ]
+    },
+  
     {
       title: "Banaskantha",
       layerList: [
@@ -322,14 +816,16 @@ const text = {
 
 const getLayerName = (layer) => layer.Name || layer.layer || layer;
 
-const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
+const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap,activeToolSidebar }) => {
   const { language } = useLanguage();
   const [addedLayers, setAddedLayers] = useState({});
   const [opacity, setOpacity] = useState({});
   const [openGroups, setOpenGroups] = useState({});
   const [isLayerLoading, setIsLayerLoading] = useState(false);
   const layerCounterRef = useRef(0);
-  
+    const [clickPosition, setClickPosition] = useState(null);
+  const [attributeData, setAttributeData] = useState(null);
+const [showAttributeTable, setShowAttributeTable] = useState(false);
   // Generate unique IDs for groups and layers on mount
   const [groupIds, setGroupIds] = useState({});
   const [layerIds, setLayerIds] = useState({});
@@ -502,6 +998,182 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
     setOpenGroups((prev) => ({ ...prev, [idx]: !prev[idx] }));
   }, []);
 
+  const layerNameMapping222 ={
+
+  }
+ 
+// REPLACE the existing fetchFeatureInfo function with this:
+const fetchFeatureInfo = useCallback(async (layerName, latlng) => {
+    const map = mapRef.current;
+    if (!map) return { features: [] };
+
+    try {
+        const bounds = map.getBounds();
+        const size = map.getSize();
+        const point = latlng ? map.latLngToContainerPoint(latlng) : { 
+            x: Math.floor(size.x / 2),
+            y: Math.floor(size.y / 2)
+        };
+
+        // CORRECTED WMS GetFeatureInfo parameters
+        const params = new URLSearchParams({
+            service: 'WMS',
+            version: '1.1.1',
+            request: 'GetFeatureInfo',
+            layers: layerName,
+            query_layers: layerName,
+            info_format: 'application/json',
+            feature_count: 50,
+            srs: 'EPSG:4326',
+            bbox: `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`,
+            width: size.x,
+            height: size.y,
+            x: Math.round(point.x),
+            y: Math.round(point.y),
+            buffer: 10,  // IMPORTANT: Increased from 5 to 10
+            exceptions: 'application/json'
+        });
+
+        // USE CORRECT GEOSERVER URL (same as in createLayer function)
+        const wmsUrl = `${GEOSERVER_WMS}?${params}`;
+        console.log('Fetching from:', wmsUrl);  // DEBUG: See the actual URL
+
+        const response = await fetch(wmsUrl);
+        
+        if (!response.ok) {
+            console.error('Response error:', response.status, response.statusText);
+            return { features: [] };
+        }
+
+        const data = await response.json();
+        console.log('GeoServer response for', layerName, ':', data);  // DEBUG
+        
+        return data;
+    } catch (error) {
+        console.error(`Error fetching feature info for ${layerName}:`, error);
+        return { features: [] };
+    }
+}, [mapRef]);
+
+  const handleMapClick = useCallback(async (e) => {
+  if (activeToolSidebar !== "info") return;
+
+  const selectedLayerNames = Object.keys(addedLayers);
+  if (selectedLayerNames.length === 0) return;
+
+  const map = mapRef.current;
+  if (!map) return;
+
+  const containerPoint = map.latLngToContainerPoint(e.latlng);
+  setClickPosition({ x: containerPoint.x, y: containerPoint.y });
+  setIsLayerLoading(true);
+
+  try {
+    const allFeatures = [];
+
+    for (let layerName of selectedLayerNames) {
+      const fetchLayerName = layerNameMapping222[layerName] || layerName;
+      const displayName = addedLayers[layerName]?.options?.attribution || layerName;
+
+      console.log(`Fetching data for: ${fetchLayerName}`);
+
+      try {
+        const data = await fetchFeatureInfo(fetchLayerName, e.latlng);
+        console.log(data);
+
+        if (data.features?.length > 0) {
+          const allowedAttributes = layersData[displayName];
+
+          allFeatures.push({
+            layerName: displayName,
+            features: data.features.map(f => {
+              const props = allowedAttributes
+                ? Object.fromEntries(
+                    Object.entries(f.properties).filter(([key]) =>
+                      allowedAttributes.includes(key)
+                    )
+                  )
+                : { ...f.properties };
+
+              return props;
+            }),
+          });
+        } else {
+          console.warn(`No features found for layer ${fetchLayerName}`);
+        }
+      } catch (layerErr) {
+        console.error(`Error fetching ${fetchLayerName}:`, layerErr);
+      }
+    }
+
+    setAttributeData(allFeatures);
+    console.log("Filtered features:", allFeatures);
+  } catch (error) {
+    console.error("Error in handleMapClick:", error);
+  } finally {
+    setIsLayerLoading(false);
+  }
+}, [
+  activeToolSidebar,
+  addedLayers,
+  fetchFeatureInfo,
+  mapRef,
+  layerNameMapping222,
+  layersData,
+  setClickPosition,
+  setIsLayerLoading,
+  setAttributeData,
+]);
+
+  const debouncedClickHandler = useMemo(
+    () => debounce(handleMapClick, 200, { leading: true, trailing: false }),
+    [handleMapClick]
+  );
+
+  
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    map.on("click", debouncedClickHandler);
+    return () => {
+      map.off("click", debouncedClickHandler);
+      debouncedClickHandler.cancel();
+    };
+  }, [debouncedClickHandler, mapRef]);
+
+  const closeAttributePopup = useCallback(() => {
+    setAttributeData(null);
+    setClickPosition(null);
+  }, []);
+
+  const fetchAllLayerData = useCallback(async () => {
+    const results = {};
+    for (const layerName in addedLayers) {
+      try {
+        const url = `${REACT_APP_GEOSERVER_URL}?service=WFS&version=1.1.0&request=GetFeature&typeName=${layerName}&outputFormat=application/json&srsName=EPSG:4326&`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Network response was not ok: ${response.status}`);
+        const data = await response.json();
+        results[layerName] = data.features?.map(f => f.properties) || [];
+      } catch (error) {
+        console.error(`Error fetching data for layer ${layerName}:`, error);
+        results[layerName] = [];
+      }
+    }
+    console.log("Fetched attribute data for all layers:99999999999999999999999999999999999999999999999999999999999999999", results);
+    setTotalAttributeData(results);
+  }, [addedLayers]);
+
+  useEffect(() => {
+    if (showAttributeTable) {
+      fetchAllLayerData();
+    }
+  }, [showAttributeTable, fetchAllLayerData]);
+
+
+
   // Handle opacity change
   const handleOpacityChange = useCallback(
     (e, layerName) => {
@@ -567,7 +1239,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
               const layerId = layerIds[`${idx}-${layerName}`] || uuidv4();
 
               return (
-                <div key={layerId} className="layer-item">
+                <div key={layerId}  className={`layer-item ${isChecked ? "active" : ""}`}>
                   <label className="layer-label-container">
                     <input
                       type="checkbox"
@@ -670,12 +1342,14 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
           ))}
         </div>
         {isLayerLoading && (
-          <div className="global-loading-indicator">
-            <div className="loading-spinner"></div>
-            <span>Loading layer...</span>
-          </div>
+         <Loader />
         )}
       </aside>
+         <AttributePopup
+        position={clickPosition}
+        data={attributeData}
+        onClose={closeAttributePopup}
+      />
     </>
   );
 };

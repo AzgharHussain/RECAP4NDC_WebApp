@@ -2,10 +2,127 @@
   font-family: "Arial", sans-serif;
   height: 92vh;
   overflow-x: auto;
+  overscroll-behavior: contain;
   padding: 10px;
+
   scrollbar-width: none; /* For Firefox */
   -ms-overflow-style: none; /* For Internet Explorer and Edge */
 }
+
+.map-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw; /* Full viewport width */
+  height: 100vh; /* Full viewport height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.3); /* transparent dark overlay */
+  pointer-events: all; /* block clicks */
+}
+
+  
+  .map-loader__radar {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    overflow: hidden;
+  }
+  
+  .map-loader__center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4CAF50;
+    z-index: 9999;
+  }
+  
+  .map-loader__satellite {
+    position: absolute;
+    width: 16px;
+    height: 8px;
+    background: #4CAF50;
+    border-radius: 4px;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: orbit 3s linear infinite;
+  }
+  
+  .map-loader__satellite:before {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+  }
+  
+  .map-loader__pulse {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #4CAF50;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    animation: pulse 3s infinite;
+  }
+  
+  .map-loader__pulse.delay-1 {
+    animation-delay: 1s;
+  }
+  
+  .map-loader__pulse.delay-2 {
+    animation-delay: 2s;
+  }
+  
+  .map-loader__sweep {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, transparent 50%, rgba(76, 175, 80, 0.3) 100%);
+    border-radius: 50%;
+    animation: sweep 3s linear infinite;
+    transform-origin: center;
+  }
+  
+  .map-loader__message {
+    margin-top: 20px;
+    color: #4CAF50;
+    font-weight: 500;
+    text-align: center;
+  }
+  
+  @keyframes orbit {
+    0% { transform: translateX(-50%) rotate(0deg) translateY(60px) rotate(0deg); }
+    100% { transform: translateX(-50%) rotate(360deg) translateY(60px) rotate(-360deg); }
+  }
+  
+  @keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.7; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+  }
+  
+  @keyframes sweep {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
 
 .leftpanel::-webkit-scrollbar {
   display: none; /* For Chrome, Safari, and Opera */
@@ -41,6 +158,7 @@
   transition: all 0.3s ease;
   font-weight: 600;
   color: #2e7d32;
+ 
 }
 
 .group-title:hover {
@@ -108,65 +226,97 @@
   color: #666;
 }
 
+.layer-item.active {
+  background: #e8f5e9;
+  border-left: 4px solid #2e7d32;
+}
+
+.layer-item.active .layer-label {
+  font-weight: 600;
+  color: #1b5e20;
+}
+/* Loading Dots */
 .loading-dots {
   margin-left: 5px;
   color: #2e7d32;
+  font-size: 14px; /* Slightly larger for better visibility */
 }
 
 /* Opacity Controls */
 .opacity-control {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 12px; /* Slightly more spacing for better touch targets */
+  margin-top: 10px;
   padding-left: 25px;
 }
 
 .opacity-control input[type="range"] {
   flex: 1;
-  height: 4px;
-  border-radius: 2px;
-  background: #ddd;
+  height: 5px; /* Slightly thicker for better usability */
+  border-radius: 3px;
+  background: #e0e0e0; /* Lighter background for contrast */
   outline: none;
   -webkit-appearance: none;
+  transition: background 0.2s ease; /* Smooth transition for hover/focus */
+}
+
+.opacity-control input[type="range"]:hover,
+.opacity-control input[type="range"]:focus {
+  background: #bdbdbd; /* Darker background on interaction */
 }
 
 .opacity-control input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 18px; /* Slightly larger for better touch targets */
+  height: 18px;
   border-radius: 50%;
   background: #2e7d32;
   cursor: pointer;
+  border: 2px solid white; /* Border for better visibility */
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+  transition: transform 0.1s ease; /* Smooth interaction */
+}
+
+.opacity-control input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.1); /* Slightly scale on press */
 }
 
 .opacity-control input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: #2e7d32;
   cursor: pointer;
-  border: none;
+  border: 2px solid white;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
 }
 
 .opacity-value {
-  font-size: 11px;
+  font-size: 12px; /* Slightly larger for readability */
   color: #666;
-  min-width: 35px;
+  min-width: 40px; /* More space for values */
   text-align: right;
+  font-weight: 500; /* Slightly bolder for clarity */
 }
 
 /* Checkbox Styling */
 input[type="checkbox"] {
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 18px; /* Slightly larger for better usability */
+  height: 18px;
   border: 2px solid #ccc;
-  border-radius: 3px;
+  border-radius: 4px; /* Slightly rounded corners */
   background: white;
   cursor: pointer;
   position: relative;
   transition: all 0.2s ease;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+input[type="checkbox"]:hover {
+  border-color: #2e7d32;
+  box-shadow: 0 0 4px rgba(46, 125, 50, 0.2); /* Highlight on hover */
 }
 
 input[type="checkbox"]:checked {
@@ -185,8 +335,8 @@ input[type="checkbox"]:checked::after {
   font-weight: bold;
 }
 
-input[type="checkbox"]:hover {
-  border-color: #2e7d32;
+input[type="checkbox"]:focus {
+  outline: 2px solid rgba(46, 125, 50, 0.3); /* Focus state for accessibility */
 }
 
 /* Loading Indicator */

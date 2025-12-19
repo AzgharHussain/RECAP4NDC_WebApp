@@ -73,41 +73,81 @@ export default function DashboardLayout() {
   return (
     <div className="layout">
       {/* Header */}
-      <header className="header">
-        <div className="header-left">
-          {/* Hamburger for mobile */}
-          <button
-            className="hamburger-btn"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
-            {isSidebarOpen ? <FaTimes /> : <FaBars />}
-          </button>
-          <img src={brand} alt="RECAP4NDC" className="header-logo" />
-        </div>
+    <header className="header">
+  {/* ===== TOP ROW ===== */}
+  <div className="header-top">
+    <div className="header-left">
+      <button
+        className="hamburger-btn"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
+        {isSidebarOpen ? <FaTimes /> : <FaBars />}
+      </button>
+      <img src={brand} alt="RECAP4NDC" className="header-logo" />
+    </div>
 
-        {/* Logos Section */}
-        <div className="header-logos">
-          <img src={logos1} alt="Logo 1" />
-          <img src={logos2} alt="Logo 2" />
-          <img src={logos3} alt="Logo 3" />
-          <img src={logos4} alt="Logo 4" />
-          <img src={logos5} alt="Logo 5" />
-          <img src={logos6} alt="Logo 6" />
-          <img src={logos7} alt="Logo 7" />
-          <img src={logos8} alt="Logo 8" />
-          <img src={logos9} alt="Logo 9" />
-          <img src={logos10} alt="Logo 10" />
-          <img src={logos11} alt="Logo 11" />
-        </div>
+    <div className="header-logos">
+      <img src={logos1} alt="Logo 1" />
+      <img src={logos2} alt="Logo 2" />
+      <img src={logos3} alt="Logo 3" />
+      <img src={logos4} alt="Logo 4" />
+      <img src={logos5} alt="Logo 5" />
+      <img src={logos6} alt="Logo 6" />
+      <img src={logos7} alt="Logo 7" />
+      <img src={logos8} alt="Logo 8" />
+      <img src={logos9} alt="Logo 9" />
+      <img src={logos10} alt="Logo 10" />
+      <img src={logos11} alt="Logo 11" />
+    </div>
 
-        <div className="header-right">
-         <span className="user-icon">
-  <img src={userIcon} alt="User Icon" className="user-icon-img" />
-</span>
-          <span className="username" onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)} >Admin ▼</span>
-        {isAdminMenuOpen && (
-            <div className="admin-dropdown">
-              <button
+    <div className="header-right">
+      <span className="user-icon">
+        <img src={userIcon} alt="User Icon" className="user-icon-img" />
+      </span>
+      <span
+        className="username"
+        onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+      >
+        Admin ▼
+      </span>
+    </div>
+  </div>
+
+  {/* ===== BOTTOM ROW (BUTTONS) ===== */}
+  <div className="header-bottom">
+    <NavLink
+      to="/geo"
+      className={`menu-item ${isActiveLink("/geo") ? "active" : ""}`}
+      onClick={handleLinkClick}
+    >
+      <FaGlobe className="icon" />
+      {text[language].geoDashboard}
+    </NavLink>
+
+    <NavLink
+      to="/petrolling-incident/patrolling"
+      className={`menu-item ${
+        isActiveLink("/petrolling-incident/patrolling") ? "active" : ""
+      }`}
+      onClick={handleLinkClick}
+    >
+      <img src={patrollingIcon} alt="Patrolling" className="menu-image" />
+      {text[language].patrollingLogs}
+    </NavLink>
+  </div>
+</header>
+
+
+          
+        
+
+        
+        <main className="content">
+          <Outlet />
+        </main>
+     
+     {isAdminMenuOpen && (  <div className="admin-dropdown ">
+ <button
                 className={`lang-chip ${language === "en" ? "active" : ""}`}
                 onClick={() => toggleLanguage("en")}
               >
@@ -119,151 +159,8 @@ export default function DashboardLayout() {
               >
                 જીયુ
               </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-
-      {/* Body */}
-      <div className="layout-body">
-        {/* Sidebar */}
-        <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
-          <ul>
-            {/* <li>
-              <NavLink
-                to="/dashboard"
-                className={`menu-item ${isActiveLink("/dashboard") ? "active" : ""}`}
-                onClick={handleLinkClick}
-              >
-                <FaThLarge className="icon" /> {text[language].overview}
-              </NavLink>
-            </li> */}
-            <li>
-              <NavLink
-                to="/geo"
-                className={`menu-item ${isActiveLink("/geo") ? "active" : ""}`}
-                onClick={handleLinkClick}
-              >
-                <FaGlobe className="icon" /> {text[language].geoDashboard}
-              </NavLink>
-            </li>
-
-            {/* Patrolling and Incident Logs Dropdown */}
-           <li className={`dropdown ${isPatrollingOpen ? "open" : ""}`}>
-              <button
-                className={`dropdown-toggle ${
-                  isActiveLink("/petrolling-incident/patrolling") ||
-                  isActiveLink("/petrolling-incident/incident")
-                    ? "active"
-                    : ""
-                }`}
-                onClick={() => setIsPatrollingOpen(!isPatrollingOpen)} // Toggle only Patrolling dropdown
-              >
-                <MdLocalPolice className="icon" /> {text[language].patrollingIncident}
-                {/* ▼▲ icon toggle */}
-                {isPatrollingOpen ? <FaChevronUp /> : <FaChevronDown />}
-              </button>
-
-              {isPatrollingOpen && (
-                <ul className="dropdown-menus">
-                  <li>
-                    <NavLink
-                      to="/petrolling-incident/patrolling"
-                      className={`menu-item ${
-                        isActiveLink("/petrolling-incident/patrolling") ? "active" : ""
-                      }`}
-                      onClick={handleLinkClick}
-                    >
-                      <img
-                        src={patrollingIcon}
-                        alt="Patrolling Logs"
-                        className="menu-image"
-                      />{" "}
-                      {/* Patrolling image */}
-                     {text[language].patrollingLogs}
-                    </NavLink>
-                  </li>
-                  {/* <li>
-                    <NavLink
-                      to="/petrolling-incident/incident"
-                      className={`menu-item ${
-                        isActiveLink("/petrolling-incident/incident") ? "active" : ""
-                      }`}
-                      onClick={handleLinkClick}
-                    >
-                      <img
-                        src={incidentIcon}
-                        alt="Incident Logs"
-                        className="menu-image"
-                      />{" "}
-                     
-                      {text[language].incidentLogs}
-                    </NavLink>
-                  </li> */}
-                </ul>
-              )}
-            </li>
-
-
-            {/* Working Plan Areas Dropdown */}
-           {/* <li className={`dropdown ${isWorkingPlanOpen ? "open" : ""}`}>
-            <button
-              className={`dropdown-toggle ${isWorkingPlanOpen ? "active" : ""}`}
-              onClick={() => setIsWorkingPlanOpen(!isWorkingPlanOpen)} 
-            >
-              <FaClipboardList className="icon" /> {text[language].workingPlan}
-             
-              {isWorkingPlanOpen ? <FaChevronUp /> : <FaChevronDown />}
-            </button>
-
-                {isWorkingPlanOpen && (
-                  <ul className="dropdown-menus">
-                    <li>
-                      <NavLink
-                        to="/working-plan/upload"
-                        className={`menu-item ${
-                          isActiveLink("/working-plan/upload") ? "active" : ""
-                        }`}
-                        onClick={handleLinkClick}
-                      >
-                        <FaUpload className="icon" /> {text[language].uploadCoupe}
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink
-                        to="/working-plan/view"
-                        className={`menu-item ${
-                          isActiveLink("/working-plan/view") ? "active" : ""
-                        }`}
-                        onClick={handleLinkClick}
-                      >
-                        <FaEye className="icon" /> {text[language].viewCoupe}
-                      </NavLink>
-                    </li>
-                    <li>
-                      <NavLink
-                        to="/working-plan/log"
-                        className={`menu-item ${
-                          isActiveLink("/working-plan/log") ? "active" : ""
-                        }`}
-                        onClick={handleLinkClick}
-                      >
-                        <GiNotebook className="icon" />  {text[language].coupeLog}
-                      </NavLink>
-                    </li>
-                  </ul>
-                )}
-              </li> */}
-
-          </ul>
-        </aside>
-
-        
-        <main className="content">
-          <Outlet />
-        </main>
       </div>
+    )}
     </div>
   );
 }
