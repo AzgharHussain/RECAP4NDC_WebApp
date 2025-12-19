@@ -4,6 +4,7 @@
   overflow-x: auto;
   overscroll-behavior: contain;
   padding: 10px;
+
   scrollbar-width: none; /* For Firefox */
   -ms-overflow-style: none; /* For Internet Explorer and Edge */
 }
@@ -157,6 +158,7 @@
   transition: all 0.3s ease;
   font-weight: 600;
   color: #2e7d32;
+ 
 }
 
 .group-title:hover {

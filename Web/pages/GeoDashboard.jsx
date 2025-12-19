@@ -752,7 +752,7 @@ const handleToolSidebarClick = (toolName) => {
               zoom={6.8}
           style={{
   height: "92vh",
-  width:  "66vw" ,
+  width:  "80vw" ,
 }}
 
               whenCreated={(mapInstance) => {
@@ -922,7 +922,9 @@ const handleToolSidebarClick = (toolName) => {
 
       <AddControls />
       <GeomanTools />
-       <ScaleControl position="bottomleft" className="custom-scale-control" />
+       <ScaleControl position="bottomleft" 
+      //  className="custom-scale-control" 
+       />
               {activeToolSidebar === "search" && <DraggableZoomControl mapRef={mapRef} />}
 
               <LatLngDisplay />
