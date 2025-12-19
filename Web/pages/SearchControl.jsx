@@ -73,7 +73,7 @@ const SearchControlWithInput = () => {
         left: "5%",
         zIndex: 1000,
         backgroundColor: "#fff",
-        padding: "6px",
+       
         borderRadius: "5px",
         width: "200px",
         boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
@@ -92,7 +92,7 @@ const SearchControlWithInput = () => {
           border: "1px solid #0B3C4D",
           outline: "none",
           fontSize: "10px",
-          marginBottom: "2px",
+          
         }}
       />
 

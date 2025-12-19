@@ -5,6 +5,26 @@ import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
 
+const Loader = () => {
+
+  console.log("loading")
+  return (
+    <div className="map-loader">
+      <div className="map-loader__radar">
+        <div className="map-loader__center">
+          <div className="map-loader__satellite"></div>
+          <div className="map-loader__pulse"></div>
+          <div className="map-loader__pulse delay-1"></div>
+          <div className="map-loader__pulse delay-2"></div>
+        </div>
+        <div className="map-loader__sweep"></div>
+      </div>
+      <div className="map-loader__message">Loading...</div>
+
+    </div>
+  );
+};
+
 const GEOSERVER_WMS = "https://www.gisfy.co.in:8443/geoserver/wms";
 
 const layersData = {
@@ -18,18 +38,7 @@ const layersData = {
       
       ]
     },
-    {
-      title: "Territorial Circle ",
-      layerList: [
-        { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
-        { Name: "Teritorial_Circle_Division_Boundary", Layer: "Territorial Circle Division" },
-        { Name: "Teritorial_Circle_Range_Boundary", Layer: "Territorial Circle Range" },
-        { Name: "Teritorial_Circle_Round_Boundary", Layer: "Territorial Circle Round" },
-        { Name: "Teritorial_Circle_Village_Boundary", Layer: "Territorial Circle Village" },
-        { Name: "Teritorial_Circle_Boundary", Layer: "Territorial Circle" },
-      ]
-    },
-    {
+      {
       title: "Wildlife Circle ",
       layerList: [
         { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat" },
@@ -50,6 +59,18 @@ const layersData = {
         { Name: "Gujarat_Social_Forestry_Village_Boundary", Layer: "Social Forestry Village" },
       ]
     },
+    {
+      title: "Territorial Circle ",
+      layerList: [
+        { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
+        { Name: "Teritorial_Circle_Division_Boundary", Layer: "Territorial Circle Division" },
+        { Name: "Teritorial_Circle_Range_Boundary", Layer: "Territorial Circle Range" },
+        { Name: "Teritorial_Circle_Round_Boundary", Layer: "Territorial Circle Round" },
+        { Name: "Teritorial_Circle_Village_Boundary", Layer: "Territorial Circle Village" },
+      
+      ]
+    },
+  
     {
       title: "Banaskantha",
       layerList: [
@@ -567,7 +588,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
               const layerId = layerIds[`${idx}-${layerName}`] || uuidv4();
 
               return (
-                <div key={layerId} className="layer-item">
+                <div key={layerId}  className={`layer-item ${isChecked ? "active" : ""}`}>
                   <label className="layer-label-container">
                     <input
                       type="checkbox"
@@ -670,10 +691,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap }) => {
           ))}
         </div>
         {isLayerLoading && (
-          <div className="global-loading-indicator">
-            <div className="loading-spinner"></div>
-            <span>Loading layer...</span>
-          </div>
+         <Loader />
         )}
       </aside>
     </>

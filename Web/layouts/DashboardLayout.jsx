@@ -105,7 +105,7 @@ export default function DashboardLayout() {
   <img src={userIcon} alt="User Icon" className="user-icon-img" />
 </span>
           <span className="username" onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)} >Admin ▼</span>
-        {isAdminMenuOpen && (
+        {/* {isAdminMenuOpen && (
             <div className="admin-dropdown">
               <button
                 className={`lang-chip ${language === "en" ? "active" : ""}`}
@@ -120,7 +120,7 @@ export default function DashboardLayout() {
                 જીયુ
               </button>
             </div>
-          )}
+          )} */}
         </div>
       </header>
 
@@ -264,6 +264,21 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+     {isAdminMenuOpen && (  <div className="admin-dropdown ">
+ <button
+                className={`lang-chip ${language === "en" ? "active" : ""}`}
+                onClick={() => toggleLanguage("en")}
+              >
+                EN
+              </button>
+              <button
+                className={`lang-chip ${language === "gu" ? "active" : ""}`}
+                onClick={() => toggleLanguage("gu")}
+              >
+                જીયુ
+              </button>
+      </div>
+    )}
     </div>
   );
 }
