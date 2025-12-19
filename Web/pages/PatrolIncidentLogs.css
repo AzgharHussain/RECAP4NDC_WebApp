@@ -252,3 +252,116 @@
   display: flex;
   gap: 10px;
 }
+.map-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw; /* Full viewport width */
+  height: 100vh; /* Full viewport height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.3); /* transparent dark overlay */
+  pointer-events: all; /* block clicks */
+}
+
+  
+  .map-loader__radar {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    overflow: hidden;
+  }
+  
+  .map-loader__center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4CAF50;
+    z-index: 9999;
+  }
+  
+  .map-loader__satellite {
+    position: absolute;
+    width: 16px;
+    height: 8px;
+    background: #4CAF50;
+    border-radius: 4px;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: orbit 3s linear infinite;
+  }
+  
+  .map-loader__satellite:before {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+  }
+  
+  .map-loader__pulse {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #4CAF50;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    animation: pulse 3s infinite;
+  }
+  
+  .map-loader__pulse.delay-1 {
+    animation-delay: 1s;
+  }
+  
+  .map-loader__pulse.delay-2 {
+    animation-delay: 2s;
+  }
+  
+  .map-loader__sweep {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, transparent 50%, rgba(76, 175, 80, 0.3) 100%);
+    border-radius: 50%;
+    animation: sweep 3s linear infinite;
+    transform-origin: center;
+  }
+  
+  .map-loader__message {
+    margin-top: 20px;
+    color: #4CAF50;
+    font-weight: 500;
+    text-align: center;
+  }
+  
+  @keyframes orbit {
+    0% { transform: translateX(-50%) rotate(0deg) translateY(60px) rotate(0deg); }
+    100% { transform: translateX(-50%) rotate(360deg) translateY(60px) rotate(-360deg); }
+  }
+  
+  @keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.7; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+  }
+  
+  @keyframes sweep {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }

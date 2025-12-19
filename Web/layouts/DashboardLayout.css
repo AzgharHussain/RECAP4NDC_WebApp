@@ -353,15 +353,16 @@ box-shadow: -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, -9.53px -9.53px 4.7
   }
 }
 .admin-dropdown {
-  position: absolute;
+  position: fixed;
   top: 40px; /* Adjust this as needed */
-  right: 0;
+  right: 20px; /* Adjust this as needed */
   /* background-color: white; */
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   padding: 10px;
   display: flex;
   /* flex-direction: column; */
   gap: 10px;
+  z-index: 100000;
 }
 /* === LANGUAGE BUTTONS === */
 .lang-chip {
@@ -376,6 +377,7 @@ box-shadow: -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, -9.53px -9.53px 4.7
   font-family: "Spline Sans";
   font-style: normal;
   cursor: pointer;
+  z-index: 100000;
   transition: all 0.3s ease;
   color: #000;
   border-radius: 68.072px;
