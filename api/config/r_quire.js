@@ -22,22 +22,16 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
   host: DB_HOST,
   port: DB_PORT,
   dialect: 'postgres',
-  logging: console.log,
-  dialectOptions: {
-    // Keepalive reduces chance server closes idle sockets.
-    keepAlive: true,
-    // SSL: set via env if needed (some hosts require SSL)
-    ...(useSsl ? { ssl: { require: true, rejectUnauthorized: false } } : {})
-  },
-  pool: {
-    // Increased pool settings to handle bursts but not too large
-    max: 20,
-    min: 2,
-    acquire: 120000, // ms
-    idle: 30000
-  },
-  // Optional global query timeout (ms) - set to 0 for none
-  // dialectOptions: { statement_timeout: 0 }
+   logging: console.log,
+    dialectOptions: {
+      ssl: false,
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    }
 });
 
 // Test connection
