@@ -11,6 +11,7 @@ const { sequelize, testConnection } = require('./config/database');
 const NdviRouter =require("./routers/ndviRouter")
 const notifications = require('./routers/notifications');
 const userlocations = require('./routers/userlocations');
+const changendvi = require('./routers/changendvi');
 
 // ===========================================================
 // 🧩 DATABASE CONNECTION (PostgreSQL + Sequelize)
@@ -85,6 +86,7 @@ app.use('/Patrolimage', express.static(patrolImageDir));
 app.use('/Incidentimage', express.static(incidentImageDir));
 app.use('/api', notifications);
 app.use('/api', userlocations);
+app.use('/api', changendvi);
 // ===========================================================
 // 📦 MULTER STORAGE SETUP (Dynamic folder selection)
 // ===========================================================
