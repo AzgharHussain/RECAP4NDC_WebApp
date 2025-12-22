@@ -32,7 +32,7 @@ router.post('/ndvi-change', async (req, res) => {
 
         // 2️⃣ Fetch all data
         const selectQuery = `
-            SELECT id, longitude, latitude, note, image_data, status
+            SELECT id, longitude, latitude
             FROM public."${tableName}";
         `;
 
@@ -98,7 +98,7 @@ router.get('/ndvi-change/:id', async (req, res) => {
         res.json({
             success: true,
             message: 'Record fetched successfully',
-            data: results[0]
+            data: results
         });
 
     } catch (error) {
