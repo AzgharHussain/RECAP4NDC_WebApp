@@ -20,7 +20,7 @@ router.post('/ndvi-change', async (req, res) => {
         // 1️⃣ Create columns if NOT EXISTS
         const alterTableQuery = `
             ALTER TABLE public."${tableName}"
-            ADD COLUMN IF NOT EXISTS id SERIAL PRIMARY KEY,
+            ADD COLUMN IF NOT EXISTS Pixle_id SERIAL PRIMARY KEY,
             ADD COLUMN IF NOT EXISTS note TEXT,
             ADD COLUMN IF NOT EXISTS image_data TEXT,
             ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
@@ -32,7 +32,7 @@ router.post('/ndvi-change', async (req, res) => {
 
         // 2️⃣ Fetch all data
         const selectQuery = `
-            SELECT id, longitude, latitude, note, image_data, status
+            SELECT Pixle_id, longitude, latitude
             FROM public."${tableName}";
         `;
 
@@ -98,7 +98,7 @@ router.get('/ndvi-change/:id', async (req, res) => {
         res.json({
             success: true,
             message: 'Record fetched successfully',
-            data: results[0]
+            data: results
         });
 
     } catch (error) {
