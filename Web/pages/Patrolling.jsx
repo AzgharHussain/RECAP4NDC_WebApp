@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect ,Suspense, lazy} from "react";
 import { Table, Button, Input, DatePicker, Modal, Image, Select, Tag, Card, Row, Col, Statistic, Progress, Typography } from "antd";
 import { SearchOutlined, EyeOutlined, TeamOutlined, ClockCircleOutlined, DashboardOutlined, CalendarOutlined } from "@ant-design/icons";
 import "./PatrolIncidentLogs.css";
@@ -9,6 +9,8 @@ import { saveAs } from "file-saver";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
+const RouteMap = lazy(() => import("./RouterMap"));
+
 import {
   MapContainer,
   TileLayer,
@@ -18,6 +20,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
+import { Route } from "react-router-dom";
 
 
 const Loader = () => {
@@ -709,6 +712,7 @@ const PatrolIncidentLogs = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { language } = useLanguage();
+  const [showmaproute, setShowMapRoute] = useState(false);
 
   const fetchPatrolData = async () => {
     setIsLoading(true);
@@ -1379,6 +1383,19 @@ const handleExport = () => {
             >
               {language === "gu" ? "ફિલ્ટર સાફ કરો" : "Clear Filters"}
             </Button>
+               <Button 
+              onClick={() => {
+    setShowMapRoute(!showmaproute);
+  }}
+              style={{
+                marginRight: "10px",
+                background: "#f5f5f5",
+                borderColor: "#d9d9d9",
+                color: "#000",
+              }}
+            >
+              {language === "gu" ? "સ્થાન માર્ગ દર્શાવો" : "Show Map Route"}
+            </Button>
             
             <Button className="btn-Export" onClick={handleExport}>
               {language === "gu" ? "નિકાસ કરો" : "Export"}
@@ -1566,7 +1583,26 @@ const handleExport = () => {
   )}
 </Modal>
         <PatrolAnalysisDashboard patrolData={filteredData} language={language} />
-        
+        {
+          showmaproute &&  <Suspense
+        fallback={
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100vh",
+              fontSize: "18px",
+              color: "#666",
+            }}
+          >
+            Loading map...
+          </div>
+        }
+      >
+        <RouteMap />
+      </Suspense>
+}
     </div>
   );
 };
