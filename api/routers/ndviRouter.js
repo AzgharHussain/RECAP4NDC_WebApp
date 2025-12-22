@@ -20,7 +20,7 @@ router.post('/ndvi-change', async (req, res) => {
         // 1️⃣ Create columns if NOT EXISTS
         const alterTableQuery = `
             ALTER TABLE public."${tableName}"
-            ADD COLUMN IF NOT EXISTS id SERIAL PRIMARY KEY,
+            ADD COLUMN IF NOT EXISTS Pixle_id SERIAL PRIMARY KEY,
             ADD COLUMN IF NOT EXISTS note TEXT,
             ADD COLUMN IF NOT EXISTS image_data TEXT,
             ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
@@ -32,7 +32,7 @@ router.post('/ndvi-change', async (req, res) => {
 
         // 2️⃣ Fetch all data
         const selectQuery = `
-            SELECT id, longitude, latitude
+            SELECT Pixle_id, longitude, latitude
             FROM public."${tableName}";
         `;
 
