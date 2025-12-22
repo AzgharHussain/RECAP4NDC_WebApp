@@ -284,7 +284,7 @@ app.get('/api/patrols-by-user', async (req, res) => {
 // ===========================================================
 // 🚀 START SERVER 
 // ===========================================================
-const PORT = 5000;
+const PORT = 5001;
 app.listen(PORT, async () => {
 
   console.log(`🚀 Server running on port ${PORT}`);
