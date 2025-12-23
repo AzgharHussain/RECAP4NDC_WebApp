@@ -464,11 +464,11 @@ const exportToExcel = () => {
           to { opacity: 1; transform: translateX(0); }
         }
         .glow-button {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #b1ea66ff 0%, #6ea24bff 100%);
           color: white;
           border: none;
-          padding: 10px 20px;
-          border-radius: 8px;
+          padding: 5px 10px;
+          border-radius: 4px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.3s ease;
@@ -485,10 +485,10 @@ const exportToExcel = () => {
           box-shadow: none;
         }
         .stats-card {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #66ea99ff 0%, #9ca24bff 100%);
           color: white;
-          border-radius: 12px;
-          padding: 20px;
+          border-radius: 6px;
+          padding: 10px;
           box-shadow: 0 10px 20px rgba(102, 126, 234, 0.15);
           transition: all 0.3s ease;
         }
@@ -498,20 +498,20 @@ const exportToExcel = () => {
         }
         .patrol-card {
           background: white;
-          border-radius: 10px;
+          border-radius: 5px;
           padding: 16px;
-          margin-bottom: 12px;
+          margin-bottom: 6px;
           border: 2px solid #e2e8f0;
           transition: all 0.3s ease;
           cursor: pointer;
         }
         .patrol-card:hover {
-          border-color: #4299e1;
+          border-color: #9e8122ff;
           transform: translateY(-3px);
           box-shadow: 0 10px 20px rgba(66, 153, 225, 0.15);
         }
         .patrol-card.active {
-          border-color: #48bb78;
+          border-color: #93bb48ff;
           background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
         }
         .image-card {
@@ -521,7 +521,7 @@ const exportToExcel = () => {
           transition: all 0.3s ease;
         }
         .image-card:hover {
-          border-color: #4299e1;
+          border-color: #c9e142ff;
           transform: scale(1.05);
         }
         .modal-overlay {
@@ -583,7 +583,7 @@ const exportToExcel = () => {
               maxWidth: "90%",
               maxHeight: "90%",
               objectFit: "contain",
-              borderRadius: "8px",
+              borderRadius: "4px",
               boxShadow: "0 20px 40px rgba(0, 0, 0, 0.3)",
             }}
             onClick={(e) => e.stopPropagation()}
@@ -617,7 +617,7 @@ const exportToExcel = () => {
               borderRadius: "12px",
               width: "90%",
               maxWidth: "800px",
-              maxHeight: "90vh",
+              maxHeight: "60vh",
               overflow: "auto",
               position: "relative",
               boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
@@ -625,12 +625,12 @@ const exportToExcel = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{
-              padding: "20px",
+              padding: "10px",
               borderBottom: "1px solid #f0f0f0",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "linear-gradient(135deg, #00c853 0%, #bcc758ff 100%)",
               color: "white",
               borderRadius: "12px 12px 0 0",
             }}>
@@ -660,17 +660,17 @@ const exportToExcel = () => {
               </button>
             </div>
             
-            <div style={{ padding: "20px" }}>
+            <div style={{ padding: "10px" }}>
               {loading.patrol ? (
                 <div style={{ textAlign: "center", padding: "40px" }}>
                   <div style={{
                     border: "4px solid #f3f3f3",
-                    borderTop: "4px solid #4299e1",
+                    borderTop: "4px solid #2ada2aff",
                     borderRadius: "50%",
                     width: "60px",
                     height: "60px",
                     animation: "spin 1s linear infinite",
-                    margin: "0 auto 20px",
+                    margin: "0 auto 10px",
                   }} />
                   <p style={{ color: "#666", fontSize: "16px" }}>{language === "gu" ? "પેટ્રોલ વિગતો લોડ કરી રહ્યા છીએ..." : "Loading patrol details..."}</p>
                 </div>
@@ -680,20 +680,20 @@ const exportToExcel = () => {
                   <div style={{
                     backgroundColor: "#fff",
                     borderRadius: "10px",
-                    padding: "20px",
-                    marginBottom: "20px",
+                    padding: "10px",
+                    marginBottom: "10px",
                     border: "1px solid #e2e8f0",
                     boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
                   }}>
                     <div style={{
                       display: "flex",
                       alignItems: "center",
-                      marginBottom: "20px",
-                      paddingBottom: "10px",
-                      borderBottom: "2px solid #4299e1",
+                      marginBottom: "10px",
+                      paddingBottom: "5px",
+                      borderBottom: "2px solid #e1bc42ff",
                     }}>
                       <div style={{
-                        backgroundColor: "#4299e1",
+                        backgroundColor: "#9ce142ff",
                         width: "40px",
                         height: "40px",
                         borderRadius: "50%",
@@ -719,7 +719,7 @@ const exportToExcel = () => {
                           fontSize: "16px",
                           fontWeight: "500",
                           color: "#2d3748",
-                          padding: "10px",
+                          padding: "5px",
                           backgroundColor: "#f7fafc",
                           borderRadius: "6px",
                           border: "1px solid #e2e8f0",
@@ -736,7 +736,7 @@ const exportToExcel = () => {
                           fontSize: "16px",
                           fontWeight: "500",
                           color: "#2d3748",
-                          padding: "10px",
+                          padding: "5px",
                           backgroundColor: "#f7fafc",
                           borderRadius: "6px",
                           border: "1px solid #e2e8f0",
@@ -753,7 +753,7 @@ const exportToExcel = () => {
                           fontSize: "16px",
                           fontWeight: "500",
                           color: "#2d3748",
-                          padding: "10px",
+                          padding: "5px",
                           backgroundColor: "#f7fafc",
                           borderRadius: "6px",
                           border: "1px solid #e2e8f0",
@@ -768,8 +768,8 @@ const exportToExcel = () => {
                         </label>
                         <div style={{
                           display: "inline-block",
-                          padding: "8px 16px",
-                          borderRadius: "20px",
+                          padding: "4px 8px",
+                          borderRadius: "10px",
                           fontSize: "14px",
                           fontWeight: "600",
                           backgroundColor: patrolDetails.type_name === "Day patrolling" ? "#ebf8ff" : 
@@ -792,7 +792,7 @@ const exportToExcel = () => {
                         <div style={{
                           fontSize: "14px",
                           color: "#4a5568",
-                          padding: "15px",
+                          padding: "7px",
                           backgroundColor: "#f7fafc",
                           borderRadius: "8px",
                           border: "1px solid #e2e8f0",
@@ -812,7 +812,7 @@ const exportToExcel = () => {
                           fontSize: "14px",
                           fontWeight: "500",
                           color: "#2d3748",
-                          padding: "10px",
+                          padding: "5px",
                           backgroundColor: "#f7fafc",
                           borderRadius: "6px",
                           border: "1px solid #e2e8f0",
@@ -829,7 +829,7 @@ const exportToExcel = () => {
                           fontSize: "14px",
                           fontWeight: "500",
                           color: "#2d3748",
-                          padding: "10px",
+                          padding: "5px",
                           backgroundColor: "#f7fafc",
                           borderRadius: "6px",
                           border: "1px solid #e2e8f0",
@@ -846,7 +846,7 @@ const exportToExcel = () => {
                           fontSize: "14px",
                           fontWeight: "500",
                           color: "#2d3748",
-                          padding: "10px",
+                          padding: "5px",
                           backgroundColor: "#f7fafc",
                           borderRadius: "6px",
                           border: "1px solid #e2e8f0",
@@ -863,7 +863,7 @@ const exportToExcel = () => {
                           fontSize: "14px",
                           fontWeight: "500",
                           color: "#2d3748",
-                          padding: "10px",
+                          padding: "5px",
                           backgroundColor: "#f7fafc",
                           borderRadius: "6px",
                           border: "1px solid #e2e8f0",
@@ -879,15 +879,15 @@ const exportToExcel = () => {
                     <div style={{
                       backgroundColor: "#fff",
                       borderRadius: "10px",
-                      padding: "20px",
+                      padding: "10px",
                       border: "1px solid #e2e8f0",
                       boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
                     }}>
                       <div style={{
                         display: "flex",
                         alignItems: "center",
-                        marginBottom: "20px",
-                        paddingBottom: "10px",
+                        marginBottom: "10px",
+                        paddingBottom: "5px",
                         borderBottom: "2px solid #4299e1",
                       }}>
                         <div style={{
@@ -898,7 +898,7 @@ const exportToExcel = () => {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          marginRight: "12px",
+                          marginRight: "6px",
                           color: "white",
                         }}>
                           <PictureOutlined />
@@ -917,7 +917,7 @@ const exportToExcel = () => {
                           <div 
                             key={index} 
                             className="image-card"
-                            onClick={() => setSelectedImage(image.image_data)}
+                            // onClick={() => setSelectedImage(image.image_data)}
                             style={{
                               border: "2px solid #e2e8f0",
                               borderRadius: "8px",
@@ -927,7 +927,7 @@ const exportToExcel = () => {
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.transform = "scale(1.05)";
-                              e.currentTarget.style.borderColor = "#4299e1";
+                              e.currentTarget.style.borderColor = "#a0c010ff";
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.transform = "scale(1)";
@@ -957,13 +957,13 @@ const exportToExcel = () => {
                                 backgroundColor: "rgba(0,0,0,0.7)",
                                 color: "white",
                                 fontSize: "12px",
-                                padding: "2px 8px",
+                                padding: "1px 4px",
                                 borderRadius: "4px",
                               }}>
                                 {index + 1}
                               </div>
                             </div>
-                            <div style={{ padding: "10px", backgroundColor: "#f8fafc" }}>
+                            <div style={{ padding: "5px", backgroundColor: "#f8fafc" }}>
                               <div style={{ fontWeight: "600", fontSize: "12px", color: "#2d3748", marginBottom: "4px" }}>
                                 {image.image_category || "Uncategorized"}
                               </div>
@@ -1319,7 +1319,7 @@ const exportToExcel = () => {
                     {coverageData.beat_name}
                   </div>
                 </div>
-                <div className="stats-card" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" }}>
+                <div className="stats-card" style={{ background: "linear-gradient(135deg, #fbdf93ff 0%, #b8f557ff 100%)" }}>
                   <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Beat Area</p>
                   <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
                     {(Number(coverageData.beat_area_sq_m) / 1000000).toFixed(2)} km²
@@ -1328,7 +1328,7 @@ const exportToExcel = () => {
                     {Number(coverageData.beat_area_sq_m).toLocaleString()} m²
                   </p>
                 </div>
-                <div className="stats-card" style={{ background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" }}>
+                <div className="stats-card" style={{ background: "linear-gradient(135deg, #fec14fff 0%, #6fb834ff 100%)" }}>
                   <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Patrol Covered Area</p>
                   <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
                     {(Number(coverageData.patrol_beat_area_sq_m) / 1000000).toFixed(2)} km²
@@ -1339,10 +1339,10 @@ const exportToExcel = () => {
                 </div>
                 <div className="stats-card" style={{ 
                   background: coverageData.coverage_percentage > 70 ? 
-                    "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" : 
+                    "linear-gradient(135deg, #e9e643ff 0%, #f93838ff 100%)" : 
                     coverageData.coverage_percentage > 40 ? 
-                    "linear-gradient(135deg, #fa709a 0%, #fee140 100%)" : 
-                    "linear-gradient(135deg, #ff0844 0%, #ffb199 100%)"
+                    "linear-gradient(135deg, #f8fa70ff 0%, #8cfe40ff 100%)" : 
+                    "linear-gradient(135deg, #ffb108ff 0%, #dbff99ff 100%)"
                 }}>
                   <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Coverage</p>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1352,7 +1352,7 @@ const exportToExcel = () => {
                     <div style={{
                       width: "60px",
                       height: "60px",
-                      borderRadius: "50%",
+                      borderRadius: "25%",
                       backgroundColor: "rgba(255,255,255,0.2)",
                       display: "flex",
                       alignItems: "center",
@@ -1462,7 +1462,7 @@ const exportToExcel = () => {
                     gap: "10px",
                   }}>
                     <span style={{
-                      backgroundColor: "#4299e1",
+                      backgroundColor: "#a5e06eff",
                       color: "white",
                       width: "32px",
                       height: "32px",
@@ -1514,7 +1514,7 @@ const exportToExcel = () => {
                             )}
                           </div>
                           <div style={{
-                            backgroundColor: selectedPatrol === patrol.patrol_id ? "#48bb78" : "#4299e1",
+                            backgroundColor: selectedPatrol === patrol.patrol_id ? "#48bb78" : "#d0eb5bff",
                             color: "white",
                             width: "32px",
                             height: "32px",
