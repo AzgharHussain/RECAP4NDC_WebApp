@@ -1613,7 +1613,7 @@ ws['!merges'] = [
           </div>
         }
       >
-        <RouteMap />
+        <RouteMap showmaproute={showmaproute} language={language} setShowMapRoute={setShowMapRoute}/>
       </Suspense>
 }
     </div>
