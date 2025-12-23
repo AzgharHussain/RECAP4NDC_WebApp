@@ -151,7 +151,7 @@ const imageToBase64 = (imagePath) => {
     const base64Data = imageBuffer.toString('base64');
     
     // Return data URL format
-    return `data:${mimeType};base64,${base64Data}`;
+    return `${base64Data}`;
   } catch (error) {
     console.error('Error converting image to base64:', error);
     throw error;
