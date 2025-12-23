@@ -78,9 +78,9 @@ router.get('/ndvi-change/:id', async (req, res) => {
 
     try {
         const selectQuery = `
-            SELECT id, longitude, latitude, note, image_data, status
+            SELECT Pixle_id, longitude, latitude, note, image_data, status
             FROM public."${tableName}"
-            WHERE id = :id;
+            WHERE Pixle_id = :id;
         `;
 
         const [results] = await sequelize.query(selectQuery, {
@@ -235,8 +235,8 @@ router.put('/ndvi-change/:id', upload.single('image_data'), async (req, res) => 
     const updateQuery = `
       UPDATE public."${tableName}"
       SET ${updates.join(', ')}, updated_at = NOW()
-      WHERE id = :id
-      RETURNING id, longitude, latitude, note, image_data, status;
+      WHERE Pixle_id = :id
+      RETURNING Pixle_id, longitude, latitude, note, image_data, status;
     `;
 
     const [results] = await sequelize.query(updateQuery, {
