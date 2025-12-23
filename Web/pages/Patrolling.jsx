@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect ,Suspense, lazy} from "react";
 import { Table, Button, Input, DatePicker, Modal, Image, Select, Tag, Card, Row, Col, Statistic, Progress, Typography } from "antd";
 import { SearchOutlined, EyeOutlined, TeamOutlined, ClockCircleOutlined, DashboardOutlined, CalendarOutlined } from "@ant-design/icons";
 import "./PatrolIncidentLogs.css";
@@ -9,6 +9,8 @@ import { saveAs } from "file-saver";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
+const RouteMap = lazy(() => import("./RouterMap"));
+
 import {
   MapContainer,
   TileLayer,
@@ -18,6 +20,7 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
+import { Route } from "react-router-dom";
 
 
 const Loader = () => {
@@ -118,6 +121,7 @@ function PatrolMap({ patrol }) {
     </MapContainer>
   );
 }
+
 
 // New component for analysis dashboard
 const PatrolAnalysisDashboard = ({ patrolData, language }) => {
@@ -709,6 +713,7 @@ const PatrolIncidentLogs = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { language } = useLanguage();
+  const [showmaproute, setShowMapRoute] = useState(false);
 
   const fetchPatrolData = async () => {
     setIsLoading(true);
@@ -927,7 +932,11 @@ const handleExport = () => {
     alert(language === "gu" ? "નિકાસ કરવા માટે કોઈ ડેટા નથી" : "No data to export");
     return;
   }
-
+const admindata={
+  division: "Bhavnagar Forest Division",
+  Range: "MAHUVA",
+  Beat: "GEBAR",
+}
   // Group data by officer name
   const officers = {};
   filteredData.forEach((item) => {
@@ -985,18 +994,21 @@ const handleExport = () => {
     
     // Header row
     [
-      'Officer Name',
-      'Day Patrolling', '', '', '',
-      'Night Patrolling', '', '', '',
-      'Beat Checking', '', '', ''
-    ],
+  'Division', 'Range', 'Beat',
+  'Officer Name',
+  'Day Patrolling', '', '', '',
+  'Night Patrolling', '', '', '',
+  'Beat Checking', '', '', ''
+]
+,
     // Sub-header row
-    [
-      '',
-      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Dist',
-      'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Dist',
-      'Total Checks', 'Avg Staff', 'Avg Hours', 'Avg Dist'
-    ]
+   [
+  '', '', '', '',
+  'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Dist',
+  'Total Patrols', 'Avg Staff', 'Avg Hours', 'Avg Dist',
+  'Total Checks', 'Avg Staff', 'Avg Hours', 'Avg Dist'
+]
+
   ];
 
   // Add data for each officer
@@ -1007,11 +1019,16 @@ const handleExport = () => {
     const beatStats = calculateStats(officerData.beatChecks);
 
     exportData.push([
-      officerName,
-      dayStats.total, dayStats.avgStaff, dayStats.avgHours, dayStats.avgDist,
-      nightStats.total, nightStats.avgStaff, nightStats.avgHours, nightStats.avgDist,
-      beatStats.total, beatStats.avgStaff, beatStats.avgHours, beatStats.avgDist
-    ]);
+  admindata.division,
+  admindata.Range,
+  admindata.Beat,
+  officerName,
+
+  dayStats.total, dayStats.avgStaff, dayStats.avgHours, dayStats.avgDist,
+  nightStats.total, nightStats.avgStaff, nightStats.avgHours, nightStats.avgDist,
+  beatStats.total, beatStats.avgStaff, beatStats.avgHours, beatStats.avgDist
+]);
+
   });
 
   // Calculate totals row
@@ -1024,12 +1041,13 @@ const handleExport = () => {
   exportData.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
   
   // Add totals row
-  exportData.push([
-    'TOTAL',
-    totalDayPatrols, '-', '-', '-',
-    totalNightPatrols, '-', '-', '-',
-    totalBeatChecks, '-', '-', '-'
-  ]);
+ exportData.push([
+  'TOTAL', '', '',
+  '',
+  totalDayPatrols, '-', '-', '-',
+  totalNightPatrols, '-', '-', '-',
+  totalBeatChecks, '-', '-', '-'
+]);
 
   // Add timestamp
   exportData.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
@@ -1157,23 +1175,22 @@ const handleExport = () => {
   }
 
   // Merge cells for better layout
-  ws['!merges'] = [
-    // Title merge
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
-    
-    // Day Patrolling header merge
-    { s: { r: 2, c: 1 }, e: { r: 2, c: 4 } },
-    // Night Patrolling header merge  
-    { s: { r: 2, c: 5 }, e: { r: 2, c: 8 } },
-    // Beat Checking header merge
-    { s: { r: 2, c: 9 }, e: { r: 2, c: 12 } },
-    
-    // Timestamp merge
-    { s: { r: range.e.r, c: 1 }, e: { r: range.e.r, c: 12 } }
-  ];
+ws['!merges'] = [
+  { s: { r: 0, c: 0 }, e: { r: 0, c: 15 } }, // Title
+
+  { s: { r: 2, c: 4 }, e: { r: 2, c: 7 } },  // Day
+  { s: { r: 2, c: 8 }, e: { r: 2, c: 11 } }, // Night
+  { s: { r: 2, c: 12 }, e: { r: 2, c: 15 } },// Beat
+
+  { s: { r: range.e.r, c: 1 }, e: { r: range.e.r, c: 15 } }
+];
+
 
   // Set column widths for better readability
   ws['!cols'] = [
+     { wch: 25 }, // Division
+  { wch: 15 }, // Range
+  { wch: 15 }, // Beat
     { wch: 20 }, // Officer Name
     { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, // Day Patrolling
     { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, // Night Patrolling  
@@ -1379,6 +1396,19 @@ const handleExport = () => {
             >
               {language === "gu" ? "ફિલ્ટર સાફ કરો" : "Clear Filters"}
             </Button>
+               <Button 
+              onClick={() => {
+    setShowMapRoute(!showmaproute);
+  }}
+              style={{
+                marginRight: "10px",
+                background: "#f5f5f5",
+                borderColor: "#d9d9d9",
+                color: "#000",
+              }}
+            >
+              {language === "gu" ? "સ્થાન માર્ગ દર્શાવો" : "Show Map Route"}
+            </Button>
             
             <Button className="btn-Export" onClick={handleExport}>
               {language === "gu" ? "નિકાસ કરો" : "Export"}
@@ -1566,7 +1596,26 @@ const handleExport = () => {
   )}
 </Modal>
         <PatrolAnalysisDashboard patrolData={filteredData} language={language} />
-        
+        {
+          showmaproute &&  <Suspense
+        fallback={
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100vh",
+              fontSize: "18px",
+              color: "#666",
+            }}
+          >
+            Loading map...
+          </div>
+        }
+      >
+        <RouteMap />
+      </Suspense>
+}
     </div>
   );
 };
