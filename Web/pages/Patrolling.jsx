@@ -9,7 +9,7 @@ import { saveAs } from "file-saver";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
-const RouteMap = lazy(() => import("./RouterMap"));
+const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
 
 import {
   MapContainer,
@@ -1407,7 +1407,7 @@ ws['!merges'] = [
                 color: "#000",
               }}
             >
-              {language === "gu" ? "સ્થાન માર્ગ દર્શાવો" : "Show Map Route"}
+              {language === "gu" ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Beat Patrol Coverage Analysis"}
             </Button>
             
             <Button className="btn-Export" onClick={handleExport}>
@@ -1613,7 +1613,7 @@ ws['!merges'] = [
           </div>
         }
       >
-        <RouteMap showmaproute={showmaproute} language={language} setShowMapRoute={setShowMapRoute}/>
+        <BeatPatrolCoverage showmaproute={showmaproute} language={language} setShowMapRoute={setShowMapRoute}/>
       </Suspense>
 }
     </div>
