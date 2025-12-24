@@ -54,6 +54,136 @@ router.post('/ndvi-change', async (req, res) => {
     }
 });
 
+router.post('/get-coupe-area', async (req, res) => {
+    const { tableName } = req.body;
+
+    if (!tableName) {
+        return res.status(400).json({
+            success: false,
+            message: 'tableName is required'
+        });
+    }
+
+    try {
+       
+
+       
+
+        // 2️⃣ Fetch all data
+        const selectQuery = `
+            SELECT
+    SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
+FROM
+    public."${tableName}";
+        `;
+
+        const [results] = await sequelize.query(selectQuery);
+
+        res.json({
+            success: true,
+            message: 'Columns verified and data fetched successfully',
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Error in NDVI change API:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process NDVI change data',
+            error: error.message
+        });
+    }
+});
+
+router.post('/ndvi-change-area', async (req, res) => {
+    const { tableName } = req.body;
+
+    if (!tableName) {
+        return res.status(400).json({
+            success: false,
+            message: 'tableName is required'
+        });
+    }
+
+    try {
+       
+
+       
+
+        // 2️⃣ Fetch all data
+        const selectQuery = `
+            SELECT
+    SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
+FROM
+    public."${tableName}";
+        `;
+
+        const [results] = await sequelize.query(selectQuery);
+
+        res.json({
+            success: true,
+            message: 'Columns verified and data fetched successfully',
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Error in NDVI change API:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process NDVI change data',
+            error: error.message
+        });
+    }
+});
+
+router.post('/ndvi-change-get', async (req, res) => {
+    const { tableName } = req.body;
+
+    if (!tableName) {
+        return res.status(400).json({
+            success: false,
+            message: 'tableName is required'
+        });
+    }
+
+    try {
+         // 1️⃣ Create columns if NOT EXISTS
+        const alterTableQuery = `
+            ALTER TABLE public."${tableName}"
+            ADD COLUMN IF NOT EXISTS Pixle_id SERIAL PRIMARY KEY,
+            ADD COLUMN IF NOT EXISTS note TEXT,
+            ADD COLUMN IF NOT EXISTS image_data TEXT,
+            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        `;
+
+        await sequelize.query(alterTableQuery);
+
+
+        // 2️⃣ Fetch all data
+        const selectQuery = `
+           SELECT *
+            FROM public."${tableName}";
+        `;
+
+        const [results] = await sequelize.query(selectQuery);
+
+        res.json({
+            success: true,
+            message: 'Columns verified and data fetched successfully',
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Error in NDVI change API:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process NDVI change data',
+            error: error.message
+        });
+    }
+});
 
 
 
@@ -78,15 +208,12 @@ router.get('/ndvi-change/:id', async (req, res) => {
 
     try {
         const selectQuery = `
-            SELECT Pixle_id, longitude, latitude, note, image_data, status
+           SELECT *
             FROM public."${tableName}"
-            WHERE Pixle_id = :id;
+            WHERE Pixle_id = ${id};
         `;
 
-        const [results] = await sequelize.query(selectQuery, {
-            replacements: { id: parseInt(id) },
-            type: sequelize.QueryTypes.SELECT
-        });
+        const [results] = await sequelize.query(selectQuery);
 
         if (!results || results.length === 0) {
             return res.status(404).json({

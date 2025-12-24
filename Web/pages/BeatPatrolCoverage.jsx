@@ -967,9 +967,9 @@ const exportToExcel = () => {
                               <div style={{ fontWeight: "600", fontSize: "12px", color: "#2d3748", marginBottom: "4px" }}>
                                 {image.image_category || "Uncategorized"}
                               </div>
-                              <div style={{ fontSize: "10px", color: "#718096" }}>
+                              {/* <div style={{ fontSize: "10px", color: "#718096" }}>
                                 {language === "gu" ? "લોન્ગ કરવા માટે ક્લિક કરો" : "Click to enlarge"}
-                              </div>
+                              </div> */}
                             </div>
                           </div>
                         ))}

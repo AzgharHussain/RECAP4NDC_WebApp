@@ -15,6 +15,7 @@ const Incident = lazy(() => import("./pages/Incident"));
 const UploadCoupe = lazy(() => import("./pages/UploadCoupe"));
 const ViewCoupe = lazy(() => import("./pages/ViewCoupe"));
 const CoupeObservation = lazy(() => import("./pages/CoupeObservation"));
+const NDVIChangeDashboard = lazy(() => import("./pages/NDVIDashboard"));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/working-plan/upload" element={<UploadCoupe />} />
             <Route path="/working-plan/view" element={<ViewCoupe />} />
             <Route path="/working-plan/log" element={<CoupeObservation />} />
+            <Route path="/ndvi-dashboard" element={<NDVIChangeDashboard />} />
           </Route>
 
           {/* Catch-all fallback */}
