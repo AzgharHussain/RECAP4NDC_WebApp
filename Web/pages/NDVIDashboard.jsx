@@ -676,8 +676,8 @@ const NDVIChangeDashboard = () => {
           `Total Area: ${totalArea.toFixed(2)} sq km`,
           `Degraded Area: ${summaryStats.degradedArea.toFixed(2)} sq km (${summaryStats.degradedAreaPercentage.toFixed(1)}%)`,
           `Afforested Area: ${summaryStats.afforestedArea.toFixed(2)} sq km (${summaryStats.afforestedAreaPercentage.toFixed(1)}%)`,
-          `Degraded Polygons: ${summaryStats.degraded}`,
-          `Afforested Polygons: ${summaryStats.afforested}`,
+         
+      
           `Records with Notes: ${summaryStats.withNotes}`,
           `Records with Images: ${summaryStats.withImages}`
         ].map(text => ({ text, margin: [0, 2, 0, 2] })) : []),
@@ -715,8 +715,7 @@ const NDVIChangeDashboard = () => {
             ${summaryStats ? `
               <p><strong>Degraded Area:</strong> ${summaryStats.degradedArea.toFixed(2)} sq km (${summaryStats.degradedAreaPercentage.toFixed(1)}%)</p>
               <p><strong>Afforested Area:</strong> ${summaryStats.afforestedArea.toFixed(2)} sq km (${summaryStats.afforestedAreaPercentage.toFixed(1)}%)</p>
-              <p><strong>Degraded Polygons:</strong> ${summaryStats.degraded}</p>
-              <p><strong>Afforested Polygons:</strong> ${summaryStats.afforested}</p>
+             
             ` : ''}
           </div>
           <h3>Data Sample</h3>
