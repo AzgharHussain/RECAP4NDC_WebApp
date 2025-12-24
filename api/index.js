@@ -12,6 +12,7 @@ const NdviRouter =require("./routers/ndviRouter")
 const notifications = require('./routers/notifications');
 const userlocations = require('./routers/userlocations');
 const changendvi = require('./routers/changendvi');
+const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 
 // ===========================================================
 // 🧩 DATABASE CONNECTION (PostgreSQL + Sequelize)
@@ -112,7 +113,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use('/api', patrolRoutes);
 app.use('/api', dropdownapis);
-app.use('/api', NdviRouter)
+app.use('/api', NdviRouter);
+app.use('/api', beat_patrol_coverage);
 
 // ===========================================================
 // ✅ TEST ROUTE

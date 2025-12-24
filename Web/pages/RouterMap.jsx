@@ -157,7 +157,7 @@ const PatrolRoutePopup = ({ patrol, language }) => {
 };
 
 // Main RouterMap Component
-const RouterMap = ({ language, setShowMapRoute }) => {
+const RouterMap = ({ language, setShowMapRoute ,showmaproute}) => {
   const [patrolData, setPatrolData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPatrol, setSelectedPatrol] = useState(null);
@@ -224,11 +224,7 @@ const parseGeomCoordinates = (geom) => {
     }
   };
 
-  const handleCloseMap = () => {
-    if (setShowMapRoute) {
-      setShowMapRoute(false);
-    }
-  };
+ 
 
   const handleMarkerClick = (patrol) => {
     const coords = parseGeomCoordinates(patrol.geom);
@@ -249,7 +245,9 @@ const parseGeomCoordinates = (geom) => {
         danger
         shape="circle"
         icon={<CloseOutlined />}
-        onClick={handleCloseMap}
+       onClick={() => {
+    setShowMapRoute(!showmaproute);
+  }}
         style={{
           position: "absolute",
           top: "10px",

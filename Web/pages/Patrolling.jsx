@@ -9,7 +9,7 @@ import { saveAs } from "file-saver";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
-const RouteMap = lazy(() => import("./RouterMap"));
+const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
 
 import {
   MapContainer,
@@ -719,7 +719,7 @@ const PatrolIncidentLogs = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/patrol-info?user_id=1`
+        `${API_BASE_URL}/api/patrol-info`
       );
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
@@ -825,6 +825,12 @@ const PatrolIncidentLogs = () => {
     }
   };
 
+  const admindata={
+  division: "Bhavnagar Forest Division",
+  Range: "MAHUVA",
+  Beat: "GEBAR",
+}
+
   const columns = [
     {
       title: language === "gu" ? "પેટ્રોલિંગ આઈડી" : "Patrol ID",
@@ -854,6 +860,24 @@ const PatrolIncidentLogs = () => {
       title: language === "gu" ? "અધિકારીનું નામ" : "Officer Name",
       dataIndex: "patrol_officer_name",
       key: "patrol_officer_name",
+      align: "center",
+    },
+    {
+      title: language === "gu" ? "વિભાગ" : "Division",
+      dataIndex: "division_name",
+      key: "division_name",
+      align: "center",
+    },
+    {
+      title: language === "gu" ? "રંગ" : "Range",
+      dataIndex: "range_name",
+      key: "range_name",
+      align: "center",
+    },
+    {
+      title: language === "gu" ? "બીટ" : "Beat",
+      dataIndex: "beat_name",
+      key: "beat_name",
       align: "center",
     },
     {
@@ -1407,7 +1431,7 @@ ws['!merges'] = [
                 color: "#000",
               }}
             >
-              {language === "gu" ? "સ્થાન માર્ગ દર્શાવો" : "Show Map Route"}
+              {language === "gu" ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Beat Patrol Coverage Analysis"}
             </Button>
             
             <Button className="btn-Export" onClick={handleExport}>
@@ -1613,7 +1637,7 @@ ws['!merges'] = [
           </div>
         }
       >
-        <RouteMap />
+        <BeatPatrolCoverage showmaproute={showmaproute} language={language} setShowMapRoute={setShowMapRoute}/>
       </Suspense>
 }
     </div>
