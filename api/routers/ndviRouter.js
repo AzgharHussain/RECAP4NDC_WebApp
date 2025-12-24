@@ -78,9 +78,9 @@ router.get('/ndvi-change/:id', async (req, res) => {
 
     try {
         const selectQuery = `
-            SELECT id, longitude, latitude, note, image_data, status
+            SELECT Pixle_id, longitude, latitude, note, image_data, status
             FROM public."${tableName}"
-            WHERE id = :id;
+            WHERE Pixle_id = :id;
         `;
 
         const [results] = await sequelize.query(selectQuery, {
@@ -151,7 +151,7 @@ const imageToBase64 = (imagePath) => {
     const base64Data = imageBuffer.toString('base64');
     
     // Return data URL format
-    return `data:${mimeType};base64,${base64Data}`;
+    return `${base64Data}`;
   } catch (error) {
     console.error('Error converting image to base64:', error);
     throw error;
@@ -235,8 +235,8 @@ router.put('/ndvi-change/:id', upload.single('image_data'), async (req, res) => 
     const updateQuery = `
       UPDATE public."${tableName}"
       SET ${updates.join(', ')}, updated_at = NOW()
-      WHERE id = :id
-      RETURNING id, longitude, latitude, note, image_data, status;
+      WHERE Pixle_id = :id
+      RETURNING Pixle_id, longitude, latitude, note, image_data, status;
     `;
 
     const [results] = await sequelize.query(updateQuery, {
