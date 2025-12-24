@@ -279,3 +279,8 @@
     display: none; /* hides logos completely */
   }
 }
+
+
+body{
+  margin: 0px !important;
+}

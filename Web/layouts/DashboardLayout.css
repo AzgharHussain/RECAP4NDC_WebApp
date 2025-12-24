@@ -425,3 +425,8 @@ box-shadow: -9.53px -9.53px 4.765px -11.119px #B3B3B3 inset, -9.53px -9.53px 4.7
 .lang-chip.active {
   color: #fff;
 }
+
+
+body{
+  margin: 0px !important;
+}
