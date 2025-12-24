@@ -719,7 +719,7 @@ const PatrolIncidentLogs = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/patrol-info?user_id=1`
+        `${API_BASE_URL}/api/patrol-info`
       );
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
@@ -825,6 +825,12 @@ const PatrolIncidentLogs = () => {
     }
   };
 
+  const admindata={
+  division: "Bhavnagar Forest Division",
+  Range: "MAHUVA",
+  Beat: "GEBAR",
+}
+
   const columns = [
     {
       title: language === "gu" ? "પેટ્રોલિંગ આઈડી" : "Patrol ID",
@@ -854,6 +860,24 @@ const PatrolIncidentLogs = () => {
       title: language === "gu" ? "અધિકારીનું નામ" : "Officer Name",
       dataIndex: "patrol_officer_name",
       key: "patrol_officer_name",
+      align: "center",
+    },
+    {
+      title: language === "gu" ? "વિભાગ" : "Division",
+      dataIndex: "division_name",
+      key: "division_name",
+      align: "center",
+    },
+    {
+      title: language === "gu" ? "રંગ" : "Range",
+      dataIndex: "range_name",
+      key: "range_name",
+      align: "center",
+    },
+    {
+      title: language === "gu" ? "બીટ" : "Beat",
+      dataIndex: "beat_name",
+      key: "beat_name",
       align: "center",
     },
     {
