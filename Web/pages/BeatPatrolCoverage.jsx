@@ -52,19 +52,24 @@ const PatrolLoader = () => (
             height: "40px",
             animation: "spin 1s linear infinite"
         }}></div>
-
-
     </div>
 )
 
 const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   const [forestTypes, setForestTypes] = useState([]);
   const [selectedForest, setSelectedForest] = useState(null);
+  const [hierarchyData, setHierarchyData] = useState([]);
+  const [divisions, setDivisions] = useState([]);
+  const [ranges, setRanges] = useState([]);
   const [beats, setBeats] = useState([]);
+  
+  const [selectedDivision, setSelectedDivision] = useState(null);
+  const [selectedRange, setSelectedRange] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
+  
   const [loading, setLoading] = useState({
     forest: false,
-    beats: false,
+    divisions: false,
     coverage: false,
     patrol: false
   });
@@ -102,8 +107,15 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   const handleForestChange = async (e) => {
     const forestId = e.target.value;
     setSelectedForest(forestId);
+    
+    // Reset all selections
+    setSelectedDivision(null);
+    setSelectedRange(null);
     setSelectedBeat(null);
+    setDivisions([]);
+    setRanges([]);
     setBeats([]);
+    setHierarchyData([]);
     setCoverageData(null);
     setPatrolLines([]);
     setSelectedPatrol(null);
@@ -112,33 +124,110 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     
     if (!forestId) return;
     
-    setLoading(prev => ({ ...prev, beats: true }));
+    setLoading(prev => ({ ...prev, divisions: true }));
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/beatscoverage`, {
+      const response = await axios.post(`${API_BASE_URL}/api/get-divisions`, {
         forest_id: forestId,
       });
       
       if (Array.isArray(response.data)) {
-        const beatOptions = response.data.map(beat => ({
-          value: beat.BEAT,
-          label: beat.BEAT,
-          beat_name: beat.beat_name,
-          BTcode: beat.BTcode,
-          id: beat.id || beat.beat_id
-        }));
-        setBeats(beatOptions);
-      } else {
-        console.error("Unexpected beats response format:", response.data);
-        alert("Unexpected data format from server");
+       
+        
+        // Extract unique divisions
+        const uniqueDivisions = [...new Set(response.data.map(item => item.DIVISION))];
+        setDivisions(uniqueDivisions.map(div => ({
+          value: div,
+          label: div
+        })));
+        
+        // Reset ranges and beats
+        setRanges([]);
         setBeats([]);
+      } else {
+        console.error("Unexpected hierarchy response format:", response.data);
+        alert("Unexpected data format from server");
+        setHierarchyData([]);
+        setDivisions([]);
       }
     } catch (error) {
-      console.error("Error fetching beats:", error);
-      alert("Failed to load beats for this forest type");
-      setBeats([]);
+      console.error("Error fetching hierarchy:", error);
+      alert("Failed to load hierarchy data");
+      setHierarchyData([]);
+      setDivisions([]);
     } finally {
-      setLoading(prev => ({ ...prev, beats: false }));
+      setLoading(prev => ({ ...prev, divisions: false }));
     }
+  };
+
+  /* =========================
+     Handle Division Selection
+  ========================= */
+const handleDivisionChange = async (selectedOption) => {
+    setSelectedDivision(selectedOption);
+    setSelectedRange(null);
+    setSelectedBeat(null);
+    setRanges([]);
+    setBeats([]);
+    
+    if (!selectedOption) return;
+
+    let divisionname = selectedOption.value;
+    
+    console.log("2222222222222222222", divisionname);
+    
+    try {
+        const response = await axios.post(`${API_BASE_URL}/api/hierarchy`, {
+            forest_id: selectedForest,
+            division_name: divisionname
+        });
+
+        console.log("1111111111111111111111111111111111111111111111", response.data);
+        
+        // FIRST: Set the hierarchy data
+        setHierarchyData(response.data);
+        
+        // THEN: Filter ranges based on the response data
+        const divisionRanges = response.data
+            .filter(item => item.DIVISION === selectedOption.value)
+            .map(item => item.RANGE);
+        
+        const uniqueRanges = [...new Set(divisionRanges)];
+        setRanges(uniqueRanges.map(range => ({
+            value: range,
+            label: range
+        })));
+        
+    } catch (error) {
+        console.error("Error fetching hierarchy:", error);
+        alert("Failed to load hierarchy data");
+        setHierarchyData([]);
+        setRanges([]);
+    }
+};
+
+  /* =========================
+     Handle Range Selection
+  ========================= */
+  const handleRangeChange = (selectedOption) => {
+    setSelectedRange(selectedOption);
+    setSelectedBeat(null);
+    setBeats([]);
+    
+    if (!selectedOption || !hierarchyData.length || !selectedDivision) return;
+    
+    // Filter beats based on selected division and range
+    const divisionBeats = hierarchyData
+      .filter(item => 
+        item.DIVISION === selectedDivision.value && 
+        item.RANGE === selectedOption.value
+      )
+      .map(item => item.BEAT);
+    
+    const uniqueBeats = [...new Set(divisionBeats)];
+    setBeats(uniqueBeats.map(beat => ({
+      value: beat,
+      label: beat
+    })));
   };
 
   /* =========================
@@ -166,7 +255,12 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     try {
       const res = await axios.post(
         `${API_BASE_URL}/api/beat-patrol-coverage`,
-        { beat: selectedBeat.value }
+        { 
+          beat: selectedBeat.value,
+          forest_id: selectedForest,
+          division: selectedDivision?.value,
+          range: selectedRange?.value
+        }
       );
 
       if (res.data.success) {
@@ -192,6 +286,9 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     }
   };
 
+  /* =========================
+     Fetch Patrol Details
+  ========================= */
   const fetchPatrolDetails = async (patrolId) => {
     setLoading(prev => ({ ...prev, patrol: true }));
     setSetShowLoader(true);
@@ -199,9 +296,7 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
       const response = await axios.get(`${API_BASE_URL}/api/patrols/${patrolId}`);
       
       if (response.data && response.data.data) {
-
         setPatrolDetails(response.data.data);
-        console.log("Patrol Details:", response.data.data);
         setSelectedPatrol(patrolId);
         setShowPatrolModal(true);
       } else {
@@ -230,107 +325,112 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   /* =========================
      Export to Excel
   ========================= */
-const exportToExcel = () => {
-  if (!coverageData) return;
+  const exportToExcel = () => {
+    if (!coverageData) return;
 
-  const summaryData = [
-    {
-      "Beat": coverageData.beat_name,
-      "Beat Area (sq m)": coverageData.beat_area_sq_m,
-      "Patrol Covered Area (sq m)": coverageData.patrol_beat_area_sq_m,
-      "Coverage %": coverageData.coverage_percentage,
-    },
-  ];
-
-  const patrolData = coverageData.patrols_covering_beat.map((patrol) => ({
-    "Patrol ID": patrol.patrol_id,
-    "Start Time": formatDateTime(patrol.start_time),
-    "End Time": formatDateTime(patrol.end_time),
-    "Duration": formatDuration(patrol.start_time, patrol.end_time),
-    "Patrol Officer": patrol.patrol_officer_name,
-    "Distance (kms)": patrol.distance_kms,
-    "Start Location": patrol.start_location,
-    "End Location": patrol.end_location,
-  }));
-
-  const wb = XLSX.utils.book_new();
-
-  /* ------------------ Coverage Summary Sheet ------------------ */
-  const summarySheet = XLSX.utils.json_to_sheet(summaryData);
-
-  // Header style
-  const headerStyle = {
-    font: { bold: true },
-    fill: { fgColor: { rgb: "D9E1F2" } },
-    alignment: { horizontal: "center", vertical: "center" }
-  };
-
-  // Apply header styles
-  const summaryHeaders = Object.keys(summaryData[0]);
-  summaryHeaders.forEach((_, i) => {
-    const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-    summarySheet[cellRef].s = headerStyle;
-  });
-
-  // Column widths
-  summarySheet["!cols"] = [
-    { wch: 25 },
-    { wch: 20 },
-    { wch: 28 },
-    { wch: 15 },
-  ];
-
-  // Number formats
-  summarySheet["B2"].z = "#,##0";
-  summarySheet["C2"].z = "#,##0";
-  summarySheet["D2"].z = "0.00%";
-
-  XLSX.utils.book_append_sheet(wb, summarySheet, "Coverage Summary");
-
-  /* ------------------ Patrols Sheet ------------------ */
-  if (patrolData.length > 0) {
-    const patrolSheet = XLSX.utils.json_to_sheet(patrolData);
-
-    const patrolHeaders = Object.keys(patrolData[0]);
-    patrolHeaders.forEach((_, i) => {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-      patrolSheet[cellRef].s = headerStyle;
-    });
-
-    patrolSheet["!cols"] = [
-      { wch: 15 },
-      { wch: 22 },
-      { wch: 22 },
-      { wch: 15 },
-      { wch: 25 },
-      { wch: 18 },
-      { wch: 30 },
-      { wch: 30 },
+    const summaryData = [
+      {
+        "Beat": coverageData.beat_name,
+        "Beat Area (sq m)": coverageData.beat_area_sq_m,
+        "Patrol Covered Area (sq m)": coverageData.patrol_beat_area_sq_m,
+        "Coverage %": coverageData.coverage_percentage,
+      },
     ];
 
-    XLSX.utils.book_append_sheet(wb, patrolSheet, "Patrols");
-  }
+    const patrolData = coverageData.patrols_covering_beat.map((patrol) => ({
+      "Patrol ID": patrol.patrol_id,
+      "Start Time": formatDateTime(patrol.start_time),
+      "End Time": formatDateTime(patrol.end_time),
+      "Duration": formatDuration(patrol.start_time, patrol.end_time),
+      "Patrol Officer": patrol.patrol_officer_name,
+      "Distance (kms)": patrol.distance_kms,
+      "Start Location": patrol.start_location,
+      "End Location": patrol.end_location,
+    }));
 
-  /* ------------------ Export ------------------ */
-  const excelBuffer = XLSX.write(wb, {
-    bookType: "xlsx",
-    type: "array",
-    cellStyles: true
-  });
+    const wb = XLSX.utils.book_new();
 
-  saveAs(
-    new Blob([excelBuffer], { type: "application/octet-stream" }),
-    `${selectedBeat.value}_patrol_coverage.xlsx`
-  );
-};
+    /* ------------------ Coverage Summary Sheet ------------------ */
+    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+
+    // Header style
+    const headerStyle = {
+      font: { bold: true },
+      fill: { fgColor: { rgb: "D9E1F2" } },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    // Apply header styles
+    const summaryHeaders = Object.keys(summaryData[0]);
+    summaryHeaders.forEach((_, i) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+      summarySheet[cellRef].s = headerStyle;
+    });
+
+    // Column widths
+    summarySheet["!cols"] = [
+      { wch: 25 },
+      { wch: 20 },
+      { wch: 28 },
+      { wch: 15 },
+    ];
+
+    // Number formats
+    summarySheet["B2"].z = "#,##0";
+    summarySheet["C2"].z = "#,##0";
+    summarySheet["D2"].z = "0.00%";
+
+    XLSX.utils.book_append_sheet(wb, summarySheet, "Coverage Summary");
+
+    /* ------------------ Patrols Sheet ------------------ */
+    if (patrolData.length > 0) {
+      const patrolSheet = XLSX.utils.json_to_sheet(patrolData);
+
+      const patrolHeaders = Object.keys(patrolData[0]);
+      patrolHeaders.forEach((_, i) => {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+        patrolSheet[cellRef].s = headerStyle;
+      });
+
+      patrolSheet["!cols"] = [
+        { wch: 15 },
+        { wch: 22 },
+        { wch: 22 },
+        { wch: 15 },
+        { wch: 25 },
+        { wch: 18 },
+        { wch: 30 },
+        { wch: 30 },
+      ];
+
+      XLSX.utils.book_append_sheet(wb, patrolSheet, "Patrols");
+    }
+
+    /* ------------------ Export ------------------ */
+    const excelBuffer = XLSX.write(wb, {
+      bookType: "xlsx",
+      type: "array",
+      cellStyles: true
+    });
+
+    saveAs(
+      new Blob([excelBuffer], { type: "application/octet-stream" }),
+      `${selectedBeat.value}_patrol_coverage.xlsx`
+    );
+  };
 
   /* =========================
      Reset Selections
   ========================= */
   const handleReset = () => {
     setSelectedForest(null);
+    setSelectedDivision(null);
+    setSelectedRange(null);
     setSelectedBeat(null);
+    setDivisions([]);
+    setRanges([]);
     setBeats([]);
+    setHierarchyData([]);
     setCoverageData(null);
     setPatrolLines([]);
     setSelectedPatrol(null);
@@ -917,7 +1017,6 @@ const exportToExcel = () => {
                           <div 
                             key={index} 
                             className="image-card"
-                            // onClick={() => setSelectedImage(image.image_data)}
                             style={{
                               border: "2px solid #e2e8f0",
                               borderRadius: "8px",
@@ -949,6 +1048,20 @@ const exportToExcel = () => {
                                   objectFit: "cover",
                                   transition: "transform 0.3s ease",
                                 }}
+                                 preview={{
+                                mask: (
+                                  <div style={{ 
+                                    color: '#fff',
+                                    fontSize: 12,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%'
+                                  }}>
+                                    {language === "gu" ? "જૂઓ" : "View"}
+                                  </div>
+                                )
+                              }}
                               />
                               <div style={{
                                 position: "absolute",
@@ -967,9 +1080,6 @@ const exportToExcel = () => {
                               <div style={{ fontWeight: "600", fontSize: "12px", color: "#2d3748", marginBottom: "4px" }}>
                                 {image.image_category || "Uncategorized"}
                               </div>
-                              {/* <div style={{ fontSize: "10px", color: "#718096" }}>
-                                {language === "gu" ? "લોન્ગ કરવા માટે ક્લિક કરો" : "Click to enlarge"}
-                              </div> */}
                             </div>
                           </div>
                         ))}
@@ -1047,7 +1157,7 @@ const exportToExcel = () => {
         }}>
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
             gap: "20px",
             alignItems: "end",
           }}>
@@ -1072,14 +1182,14 @@ const exportToExcel = () => {
                     borderRadius: "8px",
                     border: "2px solid #e2e8f0",
                     fontSize: "14px",
-                    backgroundColor: loading.beats || loading.coverage ? "#f7fafc" : "white",
-                    cursor: loading.beats || loading.coverage ? "not-allowed" : "pointer",
+                    backgroundColor: loading.divisions ? "#f7fafc" : "white",
+                    cursor: loading.divisions ? "not-allowed" : "pointer",
                     appearance: "none",
                     transition: "all 0.3s ease",
                   }}
                   value={selectedForest || ""}
                   onChange={handleForestChange}
-                  disabled={loading.beats || loading.coverage}
+                  disabled={loading.divisions}
                   onFocus={(e) => e.target.style.borderColor = "#4299e1"}
                   onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
                 >
@@ -1103,7 +1213,60 @@ const exportToExcel = () => {
               </div>
             </div>
 
-            {/* Beat Selection with React Select */}
+            {/* Division Selection */}
+            <div>
+              <label style={{
+                display: "block",
+                fontWeight: "600",
+                marginBottom: "10px",
+                fontSize: "14px",
+                color: "#2d3748",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}>
+                {language === "gu" ? "વિભાગ" : "Division"}
+              </label>
+              <Select
+                value={selectedDivision}
+                onChange={handleDivisionChange}
+                options={divisions}
+                isSearchable
+                isClearable
+                placeholder={selectedForest ? "Select Division..." : "Select forest type first"}
+                isLoading={loading.divisions}
+                isDisabled={!selectedForest || loading.divisions}
+                styles={customSelectStyles}
+                noOptionsMessage={() => "No divisions available"}
+              />
+            </div>
+
+            {/* Range Selection */}
+            <div>
+              <label style={{
+                display: "block",
+                fontWeight: "600",
+                marginBottom: "10px",
+                fontSize: "14px",
+                color: "#2d3748",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}>
+                {language === "gu" ? "રેન્જ" : "Range"}
+              </label>
+              <Select
+                value={selectedRange}
+                onChange={handleRangeChange}
+                options={ranges}
+                isSearchable
+                isClearable
+                placeholder={selectedDivision ? "Select Range..." : "Select division first"}
+                isDisabled={!selectedDivision}
+                styles={customSelectStyles}
+                noOptionsMessage={() => "No ranges available"}
+              />
+            </div>
+
+            {/* Beat Selection */}
             <div>
               <label style={{
                 display: "block",
@@ -1122,41 +1285,15 @@ const exportToExcel = () => {
                 options={beats}
                 isSearchable
                 isClearable
-                placeholder={selectedForest ? "Search and select beat..." : "Select forest type first"}
-                isLoading={loading.beats}
-                isDisabled={!selectedForest || loading.beats}
+                placeholder={selectedRange ? "Select Beat..." : "Select range first"}
+                isDisabled={!selectedRange}
                 styles={customSelectStyles}
-                components={{
-                  DropdownIndicator: (props) => (
-                    <div {...props}>
-                      <SearchOutlined style={{ color: '#a0aec0', fontSize: '16px' }} />
-                    </div>
-                  ),
-                }}
-                noOptionsMessage={({ inputValue }) => 
-                  inputValue ? "No beats found" : "No beats available"
-                }
-                formatOptionLabel={(option) => (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span>{option.label}</span>
-                    {option.beat_name && (
-                      <span style={{
-                        fontSize: "12px",
-                        color: "#718096",
-                        backgroundColor: "#f7fafc",
-                        padding: "2px 8px",
-                        borderRadius: "4px",
-                      }}>
-                        {option.beat_name}
-                      </span>
-                    )}
-                  </div>
-                )}
+                noOptionsMessage={() => "No beats available"}
               />
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: "flex", gap: "12px" }}>
+            <div style={{ display: "flex", gap: "12px", gridColumn: "span 2" }}>
               <button
                 className="glow-button"
                 onClick={fetchCoverageData}
@@ -1221,8 +1358,8 @@ const exportToExcel = () => {
           </div>
         </div>
 
-        {/* Loading Spinner for beats */}
-        {loading.beats && (
+        {/* Loading Spinner for hierarchy */}
+        {loading.divisions && (
           <div style={{ textAlign: "center", padding: "40px" }}>
             <div style={{
               border: "4px solid #f3f3f3",
@@ -1234,7 +1371,7 @@ const exportToExcel = () => {
               margin: "0 auto 20px",
             }} />
             <p style={{ marginTop: "10px", color: "#718096", fontSize: "16px" }}>
-              {language === "gu" ? "બીટ લોડ કરી રહ્યા છીએ..." : "Loading beats..."}
+              {language === "gu" ? "હાયરાર્કી ડેટા લોડ કરી રહ્યા છીએ..." : "Loading hierarchy data..."}
             </p>
           </div>
         )}
@@ -1253,36 +1390,6 @@ const exportToExcel = () => {
             }} />
             <p style={{ marginTop: "20px", color: "#718096", fontSize: "18px" }}>
               {language === "gu" ? "પેટ્રોલ કવરેજ ડેટા વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing patrol coverage data..."}
-            </p>
-          </div>
-        )}
-
-        {/* No beats message */}
-        {selectedForest && beats.length === 0 && !loading.beats && (
-          <div style={{
-            textAlign: "center",
-            padding: "40px",
-            backgroundColor: "#fff",
-            borderRadius: "12px",
-            border: "2px dashed #e2e8f0",
-            margin: "20px 0",
-          }}>
-            <div style={{
-              width: "60px",
-              height: "60px",
-              backgroundColor: "#fed7d7",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
-              color: "#e53e3e",
-              fontSize: "24px",
-            }}>
-              !
-            </div>
-            <p style={{ color: "#718096", fontSize: "16px" }}>
-              {language === "gu" ? "પસંદ કરેલી ફોરેસ્ટ પ્રકાર માટે બીટ ઉપલબ્ધ નથી" : "No beats available for the selected forest type"}
             </p>
           </div>
         )}
@@ -1403,7 +1510,7 @@ const exportToExcel = () => {
                 >
                   <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                    url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
                   />
 
                   {patrolLines.map((line, idx) => {
@@ -1589,7 +1696,7 @@ const exportToExcel = () => {
                     color: "#e53e3e",
                     fontSize: "24px",
                   }}>
-                    ⚠
+                    ⚡
                   </div>
                   <p style={{ color: "#718096", fontSize: "16px", fontWeight: "500" }}>
                     {language === "gu" ? "આ બીટની કવરેજ કરતા પેટ્રોલ મળ્યા નથી" : "No patrols found covering this beat"}
