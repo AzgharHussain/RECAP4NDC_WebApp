@@ -13,6 +13,7 @@ import {
   LineElement
 } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
+import ForestHierarchyDropdowns from "./dropdown"
 import {
   Card,
   CardContent,
@@ -266,6 +267,7 @@ const NDVIChangeDashboard = () => {
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
         const areaValue = parseFloat(area);
+        console.log("coupe area 222222222",response.data)
         
         // FIX: Ensure area is positive and reasonable
         if (areaValue <= 0) {
@@ -292,14 +294,14 @@ const NDVIChangeDashboard = () => {
     setLoadingNDVIArea(true);
     try {
       const tableName = `${month}-01_${coupeName}_NDVI_Change`;
-      const response = await axios.post(`${API_BASE_URL}/api/ndvi-change-area`, {
+      const response = await axios.post(`${API_BASE_URL}/api/ndvi-change-degraded-area`, {
         tableName
       });
       
       if (response.data.success) {
-        const area = response.data.data[0]?.total_area_sq_km || 0;
+        const area = response.data.data[0]?.total_area_sq_km ;
         const areaValue = parseFloat(area);
-        
+        console.log(response.data,"area1234")
         // FIX: Ensure degraded area is not larger than total area
         const safeDegradedArea = Math.min(areaValue, totalArea);
         setDegradedArea(safeDegradedArea);
@@ -1000,12 +1002,12 @@ const NDVIChangeDashboard = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3, bgcolor: '#f8fafc', minHeight: '100vh' }}>
+    <Container maxWidth="xl" sx={{ py: 3, minHeight: '100vh' }}>
       {/* Header */}
       <Card sx={{ 
         mb: 4, 
-        bgcolor: 'primary.main', 
-        color: 'white',
+        bgcolor: 'transparent', 
+        color: 'black',
         borderRadius: 3,
         boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
       }}>
@@ -1033,17 +1035,17 @@ const NDVIChangeDashboard = () => {
               <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
                 <Chip 
                   label="Satellite Data" 
-                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
+                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'black' }} 
                   size="small"
                 />
                 <Chip 
                   label="GIS Analysis" 
-                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
+                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'black' }} 
                   size="small"
                 />
                 <Chip 
                   label="Real-time Updates" 
-                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
+                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'black' }} 
                   size="small"
                 />
               </Stack>
@@ -1082,68 +1084,17 @@ const NDVIChangeDashboard = () => {
       </Card>
 
       {/* Hierarchy Navigation */}
-      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)' }}>
+      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor : "transparent" }}>
         <CardHeader 
           title="Forest Hierarchy Navigation"
           titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
           avatar={<Forest color="primary" />}
         />
         <CardContent>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Select Division</InputLabel>
-                <Select
-                  value={selectedDivision || ''}
-                  label="Select Division"
-                  onChange={handleDivisionChange}
-                  disabled={divisions.length === 0}
-                >
-                  <MenuItem value="">Select Division</MenuItem>
-                  {divisions.map(div => (
-                    <MenuItem key={div.value} value={div.value}>
-                      {div.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small" disabled={!selectedDivision}>
-                <InputLabel>Select Range</InputLabel>
-                <Select
-                  value={selectedRange || ''}
-                  label="Select Range"
-                  onChange={handleRangeChange}
-                >
-                  <MenuItem value="">Select Range</MenuItem>
-                  {ranges.map(range => (
-                    <MenuItem key={range.value} value={range.value}>
-                      {range.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small" disabled={!selectedRange}>
-                <InputLabel>Select Beat</InputLabel>
-                <Select
-                  value={selectedBeat || ''}
-                  label="Select Beat"
-                  onChange={handleBeatChange}
-                >
-                  <MenuItem value="">Select Beat</MenuItem>
-                  {beats.map(beat => (
-                    <MenuItem key={beat.value} value={beat.value}>
-                      {beat.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+         
+<Grid >
+  <ForestHierarchyDropdowns setSelectedCoupe={setSelectedCoupe} />
+</Grid>
 
             <Grid item xs={12} md={3}>
               <FormControl fullWidth size="small">
@@ -1161,7 +1112,7 @@ const NDVIChangeDashboard = () => {
                 </Select>
               </FormControl>
             </Grid>
-          </Grid>
+          
           
           {(selectedDivision || selectedRange || selectedBeat) && (
             <Box sx={{ mt: 3, p: 2, bgcolor: '#f0f9ff', borderRadius: 2 }}>
@@ -1178,7 +1129,7 @@ const NDVIChangeDashboard = () => {
       </Card>
 
       {/* Main Filters */}
-      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)' }}>
+      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor: "transparent" }}>
         <CardContent>
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={6}>
@@ -1206,6 +1157,13 @@ const NDVIChangeDashboard = () => {
                   onClick={() => setChartType('bar')}
                   startIcon={<BarChart />}
                   size="small"
+                  sx={{
+                    color: chartType === 'bar' ? 'black' : 'black',
+                    borderColor: 'black',
+                    '&:hover': {
+                      backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
+                    }
+                  }}
                 >
                   Bar Chart
                 </Button>
@@ -1214,6 +1172,13 @@ const NDVIChangeDashboard = () => {
                   onClick={() => setChartType('line')}
                   startIcon={<ShowChart />}
                   size="small"
+                  sx={{
+                    color: chartType === 'bar' ? 'black' : 'black',
+                    borderColor: 'black',
+                    '&:hover': {
+                      backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
+                    }
+                  }}
                 >
                   Trend Line
                 </Button>
@@ -1222,6 +1187,13 @@ const NDVIChangeDashboard = () => {
                   onClick={() => setChartType('pie')}
                   startIcon={<PieChart />}
                   size="small"
+                  sx={{
+                    color: chartType === 'bar' ? 'black' : 'black',
+                    borderColor: 'black',
+                    '&:hover': {
+                      backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
+                    }
+                  }}
                 >
                   Area Pie
                 </Button>
@@ -1477,7 +1449,7 @@ const NDVIChangeDashboard = () => {
       )}
 
       {/* Main Content Tabs */}
-      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent"}}>
         <CardContent sx={{ p: 0 }}>
           <Tabs 
             value={activeTab} 
@@ -1551,7 +1523,7 @@ const NDVIChangeDashboard = () => {
 
                 {/* Analysis Notes */}
                 {summaryStats && (
-                  <Card sx={{ mt: 4, borderRadius: 2, bgcolor: '#f8fafc' }}>
+                  <Card sx={{ mt: 4, borderRadius: 2 }}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Info color="primary" />
@@ -1649,7 +1621,7 @@ const NDVIChangeDashboard = () => {
             {activeTab === 1 && (
               <Box>
                 {/* Search and Filter Controls */}
-                <Card sx={{ mb: 3, borderRadius: 2, bgcolor: '#f8fafc' }}>
+                <Card sx={{ mb: 3, borderRadius: 2 }}>
                   <CardContent>
                     <Grid container spacing={2} alignItems="center">
                       <Grid item xs={12} md={6}>
@@ -1899,7 +1871,7 @@ const NDVIChangeDashboard = () => {
                       justifyContent: 'space-between', 
                       alignItems: 'center', 
                       flexWrap: 'wrap',
-                      bgcolor: '#f8fafc'
+                     
                     }}>
                       <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <strong>Showing:</strong> {Math.min(100, filteredData.length)} of {filteredData.length.toLocaleString()} records
@@ -2219,7 +2191,7 @@ const NDVIChangeDashboard = () => {
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent dividers sx={{ p: 3, bgcolor: '#f8fafc' }}>
+        <DialogContent dividers sx={{ p: 3 }}>
           {selectedRecord?.image_data ? (
             <Box display="flex" justifyContent="center" alignItems="center" sx={{ minHeight: '60vh' }}>
               <Box
