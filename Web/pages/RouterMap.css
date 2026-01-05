@@ -8,6 +8,8 @@
   transform: translate(-50%, -50%);
 
   z-index: 100000;
+  background-color: white;
+  font-family: 'inter';
 }
 .router-map-backdrop {
   position: fixed;

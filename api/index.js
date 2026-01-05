@@ -4,6 +4,32 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+<<<<<<< HEAD
+=======
+const patrolRoutes = require('./routers/patrolRoutes');
+const dropdownapis = require('./routers/dropdownapis');
+
+const { sequelize, testConnection } = require('./config/database');
+const NdviRouter =require("./routers/ndviRouter")
+const notifications = require('./routers/notifications');
+const userlocations = require('./routers/userlocations');
+const changendvi = require('./routers/changendvi');
+const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
+
+// ===========================================================
+// 🧩 DATABASE CONNECTION (PostgreSQL + Sequelize)
+// ===========================================================
+
+// const sequelize = new Sequelize(
+//   'GIZ',          // Database name
+//   'postgres',     // Username
+//   'pass@123',     // Password
+//   {
+//     host: 'localhost',
+//     dialect: 'postgres',
+//   }
+// );
+>>>>>>> 7e074ded351675e76ec25d8ebb2ce938880022a9
 
 
 // Initialize Sequelize with your database credentials
@@ -62,6 +88,13 @@ const upload = multer({ storage });
 // Serve static image files
 app.use('/Incidentimage', express.static(uploadDirectory));
 
+<<<<<<< HEAD
+=======
+app.use('/api', patrolRoutes);
+app.use('/api', dropdownapis);
+app.use('/api', NdviRouter);
+app.use('/api', beat_patrol_coverage);
+>>>>>>> 7e074ded351675e76ec25d8ebb2ce938880022a9
 
 
 // Test route

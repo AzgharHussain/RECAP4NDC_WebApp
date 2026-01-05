@@ -41,6 +41,7 @@ export default function DashboardLayout() {
       viewCoupe: "View Coupe Boundaries",
       coupeLog: "Coupe Observation Log",
       patrollingIncident: "Patrolling",
+
     },
     gu: {
       overview: "સારાંશ",
@@ -133,6 +134,16 @@ export default function DashboardLayout() {
     >
       <img src={patrollingIcon} alt="Patrolling" className="menu-image" />
       {text[language].patrollingLogs}
+    </NavLink>
+     <NavLink
+      to="ndvi-dashboard"
+      className={`menu-item ${
+        isActiveLink("/ndvi-dashboard") ? "active" : ""
+      }`}
+      onClick={handleLinkClick}
+    >
+      
+     NDVI Dashboard
     </NavLink>
   </div>
 </header>

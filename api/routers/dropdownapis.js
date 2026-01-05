@@ -555,6 +555,45 @@ router.post("/get-centroid", async (req, res) => {
     });
   }
 });
+router.post('/get-coupe-area', async (req, res) => {
+    const { tableName } = req.body;
 
+    if (!tableName) {
+        return res.status(400).json({
+            success: false,
+            message: 'tableName is required'
+        });
+    }
+
+    try {
+       
+
+       
+
+        // 2️⃣ Fetch all data
+        const selectQuery = `
+            SELECT
+    SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
+FROM
+    public."${tableName}";
+        `;
+
+        const [results] = await sequelize.query(selectQuery);
+
+        res.json({
+            success: true,
+            message: 'Columns verified and data fetched successfully',
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Error in NDVI change API:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process NDVI change data',
+            error: error.message
+        });
+    }
+});
 
 module.exports = router;
