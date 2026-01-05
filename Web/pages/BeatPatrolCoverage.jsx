@@ -8,7 +8,12 @@ import {
   ClockCircleOutlined,
   PictureOutlined,
   CloseCircleOutlined,
-  SearchOutlined
+  SearchOutlined,
+  RotateLeftOutlined,
+  RotateRightOutlined,
+  ZoomInOutlined,
+  ZoomOutOutlined,
+  UndoOutlined
 } from "@ant-design/icons";
 import axios from "axios";
 import * as XLSX from "xlsx";
@@ -18,6 +23,8 @@ import "leaflet/dist/leaflet.css";
 import "./RouterMap.css";
 import { API_BASE_URL } from "../config";
 import Select from 'react-select';
+import { Image } from 'antd';
+import "./BeatPatrolCoverage.css";
 
 // Helper function to parse WKT (Well-Known Text) geometry to lat/lng array
 const parseGeomCoordinates = (geom) => {
@@ -80,6 +87,8 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   const [showPatrolModal, setShowPatrolModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [setshowloader, setSetShowLoader] = useState(false);
+  const [imageRotation, setImageRotation] = useState(0);
+  const [imageScale, setImageScale] = useState(1);
 
   /* =========================
      Fetch Forest Types on mount
@@ -121,6 +130,9 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     setSelectedPatrol(null);
     setPatrolDetails(null);
     setShowPatrolModal(false);
+    setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
     
     if (!forestId) return;
     
@@ -131,8 +143,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
       });
       
       if (Array.isArray(response.data)) {
-       
-        
         // Extract unique divisions
         const uniqueDivisions = [...new Set(response.data.map(item => item.DIVISION))];
         setDivisions(uniqueDivisions.map(div => ({
@@ -162,26 +172,25 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   /* =========================
      Handle Division Selection
   ========================= */
-const handleDivisionChange = async (selectedOption) => {
+  const handleDivisionChange = async (selectedOption) => {
     setSelectedDivision(selectedOption);
     setSelectedRange(null);
     setSelectedBeat(null);
     setRanges([]);
     setBeats([]);
+    setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
     
     if (!selectedOption) return;
 
     let divisionname = selectedOption.value;
-    
-    console.log("2222222222222222222", divisionname);
     
     try {
         const response = await axios.post(`${API_BASE_URL}/api/hierarchy`, {
             forest_id: selectedForest,
             division_name: divisionname
         });
-
-        console.log("1111111111111111111111111111111111111111111111", response.data);
         
         // FIRST: Set the hierarchy data
         setHierarchyData(response.data);
@@ -203,7 +212,7 @@ const handleDivisionChange = async (selectedOption) => {
         setHierarchyData([]);
         setRanges([]);
     }
-};
+  };
 
   /* =========================
      Handle Range Selection
@@ -212,6 +221,9 @@ const handleDivisionChange = async (selectedOption) => {
     setSelectedRange(selectedOption);
     setSelectedBeat(null);
     setBeats([]);
+    setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
     
     if (!selectedOption || !hierarchyData.length || !selectedDivision) return;
     
@@ -240,6 +252,9 @@ const handleDivisionChange = async (selectedOption) => {
     setSelectedPatrol(null);
     setPatrolDetails(null);
     setShowPatrolModal(false);
+    setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
   };
 
   /* =========================
@@ -252,6 +267,9 @@ const handleDivisionChange = async (selectedOption) => {
     }
     
     setLoading(prev => ({ ...prev, coverage: true }));
+    setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
     try {
       const res = await axios.post(
         `${API_BASE_URL}/api/beat-patrol-coverage`,
@@ -292,6 +310,9 @@ const handleDivisionChange = async (selectedOption) => {
   const fetchPatrolDetails = async (patrolId) => {
     setLoading(prev => ({ ...prev, patrol: true }));
     setSetShowLoader(true);
+    setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
     try {
       const response = await axios.get(`${API_BASE_URL}/api/patrols/${patrolId}`);
       
@@ -320,6 +341,8 @@ const handleDivisionChange = async (selectedOption) => {
     setSelectedPatrol(null);
     setPatrolDetails(null);
     setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
   };
 
   /* =========================
@@ -436,6 +459,9 @@ const handleDivisionChange = async (selectedOption) => {
     setSelectedPatrol(null);
     setPatrolDetails(null);
     setShowPatrolModal(false);
+    setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
   };
 
   /* =========================
@@ -589,7 +615,7 @@ const handleDivisionChange = async (selectedOption) => {
           color: white;
           border-radius: 6px;
           padding: 10px;
-          box-shadow: 0 10px 20px rgba(102, 126, 234, 0.15);
+          boxShadow: 0 10px 20px rgba(102, 126, 234, 0.15);
           transition: all 0.3s ease;
         }
         .stats-card:hover {
@@ -630,69 +656,445 @@ const handleDivisionChange = async (selectedOption) => {
         .modal-content {
           animation: slideIn 0.3s ease-out;
         }
+        .custom-preview-mask {
+          background: rgba(0, 0, 0, 0.5) !important;
+          opacity: 0;
+          transition: opacity 0.3s ease !important;
+        }
+        .image-card:hover .custom-preview-mask {
+          opacity: 1 !important;
+        }
       `}</style>
       
-      {/* Image Preview Modal */}
+      {/* Image Preview Modal with Rotation Controls */}
       {selectedImage && (
         <div 
-          className="modal-overlay"
           style={{
             position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.9)",
+            // backgroundColor: "rgba(0,0,0,0.95)",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 3000,
+            zIndex: 9999,
             padding: "5px",
           }} 
-          onClick={() => setSelectedImage(null)}
+          onClick={(e) => {
+            // Only close if clicking on overlay (not on image or controls)
+            if (e.target === e.currentTarget) {
+              setSelectedImage(null);
+              setShowPatrolModal(true);
+              setImageRotation(0);
+              setImageScale(1);
+            }
+          }}
         >
+          {/* Close button - Top Right */}
           <button 
             style={{
               position: "absolute",
               top: "20px",
               right: "20px",
-              background: "white",
+              background: "rgba(255,255,255,0.9)",
               border: "none",
               borderRadius: "50%",
-              width: "40px",
-              height: "40px",
-              fontSize: "20px",
+              width: "50px",
+              height: "50px",
+              fontSize: "24px",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
               transition: "all 0.3s ease",
+              zIndex: 10000,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "scale(1.1)";
+              e.currentTarget.style.background = "#f56565";
+              e.currentTarget.style.color = "white";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.background = "rgba(255,255,255,0.9)";
+              e.currentTarget.style.color = "#333";
             }}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedImage(null);
+              setShowPatrolModal(true);
+              setImageRotation(0);
+              setImageScale(1);
             }}
           >
             <CloseCircleOutlined />
           </button>
-          <img 
-            src={getImageUrl(selectedImage)} 
-            alt="Preview" 
-            style={{
-              maxWidth: "90%",
-              maxHeight: "90%",
-              objectFit: "contain",
-              borderRadius: "4px",
-              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.3)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
+          
+          {/* Image counter - Top Left */}
+          {patrolDetails?.images && (
+            <div style={{
+              position: "absolute",
+              top: "20px",
+              left: "20px",
+              background: "rgba(0,0,0,0.7)",
+              color: "white",
+              padding: "8px 16px",
+              borderRadius: "20px",
+              fontSize: "14px",
+              fontWeight: "600",
+              zIndex: 10000,
+            }}>
+              Image {patrolDetails.images.findIndex(img => 
+                img.image_data === selectedImage) + 1} / {patrolDetails.images.length}
+            </div>
+          )}
+          
+          {/* Rotation Controls - Bottom Center */}
+          <div style={{
+            position: "absolute",
+            bottom: "30px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            gap: "10px",
+            background: "rgba(0,0,0,0.7)",
+            padding: "10px 20px",
+            borderRadius: "30px",
+            zIndex: 10000,
+            alignItems: "center",
+          }}>
+            {/* Zoom Out */}
+            <button
+              style={{
+                background: "rgba(255,255,255,0.9)",
+                border: "none",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                fontSize: "18px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.background = "#4299e1";
+                e.currentTarget.style.color = "white";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.9)";
+                e.currentTarget.style.color = "#333";
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageScale(prev => Math.max(0.5, prev - 0.25));
+              }}
+            >
+              <ZoomOutOutlined />
+            </button>
+            
+            {/* Rotate Left */}
+            <button
+              style={{
+                background: "rgba(255,255,255,0.9)",
+                border: "none",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                fontSize: "18px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.background = "#4299e1";
+                e.currentTarget.style.color = "white";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.9)";
+                e.currentTarget.style.color = "#333";
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageRotation(prev => prev - 90);
+              }}
+            >
+              <RotateLeftOutlined />
+            </button>
+            
+            {/* Reset Rotation & Zoom */}
+            <button
+              style={{
+                background: "rgba(255,255,255,0.9)",
+                border: "none",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                fontSize: "18px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.background = "#48bb78";
+                e.currentTarget.style.color = "white";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.9)";
+                e.currentTarget.style.color = "#333";
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageRotation(0);
+                setImageScale(1);
+              }}
+            >
+              <UndoOutlined />
+            </button>
+            
+            {/* Rotate Right */}
+            <button
+              style={{
+                background: "rgba(255,255,255,0.9)",
+                border: "none",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                fontSize: "18px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.background = "#4299e1";
+                e.currentTarget.style.color = "white";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.9)";
+                e.currentTarget.style.color = "#333";
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageRotation(prev => prev + 90);
+              }}
+            >
+              <RotateRightOutlined />
+            </button>
+            
+            {/* Zoom In */}
+            <button
+              style={{
+                background: "rgba(255,255,255,0.9)",
+                border: "none",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                fontSize: "18px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.background = "#4299e1";
+                e.currentTarget.style.color = "white";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.9)";
+                e.currentTarget.style.color = "#333";
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setImageScale(prev => Math.min(3, prev + 0.25));
+              }}
+            >
+              <ZoomInOutlined />
+            </button>
+            
+            {/* Display current zoom level */}
+            <div style={{
+              marginLeft: "10px",
+              color: "white",
+              fontSize: "14px",
+              fontWeight: "600",
+              minWidth: "50px",
+              textAlign: "center"
+            }}>
+              {Math.round(imageScale * 100)}%
+            </div>
+          </div>
+          
+          {/* The Image with Rotation and Scale */}
+          <div style={{
+            position: "relative",
+            maxWidth: "90%",
+            maxHeight: "90%",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}>
+            <img 
+              src={getImageUrl(selectedImage)} 
+              alt="Preview" 
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                borderRadius: "8px",
+                boxShadow: "0 25px 50px rgba(0, 0, 0, 0.5)",
+                cursor: "move",
+                transform: `rotate(${imageRotation}deg) scale(${imageScale})`,
+                transition: "transform 0.3s ease",
+                transformOrigin: "center center",
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onWheel={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                setImageScale(prev => {
+                  const newScale = prev + delta;
+                  return Math.max(0.1, Math.min(5, newScale));
+                });
+              }}
+            />
+            
+            {/* Rotation indicator */}
+            {imageRotation !== 0 && (
+              <div style={{
+                position: "absolute",
+                top: "10px",
+                right: "10px",
+                background: "rgba(0,0,0,0.7)",
+                color: "white",
+                padding: "5px 10px",
+                borderRadius: "15px",
+                fontSize: "12px",
+                fontWeight: "600",
+              }}>
+                {Math.abs(imageRotation)}°
+              </div>
+            )}
+          </div>
+          
+          {/* Navigation buttons for next/previous image */}
+          {patrolDetails?.images && patrolDetails.images.length > 1 && (
+            <>
+              {/* Previous button */}
+              <button
+                style={{
+                  position: "absolute",
+                  left: "30px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "rgba(255,255,255,0.9)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "50px",
+                  height: "50px",
+                  fontSize: "24px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+                  transition: "all 0.3s ease",
+                  zIndex: 10000,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
+                  e.currentTarget.style.background = "#4299e1";
+                  e.currentTarget.style.color = "white";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.9)";
+                  e.currentTarget.style.color = "#333";
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const currentIndex = patrolDetails.images.findIndex(img => 
+                    img.image_data === selectedImage);
+                  const prevIndex = (currentIndex - 1 + patrolDetails.images.length) % patrolDetails.images.length;
+                  setSelectedImage(patrolDetails.images[prevIndex].image_data);
+                  setImageRotation(0);
+                  setImageScale(1);
+                }}
+              >
+                ◀
+              </button>
+              
+              {/* Next button */}
+              <button
+                style={{
+                  position: "absolute",
+                  right: "30px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "rgba(255,255,255,0.9)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "50px",
+                  height: "50px",
+                  fontSize: "24px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+                  transition: "all 0.3s ease",
+                  zIndex: 10000,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
+                  e.currentTarget.style.background = "#4299e1";
+                  e.currentTarget.style.color = "white";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.9)";
+                  e.currentTarget.style.color = "#333";
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const currentIndex = patrolDetails.images.findIndex(img => 
+                    img.image_data === selectedImage);
+                  const nextIndex = (currentIndex + 1) % patrolDetails.images.length;
+                  setSelectedImage(patrolDetails.images[nextIndex].image_data);
+                  setImageRotation(0);
+                  setImageScale(1);
+                }}
+              >
+                ▶
+              </button>
+            </>
+          )}
         </div>
       )}
 
       {/* Patrol Details Modal */}
-      {showPatrolModal && patrolDetails && (
+      {showPatrolModal && patrolDetails && !selectedImage && (
         <div 
           className="modal-overlay"
           style={{
@@ -705,7 +1107,7 @@ const handleDivisionChange = async (selectedOption) => {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 2000,
+            zIndex: 1000,
             padding: "5px",
           }} 
           onClick={closePatrolModal}
@@ -1008,82 +1410,97 @@ const handleDivisionChange = async (selectedOption) => {
                         </h3>
                       </div>
                       
-                      <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-                        gap: "15px",
-                      }}>
-                        {patrolDetails.images.map((image, index) => (
-                          <div 
-                            key={index} 
-                            className="image-card"
-                            style={{
-                              border: "2px solid #e2e8f0",
-                              borderRadius: "8px",
-                              overflow: "hidden",
-                              cursor: "pointer",
-                              transition: "all 0.3s ease",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = "scale(1.05)";
-                              e.currentTarget.style.borderColor = "#a0c010ff";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = "scale(1)";
-                              e.currentTarget.style.borderColor = "#e2e8f0";
-                            }}
-                          >
-                            <div style={{
-                              width: "100%",
-                              height: "140px",
-                              overflow: "hidden",
-                              position: "relative",
-                            }}>
-                              <img 
-                                src={getImageUrl(image.image_data)} 
-                                alt={`Patrol ${index + 1}`}
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "cover",
-                                  transition: "transform 0.3s ease",
-                                }}
-                                 preview={{
-                                mask: (
-                                  <div style={{ 
-                                    color: '#fff',
-                                    fontSize: 12,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%'
-                                  }}>
-                                    {language === "gu" ? "જૂઓ" : "View"}
-                                  </div>
-                                )
+                      {/* Use Ant Design Image.PreviewGroup for gallery preview */}
+                      <Image.PreviewGroup>
+                        <div style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                          gap: "15px",
+                        }}>
+                          {patrolDetails.images.map((image, index) => (
+                            <div 
+                              key={index} 
+                              className="image-card"
+                              style={{
+                                border: "2px solid #e2e8f0",
+                                borderRadius: "8px",
+                                overflow: "hidden",
+                                cursor: "pointer",
+                                transition: "all 0.3s ease",
+                                position: "relative",
                               }}
-                              />
+                              onClick={() => {
+                                setSelectedImage(image.image_data);
+                                setShowPatrolModal(false);
+                                setImageRotation(0);
+                                setImageScale(1);
+                              }}
+                            >
                               <div style={{
-                                position: "absolute",
-                                top: "8px",
-                                right: "8px",
-                                backgroundColor: "rgba(0,0,0,0.7)",
-                                color: "white",
-                                fontSize: "12px",
-                                padding: "1px 4px",
-                                borderRadius: "4px",
+                                width: "100%",
+                                height: "140px",
+                                overflow: "hidden",
+                                position: "relative",
                               }}>
-                                {index + 1}
+                                <Image
+                                  width="100%"
+                                  height="100%"
+                                  style={{
+                                    objectFit: "cover",
+                                    transition: "transform 0.3s ease",
+                                  }}
+                                  src={getImageUrl(image.image_data)}
+                                  alt={`Patrol Image ${index + 1}`}
+                                  onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
+                                  onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                                  preview={{
+                                    mask: (
+                                      <div style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        height: "100%",
+                                        color: "white",
+                                      }}>
+                                        <SearchOutlined style={{ fontSize: "20px", marginBottom: "5px" }} />
+                                        <span>{language === "gu" ? "જુઓ" : "View"}</span>
+                                      </div>
+                                    ),
+                                    maskClassName: "custom-preview-mask"
+                                  }}
+                                />
+                                
+                                <div style={{
+                                  position: "absolute",
+                                  top: "8px",
+                                  right: "8px",
+                                  backgroundColor: "rgba(0,0,0,0.7)",
+                                  color: "white",
+                                  fontSize: "12px",
+                                  padding: "1px 4px",
+                                  borderRadius: "4px",
+                                  zIndex: 1,
+                                }}>
+                                  {index + 1}
+                                </div>
+                              </div>
+                              
+                              <div style={{ padding: "5px", backgroundColor: "#f8fafc" }}>
+                                <div style={{ 
+                                  fontWeight: "600", 
+                                  fontSize: "12px", 
+                                  color: "#2d3748", 
+                                  marginBottom: "4px",
+                                  textAlign: "center"
+                                }}>
+                                  {image.image_category || "Uncategorized"}
+                                </div>
                               </div>
                             </div>
-                            <div style={{ padding: "5px", backgroundColor: "#f8fafc" }}>
-                              <div style={{ fontWeight: "600", fontSize: "12px", color: "#2d3748", marginBottom: "4px" }}>
-                                {image.image_category || "Uncategorized"}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      </Image.PreviewGroup>
                     </div>
                   )}
                 </>
