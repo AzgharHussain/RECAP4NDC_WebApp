@@ -24,7 +24,6 @@ import "./RouterMap.css";
 import { API_BASE_URL } from "../config";
 import Select from 'react-select';
 import { Image } from 'antd';
-import "./BeatPatrolCoverage.css";
 
 // Helper function to parse WKT (Well-Known Text) geometry to lat/lng array
 const parseGeomCoordinates = (geom) => {
