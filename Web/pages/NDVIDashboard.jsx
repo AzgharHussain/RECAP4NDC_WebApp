@@ -1250,8 +1250,8 @@ const NDVIChangeDashboard = () => {
         <Card sx={{ 
           mb: 4, 
           borderRadius: 3,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
+          background: 'transparent',
+          color: 'black',
           boxShadow: '0 20px 40px rgba(102, 126, 234, 0.3)'
         }}>
           <CardContent>
@@ -1268,7 +1268,7 @@ const NDVIChangeDashboard = () => {
                   <Calculate sx={{ fontSize: 36 }} />
                 </Box>
               </Grid>
-              <Grid item xs>
+              <Grid item xs >
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 700 }}>
                   Coupe Area Analysis - {coupeOptions.find(c => c.value === selectedCoupe)?.label}
                 </Typography>
@@ -1621,7 +1621,7 @@ const NDVIChangeDashboard = () => {
             {activeTab === 1 && (
               <Box>
                 {/* Search and Filter Controls */}
-                <Card sx={{ mb: 3, borderRadius: 2 }}>
+                <Card sx={{ mb: 3, borderRadius: 2 ,bgcolor: 'transparent'}}>
                   <CardContent>
                     <Grid container spacing={2} alignItems="center">
                       <Grid item xs={12} md={6}>
@@ -1685,12 +1685,13 @@ const NDVIChangeDashboard = () => {
                 <Paper sx={{ 
                   borderRadius: 2, 
                   overflow: 'hidden',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                  bgcolor:'transparent'
                 }}>
                   <TableContainer sx={{ maxHeight: 500 }}>
                     <Table stickyHeader size="small">
                       <TableHead>
-                        <TableRow sx={{ '& th': { bgcolor: '#f1f5f9', fontWeight: 600 } }}>
+                        <TableRow sx={{ '& th': { bgcolor: 'transparent', fontWeight: 600 } }}>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('pixle_id')}>
                               <strong>Pixel ID</strong>
@@ -1910,7 +1911,8 @@ const NDVIChangeDashboard = () => {
                           '&:hover': {
                             transform: 'translateY(-4px)',
                             boxShadow: '0 12px 24px rgba(0,0,0,0.1)'
-                          }
+                          },
+                          bgcolor: 'transparent',
                         }}
                         onClick={() => {
                           setSelectedMonth(month.value);
@@ -1918,7 +1920,7 @@ const NDVIChangeDashboard = () => {
                         }}
                       >
                         <CardContent sx={{ p: 2.5 }}>
-                          <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ color: '#3b82f6' }}>
+                          <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ color: 'black' }}>
                             {month.label}
                           </Typography>
                           {monthlyData[month.value]?.stats ? (
