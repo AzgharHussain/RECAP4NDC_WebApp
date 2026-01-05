@@ -1059,7 +1059,8 @@ const NDVIChangeDashboard = () => {
                   onClick={handleRefresh}
                   sx={{ 
                     borderRadius: 2,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    bgcolor:'#00a651'
                   }}
                 >
                   Refresh
@@ -1088,7 +1089,7 @@ const NDVIChangeDashboard = () => {
         <CardHeader 
           title="Forest Hierarchy Navigation"
           titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
-          avatar={<Forest color="primary" />}
+          avatar={<Forest />}
         />
         <CardContent>
          
@@ -1523,7 +1524,7 @@ const NDVIChangeDashboard = () => {
 
                 {/* Analysis Notes */}
                 {summaryStats && (
-                  <Card sx={{ mt: 4, borderRadius: 2 }}>
+                  <Card sx={{ mt: 4, borderRadius: 2 ,bgcolor:'transparent'}}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Info color="primary" />
@@ -1533,9 +1534,9 @@ const NDVIChangeDashboard = () => {
                         <Grid item xs={12} md={6}>
                           <Box sx={{ 
                             p: 2, 
-                            bgcolor: 'white', 
+                            bgcolor: 'transparent', 
                             borderRadius: 2,
-                            border: '1px solid #e2e8f0'
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                           }}>
                             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
                               Key Findings
@@ -1591,9 +1592,9 @@ const NDVIChangeDashboard = () => {
                         <Grid item xs={12} md={6}>
                           <Box sx={{ 
                             p: 2, 
-                            bgcolor: 'white', 
+                            bgcolor: 'transparent', 
                             borderRadius: 2,
-                            border: '1px solid #e2e8f0'
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                           }}>
                             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
                               Data Quality
