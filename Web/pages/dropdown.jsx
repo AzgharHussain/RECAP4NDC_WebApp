@@ -5,6 +5,8 @@ const { Option } = Select;
 
 const base_url = "http://localhost:5002";
 
+
+
 const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelectedCoupe }) => {
   const [loading, setLoading] = useState({
     forest: false,
@@ -56,6 +58,9 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
     
     fetchForestTypes();
   }, []);
+
+
+  
 
   // Handle Forest Selection
   const handleForestChange = async (forestId) => {
@@ -439,18 +444,27 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
     onSelectionChange?.(newValues);
   };
 
-  const handleCoupeChange = (coupeName) => {
-    const newValues = {
-      ...selectedValues,
-      coupe: coupeName
-    };
-    setSelectedCoupe(coupeName)
-    setSelectedValues(newValues);
-    onSelectionChange?.(newValues);
+const handleCoupeChange = (coupeName) => {
+  const newValues = {
+    ...selectedValues,
+    coupe: coupeName
   };
+  
+  // Update local state
+  setSelectedValues(newValues);
+  
+  // Update parent's selectedCoupe state
+  if (setSelectedCoupe) {
+    setSelectedCoupe(coupeName);
+  }
+  
+  // Call the callback with all values
+  onSelectionChange?.(newValues);
+};
 
   const dropdownStyle = {
     // width: "100px",
+    minWidth: "150px",
     color: "#fff",
     // border: "2.21px solid rgba(255, 255, 255, 0.23)",
     background: "rgba(255, 255, 255, 0.02)",
@@ -473,6 +487,15 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
               placeholder={language === "gu" ? "વન પ્રકાર" : "Forest Type"}
               value={selectedValues.forest_id}
               onChange={handleForestChange}
+              dropdownStyle={{
+              background: "#fff",
+              borderRadius: "0px",
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               {forestTypes.map(forest => (
                 <Option key={forest.forest_id} value={forest.forest_id}>
@@ -490,6 +513,16 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
               value={selectedValues.division}
               onChange={handleDivisionChange}
               disabled={!selectedValues.forest_id}
+              dropdownStyle={{
+              background: "#fff",
+              borderRadius: "0px",
+
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               {divisions.map(division => (
                 <Option key={division.value} value={division.value}>
@@ -507,6 +540,16 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
               value={selectedValues.range}
               onChange={handleRangeChange}
               disabled={!selectedValues.division}
+              dropdownStyle={{
+              background: "#fff",
+              borderRadius: "0px",
+
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               {ranges.map(range => (
                 <Option key={range.value} value={range.value}>
@@ -524,6 +567,15 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
               value={selectedValues.round}
               onChange={handleRoundChange}
               disabled={!selectedValues.range}
+              dropdownStyle={{
+              background: "#fff",
+              borderRadius: "0px",
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               {rounds.map(round => (
                 <Option key={round.value} value={round.value}>
@@ -541,6 +593,15 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
               value={selectedValues.beat}
               onChange={handleBeatChange}
               disabled={!selectedValues.round}
+              dropdownStyle={{
+              background: "#fff",
+              borderRadius: "0px",
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               {beats.map(beat => (
                 <Option key={beat.value} value={beat.value}>
@@ -558,6 +619,15 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
               value={selectedValues.village}
               onChange={handleVillageChange}
               disabled={!selectedValues.beat}
+              dropdownStyle={{
+              background: "#fff",
+              borderRadius: "0px",
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               {villages.map(village => (
                 <Option key={village.value} value={village.value}>
@@ -575,6 +645,15 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
               value={selectedValues.coupe}
               onChange={handleCoupeChange}
               disabled={!selectedValues.village}
+              dropdownStyle={{
+              background: "#fff",
+              borderRadius: "0px",
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               {coupes.map(coupe => (
                 <Option key={coupe.value} value={coupe.value}>

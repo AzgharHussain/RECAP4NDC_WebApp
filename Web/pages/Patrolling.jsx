@@ -1442,12 +1442,20 @@ const PatrolIncidentLogs = () => {
               style={{
                 width: "180px",
                 border: "1px solid #d9d9d9",
-                borderRadius: "4px",
+                borderRadius: "0px",
                 background: "#fff",
               }}
               value={forestId}
               onChange={handleForestChange}
               allowClear
+            dropdownStyle={{
+              background: "#fff",
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
               {forestTypes.map((f) => (
@@ -1462,13 +1470,21 @@ const PatrolIncidentLogs = () => {
               style={{
                 width: "180px",
                 border: "1px solid #d9d9d9",
-                borderRadius: "4px",
+                borderRadius: "0px",
                 background: "#fff",
               }}
               value={divisionFilter}
               onChange={handleDivisionChange}
               allowClear
               disabled={!forestId}
+              dropdownStyle={{
+              background: "#fff",
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
               {divisions.map((d, index) => (
@@ -1582,12 +1598,20 @@ const PatrolIncidentLogs = () => {
               style={{
                 width: "100px",
                 border: "1px solid #d9d9d9",
-                borderRadius: "4px",
+                borderRadius: "0px",
                 background: "#fff",
               }}
               value={typeFilter}
               onChange={(value) => setTypeFilter(value)}
               allowClear
+              dropdownStyle={{
+              background: "#fff",
+            }}
+            dropdownRender={(menu) => (
+              <div style={{ background: "#fff" }}>
+                {menu}
+              </div>
+            )}
             >
               <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
               <Option value="Day patrolling">{language === "gu" ? "દિવસ પેટ્રોલિંગ" : "Day Patrolling"}</Option>

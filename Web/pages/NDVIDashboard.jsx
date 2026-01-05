@@ -107,7 +107,7 @@ ChartJS.register(
 
 const NDVIChangeDashboard = () => {
   // State management
-  const [selectedCoupe, setSelectedCoupe] = useState('Bhavnagar_coupes');
+  const [selectedCoupe, setSelectedCoupe] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('2025-02');
   const [monthlyData, setMonthlyData] = useState({});
   const [currentTableData, setCurrentTableData] = useState([]);
@@ -160,7 +160,13 @@ const NDVIChangeDashboard = () => {
     { value: '2025-09', label: 'September 2025' },
     { value: '2025-10', label: 'October 2025' }
   ];
-
+useEffect(() => {
+  if (selectedCoupe) {
+    // When selectedCoupe changes, fetch the area and data
+    fetchTotalArea(selectedCoupe);
+    // Note: fetchNDVIData will be called after totalArea is set (from another useEffect)
+  }
+}, [selectedCoupe]);
   // ============================================
   // FIXED: Fetch hierarchy and areas
   // ============================================
@@ -960,8 +966,8 @@ const NDVIChangeDashboard = () => {
                 <tr>
                   <td>${item.pixle_id || 'N/A'}</td>
                   <td>
-                    <span class="badge ${item.status ? 'badge-degraded' : 'badge-afforested'}">
-                      ${item.status ? 'Degraded' : 'Afforested'}
+                    <span class="badge  'badge-degraded' >
+                      'Degraded' 
                     </span>
                   </td>
                   <td>${item.ndvi_change?.toFixed(4) || 'N/A'}</td>
@@ -1759,8 +1765,8 @@ const NDVIChangeDashboard = () => {
                               </TableCell>
                               <TableCell>
                                 <Chip
-                                  label={row.status ? 'Degraded' : 'Afforested'}
-                                  color={row.status ? 'error' : 'success'}
+                                  label= 'Degraded'
+                                  color='error' 
                                   size="small"
                                   sx={{ fontWeight: 600 }}
                                 />
