@@ -1542,7 +1542,7 @@ useEffect(() => {
                             p: 2, 
                             bgcolor: 'transparent', 
                             borderRadius: 2,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                           }}>
                             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
                               Key Findings
