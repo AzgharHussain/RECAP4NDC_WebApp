@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Select, Row, Col, Spin, message } from 'antd';
+import { API_BASE_URL } from '../config';
 
 const { Option } = Select;
 
-const base_url = "http://localhost:5002";
+const base_url = API_BASE_URL;
 
 
 
