@@ -1310,7 +1310,7 @@ useEffect(() => {
                       </Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={12} md={3}>
+                  {/* <Grid item xs={12} md={3}>
                     <Box>
                       <Typography variant="caption" sx={{ opacity: 0.9 }}>
                         Net Change
@@ -1322,7 +1322,7 @@ useEffect(() => {
                         {summaryStats ? (summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2) : '0.00'} km²
                       </Typography>
                     </Box>
-                  </Grid>
+                  </Grid> */}
                 </Grid>
               </Grid>
             </Grid>
