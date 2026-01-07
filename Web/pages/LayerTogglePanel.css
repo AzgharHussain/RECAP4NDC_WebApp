@@ -1,5 +1,6 @@
 .leftpanel {
   font-family: "Arial", sans-serif;
+  width: 300px;
   height: 92vh;
   overflow-x: auto;
   overscroll-behavior: contain;
@@ -927,4 +928,13 @@ input[type="checkbox"]:focus {
     left: 10px;
     max-width: none;
   }
+}
+
+.coupeboundary{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #f8fff8, #e8f5e8);
+  color: rgb(11, 151, 0);
+  border-radius: 8px;
 }
