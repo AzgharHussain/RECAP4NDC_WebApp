@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef,useMemo, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { FaChevronDown, FaChevronUp, FaLayerGroup } from "react-icons/fa";
+import { MdForest } from "react-icons/md";
 import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
@@ -512,38 +513,44 @@ const layersData = {
       ]
     },
       {
-      title: "Wildlife Circle ",
+      title: "Wildlife Forest ",
       layerList: [
-        { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat" },
         { Name: "Wildlife_Circle_Boundary", Layer: "Wildlife Circle" },
         { Name: "Wildlife_Circle_Division_Boundary", Layer: "Wildlife Circle Division" },
         { Name: "Wildlife_Circle_Range_Boundary", Layer: "Wildlife Circle Range" },
         { Name: "Wildlife_Circle_Round_Boundary", Layer: "Wildlife Circle Round" },
+        { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat" },
         { Name: "Wildlife_Circle_Village_Boundary", Layer: "Wildlife Circle Village" },
       ]
     },
     {
       title: "Social Forestry ",
       layerList: [
-        { Name: "Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat" },
         { Name: "Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle" },
         { Name: "Social_Forestry_Range_Boundary", Layer: "Social Forestry Range" },
         { Name: "Social_Forestry_Round_Boundary", Layer: "Social Forestry Round" },
+        { Name: "Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat" },
         { Name: "Social_Forestry_Village_Boundary", Layer: "Social Forestry Village" },
       ]
     },
     {
-      title: "Territorial Circle ",
+      title: "Territorial Forest ",
       layerList: [
-        { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
         { Name: "Teritorial_Circle_Division_Boundary", Layer: "Territorial Circle Division" },
         { Name: "Teritorial_Circle_Range_Boundary", Layer: "Territorial Circle Range" },
         { Name: "Teritorial_Circle_Round_Boundary", Layer: "Territorial Circle Round" },
+        { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
         { Name: "Teritorial_Circle_Village_Boundary", Layer: "Territorial Circle Village" },
       
       ]
     },
   
+    
+  ]
+};
+
+const coupesData = {
+  groups: [    
     {
       title: "Banaskantha",
       layerList: [
@@ -770,6 +777,7 @@ const layersData = {
 const text = {
   en: {
     exploreData: "Explore Data",
+    coupesData: "Coupe Boundaries",
     forestCoverChange: "Forest Cover Change",
     selectLayer: "Select Layer:",
     selectBoundaries: "Select Boundaries:",
@@ -792,6 +800,7 @@ const text = {
   },
   gu: {
     exploreData: "ડેટા તપાસો",
+    coupesData: "કૂપ સીમાઓ",
     forestCoverChange: "વન આવરણમાં ફેરફાર",
     selectLayer: "લેયર પસંદ કરો:",
     selectBoundaries: "સીમા પસંદ કરો:",
@@ -827,24 +836,39 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap,activeToolSi
   const [attributeData, setAttributeData] = useState(null);
 const [showAttributeTable, setShowAttributeTable] = useState(false);
   // Generate unique IDs for groups and layers on mount
-  const [groupIds, setGroupIds] = useState({});
+  const [layersGroupIds, setLayersGroupIds] = useState({});
+  const [coupesGroupIds, setCoupesGroupIds] = useState({});
   const [layerIds, setLayerIds] = useState({});
 
-  useEffect(() => {
-    const groupIdMap = {};
+   useEffect(() => {
+    const layersGroupIdMap = {};
+    const coupesGroupIdMap = {};
     const layerIdMap = {};
 
+    // Generate IDs for layersData groups
     layersData.groups.forEach((group, groupIndex) => {
       const groupId = uuidv4();
-      groupIdMap[groupIndex] = groupId;
+      layersGroupIdMap[groupIndex] = groupId;
 
       group.layerList.forEach((layer, layerIndex) => {
         const layerName = getLayerName(layer);
-        layerIdMap[`${groupIndex}-${layerName}`] = uuidv4();
+        layerIdMap[`layers-${groupIndex}-${layerName}`] = uuidv4();
       });
     });
 
-    setGroupIds(groupIdMap);
+    // Generate IDs for coupesData groups
+    coupesData.groups.forEach((group, groupIndex) => {
+      const groupId = uuidv4();
+      coupesGroupIdMap[groupIndex] = groupId;
+
+      group.layerList.forEach((layer, layerIndex) => {
+        const layerName = getLayerName(layer);
+        layerIdMap[`coupes-${groupIndex}-${layerName}`] = uuidv4();
+      });
+    });
+
+    setLayersGroupIds(layersGroupIdMap);
+    setCoupesGroupIds(coupesGroupIdMap);
     setLayerIds(layerIdMap);
   }, []);
 
@@ -852,7 +876,10 @@ const [showAttributeTable, setShowAttributeTable] = useState(false);
   useEffect(() => {
     const initialOpenState = {};
     layersData.groups.forEach((_, idx) => {
-      initialOpenState[idx] = false;
+      initialOpenState[`layers-${idx}`] = false;
+    });
+    coupesData.groups.forEach((_, idx) => {
+      initialOpenState[`coupes-${idx}`] = false;
     });
     setOpenGroups(initialOpenState);
   }, []);
@@ -994,8 +1021,9 @@ const [showAttributeTable, setShowAttributeTable] = useState(false);
   );
 
   // Toggle group
-  const toggleGroup = useCallback((idx) => {
-    setOpenGroups((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  const toggleGroup = useCallback((section, idx) => {
+    const groupId = `${section}-${idx}`;
+    setOpenGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   }, []);
 
   const layerNameMapping222 ={
@@ -1201,7 +1229,7 @@ const fetchFeatureInfo = useCallback(async (layerName, latlng) => {
   }, [mapRef]);
 
   // LayerGroup component with UUID keys
-  const LayerGroup = React.memo(
+ const LayerGroup = React.memo(
     ({
       group,
       idx,
@@ -1214,32 +1242,35 @@ const fetchFeatureInfo = useCallback(async (layerName, latlng) => {
       icon,
       loadingLayers,
       groupId,
+      section = "layers" // Add section prop
     }) => {
+      const prefixedIdx = `${section}-${idx}`;
+      
       return (
         <div className="layer-group">
           <button
             type="button"
             className="group-title"
-            onClick={() => toggleGroup(idx)}
-            aria-expanded={openGroups[idx] ? "true" : "false"}
+            onClick={() => toggleGroup(section, idx)}
+            aria-expanded={openGroups[prefixedIdx] ? "true" : "false"}
           >
             <span className="group-title-content">
               {icon && <span style={{ marginRight: 8, fontSize: 18, color: "#0b9700" }}>{icon}</span>}
               {group.title}
             </span>
             <span className="arrow-icon">
-              {openGroups[idx] ? <FaChevronUp /> : <FaChevronDown />}
+              {openGroups[prefixedIdx] ? <FaChevronUp /> : <FaChevronDown />}
             </span>
           </button>
 
-          <div className={`layer-list-wrapper ${openGroups[idx] ? "expanded" : "collapsed"}`}>
+          <div className={`layer-list-wrapper ${openGroups[prefixedIdx] ? "expanded" : "collapsed"}`}>
             {group.layerList.map((layer, index) => {
               const layerName = getLayerName(layer);
               const isChecked = !!addedLayers[layerName];
-              const layerId = layerIds[`${idx}-${layerName}`] || uuidv4();
+              const layerId = layerIds[`${section}-${idx}-${layerName}`] || uuidv4();
 
               return (
-                <div key={layerId}  className={`layer-item ${isChecked ? "active" : ""}`}>
+                <div key={layerId} className={`layer-item ${isChecked ? "active" : ""}`}>
                   <label className="layer-label-container">
                     <input
                       type="checkbox"
@@ -1314,6 +1345,13 @@ const fetchFeatureInfo = useCallback(async (layerName, latlng) => {
     );
   };
 
+  const [isCoupesDataOpen, setIsCoupesDataOpen] = useState(false);
+
+  // Toggle function for coupes data section
+  const toggleCoupesData = () => {
+    setIsCoupesDataOpen(!isCoupesDataOpen);
+  };
+
   return (
     <> 
       <LegendPanel />
@@ -1326,7 +1364,7 @@ const fetchFeatureInfo = useCallback(async (layerName, latlng) => {
         <div className="layer-groups-container">
           {layersData.groups.map((group, idx) => (
             <LayerGroup
-              key={groupIds[idx]}
+              key={layersGroupIds[idx]}
               group={group}
               idx={idx}
               openGroups={openGroups}
@@ -1337,12 +1375,46 @@ const fetchFeatureInfo = useCallback(async (layerName, latlng) => {
               handleOpacityChange={handleOpacityChange}
               icon={<FaLayerGroup />}
               loadingLayers={isLayerLoading}
-              groupId={groupIds[idx]}
+              groupId={layersGroupIds[idx]}
+              section="layers" // Pass section prop
             />
           ))}
         </div>
+        
+        <div className="coupeboundary" onClick={toggleCoupesData}>
+          <h3 style={{ cursor: 'pointer', fontSize: "14px", marginLeft: "10px" }}>
+            <MdForest style={{ marginLeft: "8px", fontSize: "17px" }} />
+            <span style={{ marginLeft: "8px" }}>{text[language].coupesData}</span>
+          </h3>
+          <span style={{ cursor: 'pointer', marginRight: "15px" }}>
+            {isCoupesDataOpen ? '▼' : '▶'}
+          </span>
+        </div>
+      
+        {isCoupesDataOpen && (
+          <div className="layer-groups-container">
+            {coupesData.groups.map((group, idx) => (
+              <LayerGroup
+                key={coupesGroupIds[idx]}
+                group={group}
+                idx={idx}
+                openGroups={openGroups}
+                toggleGroup={toggleGroup}
+                addedLayers={addedLayers}
+                toggleLayer={toggleLayer}
+                opacity={opacity}
+                handleOpacityChange={handleOpacityChange}
+                icon={<FaLayerGroup />}
+                loadingLayers={isLayerLoading}
+                groupId={coupesGroupIds[idx]}
+                section="coupes" // Pass section prop
+              />
+            ))}
+          </div>
+        )}
+        
         {isLayerLoading && (
-         <Loader />
+          <Loader />
         )}
       </aside>
          <AttributePopup
