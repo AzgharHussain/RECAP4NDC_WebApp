@@ -185,7 +185,7 @@
 }
 
 .layer-list-wrapper.expanded {
-  max-height: 500px; /* Adjust based on your content */
+  max-height: 5000px; /* Adjust based on your content */
 }
 
 .layer-item {
