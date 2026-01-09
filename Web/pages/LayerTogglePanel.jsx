@@ -576,6 +576,57 @@ const coupesData = {
         { Name: "Baria_Danpur_DEV&CON W.C COUPE", Layer: "Baria Danpur Dev&Con W.C Coupe" },
         { Name: "Baria_Danpur_Rev", Layer: "Baria Danpur Revenue" },
         { Name: "Baria_Dev_Revenue", Layer: "Baria Dev Revenue" },
+
+        { Name: "Jhalod_AFFORESTATION W.C_COUPE", Layer: "Jhalod Afforestation W.C Coupe" },
+        { Name: "Jhalod_GRASSBIR W.C COUPE", Layer: "Jhalod Grassbir W.C Coupe" },
+        { Name: "Jhalod_J_DEVELO&CON W.C COUPE", Layer: "Jhalod Dev&Con W.C Coupe" },
+        { Name: "Jhalod_Revenue", Layer: "Jhalod Revenue" },
+
+        { Name: "Vansi_AFF W.C COUPE", Layer: "Vansi Aff W.C Coupe" },
+        { Name: "Vansi_BIO W.C COUPE", Layer: "Vansi Bio W.C Coupe" },
+        { Name: "Vansi_DEV&CON W.C  COUPE", Layer: "Vansi Dev&Con W.C Coupe" },
+        { Name: "Vansi_Revenue", Layer: "Vansi Revenue" },
+
+        { Name: "DOHAD_AFFORESTATION W.C COUPE", Layer: "Dohad Afforestation W.C Coupe" },
+        { Name: "DOHAD_D_DEVELOPMENT&CONSERVATION COUPE", Layer: "Dohad Dev&Conservation Coupe" },
+        { Name: "DOHAD_GRASSBIR W.C COUPE", Layer: "Dohad Grassbir W.C Coupe" },
+        { Name: "DOHAD_PRO", Layer: "Dohad Pro" },
+        { Name: "DOHAD_REVENUE", Layer: "Dohad Revenue" },
+
+        { Name: "FATEPURA_AFFORESTATION W.C _COUPE", Layer: "Fatepura Afforestation W.C Coupe" },
+        { Name: "FATEPURA_Revenu_Boundary", Layer: "Fatepura Revenue Boundary" },
+
+        { Name: "Kanjeta_AFF W.C COUPE", Layer: "Kanjeta Aff W.C Coupe" },
+        { Name: "Kanjeta_DEVELOPMENT&CONSERVATION W.C COUPE", Layer: "Kanjeta Dev&Conservation W.C Coupe" },
+        { Name: "Kanjeta_Revenue", Layer: "Kanjeta Revenue" },
+
+        { Name: "Raaampura_R_AFFORESTATION COUPE", Layer: "Raampura Afforestation Coupe" },
+        { Name: "Rampura_R_GRASSBIR COUPE", Layer: "Rampura Grassbir Coupe" },
+        { Name: "Rampura_Revenue", Layer: "Rampura Revenue" },
+
+        { Name: "Randhikpur_RAN_AFFO W.C COUPE", Layer: "Randhikpur Affo W.C Coupe" },
+        { Name: "Randhikpur_RAN_DEV&CON W.C COUPE", Layer: "Randhikpur Dev&Con W.C Coupe" },
+        { Name: "Randhikpur_RAN_GRASSBIR W.C COUPE", Layer: "Randhikpur Grassbir W.C Coupe" },
+        { Name: "Randhikpur_REVENUE", Layer: "Randhikpur Revenue" },
+
+        { Name: "Sarjumi_AFFORESTATION W.C COUPE", Layer: "Sarjumi Afforestation W.C Coupe" },
+        { Name: "Sarjumi_DEV&CON W.C COUPE", Layer: "Sarjumi Dev&Con W.C Coupe" },
+        { Name: "Sarjumi_GRASSBIR W.C COUPE", Layer: "Sarjumi Grassbir W.C Coupe" },
+        { Name: "Sarjumi_REVENUE", Layer: "Sarjumi Revenue" },
+
+         { Name: "Limkhed_Revenue", Layer: "Limkhed Revenue" },
+        { Name: "Limkheda_DEVELOPMENT&CONSERVATION W.C COUPE", Layer: "Limkheda Dev&Conservation W.C Coupe" },
+        { Name: "Limkheda_L_AFFORESTATION W.C COUPE", Layer: "Limkheda Afforestation W.C Coupe" },
+        { Name: "Limkheda_L_GRASSBIR W.C COUPE", Layer: "Limkheda Grassbir W.C Coupe" },
+
+        { Name: "SAGTALA_BIODI W.C COUPE", Layer: "Sagtala Biodi W.C Coupe" },
+        { Name: "SAGTALA_DEV&CON W.C COUPE", Layer: "Sagtala Dev&Con W.C Coupe" },
+
+        { Name: "Sanjeli_AFFORESTATION W.C _COUPE", Layer: "Sanjeli Afforestation W.C Coupe" },
+        { Name: "Sanjeli_DEVELO&CON W.C COUPE", Layer: "Sanjeli Dev&Con W.C Coupe" },
+        { Name: "Sanjeli_G.S.F.D.C.AREA", Layer: "Sanjeli GSFDC Area" },
+        { Name: "Sanjeli_GRASSBIR W.C COUPE", Layer: "Sanjeli Grassbir W.C Coupe" },
+        { Name: "Sanjeli_Revenu_Boundary", Layer: "Sanjeli Revenue Boundary" },
       ]
     },
     {
@@ -598,23 +649,18 @@ const coupesData = {
         { Name: "Chhotaudepur_CUD_Coupe_bdn", Layer: "Chhotaudepur CUD Coupe BDN" },
       ]
     },
-    {
-      title: "Dohad",
-      layerList: [
-        { Name: "DOHAD_AFFORESTATION W.C COUPE", Layer: "Dohad Afforestation W.C Coupe" },
-        { Name: "DOHAD_D_DEVELOPMENT&CONSERVATION COUPE", Layer: "Dohad Dev&Conservation Coupe" },
-        { Name: "DOHAD_GRASSBIR W.C COUPE", Layer: "Dohad Grassbir W.C Coupe" },
-        { Name: "DOHAD_PRO", Layer: "Dohad Pro" },
-        { Name: "DOHAD_REVENUE", Layer: "Dohad Revenue" },
-      ]
-    },
-    {
-      title: "Fatepura",
-      layerList: [
-        { Name: "FATEPURA_AFFORESTATION W.C _COUPE", Layer: "Fatepura Afforestation W.C Coupe" },
-        { Name: "FATEPURA_Revenu_Boundary", Layer: "Fatepura Revenue Boundary" },
-      ]
-    },
+    // {
+    //   title: "Dohad",
+    //   layerList: [
+        
+    //   ]
+    // },
+    // {
+    //   title: "Fatepura",
+    //   layerList: [
+        
+    //   ]
+    // },
     {
       title: "Gandhinagar",
       layerList: [
@@ -636,38 +682,30 @@ const coupesData = {
         { Name: "Jamnagar_coupes", Layer: "Jamnagar Coupes" },
       ]
     },
-    {
-      title: "Jhalod",
-      layerList: [
-        { Name: "Jhalod_AFFORESTATION W.C_COUPE", Layer: "Jhalod Afforestation W.C Coupe" },
-        { Name: "Jhalod_GRASSBIR W.C COUPE", Layer: "Jhalod Grassbir W.C Coupe" },
-        { Name: "Jhalod_J_DEVELO&CON W.C COUPE", Layer: "Jhalod Dev&Con W.C Coupe" },
-        { Name: "Jhalod_Revenue", Layer: "Jhalod Revenue" },
-      ]
-    },
+    // {
+    //   title: "Jhalod",
+    //   layerList: [
+        
+    //   ]
+    // },
     {
       title: "Junagadh",
       layerList: [
         { Name: "Junagadh coupes", Layer: "Junagadh Coupes" },
       ]
     },
-    {
-      title: "Kanjeta",
-      layerList: [
-        { Name: "Kanjeta_AFF W.C COUPE", Layer: "Kanjeta Aff W.C Coupe" },
-        { Name: "Kanjeta_DEVELOPMENT&CONSERVATION W.C COUPE", Layer: "Kanjeta Dev&Conservation W.C Coupe" },
-        { Name: "Kanjeta_Revenue", Layer: "Kanjeta Revenue" },
-      ]
-    },
-    {
-      title: "Limkheda",
-      layerList: [
-        { Name: "Limkhed_Revenue", Layer: "Limkhed Revenue" },
-        { Name: "Limkheda_DEVELOPMENT&CONSERVATION W.C COUPE", Layer: "Limkheda Dev&Conservation W.C Coupe" },
-        { Name: "Limkheda_L_AFFORESTATION W.C COUPE", Layer: "Limkheda Afforestation W.C Coupe" },
-        { Name: "Limkheda_L_GRASSBIR W.C COUPE", Layer: "Limkheda Grassbir W.C Coupe" },
-      ]
-    },
+    // {
+    //   title: "Kanjeta",
+    //   layerList: [
+        
+    //   ]
+    // },
+    // {
+    //   title: "Limkheda",
+    //   layerList: [
+       
+    //   ]
+    // },
     {
       title: "Mahisagar",
       layerList: [
@@ -693,30 +731,24 @@ const coupesData = {
         { Name: "Narmada_CP_FS2_compt4_RRB", Layer: "Narmada CP FS2 Compt4 RRB" },
       ]
     },
-    {
-      title: "Raampura",
-      layerList: [
-        { Name: "Raaampura_R_AFFORESTATION COUPE", Layer: "Raampura Afforestation Coupe" },
-        { Name: "Rampura_R_GRASSBIR COUPE", Layer: "Rampura Grassbir Coupe" },
-        { Name: "Rampura_Revenue", Layer: "Rampura Revenue" },
-      ]
-    },
-    {
-      title: "Randhikpur",
-      layerList: [
-        { Name: "Randhikpur_RAN_AFFO W.C COUPE", Layer: "Randhikpur Affo W.C Coupe" },
-        { Name: "Randhikpur_RAN_DEV&CON W.C COUPE", Layer: "Randhikpur Dev&Con W.C Coupe" },
-        { Name: "Randhikpur_RAN_GRASSBIR W.C COUPE", Layer: "Randhikpur Grassbir W.C Coupe" },
-        { Name: "Randhikpur_REVENUE", Layer: "Randhikpur Revenue" },
-      ]
-    },
-    {
-      title: "Sagtala",
-      layerList: [
-        { Name: "SAGTALA_BIODI W.C COUPE", Layer: "Sagtala Biodi W.C Coupe" },
-        { Name: "SAGTALA_DEV&CON W.C COUPE", Layer: "Sagtala Dev&Con W.C Coupe" },
-      ]
-    },
+    // {
+    //   title: "Raampura",
+    //   layerList: [
+        
+    //   ]
+    // },
+    // {
+    //   title: "Randhikpur",
+    //   layerList: [
+        
+    //   ]
+    // },
+    // {
+    //   title: "Sagtala",
+    //   layerList: [
+        
+    //   ]
+    // },
     {
       title: "Sabarkantha",
       layerList: [
@@ -724,25 +756,18 @@ const coupesData = {
         { Name: "Sabarkantha_South_Aravalli", Layer: "Sabarkantha South Aravalli" },
       ]
     },
-    {
-      title: "Sanjeli",
-      layerList: [
-        { Name: "Sanjeli_AFFORESTATION W.C _COUPE", Layer: "Sanjeli Afforestation W.C Coupe" },
-        { Name: "Sanjeli_DEVELO&CON W.C COUPE", Layer: "Sanjeli Dev&Con W.C Coupe" },
-        { Name: "Sanjeli_G.S.F.D.C.AREA", Layer: "Sanjeli GSFDC Area" },
-        { Name: "Sanjeli_GRASSBIR W.C COUPE", Layer: "Sanjeli Grassbir W.C Coupe" },
-        { Name: "Sanjeli_Revenu_Boundary", Layer: "Sanjeli Revenue Boundary" },
-      ]
-    },
-    {
-      title: "Sarjumi",
-      layerList: [
-        { Name: "Sarjumi_AFFORESTATION W.C COUPE", Layer: "Sarjumi Afforestation W.C Coupe" },
-        { Name: "Sarjumi_DEV&CON W.C COUPE", Layer: "Sarjumi Dev&Con W.C Coupe" },
-        { Name: "Sarjumi_GRASSBIR W.C COUPE", Layer: "Sarjumi Grassbir W.C Coupe" },
-        { Name: "Sarjumi_REVENUE", Layer: "Sarjumi Revenue" },
-      ]
-    },
+    // {
+    //   title: "Sanjeli",
+    //   layerList: [
+        
+    //   ]
+    // },
+    // {
+    //   title: "Sarjumi",
+    //   layerList: [
+        
+    //   ]
+    // },
     {
       title: "Surat",
       layerList: [
@@ -755,15 +780,12 @@ const coupesData = {
         { Name: "Surendranagar_coupe", Layer: "Surendranagar Coupe" },
       ]
     },
-    {
-      title: "Vansi",
-      layerList: [
-        { Name: "Vansi_AFF W.C COUPE", Layer: "Vansi Aff W.C Coupe" },
-        { Name: "Vansi_BIO W.C COUPE", Layer: "Vansi Bio W.C Coupe" },
-        { Name: "Vansi_DEV&CON W.C  COUPE", Layer: "Vansi Dev&Con W.C Coupe" },
-        { Name: "Vansi_Revenue", Layer: "Vansi Revenue" },
-      ]
-    },
+    // {
+    //   title: "Vansi",
+    //   layerList: [
+        
+    //   ]
+    // },
     {
       title: "Vyara",
       layerList: [
@@ -823,7 +845,10 @@ const text = {
   },
 };
 
-const getLayerName = (layer) => layer.Name || layer.layer || layer;
+const getLayerName = (layer, groupIndex, layerIndex) => {
+  // Create a unique key by combining group index and layer name
+  return `${layer.Name}-${groupIndex}-${layerIndex}`;
+};
 
 const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap,activeToolSidebar }) => {
   const { language } = useLanguage();
@@ -938,6 +963,11 @@ const [showAttributeTable, setShowAttributeTable] = useState(false);
         if (!newLayer) throw new Error("Layer creation failed");
 
         newLayer.addTo(mapRef.current);
+
+        layer._metadata = {
+          name: layerName,
+          label: layerLabel
+        };
         
         return new Promise((resolve) => {
           const timeout = setTimeout(() => {
@@ -968,57 +998,62 @@ const [showAttributeTable, setShowAttributeTable] = useState(false);
     },
 
     removeLayer: async (layerName) => {
-      const layer = addedLayers[layerName];
-      if (layer && mapRef.current?.hasLayer(layer)) {
-        return new Promise((resolve) => {
-          mapRef.current.removeLayer(layer);
-          layer.off();
-          setTimeout(() => resolve(true), 0);
-        });
-      }
-      return Promise.resolve(false);
-    },
-
-    setLayerOpacity: (layerName, opacityValue) => {
-      const layer = addedLayers[layerName];
-      if (layer && mapRef.current?.hasLayer(layer)) {
-        layer.setOpacity(opacityValue);
-      }
-    },
+    const layerToRemove = Object.values(addedLayers).find(
+      layer => layer._metadata?.name === layerName
+    );
+    
+    if (layerToRemove && mapRef.current?.hasLayer(layerToRemove)) {
+      return new Promise((resolve) => {
+        mapRef.current.removeLayer(layerToRemove);
+        layerToRemove.off();
+        setTimeout(() => resolve(true), 0);
+      });
+    }
+    return Promise.resolve(false);
+  },
+  
+  setLayerOpacity: (uniqueKey, opacityValue) => {
+    const layer = addedLayers[uniqueKey];
+    if (layer && mapRef.current?.hasLayer(layer)) {
+      layer.setOpacity(opacityValue);
+    }
+  },
   };
 
   // Toggle layer
   const toggleLayer = useCallback(
-    async (layerName, layerLabel) => {
-      try {
-        if (addedLayers[layerName]) {
-          // Remove the layer if it exists
-          await layerManager.removeLayer(layerName);
-          setAddedLayers((prev) => {
-            const { [layerName]: removedLayer, ...rest } = prev;
-            return rest;
-          });
-          setOpacity((prev) => {
-            const { [layerName]: removedOpacity, ...rest } = prev;
-            return rest;
-          });
-        } else {
-          // Add the new layer without affecting existing layers
-          const layer = await layerManager.addLayer(layerName, layerLabel);
-          if (!layer) throw new Error(`Failed to add layer: ${layerName}`);
-          
-          const layerOpacity = 0.7;
-          setAddedLayers((prev) => ({ ...prev, [layerName]: layer }));
-          setOpacity((prev) => ({ ...prev, [layerName]: layerOpacity }));
-          layer.setOpacity(layerOpacity);
-        }
-      } catch (err) {
-        console.error(`Layer toggle failed for ${layerName}:`, err);
-        setIsLayerLoading(false);
+  async (layerConfig, groupIndex, layerIndex) => {
+    const uniqueKey = `${layerConfig.Name}-${groupIndex}-${layerIndex}`;
+    
+    try {
+      if (addedLayers[uniqueKey]) {
+        // Remove the layer
+        await layerManager.removeLayer(layerConfig.Name);
+        setAddedLayers((prev) => {
+          const { [uniqueKey]: removedLayer, ...rest } = prev;
+          return rest;
+        });
+        setOpacity((prev) => {
+          const { [uniqueKey]: removedOpacity, ...rest } = prev;
+          return rest;
+        });
+      } else {
+        // Add the new layer
+        const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer);
+        if (!layer) throw new Error(`Failed to add layer: ${layerConfig.Name}`);
+        
+        const layerOpacity = 0.7;
+        setAddedLayers((prev) => ({ ...prev, [uniqueKey]: layer }));
+        setOpacity((prev) => ({ ...prev, [uniqueKey]: layerOpacity }));
+        layer.setOpacity(layerOpacity);
       }
-    },
-    [addedLayers, layerManager]
-  );
+    } catch (err) {
+      console.error(`Layer toggle failed for ${layerConfig.Name}:`, err);
+      setIsLayerLoading(false);
+    }
+  },
+  [addedLayers, layerManager]
+);
 
   // Toggle group
   const toggleGroup = useCallback((section, idx) => {
@@ -1204,13 +1239,18 @@ const fetchFeatureInfo = useCallback(async (layerName, latlng) => {
 
   // Handle opacity change
   const handleOpacityChange = useCallback(
-    (e, layerName) => {
-      const newOpacity = parseFloat(e.target.value);
-      setOpacity((prev) => ({ ...prev, [layerName]: newOpacity }));
-      layerManager.setLayerOpacity(layerName, newOpacity);
-    },
-    [layerManager]
-  );
+  (e, uniqueKey) => {
+    const newOpacity = parseFloat(e.target.value);
+    setOpacity((prev) => ({ ...prev, [uniqueKey]: newOpacity }));
+    
+    // Extract the actual layer name from the unique key
+    const layer = addedLayers[uniqueKey];
+    if (layer) {
+      layer.setOpacity(newOpacity);
+    }
+  },
+  [addedLayers]
+);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1229,84 +1269,82 @@ const fetchFeatureInfo = useCallback(async (layerName, latlng) => {
   }, [mapRef]);
 
   // LayerGroup component with UUID keys
- const LayerGroup = React.memo(
-    ({
-      group,
-      idx,
-      openGroups,
-      toggleGroup,
-      addedLayers,
-      toggleLayer,
-      opacity,
-      handleOpacityChange,
-      icon,
-      loadingLayers,
-      groupId,
-      section = "layers" // Add section prop
-    }) => {
-      const prefixedIdx = `${section}-${idx}`;
-      
-      return (
-        <div className="layer-group">
-          <button
-            type="button"
-            className="group-title"
-            onClick={() => toggleGroup(section, idx)}
-            aria-expanded={openGroups[prefixedIdx] ? "true" : "false"}
-          >
-            <span className="group-title-content">
-              {icon && <span style={{ marginRight: 8, fontSize: 18, color: "#0b9700" }}>{icon}</span>}
-              {group.title}
-            </span>
-            <span className="arrow-icon">
-              {openGroups[prefixedIdx] ? <FaChevronUp /> : <FaChevronDown />}
-            </span>
-          </button>
+ const LayerGroup = React.memo(({
+  group,
+  idx,
+  openGroups,
+  toggleGroup,
+  addedLayers,
+  toggleLayer,
+  opacity,
+  handleOpacityChange,
+  icon,
+  loadingLayers,
+  groupId,
+  section = "layers"
+}) => {
+  const prefixedIdx = `${section}-${idx}`;
+  
+  return (
+    <div className="layer-group">
+      <button
+        type="button"
+        className="group-title"
+        onClick={() => toggleGroup(section, idx)}
+        aria-expanded={openGroups[prefixedIdx] ? "true" : "false"}
+      >
+        <span className="group-title-content">
+          {icon && <span style={{ marginRight: 8, fontSize: 18, color: "#0b9700" }}>{icon}</span>}
+          {group.title}
+        </span>
+        <span className="arrow-icon">
+          {openGroups[prefixedIdx] ? <FaChevronUp /> : <FaChevronDown />}
+        </span>
+      </button>
 
-          <div className={`layer-list-wrapper ${openGroups[prefixedIdx] ? "expanded" : "collapsed"}`}>
-            {group.layerList.map((layer, index) => {
-              const layerName = getLayerName(layer);
-              const isChecked = !!addedLayers[layerName];
-              const layerId = layerIds[`${section}-${idx}-${layerName}`] || uuidv4();
+      <div className={`layer-list-wrapper ${openGroups[prefixedIdx] ? "expanded" : "collapsed"}`}>
+        {group.layerList.map((layer, layerIndex) => {
+          const uniqueKey = `${layer.Name}-${idx}-${layerIndex}`;
+          const isChecked = !!addedLayers[uniqueKey];
+          const layerId = layerIds[`${section}-${idx}-${uniqueKey}`] || uuidv4();
 
-              return (
-                <div key={layerId} className={`layer-item ${isChecked ? "active" : ""}`}>
-                  <label className="layer-label-container">
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => toggleLayer(layerName, layer.Layer)}
-                    />
-                    <span
-                      className={`layer-label ${isChecked ? "layer-label-bold" : ""}`}
-                    >
-                      {layer.Layer}
-                    </span>
-                  </label>
+          return (
+            <div key={layerId} className={`layer-item ${isChecked ? "active" : ""}`}>
+              <label className="layer-label-container">
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggleLayer(layer, idx, layerIndex)}
+                />
+                <span
+                  className={`layer-label ${isChecked ? "layer-label-bold" : ""}`}
+                >
+                  {layer.Layer}
+                </span>
+              </label>
 
-                  {isChecked && (
-                    <div className="opacity-control">
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value={opacity[layerName] ?? 0.7}
-                        onChange={(e) => handleOpacityChange(e, layerName)}
-                      />
-                      <span className="opacity-value">
-                        {Math.round((opacity[layerName] ?? 0.7) * 100)}%
-                      </span>
-                    </div>
-                  )}
+              {isChecked && (
+                <div className="opacity-control">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={opacity[uniqueKey] ?? 0.7}
+                    onChange={(e) => handleOpacityChange(e, uniqueKey)}
+                  />
+                  <span className="opacity-value">
+                    {Math.round((opacity[uniqueKey] ?? 0.7) * 100)}%
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    }
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
+});
 
   // Legend Component
   const LegendPanel = () => {
