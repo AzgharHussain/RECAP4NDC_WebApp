@@ -175,6 +175,54 @@ router.get('/patrol-info', async (req, res) => {
   }
 });
 
+router.get('/patrol-info-user/:user_id', async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    
+    const query = `
+      SELECT
+        p.*,
+        pt.type_name,
+        json_agg(
+          json_build_object(
+            'image_id', pi.image_id,
+            'image_data', pi.image_data,
+            'image_type', pi.image_type,
+            'image_category', pi.image_category,
+            'note', pi.note
+          )
+        ) AS images
+      FROM patrols p
+      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
+      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      WHERE p.user_id = $1
+      GROUP BY p.patrol_id, pt.type_name
+      ORDER BY p.patrol_id DESC;
+    `;
+
+    const result = await client.query(query, [user_id]);
+
+    const formattedData = result.rows.map(patrol => ({
+      ...patrol,
+      start_time: toUTC(patrol.start_time),
+      end_time: toUTC(patrol.end_time),
+      images: patrol.images.map(img => ({
+        ...img,
+        image_data: img.image_data || null
+      }))
+    }));
+
+    res.json({ 
+      message: 'Patrols fetched successfully for user', 
+      data: formattedData 
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patrols' });
+  }
+});
+
 
 router.get('/patrols/:patrol_id', async (req, res) => {
   const { patrol_id } = req.params;
