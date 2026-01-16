@@ -49,52 +49,79 @@ router.post('/patrol-post', upload.any(), async (req, res) => {
   }
 
   try {
+    // First check if user exists in government_department_users
+    const userCheckQuery = `
+      SELECT user_id FROM government_department_users 
+      WHERE user_id = $1
+    `;
+    
+    const userCheck = await client.query(userCheckQuery, [pat_data.user_id]);
+    
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found in government department users' });
+    }
+
     const startUTC = parseToUTC(pat_data.start_time);
     const endUTC = parseToUTC(pat_data.end_time);
 
-    const query1 = `
-      INSERT INTO patrols (
-        patrol_officer_name, start_time, end_time,
-        start_location, end_location, distance_kms, geom,
-        user_id, patrolling_type_id, number_of_staff
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING patrol_id;
-    `;
+    // Start a transaction
+    await client.query('BEGIN');
 
-    const result = await client.query(query1, [
-      pat_data.patrol_officer_name,
-      startUTC,   // Insert UTC
-      endUTC,     // Insert UTC
-      pat_data.start_location,
-      pat_data.end_location,
-      pat_data.distance_kms,
-      pat_data.geom,
-      pat_data.user_id,
-      pat_data.patrolling_type_id,
-      pat_data.number_of_staff
-    ]);
+    try {
+      const query1 = `
+        INSERT INTO patrols (
+          patrol_officer_name, start_time, end_time,
+          start_location, end_location, distance_kms, geom,
+          user_id, patrolling_type_id, number_of_staff
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING patrol_id;
+      `;
 
-    const patrol_id = result.rows[0].patrol_id;
+      const result = await client.query(query1, [
+        pat_data.patrol_officer_name,
+        startUTC,
+        endUTC,
+        pat_data.start_location,
+        pat_data.end_location,
+        pat_data.distance_kms,
+        pat_data.geom,
+        pat_data.user_id,
+        pat_data.patrolling_type_id,
+        pat_data.number_of_staff
+      ]);
 
-    // Insert images
-    for (let i = 0; i < req.files.length; i++) {
-      const file = req.files[i];
-      const base64Image = file.buffer.toString('base64');
+      const patrol_id = result.rows[0].patrol_id;
 
-      const imageCategory =
-        i === 0 ? 'start_image' :
-        i === 1 ? 'end_image' :
-        `image_${i - 1}`;
+      // Insert images if files are uploaded
+      if (req.files && req.files.length > 0) {
+        for (let i = 0; i < req.files.length; i++) {
+          const file = req.files[i];
+          const base64Image = file.buffer.toString('base64');
 
-      await client.query(
-        `INSERT INTO patrol_images (image_data, image_type, patrol_id, image_category)
-         VALUES ($1, $2, $3, $4)`,
-        [base64Image, file.mimetype, patrol_id, imageCategory]
-      );
+          const imageCategory =
+            i === 0 ? 'start_image' :
+            i === 1 ? 'end_image' :
+            `image_${i - 1}`;
+
+          await client.query(
+            `INSERT INTO patrol_images (image_data, image_type, patrol_id, image_category)
+             VALUES ($1, $2, $3, $4)`,
+            [base64Image, file.mimetype, patrol_id, imageCategory]
+          );
+        }
+      }
+
+      // Commit transaction
+      await client.query('COMMIT');
+      
+      res.json({ message: 'Data created successfully', patrol_id });
+
+    } catch (err) {
+      // Rollback transaction on error
+      await client.query('ROLLBACK');
+      throw err;
     }
-
-    res.json({ message: 'Data created successfully', patrol_id });
 
   } catch (err) {
     console.error(err);
