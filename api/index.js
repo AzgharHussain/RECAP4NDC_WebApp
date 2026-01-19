@@ -508,6 +508,32 @@ app.post("/login-eguj", async (req, res) => {
   }
 });
 
+app.get("/api/villages", async (req, res) => {
+  try {
+    const { name } = req.query;
+
+    if (!name) {
+      return res.status(400).json({ error: "name is required" });
+    }
+
+    const query = `
+      SELECT DISTINCT village_name, id
+      FROM public.coupe_village_master
+      WHERE coupe_name = '${name}'
+    `;
+
+    const result =  await sequelize.query(query, [name]);
+
+    res.json({
+      success: true,
+      data: result[0],
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // ===========================================================
 // 🚀 START SERVER 
 // ===========================================================
