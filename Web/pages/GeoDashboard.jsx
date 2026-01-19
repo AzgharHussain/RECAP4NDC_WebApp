@@ -43,6 +43,8 @@ const basemaps = {
   NationalGeo: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
   positron:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"
 };
+
+
 // Utility function to fetch legend for a WMS layer
 const getLegendUrl = (layerName) =>
   `https://www.gisfy.co.in:8443/geoserver/cite/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=${encodeURIComponent(
