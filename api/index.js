@@ -263,6 +263,231 @@ app.get('/api/patrols-by-user', async (req, res) => {
     res.status(500).json({ error: 'Error retrieving patrols' });
   }
 });
+const xml2js = require('xml2js');
+const parser = new xml2js.Parser();
+// const { sequelize } = require('../config/ndvidatabase');
+
+app.post("/login-eguj", async (req, res) => {
+  const { username, password } = req.body;
+
+  // Validate input
+  if (!username || !password) {
+    return res.status(400).json({ 
+      success: false, 
+      error: "Username and password are required" 
+    });
+  }
+
+  const soapXML = `<?xml version="1.0" encoding="utf-8"?>
+<soap12:Envelope
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+  <soap12:Body>
+    <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
+      <username>${username}</username>
+      <password>${password}</password>
+    </LOGIN_EGUJFOREST>
+  </soap12:Body>
+</soap12:Envelope>`;
+
+  try {
+    const response = await fetch(
+      "https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/soap+xml; charset=utf-8",
+          "SOAPAction": "http://tempuri.org/LOGIN_EGUJFOREST",
+        },
+        body: soapXML,
+      }
+    );
+
+    const text = await response.text();
+    
+    // Parse XML using xml2js
+    parser.parseString(text, (err, result) => {
+      if (err) {
+        console.error("XML Parsing Error:", err);
+        return res.status(500).json({
+          success: false,
+          error: "Failed to parse server response"
+        });
+      }
+      
+      // Check for SOAP fault
+      const faultstring = result['soap:Envelope']?.['soap:Body']?.[0]?.['soap:Fault']?.[0]?.faultstring?.[0] ||
+                         result['soap12:Envelope']?.['soap12:Body']?.[0]?.['soap12:Fault']?.[0]?.Reason?.[0]?.Text?.[0];
+      
+      if (faultstring) {
+        return res.status(401).json({
+          success: false,
+          error: faultstring
+        });
+      }
+      
+      // Extract the LOGIN_EGUJFORESTResult
+      const loginResult = result['soap:Envelope']?.['soap:Body']?.[0]?.['LOGIN_EGUJFORESTResponse']?.[0]?.['LOGIN_EGUJFORESTResult']?.[0] ||
+                         result['soap12:Envelope']?.['soap12:Body']?.[0]?.['LOGIN_EGUJFORESTResponse']?.[0]?.['LOGIN_EGUJFORESTResult']?.[0];
+      
+      if (!loginResult) {
+        return res.status(401).json({
+          success: false,
+          error: "Invalid server response format"
+        });
+      }
+      
+      // Get the diffgram data
+      const diffgram = loginResult['diffgr:diffgram']?.[0]?.DocumentElement?.[0];
+      if (!diffgram || !diffgram.Result) {
+        return res.status(401).json({
+          success: false,
+          error: "Invalid username or password"
+        });
+      }
+      
+      const resultData = diffgram.Result[0];
+      
+      // Check if NAME field exists and is not empty or dash
+      if (!resultData.NAME || !resultData.NAME[0] || 
+          resultData.NAME[0].trim() === "" || 
+          resultData.NAME[0].trim() === "-" ||
+          resultData.NAME[0].trim() === "NULL") {
+        return res.status(401).json({
+          success: false,
+          error: "Invalid username or password"
+        });
+      }
+      
+      // Also check if ALL fields are dashes (invalid login case)
+      const fieldsToCheck = ["NAME", "NameOfPost", "CadreName"];
+      const allInvalid = fieldsToCheck.every(field => {
+        const value = resultData[field]?.[0];
+        return !value || value.trim() === "" || value.trim() === "-" || value.trim() === "NULL";
+      });
+      
+      if (allInvalid) {
+        return res.status(401).json({
+          success: false,
+          error: "Invalid username or password"
+        });
+      }
+      
+      // Extract all user data
+      const userData = {};
+      const fields = ["NAME", "NameOfPost", "CadreName", "CircleName", "DivisionName", 
+                      "RangeName", "RoundName", "BeatName", "MobileNo", "EmailID"];
+      
+      fields.forEach(field => {
+        let value = resultData[field] ? resultData[field][0] : null;
+        // Convert dash to null for consistency
+        if (value === "-" || value === "NULL") {
+          value = null;
+        }
+        userData[field] = value;
+      });
+
+      // Function to save only username to database with auto-increment user_id
+      const saveUserToDatabase = async (username) => {
+        try {
+          // Create table if not exists with SERIAL user_id
+          await sequelize.query(`
+            CREATE TABLE IF NOT EXISTS government_department_users (
+              user_id SERIAL PRIMARY KEY,
+              username VARCHAR(100) UNIQUE NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+          `);
+
+          // Insert or ignore if username already exists and RETURNING user_id
+          const [result] = await sequelize.query(`
+            INSERT INTO government_department_users (username) 
+            VALUES ($1)
+            ON CONFLICT (username) 
+            DO UPDATE SET username = EXCLUDED.username
+            RETURNING user_id
+          `, {
+            bind: [username]
+          });
+
+          if (result && result.length > 0) {
+            const user_id = result[0].user_id;
+            console.log(`User saved/retrieved: ${username} with user_id: ${user_id}`);
+            return user_id;
+          } else {
+            // If no result (shouldn't happen with RETURNING), fetch existing user_id
+            const [existingUser] = await sequelize.query(`
+              SELECT user_id FROM government_department_users 
+              WHERE username = $1
+            `, {
+              bind: [username]
+            });
+            
+            if (existingUser && existingUser.length > 0) {
+              const user_id = existingUser[0].user_id;
+              console.log(`Existing user retrieved: ${username} with user_id: ${user_id}`);
+              return user_id;
+            }
+            
+            console.error(`Failed to retrieve user_id for: ${username}`);
+            return null;
+          }
+        } catch (dbError) {
+          console.error("Database Error:", dbError);
+          return null;
+        }
+      };
+
+      // Process login - save user and get user_id
+      const processLogin = async () => {
+        try {
+          // Save user to database and get user_id
+          const user_id = await saveUserToDatabase(username);
+          
+          if (!user_id) {
+            console.error("Failed to get user_id for user:", username);
+            // Still allow login even if DB fails, but with null user_id
+          }
+          
+          // Add user_id to userData
+          userData.user_id = user_id;
+          userData.username = username; // Also include username in userData
+          
+          // Return successful response with user_id
+          res.json({
+            success: true,
+            user: userData,
+            message: "Login successful"
+          });
+        } catch (processError) {
+          console.error("Login processing error:", processError);
+          
+          // Even if DB fails, allow login with null user_id
+          userData.user_id = null;
+          userData.username = username;
+          
+          res.json({
+            success: true,
+            user: userData,
+            message: "Login successful (database operation failed)"
+          });
+        }
+      };
+
+      // Start the login processing
+      processLogin();
+    });
+    
+  } catch (error) {
+    console.error("SOAP Request Error:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to process login request",
+      details: error.message 
+    });
+  }
+});
 
 
 

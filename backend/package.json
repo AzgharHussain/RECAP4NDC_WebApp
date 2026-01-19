@@ -10,7 +10,10 @@
   "license": "ISC",
   "dependencies": {
     "@google/earthengine": "^1.6.4",
+    "axios": "^1.13.2",
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "fast-xml-parser": "^5.3.3"
   }
 }

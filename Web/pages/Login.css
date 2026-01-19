@@ -1,0 +1,31 @@
+/* Remove default body margins and scroll */
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Ensure all child elements respect container boundaries */
+* {
+  box-sizing: border-box;
+}
+
+/* Make form card responsive within viewport */
+.form-card {
+  max-width: 400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Media query for smaller screens */
+@media (max-width: 768px) {
+  .login-screen {
+    padding: 0 20px !important;
+    flex-direction: column;
+  }
+  
+  .form-card {
+    max-width: 300px;
+  }
+}
