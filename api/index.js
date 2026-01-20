@@ -629,7 +629,7 @@ app.post("/login-eguj", async (req, res) => {
           "User-Agent": "Mozilla/5.0",
           Accept: "*/*",
         },
-        timeout: 15000,
+        timeout: 30000,
       }
     );
 
