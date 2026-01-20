@@ -582,226 +582,246 @@ app.use('/api', beat_patrol_coverage);
 /* =========================================================
    🔐 LOGIN API (PRODUCTION SAFE)
 ========================================================= */
-const axios = require('axios');
 const xml2js = require('xml2js');
-// Configure parser to handle namespaces properly
+
+// Polyfill fetch for older Node.js versions
+let fetch;
+if (globalThis.fetch) {
+  // Use native fetch if available (Node.js 18+)
+  fetch = globalThis.fetch;
+} else {
+  // Fall back to node-fetch for older versions
+  fetch = require('node-fetch');
+}
+
+// Configure parser
 const parser = new xml2js.Parser({
   explicitArray: false,
   ignoreAttrs: true,
   tagNameProcessors: [xml2js.processors.stripPrefix]
 });
 
+// XML escaping function
+function escapeXml(unsafe) {
+  if (typeof unsafe !== 'string') return unsafe;
+  return unsafe.replace(/[<>&'"]/g, function (c) {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+      default: return c;
+    }
+  });
+}
+
 app.post("/login-eguj", async (req, res) => {
   const { username, password } = req.body;
- 
-  /* --------- Input validation --------- */
+
+  // Input validation
   if (!username || !password) {
     return res.status(400).json({
       success: false,
       error: "Username and password are required",
     });
   }
- 
+
   console.log('✅ Login request:', username);
- 
-  /* --------- SOAP XML --------- */
+
+  // SOAP XML
   const soapXML = `<?xml version="1.0" encoding="utf-8"?>
 <soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                   xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-                   xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+                 xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                 xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
 <soap12:Body>
 <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
-<username>${username}</username>
-<password>${password}</password>
+<username>${escapeXml(username)}</username>
+<password>${escapeXml(password)}</password>
 </LOGIN_EGUJFOREST>
 </soap12:Body>
 </soap12:Envelope>`;
- 
+
   try {
-    /* --------- SOAP CALL --------- */
-    const response = await axios.post(
+    console.log('📤 Making SOAP request...');
+    
+    // Set up timeout
+    const timeout = 30000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    const response = await fetch(
       "https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx",
-      soapXML,
       {
+        method: "POST",
         headers: {
           "Content-Type": "application/soap+xml; charset=utf-8",
           SOAPAction: "http://tempuri.org/LOGIN_EGUJFOREST",
-          "User-Agent": "Mozilla/5.0",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           Accept: "*/*",
+          "Accept-Encoding": "gzip, deflate, br",
         },
-        timeout: 30000,
+        body: soapXML,
+        signal: controller.signal,
+        // For node-fetch v2, compression might need separate handling
+        compress: true,
       }
     );
 
-    // Debug: Log raw response for debugging
-    console.log('🔍 Raw response received');
- 
-    /* --------- Parse XML --------- */
-    const parsed = await parser.parseStringPromise(response.data);
+    clearTimeout(timeoutId);
+
+    // Check response status
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ HTTP ${response.status}: ${errorText.substring(0, 200)}`);
+      
+      return res.status(502).json({
+        success: false,
+        error: `Government service error (${response.status})`,
+      });
+    }
+
+    // Get response text
+    const responseText = await response.text();
+    console.log('🔍 Response received, length:', responseText.length);
+
+    // Parse XML
+    const parsed = await parser.parseStringPromise(responseText);
     
-    // Debug: Log the parsed structure (truncated)
-    console.log('🔍 Parsed structure keys:', Object.keys(parsed));
-    
-    /* --------- Check for SOAP Fault --------- */
+    // Check for SOAP fault
     const fault = parsed.Envelope?.Body?.Fault;
     if (fault) {
       const faultMsg = fault.Reason?.Text || fault.faultstring || "Authentication failed";
-      console.error("❌ SOAP FAULT:", faultMsg);
+      console.error("❌ SOAP Fault:", faultMsg);
       return res.status(401).json({
         success: false,
         error: faultMsg,
       });
     }
- 
-    /* --------- Extract login result --------- */
-    // The response structure is: Envelope -> Body -> LOGIN_EGUJFORESTResponse -> LOGIN_EGUJFORESTResult
+
+    // Extract login result
     const loginResponse = parsed.Envelope?.Body?.LOGIN_EGUJFORESTResponse;
-    
     if (!loginResponse) {
-      console.error("❌ No LOGIN_EGUJFORESTResponse in SOAP response");
+      console.error("❌ Invalid response structure");
       return res.status(500).json({
         success: false,
         error: "Invalid server response format",
       });
     }
-    
+
     const loginResult = loginResponse.LOGIN_EGUJFORESTResult;
-    
-    console.log('🔍 Login result type:', typeof loginResult);
-    
     if (!loginResult) {
-      console.error("❌ No LOGIN_EGUJFORESTResult in response");
       return res.status(401).json({
         success: false,
-        error: "Authentication failed - no result returned",
+        error: "Authentication failed",
       });
     }
- 
-    /* --------- Extract diffgram --------- */
-    // The diffgram is in the LOGIN_EGUJFORESTResult
+
+    // Extract user data
     const diffgram = loginResult.diffgram?.DocumentElement?.Result;
-    
     if (!diffgram) {
-      // Check if loginResult is actually a string containing the diffgram
+      // Try parsing as nested XML string
       if (typeof loginResult === 'string') {
-        console.log('🔍 Login result is string, trying to parse...');
         try {
           const innerParsed = await parser.parseStringPromise(loginResult);
           const innerDiffgram = innerParsed.diffgram?.DocumentElement?.Result;
           if (innerDiffgram) {
             return handleSuccessfulLogin(innerDiffgram, username, res);
           }
-        } catch (e) {
-          console.error('❌ Failed to parse inner XML:', e.message);
+        } catch (parseError) {
+          console.error('❌ Parse error:', parseError.message);
         }
       }
-      
-      console.error("❌ No user data found in response");
       return res.status(401).json({
         success: false,
-        error: "Invalid username or password",
+        error: "Invalid credentials",
       });
     }
- 
-    /* --------- Process successful login --------- */
+
+    // Process successful login
     return handleSuccessfulLogin(diffgram, username, res);
- 
+
   } catch (error) {
-    console.error("❌ LOGIN ERROR:", {
-      message: error.message,
-      code: error.code,
-      stack: error.stack,
-    });
-    
-    if (error.code === 'ECONNABORTED') {
+    console.error("❌ Error:", error.name || error.code, error.message);
+
+    // Handle specific errors
+    if (error.name === 'AbortError') {
       return res.status(504).json({
         success: false,
-        error: "Government service timeout. Please try again.",
+        error: "Request timeout - service is slow to respond",
       });
     }
-    
-    if (error.response) {
-      console.error("❌ SOAP Response status:", error.response.status);
-      console.error("❌ SOAP Response data:", error.response.data?.substring(0, 500));
+
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+      return res.status(502).json({
+        success: false,
+        error: "Cannot connect to government service",
+      });
     }
- 
+
     return res.status(500).json({
       success: false,
-      error: "Government service unreachable. Please try again later.",
+      error: "Service temporarily unavailable",
     });
   }
 });
 
-/* --------- Helper function for successful login --------- */
+// handleSuccessfulLogin function remains the same
 async function handleSuccessfulLogin(diffgram, username, res) {
   try {
-    /* --------- Validate login --------- */
     const invalidValues = ["", "-", "NULL", null, undefined];
     
     if (!diffgram.NAME || invalidValues.includes(diffgram.NAME.trim())) {
       return res.status(401).json({
         success: false,
-        error: "Invalid username or password",
+        error: "Invalid credentials",
       });
     }
- 
-    /* --------- Extract user data --------- */
+
     const fields = [
-      "NAME",
-      "NameOfPost",
-      "CadreName",
-      "CircleName",
-      "DivisionName",
-      "RangeName",
-      "RoundName",
-      "BeatName",
-      "MobileNo",
-      "EmailID",
+      "NAME", "NameOfPost", "CadreName", "CircleName", 
+      "DivisionName", "RangeName", "RoundName", "BeatName", 
+      "MobileNo", "EmailID"
     ];
- 
+
     const userData = {};
-    fields.forEach((f) => {
-      let value = diffgram[f];
+    fields.forEach(f => {
+      const value = diffgram[f];
       userData[f] = invalidValues.includes(value) ? null : value;
     });
- 
-    console.log('✅ User data extracted:', userData.NAME);
- 
-    /* --------- Save user to database --------- */
+
+    console.log('✅ Login successful for:', userData.NAME);
+
+    // Database operations...
     let user_id = null;
     try {
       const [result] = await sequelize.query(
-        `
-        INSERT INTO government_department_users (username)
-        VALUES ($1)
-        ON CONFLICT (username)
-        DO UPDATE SET username = EXCLUDED.username
-        RETURNING user_id
-        `,
+        `INSERT INTO government_department_users (username)
+         VALUES ($1)
+         ON CONFLICT (username)
+         DO UPDATE SET username = EXCLUDED.username
+         RETURNING user_id`,
         { bind: [username] }
       );
- 
       user_id = result?.[0]?.user_id || null;
-    } catch (dbErr) {
-      console.error("❌ DB ERROR:", dbErr.message);
-      // Continue even if DB fails - we still have the user data from SOAP
+    } catch (dbError) {
+      console.error("❌ Database error:", dbError.message);
     }
- 
+
     userData.user_id = user_id;
     userData.username = username;
- 
-    /* --------- SUCCESS --------- */
+
     return res.json({
       success: true,
       message: "Login successful",
       user: userData,
     });
-    
+
   } catch (error) {
-    console.error("❌ Error in handleSuccessfulLogin:", error.message);
+    console.error("❌ Processing error:", error.message);
     return res.status(500).json({
       success: false,
-      error: "Error processing user data",
+      error: "Error processing login",
     });
   }
 }
