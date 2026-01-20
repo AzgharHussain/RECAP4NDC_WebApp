@@ -30,7 +30,7 @@ try {
 // 2. Postgres Connection
 // ----------------------------------------------------
 const client = new Client({
-  host: '68.178.167.39',
+  host: '68.178.167.216',
   user: 'postgres',
   password: 'P$DB@25%$#!09',
   port: 5432,

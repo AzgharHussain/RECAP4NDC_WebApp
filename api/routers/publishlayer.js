@@ -9,7 +9,7 @@ const router = express.Router();
 // ========== CONFIGURATION ==========
 const pgConfig = {
   user: "postgres",
-  host: "68.178.167.39",
+  host: "68.178.167.216",
   database: "Recap4NDC",
   password: "DB@$ecure#25",
   port: 5432,
@@ -111,7 +111,7 @@ async function styleLayerInQGIS(viewName) {
   return new Promise((resolve, reject) => {
     const qgisScript = `
       from qgis.core import QgsProject, QgsVectorLayer, QgsLineSymbol, QgsRuleBasedRenderer
-      uri = "dbname='Recap4NDC' host=68.178.167.39 port=5432 user='postgres' password='DB@$ecure#25' key='global_id' table=\\"public\\".\\"${viewName}\\" (geom) sql="
+      uri = "dbname='Recap4NDC' host=68.178.167.216 port=5432 user='postgres' password='DB@$ecure#25' key='global_id' table=\\"public\\".\\"${viewName}\\" (geom) sql="
       layer = QgsVectorLayer(uri, "${viewName}_layer", "postgres")
       if not layer.isValid():
           print("Layer failed to load!")

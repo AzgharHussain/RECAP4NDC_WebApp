@@ -37,7 +37,7 @@ const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 //   'postgres', // Username
 //   'DB@$ecure#25', // Password
 //   {
-//     host: '68.178.167.39',
+//     host: '68.178.167.216',
 //     dialect: 'postgres',
 //     logging: console.log, // Enable logging to see SQL queries
 //     dialectOptions: {

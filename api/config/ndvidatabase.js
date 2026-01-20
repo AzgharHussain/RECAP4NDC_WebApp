@@ -4,7 +4,7 @@ const { Sequelize } = require('sequelize');
 const DB_NAME = 'Recap4NDC_new';
 const DB_USER = 'postgres';
 const DB_PASS = 'P$DB@25%$#!09';
-const DB_HOST = '68.178.167.39';
+const DB_HOST = '68.178.167.216';
 const DB_PORT =  5432;
 
 

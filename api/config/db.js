@@ -5,7 +5,7 @@ const sequelize = new Sequelize(
   'postgres', // Username
   'P$DB@25%$#!09', // Password
   {
-    host: '68.178.167.39',
+    host: '68.178.167.216',
     dialect: 'postgres',
     logging: console.log,
     dialectOptions: {
