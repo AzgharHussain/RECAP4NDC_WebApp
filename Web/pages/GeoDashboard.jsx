@@ -103,7 +103,7 @@ const changeLayers = [
 ];
   const fetchCoupeLayers = async () => {
     try {
-      const response = await axios.get("http://68.178.167.39:5000/api/coupe_metadata/location");
+      const response = await axios.get("http://68.178.167.216:5000/api/coupe_metadata/location");
       setCoupeLayers(response.data || []);
     } catch (error) {
       console.error("Error fetching coupe layers:", error);
@@ -115,7 +115,7 @@ const changeLayers = [
   }, []);
   useEffect(() => {
     if (showIncidentLayer) {
-      fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
+      fetch("http://68.178.167.216:5000/api/incidents-with-images?user_id=2")
         .then((res) => res.json())
         .then((data) => setIncidentsData(data))
         .catch((err) => console.error("Error fetching incidents", err));
@@ -566,7 +566,7 @@ const handleToolSidebarClick = (toolName) => {
       return;
     }
 
-    const response = await axios.get(`http://68.178.167.39:5000/api/tnc-users/${id}`, {
+    const response = await axios.get(`http://68.178.167.216:5000/api/tnc-users/${id}`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -773,7 +773,7 @@ const handleToolSidebarClick = (toolName) => {
 
               <WMSTileLayer
                 key="gujarat-difference"
-                url="http://68.178.167.39:8081/geoserver/cite/wms"
+                url="http://68.178.167.216:8081/geoserver/cite/wms"
                 layers="cite:Gujarat_difference"
                 format="image/png"
                 transparent={true}
@@ -783,7 +783,7 @@ const handleToolSidebarClick = (toolName) => {
 
               <WMSTileLayer
                 key="Gujarat_State"
-                url="http://68.178.167.39:8081/geoserver/cite/wms"
+                url="http://68.178.167.216:8081/geoserver/cite/wms"
                 layers="cite:Gujarat_State"
                 format="image/png"
                 transparent={true}
@@ -793,7 +793,7 @@ const handleToolSidebarClick = (toolName) => {
 
               <WMSTileLayer
                 key="tblIndia"
-                url="http://68.178.167.39:8081/geoserver/cite/wms"
+                url="http://68.178.167.216:8081/geoserver/cite/wms"
                 layers="cite:tblIndia"
                 format="image/png"
                 transparent={true}

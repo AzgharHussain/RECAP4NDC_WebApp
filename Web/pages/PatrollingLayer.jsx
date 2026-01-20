@@ -29,7 +29,7 @@ export default function PatrollingLayer({ show }) {
 
   useEffect(() => {
     if (show) {
-      fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=1")
+      fetch("http://68.178.167.216:5000/api/patrols-by-user?user_id=1")
         .then((res) => res.json())
         .then((data) => setPatrols(data))
         .catch((err) => console.error("Error fetching patrol data", err));

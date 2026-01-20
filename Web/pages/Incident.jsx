@@ -65,7 +65,7 @@ const PatrolIncidentLogs = () => {
   const fetchIncidentData = async () => {
     try {
       const response = await fetch(
-        "http://68.178.167.39:5000/api/incidents-with-images?user_id=1"
+        "http://68.178.167.216:5000/api/incidents-with-images?user_id=1"
       );
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();

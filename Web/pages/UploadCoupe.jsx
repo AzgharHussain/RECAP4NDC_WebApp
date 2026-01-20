@@ -115,7 +115,7 @@ const UploadCoupe = () => {
       fd.append("shapefile", file);
       fd.append("coupeName", coupeName);
 
-      const res = await fetch("http://68.178.167.39:6000/uploadShapefile", {
+      const res = await fetch("http://68.178.167.216:6000/uploadShapefile", {
         method: "POST",
         body: fd,
       });

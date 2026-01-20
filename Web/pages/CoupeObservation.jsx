@@ -72,7 +72,7 @@ const CoupeObservation = () => {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          "http://68.178.167.39:5000/api/coupe/log-with-images?user_id=2"
+          "http://68.178.167.216:5000/api/coupe/log-with-images?user_id=2"
         );
         const result = await response.json();
         if (result && Array.isArray(result)) {

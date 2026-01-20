@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-export const API_BASE_URL = "http://68.178.167.39:5002";
+export const API_BASE_URL = "http://68.178.167.216:5002";
 
 const MyCoups_dropdown = () => {
   const [forestTypes, setForestTypes] = useState([]);
