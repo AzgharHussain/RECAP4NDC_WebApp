@@ -186,18 +186,24 @@ const layersData = {
       title: "Wildlife Forest",
       type: "nested",
       children: [
-        {
-          title: "Wildlife Boundaries",
-          type: "group",
-          children: [
-            { Name: "Wildlife_Circle_Boundary", Layer: "Wildlife Circle" },
-            { Name: "Wildlife_Circle_Division_Boundary", Layer: "Wildlife Circle Division" },
-            { Name: "Wildlife_Circle_Range_Boundary", Layer: "Wildlife Circle Range" },
-            { Name: "Wildlife_Circle_Round_Boundary", Layer: "Wildlife Circle Round" },
-            { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat" },
-            { Name: "Wildlife_Circle_Village_Boundary", Layer: "Wildlife Circle Village" }
-          ]
-        },
+        { Name: "Wildlife_Circle_Boundary", Layer: "Wildlife Circle" },
+            { Name: "Wildlife_Circle_Division_Boundary", Layer: "Wildlife Division" },
+            { Name: "Wildlife_Circle_Range_Boundary", Layer: "Wildlife Range" },
+            // { Name: "Wildlife_Circle_Round_Boundary", Layer: "Wildlife Circle Round" },
+            // { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat" },
+            // { Name: "Wildlife_Circle_Village_Boundary", Layer: "Wildlife Circle Village" },
+        // {
+        //   title: "Wildlife Boundaries",
+        //   type: "group",
+        //   children: [
+        //     { Name: "Wildlife_Circle_Boundary", Layer: "Wildlife Circle" },
+        //     { Name: "Wildlife_Circle_Division_Boundary", Layer: "Wildlife Circle Division" },
+        //     { Name: "Wildlife_Circle_Range_Boundary", Layer: "Wildlife Circle Range" },
+        //     { Name: "Wildlife_Circle_Round_Boundary", Layer: "Wildlife Circle Round" },
+        //     { Name: "Wildlife_Circle_Beat_Boundary", Layer: "Wildlife Circle Beat" },
+        //     { Name: "Wildlife_Circle_Village_Boundary", Layer: "Wildlife Circle Village" }
+        //   ]
+        // },
         {
           title: "Gandhinagar Wildlife Circle",
           type: "group",
@@ -395,17 +401,19 @@ const layersData = {
       title: "Social Forestry",
       type: "nested",
       children: [
-        {
-          title: "Social Forestry Boundaries",
-          type: "group",
-          children: [
             { Name: "Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle" },
             { Name: "Social_Forestry_Range_Boundary", Layer: "Social Forestry Range" },
-            { Name: "Social_Forestry_Round_Boundary", Layer: "Social Forestry Round" },
-            { Name: "Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat" },
-            { Name: "Social_Forestry_Village_Boundary", Layer: "Social Forestry Village" }
-          ]
-        },
+        // {
+        //   title: "Social Forestry Boundaries",
+        //   type: "group",
+        //   children: [
+        //     { Name: "Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle" },
+        //     { Name: "Social_Forestry_Range_Boundary", Layer: "Social Forestry Range" },
+        //     { Name: "Social_Forestry_Round_Boundary", Layer: "Social Forestry Round" },
+        //     { Name: "Social_Forestry_Beat_Boundary", Layer: "Social Forestry Beat" },
+        //     { Name: "Social_Forestry_Village_Boundary", Layer: "Social Forestry Village" }
+        //   ]
+        // },
         {
           title: "Bharuch Social Forestry Circle",
           type: "group",
@@ -885,17 +893,19 @@ const layersData = {
       title: "Territorial Forest",
       type: "nested",
       children: [
-        {
-          title: "Territorial Boundaries",
-          type: "group",
-          children: [
             { Name: "Teritorial_Circle_Division_Boundary", Layer: "Territorial Circle Division" },
             { Name: "Teritorial_Circle_Range_Boundary", Layer: "Territorial Circle Range" },
-            { Name: "Teritorial_Circle_Round_Boundary", Layer: "Territorial Circle Round" },
-            { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
-            { Name: "Teritorial_Circle_Village_Boundary", Layer: "Territorial Circle Village" }
-          ]
-        },
+        // {
+        //   title: "Territorial Boundaries",
+        //   type: "group",
+        //   children: [
+        //     { Name: "Teritorial_Circle_Division_Boundary", Layer: "Territorial Circle Division" },
+        //     { Name: "Teritorial_Circle_Range_Boundary", Layer: "Territorial Circle Range" },
+        //     { Name: "Teritorial_Circle_Round_Boundary", Layer: "Territorial Circle Round" },
+        //     { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
+        //     { Name: "Teritorial_Circle_Village_Boundary", Layer: "Territorial Circle Village" }
+        //   ]
+        // },
         {
           title: "Gandhinagar Circle",
           type: "group",
