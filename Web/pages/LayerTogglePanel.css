@@ -8,6 +8,7 @@
 
   scrollbar-width: none; /* For Firefox */
   -ms-overflow-style: none; /* For Internet Explorer and Edge */
+  max-height: 50000px;
 }
 
 .map-loader {
@@ -186,6 +187,10 @@
 
 .layer-list-wrapper.expanded {
   max-height: 5000px; /* Adjust based on your content */
+}
+
+.nested-group-content.expanded {
+  max-height: 5000px; /* Add this */
 }
 
 .layer-item {
@@ -937,4 +942,13 @@ input[type="checkbox"]:focus {
   background: linear-gradient(135deg, #f8fff8, #e8f5e8);
   color: rgb(11, 151, 0);
   border-radius: 8px;
+}
+
+.nested-layer-group {
+  margin-bottom: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  /* REMOVE THIS LINE: max-height: 50000px; */
 }

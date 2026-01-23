@@ -99,6 +99,8 @@ const LAYER_CONFIG = {
     {
       title: "Territorial Circle ",
       layerList: [
+                { Name: "valsad", Layer: "valsad" },
+
         { Name: "Teritorial_Circle_Beat_Boundary", Layer: "Territorial Circle Beat" },
         { Name: "Teritorial_Circle_Division_Boundary", Layer: "Territorial Circle Division" },
         { Name: "Teritorial_Circle_Range_Boundary", Layer: "Territorial Circle Range" },

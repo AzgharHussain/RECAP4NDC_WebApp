@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../App.css";
 import { useLanguage } from "../context/LanguageContext";
 import "./Login.css";
-
+import { API_BASE_URL } from "../config";
 // === Images ===
 import brand from "../assets/logo-giz.png";
 import backImage from "../assets/backimage.jpg";
@@ -58,7 +58,7 @@ function Login() {
     setLoading(true);
     
     try {
-      const res = await fetch("http://localhost:5002/login-eguj", {
+      const res = await fetch(`${API_BASE_URL}/login-eguj`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

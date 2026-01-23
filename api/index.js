@@ -583,16 +583,8 @@ app.use('/api', beat_patrol_coverage);
    🔐 LOGIN API (PRODUCTION SAFE)
 ========================================================= */
 const xml2js = require('xml2js');
-
-// Polyfill fetch for older Node.js versions
-let fetch;
-if (globalThis.fetch) {
-  // Use native fetch if available (Node.js 18+)
-  fetch = globalThis.fetch;
-} else {
-  // Fall back to node-fetch for older versions
-  fetch = require('node-fetch');
-}
+const axios = require('axios');
+const https = require('https');
 
 // Configure parser
 const parser = new xml2js.Parser({
@@ -601,7 +593,7 @@ const parser = new xml2js.Parser({
   tagNameProcessors: [xml2js.processors.stripPrefix]
 });
 
-// XML escaping function
+// XML escaping function (same as before)
 function escapeXml(unsafe) {
   if (typeof unsafe !== 'string') return unsafe;
   return unsafe.replace(/[<>&'"]/g, function (c) {
@@ -645,15 +637,15 @@ app.post("/login-eguj", async (req, res) => {
   try {
     console.log('📤 Making SOAP request...');
     
-    // Set up timeout
-    const timeout = 30000;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    // Set up timeout and agent to ignore SSL errors (for testing only)
+    const agent = new https.Agent({
+      rejectUnauthorized: false // This will ignore SSL errors
+    });
 
-    const response = await fetch(
+    const response = await axios.post(
       "https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx",
+      soapXML,
       {
-        method: "POST",
         headers: {
           "Content-Type": "application/soap+xml; charset=utf-8",
           SOAPAction: "http://tempuri.org/LOGIN_EGUJFOREST",
@@ -661,19 +653,14 @@ app.post("/login-eguj", async (req, res) => {
           Accept: "*/*",
           "Accept-Encoding": "gzip, deflate, br",
         },
-        body: soapXML,
-        signal: controller.signal,
-        // For node-fetch v2, compression might need separate handling
-        compress: true,
+        httpsAgent: agent,
+        timeout: 30000,
       }
     );
 
-    clearTimeout(timeoutId);
-
     // Check response status
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ HTTP ${response.status}: ${errorText.substring(0, 200)}`);
+    if (response.status !== 200) {
+      console.error(`❌ HTTP ${response.status}: ${response.data.substring(0, 200)}`);
       
       return res.status(502).json({
         success: false,
@@ -682,7 +669,7 @@ app.post("/login-eguj", async (req, res) => {
     }
 
     // Get response text
-    const responseText = await response.text();
+    const responseText = response.data;
     console.log('🔍 Response received, length:', responseText.length);
 
     // Parse XML
@@ -742,10 +729,11 @@ app.post("/login-eguj", async (req, res) => {
     return handleSuccessfulLogin(diffgram, username, res);
 
   } catch (error) {
-    console.error("❌ Error:", error.name || error.code, error.message);
+    console.error("❌ Error:", error.message);
+    console.error("❌ Error details:", error);
 
     // Handle specific errors
-    if (error.name === 'AbortError') {
+    if (error.code === 'ECONNABORTED') {
       return res.status(504).json({
         success: false,
         error: "Request timeout - service is slow to respond",
@@ -756,6 +744,15 @@ app.post("/login-eguj", async (req, res) => {
       return res.status(502).json({
         success: false,
         error: "Cannot connect to government service",
+      });
+    }
+
+    // If there's a response in the error, it might be an HTTP error
+    if (error.response) {
+      console.error(`❌ HTTP ${error.response.status}: ${error.response.data.substring(0, 200)}`);
+      return res.status(502).json({
+        success: false,
+        error: `Government service error (${error.response.status})`,
       });
     }
 
