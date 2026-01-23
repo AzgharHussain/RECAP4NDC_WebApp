@@ -782,14 +782,14 @@ const handleToolSidebarClick = (toolName) => {
               />
 
               <WMSTileLayer
-                key="state_shp"
+                key="Gujarat_State"
                 url="http://68.178.167.216:8081/geoserver/cite/wms"
-                layers="state_shp"
+                layers="Recap4NDC:state_shp"
                 format="image/png"
                 transparent={true}
                 version="1.1.0"
                 opacity={1}
-              />	
+              />
 
               <WMSTileLayer
                 key="tblIndia"
