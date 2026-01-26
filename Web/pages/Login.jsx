@@ -187,7 +187,7 @@ const saveUser = async (username) => {
     const { token, user } = response.data;
 
     if (token) {
-      localStorage.setItem("authToken", token);
+      localStorage.setItem("Token", token);
       localStorage.setItem("user", JSON.stringify(user));
       console.log("🔐 JWT saved to localStorage");
     }
