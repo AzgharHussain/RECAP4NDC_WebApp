@@ -1375,7 +1375,29 @@ const layersData = {
           ]
         }
       ]
-    }
+    },
+    {
+  title: "Coupe Boundaries",
+  type: "flat",
+  children: [
+    { Name: "baria_coupe", Layer: "Baria_Coupe" },
+    { Name: "bharuch_coupe", Layer: "Bharuch_Coupe" },
+    { Name: "godhara_coupe", Layer: "Godhara_Coupe" },
+    { Name: "junagadh_coupe", Layer: "Junagadh_Coupe" },
+    { Name: "surat_coupe", Layer: "Surat_Coupe" },
+    { Name: "vyara_coupe", Layer: "Vyara_Coupe" },
+    { Name: "banaskantha_coupe", Layer: "Banaskantha_Coupe" },
+    { Name: "bhavnagar_coupe", Layer: "Bhavnagar_Coupe" },
+    { Name: "chhotaudepur_coupe_main", Layer: "chhotaudepur_coupe" },
+    { Name: "gandhinagar_coupe", Layer: "Gandhinagar_Coupe" },
+    { Name: "jamnagar_coupe", Layer: "Jamnagar_Coupe" },
+    { Name: "morbi_coupe", Layer: "Morbi_Coupe" },
+    { Name: "narmada_coupe", Layer: "Narmada_Coupe" },
+    { Name: "sabarkantha_coupe_", Layer: "Sabarkantha_Coupe" },
+    { Name: "sabarkantha_south_coupe", Layer: "Sabarkantha_South_Coupe" },
+    { Name: "surendranagar_coupe_main", Layer: "Surendranagar_Coupe" },
+  ]
+}
   ]
 };
 
@@ -1963,7 +1985,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
           {layersData.groups.map((group, idx) => renderGroup(group, idx, "layers"))}
         </div>
         
-        <div className="coupeboundary" onClick={() => setIsCoupesDataOpen(!isCoupesDataOpen)}>
+        {/* <div className="coupeboundary" onClick={() => setIsCoupesDataOpen(!isCoupesDataOpen)}>
           <h3 style={{ cursor: 'pointer', fontSize: "14px", marginLeft: "10px" }}>
             <MdForest style={{ marginLeft: "8px", fontSize: "17px" }} />
             <span style={{ marginLeft: "8px" }}>{text[language].coupesData}</span>
@@ -1971,7 +1993,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
           <span style={{ cursor: 'pointer', marginRight: "15px" }}>
             {isCoupesDataOpen ? '▼' : '▶'}
           </span>
-        </div>
+        </div> */}
       
         {isCoupesDataOpen && (
           <div className="layer-groups-container">

@@ -782,8 +782,8 @@ const handleToolSidebarClick = (toolName) => {
               />
 
               <WMSTileLayer
-                key="Gujarat_State"
-                url="http://68.178.167.216:8081/geoserver/cite/wms"
+                key="state_shp"
+                url="http://68.178.167.216:8081/geoserver/Recap4NDC/wms"
                 layers="Recap4NDC:state_shp"
                 format="image/png"
                 transparent={true}
@@ -791,15 +791,17 @@ const handleToolSidebarClick = (toolName) => {
                 opacity={1}
               />
 
+
               <WMSTileLayer
                 key="tblIndia"
-                url="http://68.178.167.216:8081/geoserver/cite/wms"
-                layers="cite:tblIndia"
+                url="http://68.178.167.216:8081/geoserver/Recap4NDC/wms"
+                layers="Recap4NDC:tblIndia"
                 format="image/png"
                 transparent={true}
-                version="1.1.0"
+                version="1.1.1"
                 opacity={1}
               />
+
 
               {showDistrictLayer && (
                 <WMSTileLayer

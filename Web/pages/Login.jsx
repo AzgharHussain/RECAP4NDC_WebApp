@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import "../App.css";
 import { useLanguage } from "../context/LanguageContext";
 import "./Login.css";
+import axios from "axios";
+import { API_BASE_URL } from '../config';
 
 // === Images ===
 import brand from "../assets/logo-giz.png";
@@ -36,11 +38,13 @@ function Login() {
       loginButton: "Login",
       footer: "2025 © All Rights Reserved By | RECAP4NDC",
       errorRequired: "Please enter both User ID and Password",
-      errorInvalid: "Invalid credentials. Please try again.",
+      errorInvalid: "Invalid credentials. Please check your User ID and Password",
+      errorUserNotFound: "User not found in the system",
       errorNetwork: "Network error. Please check your connection.",
       errorServer: "Server error. Please try again later.",
       loggingIn: "Logging in...",
-      timeout: "Request timeout. Please try again."
+      timeout: "Request timeout. Please try again.",
+      errorCORS: "CORS error. Please contact administrator."
     },
     gu: {
       title: "લૉગિન",
@@ -51,283 +55,319 @@ function Login() {
       loginButton: "લૉગિન કરો",
       footer: "૨૦૨૫ © સર્વ અધિકારો સુરક્ષિત | RECAP4NDC",
       errorRequired: "કૃપા કરીને વપરાશકર્તા ID અને પાસવર્ડ દાખલ કરો",
-      errorInvalid: "અમાન્ય લૉગિન વિગતો. કૃપા કરીને ફરી પ્રયાસ કરો.",
+      errorInvalid: "અમાન્ય લૉગિન વિગતો. કૃપા કરીને તમારું વપરાશકર્તા ID અને પાસવર્ડ તપાસો.",
+      errorUserNotFound: "સિસ્ટમમાં વપરાશકર્તા મળ્યો નથી",
       errorNetwork: "નેટવર્ક એરર. કૃપા કરીને તમારું કનેક્શન તપાસો.",
       errorServer: "સર્વર એરર. કૃપા કરીને પછી પ્રયાસ કરો.",
       loggingIn: "લૉગ ઇન થાય છે...",
-      timeout: "રિક્વેસ્ટ ટાઈમઆઉટ. કૃપા કરીને ફરી પ્રયાસ કરો."
+      timeout: "રિક્વેસ્ટ ટાઈમઆઉટ. કૃપા કરીને ફરી પ્રયાસ કરો.",
+      errorCORS: "CORS એરર. એડમિનિસ્ટ્રેટરનો સંપર્ક કરો."
     },
   };
 
-  const handleLogin = async () => {
-    // Reset previous errors
-    setError("");
-    
-    // Validate inputs
-    if (!userId.trim() || !password.trim()) {
-      setError(text[language].errorRequired);
-      return;
-    }
-    
-    setLoading(true);
-    
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-    
-    try {
-      // Construct SOAP request XML with proper escaping
-      const username = escapeXml(userId);
-      const passwd = escapeXml(password);
-      
-      const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-  <soap12:Body>
-    <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
-      <username>${username}</username>
-      <password>${passwd}</password>
-    </LOGIN_EGUJFOREST>
-  </soap12:Body>
-</soap12:Envelope>`;
-
-      console.log("Attempting login with user:", userId);
-      
-      // Make SOAP request using proxy
-      const response = await fetch(
-        "/api/FMIS/CommonService/forestcommonservice.asmx",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/soap+xml; charset=utf-8",
-            "SOAPAction": "http://tempuri.org/LOGIN_EGUJFOREST",
-          },
-          body: soapRequest,
-          signal: controller.signal,
-          mode: 'cors',
-          credentials: 'omit'
-        }
-      );
-
-      // Check HTTP status
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      // Get the response text
-      const responseText = await response.text();
-      console.log("SOAP Response received");
-
-      // Parse XML response
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(responseText, "text/xml");
-      
-      // Check for XML parsing errors
-      const parserError = xmlDoc.querySelector("parsererror");
-      if (parserError) {
-        throw new Error("Invalid XML response from server");
-      }
-      
-      // Check for SOAP Fault
-      const fault = xmlDoc.querySelector("soap\\:Fault, Fault, *|fault");
-      
-      if (fault) {
-        const faultString = fault.querySelector("faultstring")?.textContent ||
-                            fault.querySelector("faultcode")?.textContent ||
-                            fault.textContent ||
-                            "Authentication failed";
-        console.error("SOAP Fault:", faultString);
-        setError(faultString);
-        return;
-      }
-
-      // Extract result from SOAP response
-      const resultElement = xmlDoc.querySelector("LOGIN_EGUJFORESTResult, *|LOGIN_EGUJFORESTResult");
-      
-      if (resultElement) {
-        const resultText = resultElement.textContent.trim();
-        console.log("Result text:", resultText);
-        
-        // Handle different response formats
-        await handleResponse(resultText);
-      } else {
-        // No result element found
-        console.warn("No LOGIN_EGUJFORESTResult element found in response");
-        setError(text[language].errorInvalid);
-      }
-      
-    } catch (error) {
-      console.error("Login error:", error);
-      handleError(error);
-    } finally {
-      clearTimeout(timeoutId);
-      setLoading(false);
-    }
-  };
-
-  const handleResponse = async (resultText) => {
-    // Try to parse as JSON first
-    try {
-      const resultData = JSON.parse(resultText);
-      
-      if (resultData.success || resultData.status === "success" || resultData.token) {
-        // Store user data in localStorage
-        const userData = {
-          username: userId,
-          name: resultData.name || resultData.NAME || resultData.UserName || userId,
-          email: resultData.email || resultData.Email,
-          department: resultData.department || resultData.Department,
-          loginTime: new Date().toISOString(),
-          ...resultData
-        };
-        localStorage.setItem("userData", JSON.stringify(userData));
-        localStorage.setItem("token", resultData.token || "authenticated");
-        localStorage.setItem("lastLogin", new Date().toISOString());
-        
-        console.log("Login successful for user:", userData.name);
-        
-        // Navigate to geo page
-        navigate("/geo");
-        return;
-      } else {
-        setError(resultData.message || resultData.error || resultData.MESSAGE || text[language].errorInvalid);
-        return;
-      }
-    } catch (jsonError) {
-      // If not JSON, check for plain text responses
-      console.log("Response is not JSON, checking text content");
-      
-      // Check for success indicators in text
-      const successIndicators = ["success", "true", "1", "valid", "authenticated", "approved", "welcome"];
-      const failureIndicators = ["fail", "false", "0", "invalid", "error", "rejected", "denied"];
-      
-      const lowerResult = resultText.toLowerCase();
-      
-      if (successIndicators.some(indicator => lowerResult.includes(indicator))) {
-        // Login successful
-        const userData = {
-          username: userId,
-          name: userId,
-          loginTime: new Date().toISOString(),
-          rawResponse: resultText
-        };
-        localStorage.setItem("userData", JSON.stringify(userData));
-        localStorage.setItem("token", "authenticated");
-        localStorage.setItem("lastLogin", new Date().toISOString());
-        
-        console.log("Login successful (text response)");
-        navigate("/geo");
-        return;
-      } else if (failureIndicators.some(indicator => lowerResult.includes(indicator))) {
-        setError(text[language].errorInvalid);
-        return;
-      } else {
-        // Check if response looks like XML or other structured data
-        if (resultText.startsWith("<") || resultText.includes("<")) {
-          console.log("Response appears to be XML");
-          // Try to extract meaningful data from XML
-          const xmlParser = new DOMParser();
-          const xmlDoc = xmlParser.parseFromString(resultText, "text/xml");
-          const anyText = xmlDoc.textContent || xmlDoc.body?.textContent || "";
-          
-          if (anyText.length > 10) {
-            const userData = {
-              username: userId,
-              name: userId,
-              loginTime: new Date().toISOString(),
-              response: resultText.substring(0, 100)
-            };
-            localStorage.setItem("userData", JSON.stringify(userData));
-            localStorage.setItem("token", "authenticated");
-            navigate("/geo");
-            return;
-          }
-        }
-        
-        // Default: non-empty response treated as success
-        if (resultText.length > 0 && resultText !== "null" && resultText !== "undefined") {
-          const userData = {
-            username: userId,
-            name: userId,
-            rawResponse: resultText.substring(0, 200),
-            loginTime: new Date().toISOString()
-          };
-          localStorage.setItem("userData", JSON.stringify(userData));
-          localStorage.setItem("token", "authenticated");
-          
-          console.log("Login successful (unknown response format)");
-          navigate("/geo");
-          return;
-        }
-        
-        // If we reach here, login failed
-        setError(text[language].errorInvalid);
-      }
-    }
-  };
-
-  const handleError = (error) => {
-    // Handle specific error types
-    if (error.name === 'AbortError') {
-      setError(text[language].timeout);
-    } else if (error.name === 'TypeError') {
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        setError(text[language].errorNetwork);
-      } else {
-        setError(text[language].errorServer);
-      }
-    } else if (error.message) {
-      // Extract meaningful error message
-      const errorMsg = error.message.toLowerCase();
-      if (errorMsg.includes('cors') || errorMsg.includes('origin')) {
-        setError("CORS error. Please check server configuration.");
-      } else if (errorMsg.includes('timeout')) {
-        setError(text[language].timeout);
-      } else {
-        setError(error.message);
-      }
-    } else {
-      setError(text[language].errorServer);
-    }
-  };
-
-  // Helper function to escape XML special characters
-  const escapeXml = (unsafe) => {
-    if (!unsafe) return '';
-    return unsafe.replace(/[<>&'"]/g, (c) => {
-      switch (c) {
-        case '<': return '&lt;';
-        case '>': return '&gt;';
-        case '&': return '&amp;';
-        case '\'': return '&apos;';
-        case '"': return '&quot;';
-        default: return c;
-      }
-    });
-  };
-
-  // Handle Enter key press
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !loading) {
-      handleLogin();
-    }
-  };
-
-  // Handle language toggle
-  const handleLanguageToggle = (lang) => {
-    if (!loading && language !== lang) {
-      toggleLanguage(lang);
-    }
-  };
-
-  // Clear error when user starts typing
+  // Event Handlers
   const handleUserIdChange = (e) => {
     setUserId(e.target.value);
-    if (error) setError("");
+    setError("");
   };
 
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
-    if (error) setError("");
+    setError("");
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
+
+  const handleLanguageToggle = (lang) => {
+    if (!loading) {
+      toggleLanguage(lang);
+    }
+  };
+
+  // Enhanced XML Parser Helper Function
+  const parseXMLResponse = (xmlString) => {
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+      
+      console.log("Raw XML Response:", xmlString);
+      console.log("Parsed XML Document:", xmlDoc);
+      
+      // Check for SOAP Fault
+      const faultString = xmlDoc.getElementsByTagName("faultstring")[0];
+      if (faultString) {
+        const errorMsg = faultString.textContent || "Authentication failed";
+        throw new Error(errorMsg);
+      }
+
+      // Check for empty or error response
+      const diffgram = xmlDoc.getElementsByTagName("diffgr:diffgram")[0];
+      if (!diffgram) {
+        // Try without namespace
+        const diffgramAlt = xmlDoc.querySelector("diffgram");
+        if (!diffgramAlt) {
+          throw new Error("Invalid response format - missing data");
+        }
+      }
+
+      // Get Result element
+      const resultElements = xmlDoc.getElementsByTagName("Result");
+      console.log("Number of Result elements:", resultElements.length);
+      
+      if (resultElements.length === 0) {
+        // Try with different namespace or case
+        const resultAlt = xmlDoc.querySelector("Result, result");
+        if (!resultAlt) {
+          throw new Error("No user data found in response");
+        }
+      }
+
+      const resultElement = resultElements[0] || xmlDoc.querySelector("Result, result");
+      
+      // Extract data with better fallback handling
+      const getElementText = (element, tagName) => {
+        const elem = element.getElementsByTagName(tagName)[0];
+        const text = elem ? elem.textContent : null;
+        console.log(`${tagName}:`, text);
+        return text;
+      };
+
+      const userData = {
+        name: getElementText(resultElement, "NAME") || "-",
+        post: getElementText(resultElement, "NameOfPost") || "-",
+        cadre: getElementText(resultElement, "CadreName") || "-",
+        circle: getElementText(resultElement, "CircleName") || "-",
+        division: getElementText(resultElement, "DivisionName") || "-",
+        range: getElementText(resultElement, "RangeName") || "-",
+        round: getElementText(resultElement, "RoundName") || "-",
+        beat: getElementText(resultElement, "BeatName") || "-",
+        mobile: getElementText(resultElement, "MobileNo") || "-",
+        email: getElementText(resultElement, "EmailID") || "-",
+      };
+
+      console.log("Extracted user data:", userData);
+
+      // Check if all fields are empty/dashes (invalid credentials)
+      const allFieldsEmpty = Object.values(userData).every(
+        value => value === "-" || value === "" || value === null || value === undefined
+      );
+
+      if (allFieldsEmpty) {
+        throw new Error("INVALID_CREDENTIALS");
+      }
+
+      // Check for minimum required data
+      if (userData.name === "-" && userData.mobile === "-") {
+        throw new Error("INCOMPLETE_USER_DATA");
+      }
+
+      return userData;
+    } catch (error) {
+      console.error("XML Parsing Error:", error);
+      throw error;
+    }
+  };
+
+const saveUser = async (username) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/api/saveuser`,
+      { username },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const { token, user } = response.data;
+
+    if (token) {
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      console.log("🔐 JWT saved to localStorage");
+    }
+
+    return response.data;
+  } catch (err) {
+    console.error(
+      "❌ Failed to save user:",
+      err.response?.data || err.message
+    );
+    return null;
+  }
+};
+
+
+
+
+  // Login Handler
+  const handleLogin = async () => {
+    // Validation
+    if (!userId.trim() || !password.trim()) {
+      setError(text[language].errorRequired);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Test credentials (for debugging)
+      const testCredentials = [
+        { user: "admin", pass: "Gipl@123" },
+        { user: "demo", pass: "demo@123" },
+        { user: "test", pass: "test@123" }
+      ];
+      
+      // Check if using test credentials
+      const isTestCredential = testCredentials.some(
+        cred => cred.user === userId.trim() && cred.pass === password.trim()
+      );
+
+      // If using test credentials, bypass SOAP API and simulate success
+      if (isTestCredential) {
+        console.log("Using test credentials - bypassing SOAP API");
+        
+        // Create mock user data for test credentials
+        const mockUserData = {
+          name: "Test User",
+          post: "Administrator",
+          cadre: "Admin Cadre",
+          circle: "Test Circle",
+          division: "Test Division",
+          range: "Test Range",
+          round: "Test Round",
+          beat: "Test Beat",
+          mobile: "9876543210",
+          email: "test@example.com",
+        };
+
+        // Store user data (NO PASSWORD)
+        const userSession = {
+          ...mockUserData,
+          username: userId.trim(),
+          isAuthenticated: true,
+          loginTime: new Date().toISOString()
+        };
+
+        localStorage.setItem("userData", JSON.stringify(userSession));
+        localStorage.setItem("authToken", "authenticated");
+
+        // Save user to backend
+        await saveUser(userId.trim());
+
+        // Navigate to dashboard
+        navigate("/geo");
+        return;
+      }
+
+      // SOAP Request XML for real authentication
+      const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+  <soap12:Body>
+    <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
+      <username>${userId.trim()}</username>
+      <password>${password.trim()}</password>
+    </LOGIN_EGUJFOREST>
+  </soap12:Body>
+</soap12:Envelope>`;
+
+      console.log("Sending SOAP Request with username:", userId.trim());
+
+      // Use API_BASE_URL for the SOAP endpoint
+      const soapEndpoint = `${API_BASE_URL}/api/FMIS/CommonService/forestcommonservice.asmx?op=LOGIN_EGUJFOREST`;
+      
+      const config = {
+        method: 'post',
+        url: soapEndpoint,
+        headers: {
+          'Content-Type': 'application/soap+xml; charset=utf-8',
+          'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
+        },
+        data: soapRequest,
+        timeout: 60000, // 60 seconds timeout
+      };
+
+      // Make API call
+      const response = await axios(config);
+      
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+      console.log("Response data length:", response.data.length);
+      
+      if (response.status !== 200) {
+        throw new Error(`HTTP ${response.status}: ${text[language].errorServer}`);
+      }
+
+      // Log first 1000 chars of response for debugging
+      console.log("Response data (first 1000 chars):", response.data.substring(0, 1000));
+
+      // Parse the XML response
+      const userData = parseXMLResponse(response.data);
+      
+      console.log("Parsed user data:", userData);
+
+      // Store user data
+      const userSession = {
+        ...userData,
+        username: userId.trim(),
+        isAuthenticated: true,
+        loginTime: new Date().toISOString()
+      };
+
+      localStorage.setItem("userData", JSON.stringify(userSession));
+      localStorage.setItem("authToken", "authenticated");
+
+      // Save user to backend
+      await saveUser(userId.trim());
+
+      // Navigate to dashboard
+      navigate("/geo");
+
+    } catch (error) {
+      console.error("Login Error Details:", {
+        message: error.message,
+        code: error.code,
+        response: error.response,
+        request: error.request
+      });
+      
+      // Handle specific error cases
+      if (error.code === 'ECONNABORTED') {
+        setError(text[language].timeout);
+      } else if (error.message === 'INVALID_CREDENTIALS') {
+        setError(text[language].errorInvalid);
+      } else if (error.message === 'INCOMPLETE_USER_DATA') {
+        setError(text[language].errorUserNotFound);
+      } else if (error.response) {
+        // Server responded with error status
+        if (error.response.status === 401 || error.response.status === 403) {
+          setError(text[language].errorInvalid);
+        } else if (error.response.status === 404) {
+          setError("API endpoint not found. Please check the server URL.");
+        } else if (error.response.status >= 500) {
+          setError(text[language].errorServer);
+        } else {
+          setError(`Server Error: ${error.response.status}`);
+        }
+      } else if (error.request) {
+        // Request made but no response (network error or CORS)
+        if (error.message.includes("Network Error") || error.message.includes("CORS")) {
+          setError(text[language].errorCORS);
+        } else {
+          setError(text[language].errorNetwork);
+        }
+      } else {
+        setError(error.message || text[language].errorServer);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -423,6 +463,7 @@ function Login() {
               onKeyPress={handleKeyPress}
               disabled={loading}
               autoComplete="username"
+              style={{ fontSize: "16px", padding: "12px" }}
             />
             <span className="icon">
               <img src="/assets/user.png" alt="User" width="20" height="20" />
@@ -439,6 +480,7 @@ function Login() {
               onKeyPress={handleKeyPress}
               disabled={loading}
               autoComplete="current-password"
+              style={{ fontSize: "16px", padding: "12px" }}
             />
             <button
               type="button"
@@ -470,11 +512,19 @@ function Login() {
             onClick={handleLogin}
             disabled={loading}
             style={{
-              backgroundColor: loading ? "#cccccc" : "",
+              backgroundColor: loading ? "#cccccc" : "#4CAF50",
               cursor: loading ? "not-allowed" : "pointer",
               opacity: loading ? 0.7 : 1,
               transition: "all 0.3s ease",
-              position: "relative"
+              position: "relative",
+              width: "100%",
+              padding: "14px",
+              fontSize: "16px",
+              fontWeight: "bold",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              marginTop: "20px"
             }}
           >
             {loading && (
@@ -491,6 +541,10 @@ function Login() {
             )}
             {loading ? text[language].loggingIn : text[language].loginButton}
           </button>
+
+          
+
+          
         </div>
 
         {/* Footer Bar */}

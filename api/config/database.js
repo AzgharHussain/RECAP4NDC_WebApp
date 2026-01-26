@@ -3,16 +3,16 @@ const { Sequelize } = require('sequelize');
 const sequelize = new Sequelize(
   'Recap4NDC', // Database name
   'postgres', // Username
-  'P$DB@25%$#!09', // Password
+  'pass@123', // Password
   {
-    host: '68.178.167.39',
+    host: '68.178.167.216',
     dialect: 'postgres',
     logging: console.log,
     dialectOptions: {
       ssl: false,
     },
     pool: {
-      max: 5,
+      max: 20,
       min: 0,
       acquire: 30000,
       idle: 10000

@@ -26,7 +26,7 @@ const upload = multer({ dest: "uploads/" });
 // ============================
 const pool = new Pool({
   user: "postgres",
-  host: "68.178.167.39",
+  host: "68.178.167.216",
   database: "Recap4NDC",
   password: "DB@$ecure#25",
   port: 5432,
