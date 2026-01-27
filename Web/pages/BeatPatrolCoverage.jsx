@@ -137,9 +137,20 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     
     setLoading(prev => ({ ...prev, divisions: true }));
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/get-divisions`, {
-        forest_id: forestId,
-      });
+      const token = localStorage.getItem("token"); // or sessionStorage
+
+const response = await axios.post(
+  `${API_BASE_URL}/api/get-divisions`,
+  {
+    forest_id: forestId,
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`, // 👈 token added
+    },
+  }
+);
+
       
       if (Array.isArray(response.data)) {
         // Extract unique divisions

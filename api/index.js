@@ -5,6 +5,10 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
+const { verifyJwt } = require("./middlewares/verifyJwt");
+
+
+
 const { sequelize, testConnection } = require('./config/database');
 
 // Routers
@@ -19,7 +23,7 @@ const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 const app = express();
 
 // -------------------- MIDDLEWARE -------------------- //
-app.use(cors({ origin: '*', methods: ['GET','POST','PUT','DELETE'], allowedHeaders: ['Content-Type','Authorization'] }));
+app.use(cors({ origin: '*', methods: ['GET','POST','PUT','DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -52,7 +56,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB
 
 // -------------------- JWT -------------------- //
-const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const SECRET_KEY = process.env.JWT_SECRET || "mysecret123";
 
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -94,11 +98,15 @@ app.get('/health', async (req, res) => {
   });
 });
 
+
+
+
 // Save user endpoint
-app.post('/api/saveuser', async (req, res) => {
+app.post("/api/saveuser", async (req, res) => {
   try {
     const username = req.body?.username || req.query?.username;
-    if (!username || username.trim() === '') return res.status(400).json({ success: false, error: 'Username required' });
+    if (!username || username.trim() === "")
+      return res.status(400).json({ success: false, error: "Username required" });
 
     const trimmedUsername = username.trim();
 
@@ -119,18 +127,18 @@ app.post('/api/saveuser', async (req, res) => {
       user = result[0];
     }
 
-    // Generate token
-    const token = jwt.sign({ userId: user.user_id, username: user.username }, SECRET_KEY, { expiresIn: '24h' });
+    // Generate JWT
+    const token = jwt.sign({ userId: user.user_id, username: user.username }, SECRET_KEY, { expiresIn: "24h" });
 
     res.json({
       success: true,
-      message: users.length > 0 ? 'User already exists' : 'User created',
+      message: users.length > 0 ? "User already exists" : "User created",
       user,
-      token
+      token,
     });
   } catch (err) {
-    console.error('Error /api/saveuser:', err);
-    res.status(500).json({ success: false, error: 'Server error', message: err.message });
+    console.error("Error /api/saveuser:", err);
+    res.status(500).json({ success: false, error: "Server error", message: err.message });
   }
 });
 

@@ -91,13 +91,16 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
     
     try {
       setLoading(prev => ({ ...prev, division: true }));
-      const response = await fetch(`${base_url}/api/get-divisions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ forest_id: forestId }),
-      });
+      const token = localStorage.getItem("token"); // ✅ get JWT
+
+  const response = await fetch(`${base_url}/api/get-divisions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`, // ✅ add token
+    },
+    body: JSON.stringify({ forest_id: forestId }),
+  });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -160,16 +163,20 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
     
     try {
       setLoading(prev => ({ ...prev, range: true, round: true }));
-      const response = await fetch(`${base_url}/api/hierarchy`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          forest_id: selectedValues.forest_id,
-          division_name: divisionName
-        }),
-      });
+      const token = localStorage.getItem("token");
+
+const response = await fetch(`${base_url}/api/hierarchy`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`, // 👈 token added
+  },
+  body: JSON.stringify({
+    forest_id: selectedValues.forest_id,
+    division_name: divisionName,
+  }),
+});
+
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

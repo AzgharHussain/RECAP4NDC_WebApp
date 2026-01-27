@@ -1,37 +1,28 @@
-import jwt from "jsonwebtoken";
+const jwt = require("jsonwebtoken");
+const SECRET_KEY = process.env.JWT_SECRET || "mysecret123"; // fallback secret
 
-export const verifyJwt = (req, res, next) => {
+const verifyJwt = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  console.log("Auth header received:", authHeader); // 🔥 debug
+
+  if (!authHeader) {
+    return res.status(401).json({ success: false, message: "Authorization header missing" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ success: false, message: "JWT token missing" });
+  }
+
   try {
-    // Expect: Authorization: Bearer <token>
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      return res.status(401).json({
-        success: false,
-        message: "Authorization header missing",
-      });
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "JWT token missing",
-      });
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Attach decoded payload to request
+    const decoded = jwt.verify(token, SECRET_KEY);
     req.user = decoded;
-
-    next(); // ✅ token valid
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid or expired token",
-    });
+    console.log("Decoded JWT:", decoded); // 🔥 debug
+    next();
+  } catch (err) {
+    console.error("JWT verification failed:", err.message);
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
 };
+
+module.exports = { verifyJwt };

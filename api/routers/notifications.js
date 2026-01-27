@@ -32,7 +32,7 @@ try {
 const client = new Client({
   host: '68.178.167.216',
   user: 'postgres',
-  password: 'pass@123',
+  password: 'P$DB@25%$#!26',
   port: 5432,
   database: 'Recap4NDC_new'
 });

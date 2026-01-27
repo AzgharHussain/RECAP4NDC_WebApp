@@ -5,7 +5,7 @@ const DB_NAME = 'Recap4NDC_Query';
 const DB_USER = 'postgres';
 const DB_PASS = 'pass@123';
 const DB_HOST = '68.178.167.216';
-const DB_PORT = 5432;
+const DB_PORT = 5435;
 
 // Create Sequelize instance
 const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {

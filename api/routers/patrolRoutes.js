@@ -1,13 +1,16 @@
 const express = require('express');
 const { Client } = require('pg');
 const multer = require('multer');
+const jwt = require("jsonwebtoken");
+const { verifyJwt } = require("../middlewares/verifyJwt"); 
+
 const router = express.Router();
 
 // PostgreSQL client
 const client = new Client({
   host: '68.178.167.216',
   user: 'postgres',
-  password: 'pass@123',
+  password: 'P$DB@25%$#!26',
   port: 5432,
   database: 'Recap4NDC'
 });
@@ -133,7 +136,7 @@ router.post('/patrol-post', upload.any(), async (req, res) => {
 
 
 // GET all patrols with images and notes
-router.get('/patrol-info', async (req, res) => {
+router.get('/patrol-info', verifyJwt, async (req, res) => {
   try {
     const query = `
       SELECT

@@ -3,7 +3,7 @@ const { Sequelize } = require('sequelize');
 const sequelize = new Sequelize(
   'Recap4NDC', // Database name
   'postgres', // Username
-  'pass@123', // Password
+  'P$DB@25%$#!26', // Password
   {
     host: '68.178.167.216',
     dialect: 'postgres',

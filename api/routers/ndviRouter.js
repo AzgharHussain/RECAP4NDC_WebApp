@@ -5,8 +5,10 @@ const { sequelize } = require('../config/r_quire');
 const fs = require('fs'); 
 const path = require('path');
 
+const { verifyJwt } = require("../middlewares/verifyJwt"); 
+
 // POST: Create new NDVI record (with auto-generated ID)
-router.post('/ndvi-change', async (req, res) => {
+router.post('/ndvi-change', verifyJwt, async (req, res) => {
     const { tableName } = req.body;
 
     if (!tableName) {
@@ -54,7 +56,7 @@ router.post('/ndvi-change', async (req, res) => {
     }
 });
 
-router.post('/get-coupe-area', async (req, res) => {
+router.post('/get-coupe-area', verifyJwt, async (req, res) => {
     const { tableName } = req.body;
 
     if (!tableName) {
@@ -95,7 +97,7 @@ FROM
     }
 });
 
-router.post('/ndvi-change-degraded-area', async (req, res) => {
+router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
     const { tableName } = req.body;
 
     if (!tableName) {
@@ -180,7 +182,7 @@ FROM
 });
 
 
-router.post('/ndvi-change-get', async (req, res) => {
+router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
     const { tableName } = req.body;
 
     if (!tableName) {

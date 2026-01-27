@@ -267,9 +267,21 @@ useEffect(() => {
   const fetchTotalArea = async (coupeName) => {
     setLoadingArea(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/get-coupe-area`, {
-        tableName: coupeName
-      });
+      const token = localStorage.getItem("token");
+
+const response = await axios.post(
+  `${API_BASE_URL}/api/get-coupe-area`,
+  {
+    tableName: coupeName,
+  },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`, // ✅ token added
+    },
+  }
+);
+
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
         const areaValue = parseFloat(area);
@@ -300,9 +312,21 @@ useEffect(() => {
     setLoadingNDVIArea(true);
     try {
       const tableName = `${month}-01_${coupeName}_NDVI_Change`;
-      const response = await axios.post(`${API_BASE_URL}/api/ndvi-change-degraded-area`, {
-        tableName
-      });
+      const token = localStorage.getItem("token");
+
+const response = await axios.post(
+  `${API_BASE_URL}/api/ndvi-change-degraded-area`,
+  {
+    tableName,
+  },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
       
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km ;
@@ -333,7 +357,19 @@ useEffect(() => {
       const tableName = `${month}-01_${coupeName}_NDVI_Change`;
       
       // Fetch data
-      const dataResponse = await axios.post(`${API_BASE_URL}/api/ndvi-change-get`, { tableName });
+      const token = localStorage.getItem("token");
+
+const dataResponse = await axios.post(
+  `${API_BASE_URL}/api/ndvi-change-get`,
+  { tableName },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
       
       if (dataResponse.data.success) {
         const data = dataResponse.data.data;
@@ -435,7 +471,18 @@ useEffect(() => {
   const fetchRecordDetails = async (id) => {
     try {
       const tableName = `${selectedMonth}-01_${selectedCoupe}_NDVI_Change`;
-      const response = await axios.get(`${API_BASE_URL}/api/ndvi-change/${id}?tableName=${tableName}`);
+      const token = localStorage.getItem("token");
+
+const response = await axios.get(
+  `${API_BASE_URL}/api/ndvi-change/${id}?tableName=${tableName}`,
+  {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
       
       if (response.data.success) {
         setSelectedRecord(response.data.data[0]);

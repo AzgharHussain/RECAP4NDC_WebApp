@@ -288,11 +288,16 @@ export default function Dashboard() {
     }
     try {
       setLoadingForest(true);
-      const response = await fetch(`${API_BASE_URL}/api/get-divisions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ forest_id: forestId }),
-      });
+      const token = localStorage.getItem("token"); // or sessionStorage
+
+    const response = await fetch(`${API_BASE_URL}/api/get-divisions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`, // 👈 token added
+      },
+      body: JSON.stringify({ forest_id: forestId }),
+    });
       const data = await response.json();
       setDivisions(data?.data || data || []);
     } catch (error) {

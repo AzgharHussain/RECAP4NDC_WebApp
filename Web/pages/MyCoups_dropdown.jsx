@@ -37,9 +37,21 @@ const MyCoups_dropdown = () => {
 
     if (!id) return;
      
-    const res = await axios.post(`${API_BASE_URL}/api/get-divisions`, {
-      forest_id: id,
-    });
+    const token = localStorage.getItem("token");
+
+const res = await axios.post(
+  `${API_BASE_URL}/api/get-divisions`,
+  {
+    forest_id: id,
+  },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`, // ✅ JWT added
+    },
+  }
+);
+
        
     setDivisions(res.data);
   };
@@ -55,10 +67,22 @@ const MyCoups_dropdown = () => {
 
     if (!div) return;
 
-    const res = await axios.post(`${API_BASE_URL}/api/hierarchy`, {
-      forest_id: forestId,
-      division_name: div,
-    });
+    const token = localStorage.getItem("token");
+
+const res = await axios.post(
+  `${API_BASE_URL}/api/hierarchy`,
+  {
+    forest_id: forestId,
+    division_name: div,
+  },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
 
     setHierarchyData(res.data);
 

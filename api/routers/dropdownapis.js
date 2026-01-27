@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-
+const { verifyJwt } = require("../middlewares/verifyJwt"); 
 
 const { sequelize } = require('../config/ndvidatabase');
 
@@ -300,7 +300,7 @@ router.post('/coupes', async (req, res) => {
   }
 });
 
-router.post('/get-divisions', async (req, res) => {
+router.post('/get-divisions', verifyJwt,  async (req, res) => {
   try {
   const { forest_id } = req.body;
 

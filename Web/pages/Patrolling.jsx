@@ -717,9 +717,15 @@ const PatrolIncidentLogs = () => {
   const fetchPatrolData = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/patrol-info`
-      );
+      const token = localStorage.getItem("token"); // 🔑 get JWT from localStorage
+
+const response = await fetch(`${API_BASE_URL}/api/patrol-info`, {
+  method: "GET",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`, // ✅ attach JWT
+  },
+});
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       console.log("Fetched Patrol data:", data);
@@ -771,9 +777,21 @@ const PatrolIncidentLogs = () => {
     }
 
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/get-divisions`, {
-        forest_id: value,
-      });
+      const token = localStorage.getItem("token"); // 🔑 get JWT from localStorage
+  if (!token) throw new Error("No token found. Please login first.");
+
+  const res = await axios.post(
+    `${API_BASE_URL}/api/get-divisions`,
+    {
+      forest_id: value, // payload
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`, // ✅ attach JWT
+      },
+    }
+  );
       setDivisions(res.data);
     } catch (error) {
       console.error("Error fetching divisions:", error);

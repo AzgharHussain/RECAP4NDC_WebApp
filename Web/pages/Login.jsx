@@ -177,17 +177,13 @@ const saveUser = async (username) => {
     const response = await axios.post(
       `${API_BASE_URL}/api/saveuser`,
       { username },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
+      
     );
 
     const { token, user } = response.data;
 
     if (token) {
-      localStorage.setItem("Token", token);
+      localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
       console.log("🔐 JWT saved to localStorage");
     }
