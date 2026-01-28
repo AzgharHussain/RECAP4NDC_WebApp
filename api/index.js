@@ -143,7 +143,7 @@ app.post("/api/saveuser", async (req, res) => {
 });
 
 // Get villages
-app.get('/api/villages', async (req, res) => {
+app.get('/api/villages',verifyJwt, async (req, res) => {
   try {
     const { name } = req.query;
     if (!name || name.trim() === '') return res.status(400).json({ success: false, error: 'Coupe name is required' });

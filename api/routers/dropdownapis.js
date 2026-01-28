@@ -500,53 +500,52 @@ router.get('/forest-types', async (req, res) => {
 
 router.post("/get-centroid", async (req, res) => {
   try {
-    const { coupe_code, village_name, beat_name, coupe_name } = req.body;
-
-    if (!coupe_code || !village_name || !beat_name || !coupe_name) {
+    const { coupe_code, village_name,  coupe_name } = req.body;
+ 
+    if (!coupe_code || !village_name || !coupe_name) {
       return res.status(400).json({
-        error: "coupe_code, village_name, beat_name, and coupe_name are required"
+        error: "coupe_code, village_name, and coupe_name are required"
       });
     }
-
+ 
     const query = `
-      SELECT 
+      SELECT
         ST_AsText(ST_Centroid(geom)) AS centroid_wkt,
         ST_Y(ST_Centroid(geom)) AS latitude,
         ST_X(ST_Centroid(geom)) AS longitude
       FROM public."${coupe_name}"
       WHERE
-        "BEAT" = :beat
-        AND "VNAME" = :village
+          "Village" = :village
         AND "Coupe_No" = :coupe
       LIMIT 1;
     `;
-
+ 
     const rows = await sequelize.query(query, {
       replacements: {
-        beat: beat_name,
+       
         village: village_name,
         coupe: coupe_code
       },
       type: sequelize.QueryTypes.SELECT
     });
-
+ 
     if (rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No data found"
       });
     }
-
+ 
     const row = rows[0];
-
+ 
     res.json({
       success: true,
-      
+     
           latitude: Number(row.latitude),
           longitude: Number(row.longitude)
      
     });
-
+ 
   } catch (error) {
     console.error("Centroid error:", error);
     res.status(500).json({
@@ -555,6 +554,7 @@ router.post("/get-centroid", async (req, res) => {
     });
   }
 });
+
 router.post('/get-coupe-area', async (req, res) => {
     const { tableName } = req.body;
 

@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const { sequelize } = require("../config/database"); // adjust path
+const { verifyJwt } = require("../middlewares/verifyJwt");
 
 
-router.post('/beatscoverage', async (req, res) => {
+router.post('/beatscoverage',verifyJwt, async (req, res) => {
   try {
     const { forest_id } = req.body;
     
@@ -50,7 +51,7 @@ router.post('/beatscoverage', async (req, res) => {
   }
 });
 
-router.post("/beat-patrol-coverage", async (req, res) => {
+router.post("/beat-patrol-coverage",verifyJwt, async (req, res) => {
   const { beat } = req.body;
 
   if (!beat) {
