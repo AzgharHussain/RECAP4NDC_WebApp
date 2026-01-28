@@ -281,15 +281,24 @@ const response = await axios.post(
     setImageRotation(0);
     setImageScale(1);
     try {
-      const res = await axios.post(
-        `${API_BASE_URL}/api/beat-patrol-coverage`,
-        { 
-          beat: selectedBeat.value,
-          forest_id: selectedForest,
-          division: selectedDivision?.value,
-          range: selectedRange?.value
-        }
-      );
+      const token = localStorage.getItem("token"); // your JWT
+
+const res = await axios.post(
+  `${API_BASE_URL}/api/beat-patrol-coverage`,
+  { 
+    beat: selectedBeat.value,
+    forest_id: selectedForest,
+    division: selectedDivision?.value,
+    range: selectedRange?.value
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  }
+);
+
 
       if (res.data.success) {
         setCoverageData(res.data.data);
@@ -324,7 +333,19 @@ const response = await axios.post(
     setImageRotation(0);
     setImageScale(1);
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/patrols/${patrolId}`);
+      const token = localStorage.getItem("token");
+
+const response = await axios.get(
+  `${API_BASE_URL}/api/patrols/${patrolId}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
+const data = response.data;
+
       
       if (response.data && response.data.data) {
         setPatrolDetails(response.data.data);

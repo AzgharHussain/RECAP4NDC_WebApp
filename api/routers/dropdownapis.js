@@ -498,7 +498,7 @@ router.get('/forest-types', async (req, res) => {
 });
 
 
-router.post("/get-centroid", async (req, res) => {
+router.post("/get-centroid", verifyJwt, async (req, res) => {
   try {
     const { coupe_code, village_name,  coupe_name } = req.body;
  
@@ -555,7 +555,7 @@ router.post("/get-centroid", async (req, res) => {
   }
 });
 
-router.post('/get-coupe-area', async (req, res) => {
+router.post('/get-coupe-area', verifyJwt, async (req, res) => {
     const { tableName } = req.body;
 
     if (!tableName) {
