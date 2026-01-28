@@ -9,7 +9,7 @@ const { verifyJwt } = require("../middlewares/verifyJwt");
 
 // POST: Create new NDVI record (with auto-generated ID)
 router.post('/ndvi-change',verifyJwt, async (req, res) => {
-    const { tableName } = req.body;
+    const { tableName,village_name } = req.body;
  
     if (!tableName) {
         return res.status(400).json({
@@ -36,8 +36,8 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
         const selectQuery = `
             SELECT Pixle_id, longitude, latitude
             FROM public."${tableName}"
-            WHERE "Village" = :village
-        AND "Coupe_No" = :coupe;
+            WHERE "Village" = '${village_name}'
+        ;
         `;
  
         const [results] = await sequelize.query(selectQuery);
