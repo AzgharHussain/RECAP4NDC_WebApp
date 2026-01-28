@@ -27,24 +27,33 @@ const upload = multer({
   }
 });
 
-
-
 function toUTC(dateValue) {
-  return new Date(dateValue).toISOString(); // Always UTC
+  return new Date(dateValue).toISOString();
 }
 
 function parseToUTC(dateValue) {
   return new Date(dateValue).toISOString();
 }
 
-
-
-
 // POST route for patrol with multiple images (no notes)
-router.post('/patrol-post',verifyJwt, upload.any(), async (req, res) => {
+router.post('/patrol-post', verifyJwt, upload.any(), async (req, res) => {
   const pat_data = req.body;
 
-  const requiredFields = ['patrol_officer_name', 'start_time', 'end_time', 'start_location', 'end_location', 'distance_kms', 'geom', 'user_id', 'patrolling_type_id', 'number_of_staff'];
+  const requiredFields = [
+    'patrol_officer_name', 
+    'start_time', 
+    'end_time', 
+    'start_location', 
+    'end_location', 
+    'distance_kms', 
+    'geom', 
+    'user_id', 
+    'patrolling_type_id', 
+    'number_of_staff',
+    'beat',          // Added beat as required field
+    'range',         // Added range as required field
+    'division'       // Added division as required field
+  ];
 
   for (let field of requiredFields) {
     if (!pat_data[field])
@@ -73,11 +82,21 @@ router.post('/patrol-post',verifyJwt, upload.any(), async (req, res) => {
     try {
       const query1 = `
         INSERT INTO patrols (
-          patrol_officer_name, start_time, end_time,
-          start_location, end_location, distance_kms, geom,
-          user_id, patrolling_type_id, number_of_staff
+          patrol_officer_name, 
+          start_time, 
+          end_time,
+          start_location, 
+          end_location, 
+          distance_kms, 
+          geom,
+          user_id, 
+          patrolling_type_id, 
+          number_of_staff,
+          beat,           -- Added beat column
+          range,          -- Added range column
+          division        -- Added division column
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING patrol_id;
       `;
 
@@ -91,7 +110,10 @@ router.post('/patrol-post',verifyJwt, upload.any(), async (req, res) => {
         pat_data.geom,
         pat_data.user_id,
         pat_data.patrolling_type_id,
-        pat_data.number_of_staff
+        pat_data.number_of_staff,
+        pat_data.beat,      // Added beat value
+        pat_data.range,     // Added range value
+        pat_data.division   // Added division value
       ]);
 
       const patrol_id = result.rows[0].patrol_id;
@@ -132,9 +154,6 @@ router.post('/patrol-post',verifyJwt, upload.any(), async (req, res) => {
   }
 });
 
-
-
-
 // GET all patrols with images and notes
 router.get('/patrol-info', verifyJwt, async (req, res) => {
   try {
@@ -162,7 +181,7 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_time: toUTC(patrol.start_time), // Convert to UTC
+      start_time: toUTC(patrol.start_time),
       end_time: toUTC(patrol.end_time),
       images: patrol.images.map(img => ({
         ...img,
@@ -178,7 +197,7 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
   }
 });
 
-router.get('/patrol-info-user/:user_id',verifyJwt, async (req, res) => {
+router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
   try {
     const { user_id } = req.params;
     
@@ -226,8 +245,7 @@ router.get('/patrol-info-user/:user_id',verifyJwt, async (req, res) => {
   }
 });
 
-
-router.get('/patrols/:patrol_id', verifyJwt,async (req, res) => {
+router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
   const { patrol_id } = req.params;
 
   try {
@@ -276,9 +294,8 @@ router.get('/patrols/:patrol_id', verifyJwt,async (req, res) => {
   }
 });
 
-
 // GET all patrolling types
-router.get('/patrolling-types',verifyJwt, async (req, res) => {
+router.get('/patrolling-types', verifyJwt, async (req, res) => {
   try {
     const query = `
       SELECT type_id, type_name
@@ -297,4 +314,3 @@ router.get('/patrolling-types',verifyJwt, async (req, res) => {
 });
 
 module.exports = router;
-

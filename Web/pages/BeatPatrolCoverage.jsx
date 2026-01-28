@@ -201,6 +201,7 @@ const response = await axios.post(
             forest_id: selectedForest,
             division_name: divisionname
         });
+        console.log("api/hierarchy");
         
         // FIRST: Set the hierarchy data
         setHierarchyData(response.data);
@@ -298,7 +299,7 @@ const res = await axios.post(
     },
   }
 );
-
+console.log("api/beat-patrol-coverage");
 
       if (res.data.success) {
         setCoverageData(res.data.data);

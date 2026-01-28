@@ -726,6 +726,7 @@ const response = await fetch(`${API_BASE_URL}/api/patrol-info`, {
     Authorization: `Bearer ${token}`, // ✅ attach JWT
   },
 });
+console.log("api/patrol-info");
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       console.log("Fetched Patrol data:", data);
@@ -753,7 +754,7 @@ const response = await fetch(`${API_BASE_URL}/api/patrol-info`, {
 
   useEffect(() => {
     fetchPatrolData();
-    
+    console.log("api/forest-types");
     // Load forest types
     axios
       .get(`${API_BASE_URL}/api/forest-types`)
@@ -792,6 +793,7 @@ const response = await fetch(`${API_BASE_URL}/api/patrol-info`, {
       },
     }
   );
+  console.log("api/get-divisions");
       setDivisions(res.data);
     } catch (error) {
       console.error("Error fetching divisions:", error);
@@ -816,6 +818,7 @@ const response = await fetch(`${API_BASE_URL}/api/patrol-info`, {
         forest_id: forestId,
         division_name: value,
       });
+      console.log("api/hierarchy");
 
       setHierarchyData(res.data);
 

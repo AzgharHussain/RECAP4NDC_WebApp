@@ -185,7 +185,7 @@ useEffect(() => {
           label: div
         })));
       }
-      
+      console.log("api/hierarchy");
       // Fetch area for default coupe
       fetchTotalArea(selectedCoupe);
       
@@ -281,6 +281,7 @@ const response = await axios.post(
     },
   }
 );
+console.log("api/get-coupe-area");
 
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
@@ -326,7 +327,7 @@ const response = await axios.post(
     },
   }
 );
-
+console.log("api/ndvi-change-degraded-area",response);
       
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km ;
@@ -369,7 +370,7 @@ const dataResponse = await axios.post(
     },
   }
 );
-
+console.log("api/ndvi-change-get",dataResponse);
       
       if (dataResponse.data.success) {
         const data = dataResponse.data.data;
@@ -482,7 +483,7 @@ const response = await axios.get(
     },
   }
 );
-
+console.log("api/ndvi-change");
       
       if (response.data.success) {
         setSelectedRecord(response.data.data[0]);

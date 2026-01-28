@@ -18,6 +18,7 @@ const MyCoups_dropdown = () => {
 
   /* ------------------ Load Forest Types ------------------ */
   useEffect(() => {
+    console.log("api/forest-types");
     axios
       .get(`${API_BASE_URL}/api/forest-types`)
       .then((res) => setForestTypes(res.data))
@@ -51,7 +52,7 @@ const res = await axios.post(
     },
   }
 );
-
+console.log("api/get-divisions");
        
     setDivisions(res.data);
   };
@@ -82,7 +83,7 @@ const res = await axios.post(
     },
   }
 );
-
+console.log("api/hierarchy");
 
     setHierarchyData(res.data);
 
