@@ -8,16 +8,16 @@ const path = require('path');
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
 
 // POST: Create new NDVI record (with auto-generated ID)
-router.post('/ndvi-change', verifyJwt, async (req, res) => {
+router.post('/ndvi-change',verifyJwt, async (req, res) => {
     const { tableName } = req.body;
-
+ 
     if (!tableName) {
         return res.status(400).json({
             success: false,
             message: 'tableName is required'
         });
     }
-
+ 
     try {
         // 1️⃣ Create columns if NOT EXISTS
         const alterTableQuery = `
@@ -29,23 +29,25 @@ router.post('/ndvi-change', verifyJwt, async (req, res) => {
             ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         `;
-
+ 
         await sequelize.query(alterTableQuery);
-
+ 
         // 2️⃣ Fetch all data
         const selectQuery = `
             SELECT Pixle_id, longitude, latitude
-            FROM public."${tableName}";
+            FROM public."${tableName}"
+            WHERE "Village" = :village
+        AND "Coupe_No" = :coupe;
         `;
-
+ 
         const [results] = await sequelize.query(selectQuery);
-
+ 
         res.json({
             success: true,
             message: 'Columns verified and data fetched successfully',
             data: results
         });
-
+ 
     } catch (error) {
         console.error('Error in NDVI change API:', error);
         res.status(500).json({
@@ -55,6 +57,7 @@ router.post('/ndvi-change', verifyJwt, async (req, res) => {
         });
     }
 });
+
 
 router.post('/get-coupe-area', verifyJwt, async (req, res) => {
     const { tableName } = req.body;
@@ -140,7 +143,7 @@ FROM
 
 
 
-router.post('/coupe-area', async (req, res) => {
+router.post('/coupe-area',verifyJwt, async (req, res) => {
     const { tableName } = req.body;
 
     if (!tableName) {
@@ -234,7 +237,7 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
 
 
 // GET: Get single NDVI record by ID
-router.get('/ndvi-change/:id', async (req, res) => {
+router.get('/ndvi-change/:id',verifyJwt, async (req, res) => {
     const { tableName } = req.query;
     const { id } = req.params;
 
@@ -333,7 +336,7 @@ const imageToBase64 = (imagePath) => {
 
 
 // PUT: Update NDVI record by ID with image handling - FIXED VERSION
-router.put('/ndvi-change/:id', upload.single('image_data'), async (req, res) => {
+router.put('/ndvi-change/:id',verifyJwt, upload.single('image_data'), async (req, res) => {
   const { tableName, note, status } = req.body;
   const { id } = req.params;
   const imageFile = req.file;
@@ -444,7 +447,7 @@ router.put('/ndvi-change/:id', upload.single('image_data'), async (req, res) => 
 
 
 // Alternative version without multer (if you prefer base64 in request body only)
-router.put('/ndvi-change-base64/:id', async (req, res) => {
+router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
   const { tableName, note, image_data, status } = req.body;
   const { id } = req.params;
 
@@ -534,7 +537,7 @@ router.put('/ndvi-change-base64/:id', async (req, res) => {
 });
 
 // DELETE: Delete NDVI record by ID
-router.delete('/ndvi-change/:id', async (req, res) => {
+router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
     const { tableName } = req.query;
     const { id } = req.params;
 

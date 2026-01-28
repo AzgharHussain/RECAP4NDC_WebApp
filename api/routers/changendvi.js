@@ -1,13 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const { sequelize } = require("../config/ndvidatabase");
+const { verifyJwt } = require("../middlewares/verifyJwt");
 
 /**
  * ===============================
  * 1️⃣ CREATE TABLE IF NOT EXISTS
  * ===============================
  */
-router.get("/init-table", async (req, res) => {
+router.get("/init-table",verifyJwt, async (req, res) => {
   try {
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS ndvi_change (
@@ -42,7 +43,7 @@ router.get("/init-table", async (req, res) => {
  * 2️⃣ INSERT NDVI RECORD
  * ===============================
  */
-router.post("/create_changendvi", async (req, res) => {
+router.post("/create_changendvi", verifyJwt,async (req, res) => {
   try {
     const {
       state,
@@ -96,7 +97,7 @@ router.post("/create_changendvi", async (req, res) => {
  * 3️⃣ GET ALL RECORDS
  * ===============================
  */
-router.get("/changendvi", async (req, res) => {
+router.get("/changendvi",verifyJwt, async (req, res) => {
   try {
     const [data] = await sequelize.query(
       "SELECT * FROM ndvi_change ORDER BY created_at DESC"
@@ -112,7 +113,7 @@ router.get("/changendvi", async (req, res) => {
  * 4️⃣ GET RECORD BY ID
  * ===============================
  */
-router.get("/changendvi/:id", async (req, res) => {
+router.get("/changendvi/:id", verifyJwt,async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -136,7 +137,7 @@ router.get("/changendvi/:id", async (req, res) => {
  * 5️⃣ UPDATE RECORD
  * ===============================
  */
-router.put("/update_changendvi/:id", async (req, res) => {
+router.put("/update_changendvi/:id",verifyJwt, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -206,7 +207,7 @@ router.put("/update_changendvi/:id", async (req, res) => {
  * 6️⃣ DELETE RECORD
  * ===============================
  */
-router.delete("/delete_changendvi/:id", async (req, res) => {
+router.delete("/delete_changendvi/:id",verifyJwt, async (req, res) => {
   try {
     const { id } = req.params;
 

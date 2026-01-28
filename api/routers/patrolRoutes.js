@@ -41,7 +41,7 @@ function parseToUTC(dateValue) {
 
 
 // POST route for patrol with multiple images (no notes)
-router.post('/patrol-post', upload.any(), async (req, res) => {
+router.post('/patrol-post',verifyJwt, upload.any(), async (req, res) => {
   const pat_data = req.body;
 
   const requiredFields = ['patrol_officer_name', 'start_time', 'end_time', 'start_location', 'end_location', 'distance_kms', 'geom', 'user_id', 'patrolling_type_id', 'number_of_staff'];
@@ -178,7 +178,7 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
   }
 });
 
-router.get('/patrol-info-user/:user_id', async (req, res) => {
+router.get('/patrol-info-user/:user_id',verifyJwt, async (req, res) => {
   try {
     const { user_id } = req.params;
     
@@ -227,7 +227,7 @@ router.get('/patrol-info-user/:user_id', async (req, res) => {
 });
 
 
-router.get('/patrols/:patrol_id', async (req, res) => {
+router.get('/patrols/:patrol_id', verifyJwt,async (req, res) => {
   const { patrol_id } = req.params;
 
   try {
@@ -278,7 +278,7 @@ router.get('/patrols/:patrol_id', async (req, res) => {
 
 
 // GET all patrolling types
-router.get('/patrolling-types', async (req, res) => {
+router.get('/patrolling-types',verifyJwt, async (req, res) => {
   try {
     const query = `
       SELECT type_id, type_name

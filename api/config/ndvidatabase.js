@@ -19,7 +19,7 @@ const { Sequelize } = require('sequelize');
 const useSsl = process.env.DB_SSL === 'true';
 
 const sequelize = new Sequelize(
-  'Recap4NDC', // Database name
+  'Recap4NDC_new', // Database name
   'postgres', // Username
   'P$DB@25%$#!26', // Password
   {
