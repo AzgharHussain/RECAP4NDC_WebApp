@@ -25,7 +25,7 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
             ADD COLUMN IF NOT EXISTS Pixle_id SERIAL PRIMARY KEY,
             ADD COLUMN IF NOT EXISTS note TEXT,
             ADD COLUMN IF NOT EXISTS image_data TEXT,
-            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
+            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT true,
             ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         `;

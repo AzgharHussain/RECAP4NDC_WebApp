@@ -1,22 +1,22 @@
-import express from "express";
-import cors from "cors";
-import multer from "multer";
-import fs from "fs";
-import path from "path";
-import { exec } from "child_process";
-import axios from "axios";
+const express = require("express");
+const cors = require("cors");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
+const { exec } = require("child_process");
+const axios = require("axios");
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const router = express.Router();
+
+const { sequelize, testConnection } = require('../config/ndvidatabase');
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // --- DB & GEOSERVER CONFIG ---
 const PG_HOST = "68.178.167.216";
 const PG_USER = "postgres";
-const PG_PASS = "pass@123";
+const PG_PASS = "P$DB@25%$#!26";
 const PG_DB = "Recap4NDC_new";
 
 const GEOSERVER_URL = "http://68.178.167.216:8081/geoserver";
@@ -109,29 +109,32 @@ function generateSLD(layerName, color) {
     </UserStyle>
   </NamedLayer>
 </StyledLayerDescriptor>`;
-
 }
 
 // --- Fix PostgreSQL table for GeoServer ---
 async function fixPostgreSQLTable(tableName) {
   try {
     const env = { ...process.env, PGPASSWORD: PG_PASS };
-
-    // Ensure lowercase table name
     const lowerTable = tableName.toLowerCase();
 
     // Check if fid exists; only create if missing
-    const addFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name='fid';"`;
-    const { stdout } = await runCommand(addFidCmd, env);
+    const checkFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name='fid';"`;
+    const { stdout } = await runCommand(checkFidCmd, env);
 
     if (!stdout.trim()) {
       const createFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL PRIMARY KEY;"`;
       await runCommand(createFidCmd, env);
     }
 
-    // Ensure geometry column is named 'geom'
-    const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN IF EXISTS wkb_geometry TO geom;"`;
-    await runCommand(geomCmd, env);
+    // Check if wkb_geometry column exists before renaming
+    const checkWkbCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name='wkb_geometry';"`;
+    const { stdout: wkbExists } = await runCommand(checkWkbCmd, env);
+    
+    if (wkbExists.trim()) {
+      // Rename wkb_geometry to geom if it exists
+      const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN wkb_geometry TO geom;"`;
+      await runCommand(geomCmd, env);
+    }
 
     // Create spatial index
     const indexCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "CREATE INDEX IF NOT EXISTS idx_${lowerTable}_geom ON ${lowerTable} USING GIST (geom);"`; 
@@ -204,8 +207,79 @@ async function publishToGeoServer(tableName, color) {
   }
 }
 
+// --- Add columns to coupe_village_master table ---
+// --- Simpler version without ON CONFLICT ---
+async function addcolumnsintable(tableName) {
+  try {
+    const lowerTable = tableName.toLowerCase();
+    
+    console.log(`Starting to process villages for table: ${lowerTable}`);
+    
+    // Get distinct village values
+    const [villages] = await sequelize.query(
+      `SELECT DISTINCT village 
+       FROM "${lowerTable}" 
+       WHERE village IS NOT NULL 
+       AND TRIM(village) != '' 
+       ORDER BY village`,
+      {
+        bind: []
+      }
+    );
+    
+    console.log(`Found ${villages.length} distinct villages`);
+    
+    if (villages.length === 0) {
+      console.log(`No village data found in table: ${lowerTable}`);
+      return false;
+    }
+    
+    // Insert villages into coupe_village_master (simple INSERT IGNORE approach)
+    let insertedCount = 0;
+    
+    for (const village of villages) {
+      try {
+        const villageName = village.village ? village.village.toString().trim() : '';
+        if (!villageName) continue;
+        
+        // Use a simple INSERT and catch duplicates
+        try {
+          await sequelize.query(
+            `INSERT INTO coupe_village_master (coupe_name, village_name) 
+             VALUES ($1, $2)`,
+            {
+              bind: [lowerTable, villageName]
+            }
+          );
+          insertedCount++;
+        } catch (insertErr) {
+          // If it's a duplicate key error, just skip it
+          if (insertErr.message.includes('duplicate') || 
+              insertErr.message.includes('unique') ||
+              insertErr.code === '23505') {
+            // Duplicate entry, skip it
+            continue;
+          } else {
+            console.error(`Error inserting village ${villageName}:`, insertErr.message);
+          }
+        }
+      } catch (villageErr) {
+        console.error(`Error processing village ${village.village}:`, villageErr.message);
+      }
+    }
+    
+    console.log(`Successfully inserted ${insertedCount} villages from ${lowerTable} into coupe_village_master`);
+    
+    return insertedCount > 0;
+    
+  } catch (err) {
+    console.error('Error in addcolumnsintable:', err.message);
+    return false;
+  }
+}
+
 // --- Upload shapefile route ---
-app.post("/upload-shp", upload.array("files"), async (req, res) => {
+router.post("/upload-shp", upload.array("files"), async (req, res) => {
   let uploadedFiles = [];
   try {
     const color = req.body.color || "#0000ff";
@@ -214,16 +288,20 @@ app.post("/upload-shp", upload.array("files"), async (req, res) => {
 
     uploadedFiles = req.files;
 
-    const tableName = path.basename(shpFile.originalname, ".shp").replace(/[^a-zA-Z0-9_]/g, '_');
+    const originalTableName = path.basename(shpFile.originalname, ".shp");
+    const tableName = originalTableName.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
     const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
+
+    console.log(`Processing shapefile: ${originalTableName}`);
+    console.log(`Table name will be: ${tableName}`);
 
     const ogr2ogrPath = `"C:/Program Files/QGIS 3.40.10/bin/ogr2ogr.exe"`;
     process.env.PROJ_LIB = "C:/Program Files/QGIS 3.40.10/share/proj";
 
-const ogrCmd = `${ogr2ogrPath} -f "PostgreSQL" \
+    const ogrCmd = `${ogr2ogrPath} -f "PostgreSQL" \
 PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB}" \
 "${shpPath}" \
--nln "${tableName.toLowerCase()}" \
+-nln "${tableName}" \
 -nlt PROMOTE_TO_MULTI \
 -lco GEOMETRY_NAME=geom \
 -lco FID=fid \
@@ -233,29 +311,76 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB}" \
 -skipfailures`;
 
     console.log("Running ogr2ogr command...");
-    await runCommand(ogrCmd);
+    console.log("Command:", ogrCmd.substring(0, 200) + "...");
+    
+    const ogrResult = await runCommand(ogrCmd);
+    console.log("ogr2ogr output:", ogrResult.stdout ? ogrResult.stdout.substring(0, 500) : "No output");
+    
+    if (ogrResult.stderr) {
+      console.warn("ogr2ogr warnings:", ogrResult.stderr.substring(0, 500));
+    }
+
+    // Add delay to ensure table is fully created
+    console.log("Waiting for table creation to complete...");
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     // Fix table for GeoServer
+    console.log("Fixing PostgreSQL table for GeoServer...");
     await fixPostgreSQLTable(tableName);
 
     // Publish to GeoServer
+    console.log("Publishing to GeoServer...");
     await publishToGeoServer(tableName, color);
 
-    // Cleanup
-    uploadedFiles.forEach(file => fs.existsSync(path.join(UPLOAD_DIR, file.originalname)) && fs.unlinkSync(path.join(UPLOAD_DIR, file.originalname)));
+    // Add delay before querying
+    console.log("Waiting before querying villages...");
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Add village data to coupe_village_master table
+    console.log("Adding village data to coupe_village_master...");
+    const villageInserted = await addcolumnsintable(tableName);
+
+    // Cleanup uploaded files
+    console.log("Cleaning up uploaded files...");
+    uploadedFiles.forEach(file => {
+      const filePath = path.join(UPLOAD_DIR, file.originalname);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          console.log(`Deleted: ${file.originalname}`);
+        } catch (cleanupErr) {
+          console.warn(`Failed to delete ${filePath}:`, cleanupErr.message);
+        }
+      }
+    });
 
     res.json({
       success: true,
       message: "Shapefile uploaded & published successfully",
-      table: tableName.toLowerCase(),
+      table: tableName,
       color,
       wmsUrl: `${GEOSERVER_URL}/${WORKSPACE}/wms`,
-      layerName: `${WORKSPACE}:${tableName.toLowerCase()}`
+      layerName: `${WORKSPACE}:${tableName}`,
+      villagesInserted: villageInserted
     });
 
   } catch (err) {
     console.error("Upload error:", err);
-    uploadedFiles.forEach(file => fs.existsSync(path.join(UPLOAD_DIR, file.originalname)) && fs.unlinkSync(path.join(UPLOAD_DIR, file.originalname)));
+    console.error("Error details:", err.stderr || err.message);
+    
+    // Cleanup on error
+    uploadedFiles.forEach(file => {
+      const filePath = path.join(UPLOAD_DIR, file.originalname);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          console.log(`Cleaned up on error: ${file.originalname}`);
+        } catch (cleanupErr) {
+          console.warn(`Failed to delete ${filePath}:`, cleanupErr.message);
+        }
+      }
+    });
+    
     res.status(500).json({
       success: false,
       message: "Upload failed",
@@ -265,3 +390,4 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB}" \
   }
 });
 
+module.exports = router;

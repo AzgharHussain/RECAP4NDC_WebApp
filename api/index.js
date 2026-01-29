@@ -16,6 +16,7 @@ const notifications = require('./routers/notifications');
 const userlocations = require('./routers/userlocations');
 const changendvi = require('./routers/changendvi');
 const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
+const gisupload = require('./routers/gisupload');
 
 const app = express();
 
@@ -179,8 +180,7 @@ app.post("/api/saveuser", async (req, res) => {
     // Generate JWT
     const token = jwt.sign(
       { userId: user.user_id, username: user.username }, 
-      SECRET_KEY, 
-      { expiresIn: "24h" }
+      SECRET_KEY
     );
 
     res.json({
@@ -199,7 +199,7 @@ app.post("/api/saveuser", async (req, res) => {
   }
 });
 
-app.get('/api/coupes', async (req, res) => {
+app.get('/api/admincoupes', async (req, res) => {
   try {
 
     const [result] = await sequelize.query(
@@ -269,6 +269,7 @@ app.use('/api', notifications);
 app.use('/api', userlocations);
 app.use('/api', changendvi);
 app.use('/api', beat_patrol_coverage);
+app.use('/api', gisupload);
 
 // ==================== START SERVER ==================== //
 const PORT = process.env.PORT || 5002;

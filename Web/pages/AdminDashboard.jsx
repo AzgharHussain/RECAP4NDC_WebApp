@@ -44,7 +44,7 @@ function AdminDashboard() {
         setLoading(true);
         setError(null);
         
-        const response = await axios.get(`${API_BASE_URL}/api/coupes`);
+        const response = await axios.get(`${API_BASE_URL}/api/admincoupes`);
         
         if (response.data && response.data.data) {
           // Extract coupe_name from the result
@@ -64,28 +64,7 @@ function AdminDashboard() {
     fetchCoupes();
   }, []); // Empty dependency array - runs once on mount
 
-  // Function to retry fetching data
-  const handleRetry = () => {
-    setLoading(true);
-    setError(null);
-    // Re-fetch the data
-    axios.get(`${API_BASE_URL}/api/coupes`)
-      .then(response => {
-        if (response.data && response.data.data) {
-          const coupeList = response.data.data.map(item => item.coupe_name);
-          setCoupes(coupeList);
-        } else {
-          setError("No data received from server");
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching coupes:", err);
-        setError(err.message || "Failed to fetch coupes");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
+
 
   // Upload shapefile
   const uploadFiles = async () => {
@@ -105,7 +84,7 @@ function AdminDashboard() {
     form.append("color", selectedColor);
 
     try {
-      const res = await axios.post("http://localhost:4000/upload-shp", form, {
+      const res = await axios.post(`${API_BASE_URL}/api/upload-shp`, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -139,41 +118,21 @@ function AdminDashboard() {
   ];
 
   return (
-    <div className="admin-container" >
+    <div className="admin-container">
       {/* Main Content Area */}
       <div className="admin-content">
         
-        {/* Statistics */}
-        <div className="dashboard-stats">
+      </div>
+      {/* Left Panel with coupe names */}
+      <div className="left-panel"  style={{ display:'flex'}} >
+        <div className="coupe-list">
           <div className="stat-card">
             <h3>Total Coupes</h3>
             <p className="stat-number">{coupes.length}</p>
           </div>
-          
-        </div>
-        
-      </div>
-      {/* Left Panel with coupe names */}
-      <div className="left-panel">
-        <div className="coupe-list">
           <h3>{text[language].coupeList}</h3>
           
-          {loading ? (
-            <div className="loading-message">
-              <p>{text[language].loading}</p>
-              <div className="loader"></div>
-            </div>
-          ) : error ? (
-            <div className="error-message">
-              <p>{text[language].error}</p>
-              <button 
-                className="retry-btn"
-                onClick={handleRetry}
-              >
-                {text[language].retry}
-              </button>
-            </div>
-          ) : (
+          
             <ul>
               {coupes.map((coupe, index) => (
                 <li key={index}>
@@ -188,7 +147,7 @@ function AdminDashboard() {
                 <li className="no-data">No coupes found</li>
               )}
             </ul>
-          )}
+         
         </div>
 
 
