@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "./context/LanguageContext";
 
 // === Components ===
-import LoadingSpinner from "./components/LoadingSpinner"; // Create this component for loading states
+import LoadingSpinner from "./components/LoadingSpinner";
 
 // === Lazy-loaded Pages ===
 const Login = lazy(() => import("./pages/Login"));
@@ -16,11 +16,11 @@ const UploadCoupe = lazy(() => import("./pages/UploadCoupe"));
 const ViewCoupe = lazy(() => import("./pages/ViewCoupe"));
 const CoupeObservation = lazy(() => import("./pages/CoupeObservation"));
 const NDVIChangeDashboard = lazy(() => import("./pages/NDVIDashboard"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 
-// Loading fallback component
 const LoadingFallback = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-    <LoadingSpinner /> {/* You can replace this with any loading component */}
+    <LoadingSpinner />
   </div>
 );
 
@@ -29,12 +29,16 @@ export default function App() {
     <LanguageProvider>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          {/* Login without sidebar */}
+          {/* Public Routes (no layout) */}
           <Route path="/" element={<Login />} />
+          
+          {/* Admin Route - SEPARATE layout (no sidebar) */}
+          
 
-          {/* Protected pages with master layout */}
+          {/* Protected Routes with DashboardLayout (sidebar) */}
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/geo" element={<GeoDashboard />} />
             <Route path="/petrolling-incident/patrolling" element={<Patrolling />} />
             <Route path="/petrolling-incident/incident" element={<Incident />} />

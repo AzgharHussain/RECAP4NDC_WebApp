@@ -36,7 +36,7 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
         const selectQuery = `
             SELECT Pixle_id, longitude, latitude
             FROM public."${tableName}"
-            WHERE "Village" = '${village_name}'
+            WHERE village = '${village_name}'
         ;
         `;
  

@@ -6,9 +6,6 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
 const { verifyJwt } = require("./middlewares/verifyJwt");
-
-
-
 const { sequelize, testConnection } = require('./config/database');
 
 // Routers
@@ -22,8 +19,12 @@ const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 
 const app = express();
 
-// -------------------- MIDDLEWARE -------------------- //
-app.use(cors({ origin: '*', methods: ['GET','POST','PUT','DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
+// ==================== MIDDLEWARE ==================== //
+app.use(cors({ 
+  origin: '*', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
+  allowedHeaders: ['Content-Type', 'Authorization'] 
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -33,29 +34,33 @@ app.use((req, res, next) => {
   next();
 });
 
-// -------------------- FILE STORAGE -------------------- //
+// ==================== FILE STORAGE ==================== //
 const patrolImageDir = path.join(__dirname, '..', 'Patrolimage');
 const incidentImageDir = path.join(__dirname, '..', 'Incidentimage');
 
-if (!fs.existsSync(patrolImageDir)) fs.mkdirSync(patrolImageDir, { recursive: true });
-if (!fs.existsSync(incidentImageDir)) fs.mkdirSync(incidentImageDir, { recursive: true });
+[patrolImageDir, incidentImageDir].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
 app.use('/Patrolimage', express.static(patrolImageDir));
 app.use('/Incidentimage', express.static(incidentImageDir));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (file.fieldname.startsWith('patrol_images')) cb(null, patrolImageDir);
-    else cb(null, incidentImageDir);
+    if (file.fieldname.startsWith('patrol_images')) {
+      cb(null, patrolImageDir);
+    } else {
+      cb(null, incidentImageDir);
+    }
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + '_' + file.originalname);
   }
 });
 
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB
+const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
-// -------------------- JWT -------------------- //
+// ==================== JWT CONFIG ==================== //
 const SECRET_KEY = process.env.JWT_SECRET || "mysecret123";
 
 const verifyToken = (req, res, next) => {
@@ -74,39 +79,83 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// -------------------- ROUTES -------------------- //
+// ==================== ROUTES ==================== //
 
-// Root
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Server is running',
-    endpoints: [
-      'POST /api/saveuser',
-      'GET /api/villages?name=coupe_name',
-      'GET /health',
-    ]
-  });
+// Test GET endpoint
+app.get('/api/test', (req, res) => {
+  console.log('✅ /api/test GET endpoint hit');
+  res.json({ success: true, message: 'Test route works!' });
 });
 
-// Health check
-app.get('/health', async (req, res) => {
-  const dbConnected = await testConnection();
-  res.status(dbConnected ? 200 : 500).json({
-    status: dbConnected ? 'healthy' : 'unhealthy',
-    database: dbConnected ? 'connected' : 'disconnected',
-    timestamp: new Date().toISOString()
-  });
+// Admin login endpoint (POST - for frontend)
+app.post('/api/admin', async (req, res) => {
+  try {
+    console.log('✅ /api/admin POST route accessed');
+    const { username, password } = req.body;
+    
+    if (!username || username.trim() === '') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Username is required' 
+      });
+    }
+    
+    if (!password || password.trim() === '') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Password is required' 
+      });
+    }
+
+    console.log(`Admin POST login attempt: ${username}`);
+
+    // Try with 'public.' prefix first, then without if it fails
+    let [result] = await sequelize.query(
+      `SELECT * FROM public.admin WHERE username = $1 AND password = $2`,
+      { bind: [username.trim(), password.trim()] }
+    );
+
+    // If no results, try without schema prefix
+    if (result.length === 0) {
+      console.log('Trying without public schema prefix...');
+      [result] = await sequelize.query(
+        `SELECT * FROM admin WHERE username = $1 AND password = $2`,
+        { bind: [username.trim(), password.trim()] }
+      );
+    }
+
+    console.log(`Admin query result count: ${result.length}`);
+
+    if (result.length === 0) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid admin credentials' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      data: result, 
+      count: result.length 
+    });
+    
+  } catch (err) {
+    console.error('Error in /api/admin POST:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal Server Error', 
+      message: err.message 
+    });
+  }
 });
-
-
-
 
 // Save user endpoint
 app.post("/api/saveuser", async (req, res) => {
   try {
     const username = req.body?.username || req.query?.username;
-    if (!username || username.trim() === "")
+    if (!username || username.trim() === "") {
       return res.status(400).json({ success: false, error: "Username required" });
+    }
 
     const trimmedUsername = username.trim();
 
@@ -128,7 +177,11 @@ app.post("/api/saveuser", async (req, res) => {
     }
 
     // Generate JWT
-    const token = jwt.sign({ userId: user.user_id, username: user.username }, SECRET_KEY, { expiresIn: "24h" });
+    const token = jwt.sign(
+      { userId: user.user_id, username: user.username }, 
+      SECRET_KEY, 
+      { expiresIn: "24h" }
+    );
 
     res.json({
       success: true,
@@ -138,34 +191,77 @@ app.post("/api/saveuser", async (req, res) => {
     });
   } catch (err) {
     console.error("Error /api/saveuser:", err);
-    res.status(500).json({ success: false, error: "Server error", message: err.message });
+    res.status(500).json({ 
+      success: false, 
+      error: "Server error", 
+      message: err.message 
+    });
   }
 });
 
-// Get villages
-app.get('/api/villages',verifyJwt, async (req, res) => {
+app.get('/api/coupes', async (req, res) => {
+  try {
+
+    const [result] = await sequelize.query(
+      `	SELECT DISTINCT coupe_name FROM public.coupe_village_master`,
+    );
+
+    res.json({ 
+      
+      data: result,
+      
+    });
+  } catch (err) {
+    console.error('Error /api/villages:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal Server Error', 
+      message: err.message 
+    });
+  }
+});
+
+// Get villages endpoint
+app.get('/api/villages', verifyJwt, async (req, res) => {
   try {
     const { name } = req.query;
-    if (!name || name.trim() === '') return res.status(400).json({ success: false, error: 'Coupe name is required' });
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Coupe name is required' 
+      });
+    }
 
     const [result] = await sequelize.query(
       `SELECT DISTINCT village_name, id FROM public.coupe_village_master WHERE coupe_name = $1 ORDER BY village_name`,
       { bind: [name.trim()] }
     );
 
-    res.json({ success: true, data: result, count: result.length });
+    res.json({ 
+      success: true, 
+      data: result, 
+      count: result.length 
+    });
   } catch (err) {
     console.error('Error /api/villages:', err);
-    res.status(500).json({ success: false, error: 'Internal Server Error', message: err.message });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal Server Error', 
+      message: err.message 
+    });
   }
 });
 
 // Protected route example
 app.get('/api/protected', verifyToken, (req, res) => {
-  res.json({ success: true, message: 'Protected route accessed', user: req.user });
+  res.json({ 
+    success: true, 
+    message: 'Protected route accessed', 
+    user: req.user 
+  });
 });
 
-// -------------------- INCLUDE ROUTERS -------------------- //
+// ==================== INCLUDE ROUTERS ==================== //
 app.use('/api', patrolRoutes);
 app.use('/api', dropdownapis);
 app.use('/api', NdviRouter);
@@ -173,24 +269,16 @@ app.use('/api', notifications);
 app.use('/api', userlocations);
 app.use('/api', changendvi);
 app.use('/api', beat_patrol_coverage);
-// -------------------- GLOBAL ERROR HANDLER -------------------- //
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(err.status || 500).json({ success: false, error: err.message || 'Something went wrong' });
-});
 
-// 404 handler
-app.use((req, res) => res.status(404).json({ success: false, error: 'Endpoint not found' }));
-
-// -------------------- START SERVER -------------------- //
+// ==================== START SERVER ==================== //
 const PORT = process.env.PORT || 5002;
 
 app.listen(PORT, async () => {
   try {
     await sequelize.authenticate();
-    console.log('🟢 Database connected');
+    console.log('🟢 Database connected successfully');
   } catch (err) {
-    console.error('❌ Database connection failed', err);
+    console.error('❌ Database connection failed:', err.message);
   }
   console.log(`🚀 Server running on port ${PORT}`);
 });

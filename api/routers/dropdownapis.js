@@ -515,8 +515,8 @@ router.post("/get-centroid", verifyJwt, async (req, res) => {
         ST_X(ST_Centroid(geom)) AS longitude
       FROM public."${coupe_name}"
       WHERE
-          "Village" = :village
-        AND "Coupe_No" = :coupe
+          village = :village
+        AND coupe_no = :coupe
       LIMIT 1;
     `;
  

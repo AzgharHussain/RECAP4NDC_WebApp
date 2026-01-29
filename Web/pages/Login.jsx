@@ -88,118 +88,120 @@ function Login() {
     }
   };
 
-  // Enhanced XML Parser Helper Function
-  const parseXMLResponse = (xmlString) => {
+  // Exact equivalent of Dart's parseLoginEGUJForestSoapToJson function
+  const parseLoginEGUJForestSoapToJson = (xmlStr) => {
+    console.log("Parsing XML response...");
+    
     try {
       const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-      
-      console.log("Raw XML Response:", xmlString);
-      console.log("Parsed XML Document:", xmlDoc);
-      
-      // Check for SOAP Fault
-      const faultString = xmlDoc.getElementsByTagName("faultstring")[0];
-      if (faultString) {
-        const errorMsg = faultString.textContent || "Authentication failed";
-        throw new Error(errorMsg);
-      }
+      const doc = parser.parseFromString(xmlStr, "text/xml");
 
-      // Check for empty or error response
-      const diffgram = xmlDoc.getElementsByTagName("diffgr:diffgram")[0];
-      if (!diffgram) {
-        // Try without namespace
-        const diffgramAlt = xmlDoc.querySelector("diffgram");
-        if (!diffgramAlt) {
-          throw new Error("Invalid response format - missing data");
+      // Find all <Result> elements
+      const results = doc.getElementsByTagName('Result');
+      console.log(`Found ${results.length} Result elements`);
+
+      // If there are multiple Result nodes, convert all to a list
+      const parsedResults = [];
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        
+        // Skip schema Result definitions if any (usually empty of the actual data)
+        // We only want Result nodes that contain child elements
+        const childElements = Array.from(result.children).filter(child => 
+          child.nodeType === Node.ELEMENT_NODE
+        );
+        
+        if (childElements.length === 0) continue;
+
+        const map = {};
+
+        for (const child of childElements) {
+          const key = child.tagName; // Use full tag name
+          const value = child.textContent?.trim() || '';
+          map[key] = value;
+        }
+
+        // Only add if it actually has fields
+        if (Object.keys(map).length > 0) {
+          parsedResults.push(map);
         }
       }
 
-      // Get Result element
-      const resultElements = xmlDoc.getElementsByTagName("Result");
-      console.log("Number of Result elements:", resultElements.length);
-      
-      if (resultElements.length === 0) {
-        // Try with different namespace or case
-        const resultAlt = xmlDoc.querySelector("Result, result");
-        if (!resultAlt) {
-          throw new Error("No user data found in response");
-        }
-      }
+      console.log("Parsed results:", parsedResults);
 
-      const resultElement = resultElements[0] || xmlDoc.querySelector("Result, result");
-      
-      // Extract data with better fallback handling
-      const getElementText = (element, tagName) => {
-        const elem = element.getElementsByTagName(tagName)[0];
-        const text = elem ? elem.textContent : null;
-        console.log(`${tagName}:`, text);
-        return text;
-      };
+      // If you expect a single record, return the first.
+      // Otherwise, return {"data": parsedResults}
+      if (parsedResults.length === 0) return {};
+      if (parsedResults.length === 1) return parsedResults[0];
 
-      const userData = {
-        name: getElementText(resultElement, "NAME") || "-",
-        post: getElementText(resultElement, "NameOfPost") || "-",
-        cadre: getElementText(resultElement, "CadreName") || "-",
-        circle: getElementText(resultElement, "CircleName") || "-",
-        division: getElementText(resultElement, "DivisionName") || "-",
-        range: getElementText(resultElement, "RangeName") || "-",
-        round: getElementText(resultElement, "RoundName") || "-",
-        beat: getElementText(resultElement, "BeatName") || "-",
-        mobile: getElementText(resultElement, "MobileNo") || "-",
-        email: getElementText(resultElement, "EmailID") || "-",
-      };
+      return {"data": parsedResults};
 
-      console.log("Extracted user data:", userData);
-
-      // Check if all fields are empty/dashes (invalid credentials)
-      const allFieldsEmpty = Object.values(userData).every(
-        value => value === "-" || value === "" || value === null || value === undefined
-      );
-
-      if (allFieldsEmpty) {
-        throw new Error("INVALID_CREDENTIALS");
-      }
-
-      // Check for minimum required data
-      if (userData.name === "-" && userData.mobile === "-") {
-        throw new Error("INCOMPLETE_USER_DATA");
-      }
-
-      return userData;
     } catch (error) {
-      console.error("XML Parsing Error:", error);
-      throw error;
+      console.error("XML parsing error:", error);
+      return {};
     }
   };
 
-const saveUser = async (username) => {
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/saveuser`,
-      { username },
-      
-    );
+  // Exact equivalent of Dart's login function
+  const login = async (username, password) => {
+    try {
+      const soapRequest = `<?xml version="1.0" encoding="utf-8"?>\r\n<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">\r\n  <soap12:Body>\r\n    <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">\r\n      <username>${username}</username>\r\n      <password>${password}</password>\r\n    </LOGIN_EGUJFOREST>\r\n  </soap12:Body>\r\n</soap12:Envelope>`;
 
-    const { token, user } = response.data;
+      console.log("Sending SOAP request with username:", username);
 
-    if (token) {
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      console.log("🔐 JWT saved to localStorage");
+      const response = await axios.post(
+        '/FMIS/CommonService/forestcommonservice.asmx', // Using proxy
+        soapRequest,
+        {
+          headers: {
+            'Content-Type': 'text/xml',
+            'Cookie': 'cookiesession1=678B76C6BFFC3FC980E5E4E1E44467A6'
+          },
+          timeout: 30000
+        }
+      );
+
+      if (response.status === 200) {
+        console.log('success:', response.status, '/ Response length:', response.data.length);
+        const jsonMap = parseLoginEGUJForestSoapToJson(response.data);
+        console.log('Parsed JSON Map:', jsonMap);
+        return jsonMap;
+      } else {
+        console.log('error:', response.status, '/', response.data);
+        return null;
+      }
+    } catch (e) {
+      console.log('error:', e.toString());
+      return null;
     }
+  };
 
-    return response.data;
-  } catch (err) {
-    console.error(
-      "❌ Failed to save user:",
-      err.response?.data || err.message
-    );
-    return null;
-  }
-};
+  const saveUser = async (username) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/api/saveuser`,
+        { username },
+        
+      );
 
+      const { token, user } = response.data;
 
+      if (token) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        console.log("🔐 JWT saved to localStorage");
+      }
 
+      return response.data;
+    } catch (err) {
+      console.error(
+        "❌ Failed to save user:",
+        err.response?.data || err.message
+      );
+      return null;
+    }
+  };
 
   // Login Handler
   const handleLogin = async () => {
@@ -213,106 +215,87 @@ const saveUser = async (username) => {
     setError("");
 
     try {
-      // Test credentials (for debugging)
-      const testCredentials = [
-        { user: "admin", pass: "Gipl@123" },
-        { user: "demo", pass: "demo@123" },
-        { user: "test", pass: "test@123" }
-      ];
+      // 1. Check if user is an admin via the API
+      console.log("Checking admin credentials...");
       
-      // Check if using test credentials
-      const isTestCredential = testCredentials.some(
-        cred => cred.user === userId.trim() && cred.pass === password.trim()
-      );
-
-      // If using test credentials, bypass SOAP API and simulate success
-      if (isTestCredential) {
-        console.log("Using test credentials - bypassing SOAP API");
-        
-        // Create mock user data for test credentials
-        const mockUserData = {
-          name: "Test User",
-          post: "Administrator",
-          cadre: "Admin Cadre",
-          circle: "Test Circle",
-          division: "Test Division",
-          range: "Test Range",
-          round: "Test Round",
-          beat: "Test Beat",
-          mobile: "9876543210",
-          email: "test@example.com",
-        };
-
-        // Store user data (NO PASSWORD)
-        const userSession = {
-          ...mockUserData,
+      try {
+        const adminCheckResponse = await axios.post(`${API_BASE_URL}/api/admin`, {
           username: userId.trim(),
-          isAuthenticated: true,
-          loginTime: new Date().toISOString()
-        };
+          password: password.trim()
+        });
 
-        localStorage.setItem("userData", JSON.stringify(userSession));
-        localStorage.setItem("authToken", "authenticated");
+        // If admin credentials are valid
+        if (adminCheckResponse.data.success && adminCheckResponse.data.count > 0) {
+          console.log("Admin user authenticated via API");
+          
+          const adminData = adminCheckResponse.data.data[0];
+          
+          // Create admin user session
+          const userSession = {
+            name: adminData.name || "Administrator",
+            post: adminData.post || "Admin",
+            cadre: adminData.cadre || "Administrative",
+            circle: adminData.circle || "Admin Circle",
+            division: adminData.division || "Admin Division",
+            range: adminData.range || "Admin Range",
+            round: adminData.round || "Admin Round",
+            beat: adminData.beat || "Admin Beat",
+            mobile: adminData.mobile || "-",
+            email: adminData.email || "-",
+            username: userId.trim(),
+            isAuthenticated: true,
+            isAdmin: true,
+            loginTime: new Date().toISOString()
+          };
 
-        // Save user to backend
-        await saveUser(userId.trim());
+          // Store user data
+          localStorage.setItem("userData", JSON.stringify(userSession));
+          localStorage.setItem("authToken", "authenticated");
+          localStorage.setItem("isAdmin", "true");
 
-        // Navigate to dashboard
-        navigate("/geo");
-        return;
+          // Navigate to admin dashboard/page
+          navigate("/admin");
+          return;
+        }
+      } catch (adminError) {
+        // User is not an admin, continue with SOAP auth
+        console.log("User is not an admin, continuing with SOAP authentication...");
       }
 
-      // SOAP Request XML for real authentication
-      const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-  <soap12:Body>
-    <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
-      <username>${userId.trim()}</username>
-      <password>${password.trim()}</password>
-    </LOGIN_EGUJFOREST>
-  </soap12:Body>
-</soap12:Envelope>`;
-
-      console.log("Sending SOAP Request with username:", userId.trim());
-
-      // Use API_BASE_URL for the SOAP endpoint
-      const soapEndpoint = `${API_BASE_URL}/api/FMIS/CommonService/forestcommonservice.asmx?op=LOGIN_EGUJFOREST`;
+      // 2. SOAP Authentication for regular users
+      const jsonMap = await login(userId.trim(), password.trim());
       
-      const config = {
-        method: 'post',
-        url: soapEndpoint,
-        headers: {
-          'Content-Type': 'application/soap+xml; charset=utf-8',
-          'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
-        },
-        data: soapRequest,
-        timeout: 60000, // 60 seconds timeout
+      if (!jsonMap || Object.keys(jsonMap).length === 0) {
+        throw new Error("INVALID_CREDENTIALS");
+      }
+
+      console.log("Authentication successful, user data:", jsonMap);
+
+      // Extract user data
+      const userData = {
+        name: jsonMap.NAME || "-",
+        post: jsonMap.NameOfPost || "-",
+        cadre: jsonMap.CadreName || "-",
+        circle: jsonMap.CircleName || "-",
+        division: jsonMap.DivisionName || "-",
+        range: jsonMap.RangeName || "-",
+        round: jsonMap.RoundName || "-",
+        beat: jsonMap.BeatName || "-",
+        mobile: jsonMap.MobileNo || "-",
+        email: jsonMap.EmailID || "-",
       };
 
-      // Make API call
-      const response = await axios(config);
-      
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
-      console.log("Response data length:", response.data.length);
-      
-      if (response.status !== 200) {
-        throw new Error(`HTTP ${response.status}: ${text[language].errorServer}`);
+      // Check if user data is valid
+      if (userData.name === "-" && userData.mobile === "-") {
+        throw new Error("INVALID_CREDENTIALS");
       }
-
-      // Log first 1000 chars of response for debugging
-      console.log("Response data (first 1000 chars):", response.data.substring(0, 1000));
-
-      // Parse the XML response
-      const userData = parseXMLResponse(response.data);
-      
-      console.log("Parsed user data:", userData);
 
       // Store user data
       const userSession = {
         ...userData,
         username: userId.trim(),
         isAuthenticated: true,
+        isAdmin: false,
         loginTime: new Date().toISOString()
       };
 
@@ -326,38 +309,25 @@ const saveUser = async (username) => {
       navigate("/geo");
 
     } catch (error) {
-      console.error("Login Error Details:", {
-        message: error.message,
-        code: error.code,
-        response: error.response,
-        request: error.request
-      });
+      console.error("Login Error:", error);
       
       // Handle specific error cases
       if (error.code === 'ECONNABORTED') {
         setError(text[language].timeout);
       } else if (error.message === 'INVALID_CREDENTIALS') {
         setError(text[language].errorInvalid);
-      } else if (error.message === 'INCOMPLETE_USER_DATA') {
-        setError(text[language].errorUserNotFound);
       } else if (error.response) {
-        // Server responded with error status
         if (error.response.status === 401 || error.response.status === 403) {
           setError(text[language].errorInvalid);
         } else if (error.response.status === 404) {
-          setError("API endpoint not found. Please check the server URL.");
+          setError("API endpoint not found");
         } else if (error.response.status >= 500) {
           setError(text[language].errorServer);
         } else {
-          setError(`Server Error: ${error.response.status}`);
+          setError(`Error: ${error.response.status}`);
         }
       } else if (error.request) {
-        // Request made but no response (network error or CORS)
-        if (error.message.includes("Network Error") || error.message.includes("CORS")) {
-          setError(text[language].errorCORS);
-        } else {
-          setError(text[language].errorNetwork);
-        }
+        setError(text[language].errorNetwork);
       } else {
         setError(error.message || text[language].errorServer);
       }

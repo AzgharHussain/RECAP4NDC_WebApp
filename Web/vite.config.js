@@ -6,16 +6,22 @@ export default defineConfig({
   
   server: {
     proxy: {
+      // For your backend API (localhost:5002)
       "/api": {
+        target: "http://localhost:5002",
+        changeOrigin: true,
+        secure: false,
+      },
+      // For SOAP calls to Gujarat Forest Service
+      "/FMIS": {
         target: "https://egujforest.gujarat.gov.in",
         changeOrigin: true,
-        secure: false, // Add this for HTTPS
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
+        secure: false,
+      }
     },
   },
   
   optimizeDeps: {
-    include: ["antd", "react-router-dom"]
+    include: ["react", "react-dom", "react-router-dom", "axios"]
   }
 });
