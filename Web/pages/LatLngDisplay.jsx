@@ -26,15 +26,15 @@ const LatLngDisplay = () => {
     <div className="lat-lng-display"
      style={{
       position: 'absolute',
-      bottom: '12%',
-      left: '4%',
+      bottom: '9%',
+      left: '13%',
       zIndex: 10000,
       backgroundColor: 'white',
       padding: '5px 10px',
       borderRadius: '4px',
       boxShadow: '0 0 5px rgba(0,0,0,0.3)',
       fontFamily: 'Arial, sans-serif',
-      fontSize: '14px'
+      fontSize: '8px'
     }}
     >
      {directions.lat},  {directions.lng}
