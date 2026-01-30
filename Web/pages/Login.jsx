@@ -219,48 +219,33 @@ function Login() {
       console.log("Checking admin credentials...");
       
       try {
-        const adminCheckResponse = await axios.post(`${API_BASE_URL}/api/admin`, {
-          username: userId.trim(),
-          password: password.trim()
-        });
-
-        // If admin credentials are valid
-        if (adminCheckResponse.data.success && adminCheckResponse.data.count > 0) {
-          console.log("Admin user authenticated via API");
-          
-          const adminData = adminCheckResponse.data.data[0];
-          
-          // Create admin user session
-          const userSession = {
-            name: adminData.name || "Administrator",
-            post: adminData.post || "Admin",
-            cadre: adminData.cadre || "Administrative",
-            circle: adminData.circle || "Admin Circle",
-            division: adminData.division || "Admin Division",
-            range: adminData.range || "Admin Range",
-            round: adminData.round || "Admin Round",
-            beat: adminData.beat || "Admin Beat",
-            mobile: adminData.mobile || "-",
-            email: adminData.email || "-",
-            username: userId.trim(),
-            isAuthenticated: true,
-            isAdmin: true,
-            loginTime: new Date().toISOString()
-          };
-
-          // Store user data
-          localStorage.setItem("userData", JSON.stringify(userSession));
-          localStorage.setItem("authToken", "authenticated");
-          localStorage.setItem("isAdmin", "true");
-
-          // Navigate to admin dashboard/page
-          navigate("/admin");
-          return;
+    const response = await axios.post(`${API_BASE_URL}/api/admin`, {
+      username: userId.trim(),  // Fixed: Use userId instead of undefined username
+        password: password.trim()
+    });
+    
+    if (response.data.success) {
+      // Store the token and user info
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Now you can make authenticated requests
+      const coupesResponse = await axios.get(
+        `${API_BASE_URL}/api/admincoupes`,
+        {
+          headers: {
+            Authorization: `Bearer ${response.data.token}`,
+          },
         }
-      } catch (adminError) {
-        // User is not an admin, continue with SOAP auth
-        console.log("User is not an admin, continuing with SOAP authentication...");
-      }
+      );
+            navigate("/admin");
+
+      return coupesResponse.data;
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
 
       // 2. SOAP Authentication for regular users
       const jsonMap = await login(userId.trim(), password.trim());

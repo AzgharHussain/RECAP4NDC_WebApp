@@ -89,6 +89,7 @@ app.get('/api/test', (req, res) => {
 });
 
 // Admin login endpoint (POST - for frontend)
+// In your server.js, update the admin login endpoint:
 app.post('/api/admin', async (req, res) => {
   try {
     console.log('✅ /api/admin POST route accessed');
@@ -110,20 +111,12 @@ app.post('/api/admin', async (req, res) => {
 
     console.log(`Admin POST login attempt: ${username}`);
 
-    // Try with 'public.' prefix first, then without if it fails
-    let [result] = await sequelize.query(
-      `SELECT * FROM public.admin WHERE username = $1 AND password = $2`,
-      { bind: [username.trim(), password.trim()] }
-    );
 
-    // If no results, try without schema prefix
-    if (result.length === 0) {
-      console.log('Trying without public schema prefix...');
       [result] = await sequelize.query(
         `SELECT * FROM admin WHERE username = $1 AND password = $2`,
         { bind: [username.trim(), password.trim()] }
       );
-    }
+    
 
     console.log(`Admin query result count: ${result.length}`);
 
@@ -134,9 +127,23 @@ app.post('/api/admin', async (req, res) => {
       });
     }
 
+    const admin = result[0];
+    
+    // Generate JWT token with the SAME structure as verifyJwt expects
+    const token = jwt.sign(
+      { 
+        username: admin.username,
+      }, 
+      SECRET_KEY,
+    );
+
     res.json({ 
       success: true, 
-      data: result, 
+      message: 'Admin login successful',
+      user: {
+        username: admin.username,
+      },
+      token,
       count: result.length 
     });
     
@@ -199,27 +206,7 @@ app.post("/api/saveuser", async (req, res) => {
   }
 });
 
-app.get('/api/admincoupes', async (req, res) => {
-  try {
 
-    const [result] = await sequelize.query(
-      `	SELECT DISTINCT coupe_name FROM public.coupe_village_master`,
-    );
-
-    res.json({ 
-      
-      data: result,
-      
-    });
-  } catch (err) {
-    console.error('Error /api/villages:', err);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal Server Error', 
-      message: err.message 
-    });
-  }
-});
 
 // Get villages endpoint
 app.get('/api/villages', verifyJwt, async (req, res) => {

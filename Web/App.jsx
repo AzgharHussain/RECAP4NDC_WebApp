@@ -8,6 +8,7 @@ import LoadingSpinner from "./components/LoadingSpinner";
 // === Lazy-loaded Pages ===
 const Login = lazy(() => import("./pages/Login"));
 const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
+const DashboardLayoutAdmin = lazy(() => import("./layouts/DashboardLayoutAdmin"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const GeoDashboard = lazy(() => import("./pages/GeoDashboard"));
 const Patrolling = lazy(() => import("./pages/Patrolling"));
@@ -38,7 +39,6 @@ export default function App() {
           {/* Protected Routes with DashboardLayout (sidebar) */}
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/geo" element={<GeoDashboard />} />
             <Route path="/petrolling-incident/patrolling" element={<Patrolling />} />
             <Route path="/petrolling-incident/incident" element={<Incident />} />
@@ -46,6 +46,11 @@ export default function App() {
             <Route path="/working-plan/view" element={<ViewCoupe />} />
             <Route path="/working-plan/log" element={<CoupeObservation />} />
             <Route path="/ndvi-dashboard" element={<NDVIChangeDashboard />} />
+          </Route>
+
+          <Route element={<DashboardLayoutAdmin />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            
           </Route>
 
           {/* Catch-all fallback */}
