@@ -203,123 +203,124 @@ function Login() {
     }
   };
 
-  // Login Handler
-  const handleLogin = async () => {
-    // Validation
-    if (!userId.trim() || !password.trim()) {
-      setError(text[language].errorRequired);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      // 1. Check if user is an admin via the API
-      console.log("Checking admin credentials...");
-      
-      try {
-    const response = await axios.post(`${API_BASE_URL}/api/admin`, {
-      username: userId.trim(),  // Fixed: Use userId instead of undefined username
-        password: password.trim()
-    });
-    
-    if (response.data.success) {
-      // Store the token and user info
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      // Now you can make authenticated requests
-      const coupesResponse = await axios.get(
-        `${API_BASE_URL}/api/admincoupes`,
-        {
-          headers: {
-            Authorization: `Bearer ${response.data.token}`,
-          },
-        }
-      );
-            navigate("/admin");
-
-      return coupesResponse.data;
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    throw error;
+const handleLogin = async () => {
+  // Validation
+  if (!userId.trim() || !password.trim()) {
+    setError(text[language].errorRequired);
+    return;
   }
 
-      // 2. SOAP Authentication for regular users
-      const jsonMap = await login(userId.trim(), password.trim());
-      
-      if (!jsonMap || Object.keys(jsonMap).length === 0) {
-        throw new Error("INVALID_CREDENTIALS");
-      }
+  setLoading(true);
+  setError("");
 
-      console.log("Authentication successful, user data:", jsonMap);
-
-      // Extract user data
-      const userData = {
-        name: jsonMap.NAME || "-",
-        post: jsonMap.NameOfPost || "-",
-        cadre: jsonMap.CadreName || "-",
-        circle: jsonMap.CircleName || "-",
-        division: jsonMap.DivisionName || "-",
-        range: jsonMap.RangeName || "-",
-        round: jsonMap.RoundName || "-",
-        beat: jsonMap.BeatName || "-",
-        mobile: jsonMap.MobileNo || "-",
-        email: jsonMap.EmailID || "-",
-      };
-
-      // Check if user data is valid
-      if (userData.name === "-" && userData.mobile === "-") {
-        throw new Error("INVALID_CREDENTIALS");
-      }
-
-      // Store user data
-      const userSession = {
-        ...userData,
+  try {
+    // 1. Check if user is an admin via the API
+    console.log("Checking admin credentials...");
+    
+    try {
+      const adminResponse = await axios.post(`${API_BASE_URL}/api/admin`, {
         username: userId.trim(),
-        isAuthenticated: true,
-        isAdmin: false,
-        loginTime: new Date().toISOString()
-      };
-
-      localStorage.setItem("userData", JSON.stringify(userSession));
-      localStorage.setItem("authToken", "authenticated");
-
-      // Save user to backend
-      await saveUser(userId.trim());
-
-      // Navigate to dashboard
-      navigate("/geo");
-
-    } catch (error) {
-      console.error("Login Error:", error);
+        password: password.trim()
+      });
       
-      // Handle specific error cases
-      if (error.code === 'ECONNABORTED') {
-        setError(text[language].timeout);
-      } else if (error.message === 'INVALID_CREDENTIALS') {
-        setError(text[language].errorInvalid);
-      } else if (error.response) {
-        if (error.response.status === 401 || error.response.status === 403) {
-          setError(text[language].errorInvalid);
-        } else if (error.response.status === 404) {
-          setError("API endpoint not found");
-        } else if (error.response.status >= 500) {
-          setError(text[language].errorServer);
-        } else {
-          setError(`Error: ${error.response.status}`);
-        }
-      } else if (error.request) {
-        setError(text[language].errorNetwork);
-      } else {
-        setError(error.message || text[language].errorServer);
+      if (adminResponse.data.success) {
+        // Store the token and user info
+        localStorage.setItem('token', adminResponse.data.token);
+        localStorage.setItem('user', JSON.stringify(adminResponse.data.user));
+        
+        // Now you can make authenticated requests
+        await axios.get(
+          `${API_BASE_URL}/api/admincoupes`,
+          {
+            headers: {
+              Authorization: `Bearer ${adminResponse.data.token}`,
+            },
+          }
+        );
+        
+        navigate("/admin");
+        setLoading(false);
+        return; // IMPORTANT: Return here to stop further execution
       }
-    } finally {
-      setLoading(false);
+    } catch (adminError) {
+      console.log('Admin login failed, trying regular user authentication...');
+      // Don't throw error here, just continue to SOAP authentication
     }
-  };
+
+    // 2. SOAP Authentication for regular users (only if admin login failed)
+    console.log("Proceeding with SOAP authentication...");
+    const jsonMap = await login(userId.trim(), password.trim());
+    
+    if (!jsonMap || Object.keys(jsonMap).length === 0) {
+      throw new Error("INVALID_CREDENTIALS");
+    }
+
+    console.log("Authentication successful, user data:", jsonMap);
+
+    // Extract user data
+    const userData = {
+      name: jsonMap.NAME || "-",
+      post: jsonMap.NameOfPost || "-",
+      cadre: jsonMap.CadreName || "-",
+      circle: jsonMap.CircleName || "-",
+      division: jsonMap.DivisionName || "-",
+      range: jsonMap.RangeName || "-",
+      round: jsonMap.RoundName || "-",
+      beat: jsonMap.BeatName || "-",
+      mobile: jsonMap.MobileNo || "-",
+      email: jsonMap.EmailID || "-",
+    };
+
+    // Check if user data is valid
+    if (userData.name === "-" && userData.mobile === "-") {
+      throw new Error("INVALID_CREDENTIALS");
+    }
+
+    // Store user data
+    const userSession = {
+      ...userData,
+      username: userId.trim(),
+      isAuthenticated: true,
+      isAdmin: false,
+      loginTime: new Date().toISOString()
+    };
+
+    localStorage.setItem("userData", JSON.stringify(userSession));
+    localStorage.setItem("authToken", "authenticated");
+
+    // Save user to backend
+    await saveUser(userId.trim());
+
+    // Navigate to dashboard
+    navigate("/geo");
+
+  } catch (error) {
+    console.error("Login Error:", error);
+    
+    // Handle specific error cases
+    if (error.code === 'ECONNABORTED') {
+      setError(text[language].timeout);
+    } else if (error.message === 'INVALID_CREDENTIALS') {
+      setError(text[language].errorInvalid);
+    } else if (error.response) {
+      if (error.response.status === 401 || error.response.status === 403) {
+        setError(text[language].errorInvalid);
+      } else if (error.response.status === 404) {
+        setError("API endpoint not found");
+      } else if (error.response.status >= 500) {
+        setError(text[language].errorServer);
+      } else {
+        setError(`Error: ${error.response.status}`);
+      }
+    } else if (error.request) {
+      setError(text[language].errorNetwork);
+    } else {
+      setError(error.message || text[language].errorServer);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div
