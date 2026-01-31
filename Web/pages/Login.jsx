@@ -88,91 +88,31 @@ function Login() {
     }
   };
 
-  // Exact equivalent of Dart's parseLoginEGUJForestSoapToJson function
-  const parseLoginEGUJForestSoapToJson = (xmlStr) => {
-    console.log("Parsing XML response...");
-    
+  // Updated login function using backend proxy
+  const forestLogin = async (username, password) => {
     try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlStr, "text/xml");
-
-      // Find all <Result> elements
-      const results = doc.getElementsByTagName('Result');
-      console.log(`Found ${results.length} Result elements`);
-
-      // If there are multiple Result nodes, convert all to a list
-      const parsedResults = [];
-
-      for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        
-        // Skip schema Result definitions if any (usually empty of the actual data)
-        // We only want Result nodes that contain child elements
-        const childElements = Array.from(result.children).filter(child => 
-          child.nodeType === Node.ELEMENT_NODE
-        );
-        
-        if (childElements.length === 0) continue;
-
-        const map = {};
-
-        for (const child of childElements) {
-          const key = child.tagName; // Use full tag name
-          const value = child.textContent?.trim() || '';
-          map[key] = value;
-        }
-
-        // Only add if it actually has fields
-        if (Object.keys(map).length > 0) {
-          parsedResults.push(map);
-        }
-      }
-
-      console.log("Parsed results:", parsedResults);
-
-      // If you expect a single record, return the first.
-      // Otherwise, return {"data": parsedResults}
-      if (parsedResults.length === 0) return {};
-      if (parsedResults.length === 1) return parsedResults[0];
-
-      return {"data": parsedResults};
-
-    } catch (error) {
-      console.error("XML parsing error:", error);
-      return {};
-    }
-  };
-
-  // Exact equivalent of Dart's login function
-  const login = async (username, password) => {
-    try {
-      const soapRequest = `<?xml version="1.0" encoding="utf-8"?>\r\n<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">\r\n  <soap12:Body>\r\n    <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">\r\n      <username>${username}</username>\r\n      <password>${password}</password>\r\n    </LOGIN_EGUJFOREST>\r\n  </soap12:Body>\r\n</soap12:Envelope>`;
-
-      console.log("Sending SOAP request with username:", username);
-
+      console.log("Sending SOAP request through backend proxy...");
+      
       const response = await axios.post(
-        '/FMIS/CommonService/forestcommonservice.asmx', // Using proxy
-        soapRequest,
+        `${API_BASE_URL}/api/forest-login`,
         {
-          headers: {
-            'Content-Type': 'text/xml',
-            'Cookie': 'cookiesession1=678B76C6BFFC3FC980E5E4E1E44467A6'
-          },
+          username: username,
+          password: password
+        },
+        {
           timeout: 30000
         }
       );
 
-      if (response.status === 200) {
-        console.log('success:', response.status, '/ Response length:', response.data.length);
-        const jsonMap = parseLoginEGUJForestSoapToJson(response.data);
-        console.log('Parsed JSON Map:', jsonMap);
-        return jsonMap;
+      if (response.status === 200 && response.data.success) {
+        console.log('Backend proxy success:', response.data);
+        return response.data.jsonMap || {};
       } else {
-        console.log('error:', response.status, '/', response.data);
+        console.log('Backend proxy error:', response.status, '/', response.data);
         return null;
       }
     } catch (e) {
-      console.log('error:', e.toString());
+      console.log('Backend proxy error:', e.toString());
       return null;
     }
   };
@@ -181,8 +121,7 @@ function Login() {
     try {
       const response = await axios.post(
         `${API_BASE_URL}/api/saveuser`,
-        { username },
-        
+        { username }
       );
 
       const { token, user } = response.data;
@@ -203,124 +142,124 @@ function Login() {
     }
   };
 
-const handleLogin = async () => {
-  // Validation
-  if (!userId.trim() || !password.trim()) {
-    setError(text[language].errorRequired);
-    return;
-  }
+  const handleLogin = async () => {
+    // Validation
+    if (!userId.trim() || !password.trim()) {
+      setError(text[language].errorRequired);
+      return;
+    }
 
-  setLoading(true);
-  setError("");
+    setLoading(true);
+    setError("");
 
-  try {
-    // 1. Check if user is an admin via the API
-    console.log("Checking admin credentials...");
-    
     try {
-      const adminResponse = await axios.post(`${API_BASE_URL}/api/admin`, {
-        username: userId.trim(),
-        password: password.trim()
-      });
+      // 1. Check if user is an admin via the API
+      console.log("Checking admin credentials...");
       
-      if (adminResponse.data.success) {
-        // Store the token and user info
-        localStorage.setItem('token', adminResponse.data.token);
-        localStorage.setItem('user', JSON.stringify(adminResponse.data.user));
+      try {
+        const adminResponse = await axios.post(`${API_BASE_URL}/api/admin`, {
+          username: userId.trim(),
+          password: password.trim()
+        });
         
-        // Now you can make authenticated requests
-        await axios.get(
-          `${API_BASE_URL}/api/admincoupes`,
-          {
-            headers: {
-              Authorization: `Bearer ${adminResponse.data.token}`,
-            },
-          }
-        );
-        
-        navigate("/admin");
-        setLoading(false);
-        return; // IMPORTANT: Return here to stop further execution
+        if (adminResponse.data.success) {
+          // Store the token and user info
+          localStorage.setItem('token', adminResponse.data.token);
+          localStorage.setItem('user', JSON.stringify(adminResponse.data.user));
+          
+          // Test authenticated request
+          await axios.get(
+            `${API_BASE_URL}/api/admincoupes`,
+            {
+              headers: {
+                Authorization: `Bearer ${adminResponse.data.token}`,
+              },
+            }
+          );
+          
+          navigate("/admin");
+          setLoading(false);
+          return;
+        }
+      } catch (adminError) {
+        console.log('Admin login failed, trying regular user authentication...');
+        // Continue to forest authentication
       }
-    } catch (adminError) {
-      console.log('Admin login failed, trying regular user authentication...');
-      // Don't throw error here, just continue to SOAP authentication
-    }
 
-    // 2. SOAP Authentication for regular users (only if admin login failed)
-    console.log("Proceeding with SOAP authentication...");
-    const jsonMap = await login(userId.trim(), password.trim());
-    
-    if (!jsonMap || Object.keys(jsonMap).length === 0) {
-      throw new Error("INVALID_CREDENTIALS");
-    }
+      // 2. Forest Authentication for regular users (only if admin login failed)
+      console.log("Proceeding with Forest authentication...");
+      const jsonMap = await forestLogin(userId.trim(), password.trim());
+      
+      if (!jsonMap || Object.keys(jsonMap).length === 0) {
+        throw new Error("INVALID_CREDENTIALS");
+      }
 
-    console.log("Authentication successful, user data:", jsonMap);
+      console.log("Authentication successful, user data:", jsonMap);
 
-    // Extract user data
-    const userData = {
-      name: jsonMap.NAME || "-",
-      post: jsonMap.NameOfPost || "-",
-      cadre: jsonMap.CadreName || "-",
-      circle: jsonMap.CircleName || "-",
-      division: jsonMap.DivisionName || "-",
-      range: jsonMap.RangeName || "-",
-      round: jsonMap.RoundName || "-",
-      beat: jsonMap.BeatName || "-",
-      mobile: jsonMap.MobileNo || "-",
-      email: jsonMap.EmailID || "-",
-    };
+      // Extract user data
+      const userData = {
+        name: jsonMap.NAME || "-",
+        post: jsonMap.NameOfPost || "-",
+        cadre: jsonMap.CadreName || "-",
+        circle: jsonMap.CircleName || "-",
+        division: jsonMap.DivisionName || "-",
+        range: jsonMap.RangeName || "-",
+        round: jsonMap.RoundName || "-",
+        beat: jsonMap.BeatName || "-",
+        mobile: jsonMap.MobileNo || "-",
+        email: jsonMap.EmailID || "-",
+      };
 
-    // Check if user data is valid
-    if (userData.name === "-" && userData.mobile === "-") {
-      throw new Error("INVALID_CREDENTIALS");
-    }
+      // Check if user data is valid
+      if (userData.name === "-" && userData.mobile === "-") {
+        throw new Error("INVALID_CREDENTIALS");
+      }
 
-    // Store user data
-    const userSession = {
-      ...userData,
-      username: userId.trim(),
-      isAuthenticated: true,
-      isAdmin: false,
-      loginTime: new Date().toISOString()
-    };
+      // Store user data
+      const userSession = {
+        ...userData,
+        username: userId.trim(),
+        isAuthenticated: true,
+        isAdmin: false,
+        loginTime: new Date().toISOString()
+      };
 
-    localStorage.setItem("userData", JSON.stringify(userSession));
-    localStorage.setItem("authToken", "authenticated");
+      localStorage.setItem("userData", JSON.stringify(userSession));
+      localStorage.setItem("authToken", "authenticated");
 
-    // Save user to backend
-    await saveUser(userId.trim());
+      // Save user to backend
+      await saveUser(userId.trim());
 
-    // Navigate to dashboard
-    navigate("/geo");
+      // Navigate to dashboard
+      navigate("/geo");
 
-  } catch (error) {
-    console.error("Login Error:", error);
-    
-    // Handle specific error cases
-    if (error.code === 'ECONNABORTED') {
-      setError(text[language].timeout);
-    } else if (error.message === 'INVALID_CREDENTIALS') {
-      setError(text[language].errorInvalid);
-    } else if (error.response) {
-      if (error.response.status === 401 || error.response.status === 403) {
+    } catch (error) {
+      console.error("Login Error:", error);
+      
+      // Handle specific error cases
+      if (error.code === 'ECONNABORTED') {
+        setError(text[language].timeout);
+      } else if (error.message === 'INVALID_CREDENTIALS') {
         setError(text[language].errorInvalid);
-      } else if (error.response.status === 404) {
-        setError("API endpoint not found");
-      } else if (error.response.status >= 500) {
-        setError(text[language].errorServer);
+      } else if (error.response) {
+        if (error.response.status === 401 || error.response.status === 403) {
+          setError(text[language].errorInvalid);
+        } else if (error.response.status === 404) {
+          setError("API endpoint not found");
+        } else if (error.response.status >= 500) {
+          setError(text[language].errorServer);
+        } else {
+          setError(`Error: ${error.response.status}`);
+        }
+      } else if (error.request) {
+        setError(text[language].errorNetwork);
       } else {
-        setError(`Error: ${error.response.status}`);
+        setError(error.message || text[language].errorServer);
       }
-    } else if (error.request) {
-      setError(text[language].errorNetwork);
-    } else {
-      setError(error.message || text[language].errorServer);
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div
@@ -418,7 +357,7 @@ const handleLogin = async () => {
               style={{ fontSize: "16px", padding: "12px" }}
             />
             <span className="icon">
-              <img src="/assets/user.png" alt="User" width="20" height="20" />
+              <img src="../assets/user.png" alt="User" width="20" height="20" />
             </span>
           </div>
 
@@ -450,7 +389,7 @@ const handleLogin = async () => {
                 "👁"
               ) : (
                 <img
-                  src="/assets/Eyeclose.png"
+                  src="../assets/Eyeclose.png"
                   alt="Closed Eye"
                   width="20"
                   height="20"
@@ -493,10 +432,6 @@ const handleLogin = async () => {
             )}
             {loading ? text[language].loggingIn : text[language].loginButton}
           </button>
-
-          
-
-          
         </div>
 
         {/* Footer Bar */}

@@ -1,9 +1,11 @@
+// app.js or index.js
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
+// REMOVE THIS: const bodyParser = require('body-parser'); // ❌ Remove this line
 
 const { verifyJwt } = require("./middlewares/verifyJwt");
 const { sequelize, testConnection } = require('./config/database');
@@ -17,6 +19,7 @@ const userlocations = require('./routers/userlocations');
 const changendvi = require('./routers/changendvi');
 const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 const gisupload = require('./routers/gisupload');
+const forestLoginRoutes = require('./routers/forestLogin');
 
 const app = express();
 
@@ -24,14 +27,18 @@ const app = express();
 app.use(cors({ 
   origin: '*', 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
-  allowedHeaders: ['Content-Type', 'Authorization'] 
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
-app.use(express.json());
+
+// Use express built-in JSON parser (remove body-parser)
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logger
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('Request Body:', req.body); // Add this for debugging
   next();
 });
 
@@ -88,11 +95,23 @@ app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'Test route works!' });
 });
 
-// Admin login endpoint (POST - for frontend)
-// In your server.js, update the admin login endpoint:
+// Test POST endpoint to verify body parsing
+app.post('/api/test-post', (req, res) => {
+  console.log('✅ /api/test-post POST endpoint hit');
+  console.log('Request body:', req.body);
+  res.json({ 
+    success: true, 
+    message: 'POST test route works!',
+    receivedBody: req.body 
+  });
+});
+
+// Admin login endpoint
 app.post('/api/admin', async (req, res) => {
   try {
     console.log('✅ /api/admin POST route accessed');
+    console.log('Request body:', req.body);
+    
     const { username, password } = req.body;
     
     if (!username || username.trim() === '') {
@@ -111,12 +130,10 @@ app.post('/api/admin', async (req, res) => {
 
     console.log(`Admin POST login attempt: ${username}`);
 
-
-      [result] = await sequelize.query(
-        `SELECT * FROM admin WHERE username = $1 AND password = $2`,
-        { bind: [username.trim(), password.trim()] }
-      );
-    
+    const [result] = await sequelize.query(
+      `SELECT * FROM admin WHERE username = $1 AND password = $2`,
+      { bind: [username.trim(), password.trim()] }
+    );
 
     console.log(`Admin query result count: ${result.length}`);
 
@@ -129,7 +146,7 @@ app.post('/api/admin', async (req, res) => {
 
     const admin = result[0];
     
-    // Generate JWT token with the SAME structure as verifyJwt expects
+    // Generate JWT token
     const token = jwt.sign(
       { 
         username: admin.username,
@@ -160,6 +177,9 @@ app.post('/api/admin', async (req, res) => {
 // Save user endpoint
 app.post("/api/saveuser", async (req, res) => {
   try {
+    console.log('✅ /api/saveuser POST route accessed');
+    console.log('Request body:', req.body);
+    
     const username = req.body?.username || req.query?.username;
     if (!username || username.trim() === "") {
       return res.status(400).json({ success: false, error: "Username required" });
@@ -206,48 +226,6 @@ app.post("/api/saveuser", async (req, res) => {
   }
 });
 
-
-
-// Get villages endpoint
-app.get('/api/villages', verifyJwt, async (req, res) => {
-  try {
-    const { name } = req.query;
-    if (!name || name.trim() === '') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Coupe name is required' 
-      });
-    }
-
-    const [result] = await sequelize.query(
-      `SELECT DISTINCT village_name, id FROM public.coupe_village_master WHERE coupe_name = $1 ORDER BY village_name`,
-      { bind: [name.trim()] }
-    );
-
-    res.json({ 
-      success: true, 
-      data: result, 
-      count: result.length 
-    });
-  } catch (err) {
-    console.error('Error /api/villages:', err);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal Server Error', 
-      message: err.message 
-    });
-  }
-});
-
-// Protected route example
-app.get('/api/protected', verifyToken, (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Protected route accessed', 
-    user: req.user 
-  });
-});
-
 // ==================== INCLUDE ROUTERS ==================== //
 app.use('/api', patrolRoutes);
 app.use('/api', dropdownapis);
@@ -257,6 +235,27 @@ app.use('/api', userlocations);
 app.use('/api', changendvi);
 app.use('/api', beat_patrol_coverage);
 app.use('/api', gisupload);
+app.use('/api', forestLoginRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err.stack);
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// 404 handler
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found',
+    path: req.path,
+    method: req.method
+  });
+});
 
 // ==================== START SERVER ==================== //
 const PORT = process.env.PORT || 5002;
@@ -269,4 +268,8 @@ app.listen(PORT, async () => {
     console.error('❌ Database connection failed:', err.message);
   }
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📝 Test endpoints:`);
+  console.log(`   GET  http://localhost:${PORT}/api/test`);
+  console.log(`   POST http://localhost:${PORT}/api/test-post`);
+  console.log(`   POST http://localhost:${PORT}/api/forest-login`);
 });
