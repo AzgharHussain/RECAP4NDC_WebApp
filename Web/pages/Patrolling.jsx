@@ -794,6 +794,8 @@ console.log("api/patrol-info");
     }
   );
   console.log("api/get-divisions");
+    console.log(value);
+
       setDivisions(res.data);
     } catch (error) {
       console.error("Error fetching divisions:", error);
@@ -819,6 +821,7 @@ console.log("api/patrol-info");
         division_name: value,
       });
       console.log("api/hierarchy");
+      console.log("division_name:", value);
 
       setHierarchyData(res.data);
 

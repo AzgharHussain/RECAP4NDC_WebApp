@@ -140,14 +140,90 @@ const NDVIChangeDashboard = () => {
   const [beats, setBeats] = useState([]);
 
   // Configuration
-  const coupeOptions = [
-    { value: 'Banaskantha_RWD_WC_final', label: 'Banaskantha RWD WC' },
-    { value: 'Banaskantha_Wild Life_WC', label: 'Banaskantha Wildlife WC' },
-    { value: 'Banaskantha_Con_Cum_Imp_WC_OVLP', label: 'Banaskantha Con Cum Imp' },
-    { value: 'Bhavnagar_coupes', label: 'Bhavnagar Coupes' },
-    { value: 'Sabarkantha_North_Aravalli', label: 'Sabarkantha North Aravalli' }
-  ];
+  // const coupeOptions = [
+  //   { value: 'Banaskantha_RWD_WC_final', label: 'Banaskantha RWD WC' },
+  //   { value: 'Banaskantha_Wild Life_WC', label: 'Banaskantha Wildlife WC' },
+  //   { value: 'Banaskantha_Con_Cum_Imp_WC_OVLP', label: 'Banaskantha Con Cum Imp' },
+  //   { value: 'Bhavnagar_coupes', label: 'Bhavnagar Coupes' },
+  //   { value: 'Sabarkantha_North_Aravalli', label: 'Sabarkantha North Aravalli' }
+  // ];
 
+  // Add state for coupeOptions
+const [coupeOptions, setCoupeOptions] = useState([
+  { value: 'Banaskantha_RWD_WC_final', label: 'Banaskantha RWD WC' },
+  { value: 'Banaskantha_Wild Life_WC', label: 'Banaskantha Wildlife WC' },
+  { value: 'Banaskantha_Con_Cum_Imp_WC_OVLP', label: 'Banaskantha Con Cum Imp' },
+  { value: 'Bhavnagar_coupes', label: 'Bhavnagar Coupes' },
+  { value: 'Sabarkantha_North_Aravalli', label: 'Sabarkantha North Aravalli' }
+]);
+
+// Remove the hardcoded const coupeOptions declaration
+// const coupeOptions = [ ... ]; // Remove this line
+
+// Add useEffect to fetch coupes
+useEffect(() => {
+  const fetchCoupes = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Try to fetch from API
+      const res = await axios.get(
+        `${API_BASE_URL}/api/admincoupes`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("API Response for coupes:", res.data);
+
+      // Process API response - handle different response formats
+      let apiCoupes = [];
+      
+      if (Array.isArray(res.data)) {
+        // Direct array response
+        apiCoupes = res.data.map(coupe => ({
+          value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
+          label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+        }));
+      } else if (res.data && res.data.success && Array.isArray(res.data.data)) {
+        // Success object with data array
+        apiCoupes = res.data.data.map(coupe => ({
+          value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
+          label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+        }));
+      } else if (res.data && Array.isArray(res.data.data)) {
+        // Object with data array
+        apiCoupes = res.data.data.map(coupe => ({
+          value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
+          label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+        }));
+      } else if (res.data && res.data.coupes && Array.isArray(res.data.coupes)) {
+        // Object with coupes array
+        apiCoupes = res.data.coupes.map(coupe => ({
+          value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
+          label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+        }));
+      }
+
+      // If we got valid coupes from API, use them
+      if (apiCoupes.length > 0) {
+        setCoupeOptions(apiCoupes);
+        console.log("Loaded coupes from API:", apiCoupes.length);
+      } else {
+        console.log("No valid coupes from API, using fallback");
+        // Keep the fallback coupes already set in initial state
+      }
+      
+    } catch (error) {
+      console.error("Failed to fetch coupes from API, using fallback:", error);
+      // Keep using the fallback coupes
+    }
+  };
+
+  fetchCoupes();
+}, []); // Empty dependency array - run once on mount
   const monthOptions = [
     { value: '2025-01', label: 'January 2025' },
     { value: '2025-02', label: 'February 2025' },
@@ -158,7 +234,9 @@ const NDVIChangeDashboard = () => {
     { value: '2025-07', label: 'July 2025' },
     { value: '2025-08', label: 'August 2025' },
     { value: '2025-09', label: 'September 2025' },
-    { value: '2025-10', label: 'October 2025' }
+    { value: '2025-10', label: 'October 2025' },
+    { value: '2025-11', label: 'November 2025' },
+    { value: '2025-12', label: 'December 2025' }
   ];
 useEffect(() => {
   if (selectedCoupe) {
@@ -1147,9 +1225,9 @@ console.log("api/ndvi-change");
         />
         <CardContent>
          
-<Grid >
+{/* <Grid >
   <ForestHierarchyDropdowns setSelectedCoupe={setSelectedCoupe} />
-</Grid>
+</Grid> */}
 
             <Grid item xs={12} md={3}>
               <FormControl fullWidth size="small">

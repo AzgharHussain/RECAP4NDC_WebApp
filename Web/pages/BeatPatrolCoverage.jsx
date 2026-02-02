@@ -138,6 +138,7 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     setLoading(prev => ({ ...prev, divisions: true }));
     try {
       const token = localStorage.getItem("token"); // or sessionStorage
+    console.log("Selected Forest ID:", forestId);
 
 const response = await axios.post(
   `${API_BASE_URL}/api/get-divisions`,
@@ -202,7 +203,7 @@ const response = await axios.post(
             division_name: divisionname
         });
         console.log("api/hierarchy");
-        
+        console.log("division_name:", divisionname);
         // FIRST: Set the hierarchy data
         setHierarchyData(response.data);
         
@@ -300,6 +301,7 @@ const res = await axios.post(
   }
 );
 console.log("api/beat-patrol-coverage");
+console.log("beat: ", selectedBeat?.value, " forest_id: ", selectedForest, " division: ", selectedDivision?.value, " range: ", selectedRange?.value);
 
       if (res.data.success) {
         setCoverageData(res.data.data);
@@ -344,6 +346,7 @@ const response = await axios.get(
     },
   }
 );
+console.log("api/patrols/:patrol_id");
 
 const data = response.data;
 

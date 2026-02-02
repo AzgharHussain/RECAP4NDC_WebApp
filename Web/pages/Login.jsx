@@ -11,6 +11,9 @@ import brand from "../assets/logo-giz.png";
 import backImage from "../assets/backimage.jpg";
 import leftLogos from "../assets/Logo.png";
 
+import Eyeclose from "../assets/Eyeclose.png";
+import user from "../assets/user.png";
+
 function Login() {
   const [showPwd, setShowPwd] = useState(false);
   const { language, toggleLanguage } = useLanguage();
@@ -357,7 +360,7 @@ function Login() {
               style={{ fontSize: "16px", padding: "12px" }}
             />
             <span className="icon">
-              <img src="../assets/user.png" alt="User" width="20" height="20" />
+              <img src={user} alt="User" width="20" height="20" />
             </span>
           </div>
 
@@ -389,7 +392,7 @@ function Login() {
                 "👁"
               ) : (
                 <img
-                  src="../assets/Eyeclose.png"
+                  src={Eyeclose}
                   alt="Closed Eye"
                   width="20"
                   height="20"
