@@ -47,7 +47,10 @@ function Login() {
       errorServer: "Server error. Please try again later.",
       loggingIn: "Logging in...",
       timeout: "Request timeout. Please try again.",
-      errorCORS: "CORS error. Please contact administrator."
+      errorCORS: "CORS error. Please contact administrator.",
+      forestServiceUnavailable: "Gujarat Forest Service is currently unavailable",
+      forestConnectionFailed: "Cannot connect to Gujarat Forest Service",
+      forestAuthFailed: "Forest authentication failed"
     },
     gu: {
       title: "લૉગિન",
@@ -64,7 +67,10 @@ function Login() {
       errorServer: "સર્વર એરર. કૃપા કરીને પછી પ્રયાસ કરો.",
       loggingIn: "લૉગ ઇન થાય છે...",
       timeout: "રિક્વેસ્ટ ટાઈમઆઉટ. કૃપા કરીને ફરી પ્રયાસ કરો.",
-      errorCORS: "CORS એરર. એડમિનિસ્ટ્રેટરનો સંપર્ક કરો."
+      errorCORS: "CORS એરર. એડમિનિસ્ટ્રેટરનો સંપર્ક કરો.",
+      forestServiceUnavailable: "ગુજરાત ફોરેસ્ટ સેવા હાલમાં ઉપલબ્ધ નથી",
+      forestConnectionFailed: "ફોરેસ્ટ ઓથેન્ટિકેશન સેવા સાથે કનેક્ટ થઈ શકતું નથી",
+      forestAuthFailed: "ફોરેસ્ટ ઓથેન્ટિકેશન નિષ્ફળ"
     },
   };
 
@@ -91,32 +97,104 @@ function Login() {
     }
   };
 
-  // Updated login function using backend proxy
+  // Frontend-only SOAP authentication using Vite proxy
   const forestLogin = async (username, password) => {
     try {
-      console.log("Sending SOAP request through backend proxy...");
+      console.log("🌲 Making SOAP request through Vite proxy...");
       
+      // Create SOAP Request
+      const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+  <soap12:Body>
+    <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
+      <username>${username}</username>
+      <password>${password}</password>
+    </LOGIN_EGUJFOREST>
+  </soap12:Body>
+</soap12:Envelope>`;
+
+      console.log('Sending SOAP request...');
+      
+      // Make SOAP request through Vite proxy
       const response = await axios.post(
-        `${API_BASE_URL}/api/forest-login`,
+        '/forest-proxy/FMIS/CommonService/forestcommonservice.asmx',
+        soapRequest,
         {
-          username: username,
-          password: password
-        },
-        {
-          timeout: 30000
+          headers: {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
+          },
+          timeout: 30000,
+          responseType: 'text'
         }
       );
 
-      if (response.status === 200 && response.data.success) {
-        console.log('Backend proxy success:', response.data);
-        return response.data.jsonMap || {};
-      } else {
-        console.log('Backend proxy error:', response.status, '/', response.data);
-        return null;
+      console.log('SOAP Response Status:', response.status);
+      
+      if (response.status !== 200) {
+        throw new Error('FOREST_SERVICE_UNAVAILABLE');
       }
-    } catch (e) {
-      console.log('Backend proxy error:', e.toString());
-      return null;
+
+      // Parse XML response using DOMParser
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(response.data, "text/xml");
+      
+      // Check for parsing errors
+      const parseError = xmlDoc.querySelector('parsererror');
+      if (parseError) {
+        console.error("XML parsing error");
+        throw new Error('FOREST_AUTH_FAILED');
+      }
+
+      // Navigate through XML structure to extract user data
+      const getElementText = (doc, tagName) => {
+        const element = doc.getElementsByTagName(tagName)[0];
+        return element ? (element.textContent || '-') : '-';
+      };
+
+      // Extract data from XML
+      const userData = {
+        NAME: getElementText(xmlDoc, 'NAME'),
+        NameOfPost: getElementText(xmlDoc, 'NameOfPost'),
+        CadreName: getElementText(xmlDoc, 'CadreName'),
+        CircleName: getElementText(xmlDoc, 'CircleName'),
+        DivisionName: getElementText(xmlDoc, 'DivisionName'),
+        RangeName: getElementText(xmlDoc, 'RangeName'),
+        RoundName: getElementText(xmlDoc, 'RoundName'),
+        BeatName: getElementText(xmlDoc, 'BeatName'),
+        MobileNo: getElementText(xmlDoc, 'MobileNo'),
+        EmailID: getElementText(xmlDoc, 'EmailID'),
+        USER_ID: getElementText(xmlDoc, 'USER_ID'),
+        USER_TYPE: getElementText(xmlDoc, 'USER_TYPE'),
+        F_ID: getElementText(xmlDoc, 'F_ID')
+      };
+
+      console.log('Extracted user data:', userData);
+      
+      // Check if we have valid user data
+      if (!userData.NAME || userData.NAME === '-') {
+        throw new Error('FOREST_AUTH_FAILED');
+      }
+
+      return userData;
+
+    } catch (error) {
+      console.error('SOAP proxy error:', error.message);
+      
+      // Map error messages
+      if (error.message === 'FOREST_AUTH_FAILED') {
+        throw new Error('FOREST_AUTH_FAILED');
+      } else if (error.code === 'ECONNABORTED') {
+        throw new Error('FOREST_TIMEOUT');
+      } else if (error.code === 'ENOTFOUND') {
+        throw new Error('FOREST_CONNECTION_FAILED');
+      } else if (error.message.includes('Network Error')) {
+        throw new Error('FOREST_CONNECTION_FAILED');
+      } else if (error.message.includes('502') || error.message.includes('504') || error.message.includes('503')) {
+        throw new Error('FOREST_SERVICE_UNAVAILABLE');
+      }
+      
+      throw new Error(error.message || 'FOREST_AUTH_FAILED');
     }
   };
 
@@ -157,7 +235,7 @@ function Login() {
 
     try {
       // 1. Check if user is an admin via the API
-      console.log("Checking admin credentials...");
+      console.log("👑 Checking admin credentials...");
       
       try {
         const adminResponse = await axios.post(`${API_BASE_URL}/api/admin`, {
@@ -185,19 +263,19 @@ function Login() {
           return;
         }
       } catch (adminError) {
-        console.log('Admin login failed, trying regular user authentication...');
+        console.log('👑 Admin login failed, trying regular user authentication...');
         // Continue to forest authentication
       }
 
       // 2. Forest Authentication for regular users (only if admin login failed)
-      console.log("Proceeding with Forest authentication...");
+      console.log("🌲 Proceeding with Forest authentication...");
       const jsonMap = await forestLogin(userId.trim(), password.trim());
       
       if (!jsonMap || Object.keys(jsonMap).length === 0) {
         throw new Error("INVALID_CREDENTIALS");
       }
 
-      console.log("Authentication successful, user data:", jsonMap);
+      console.log("✅ Authentication successful, user data:", jsonMap);
 
       // Extract user data
       const userData = {
@@ -211,6 +289,9 @@ function Login() {
         beat: jsonMap.BeatName || "-",
         mobile: jsonMap.MobileNo || "-",
         email: jsonMap.EmailID || "-",
+        userId: jsonMap.USER_ID || userId.trim(),
+        userType: jsonMap.USER_TYPE || "-",
+        forestId: jsonMap.F_ID || "-"
       };
 
       // Check if user data is valid
@@ -224,11 +305,12 @@ function Login() {
         username: userId.trim(),
         isAuthenticated: true,
         isAdmin: false,
-        loginTime: new Date().toISOString()
+        loginTime: new Date().toISOString(),
+        source: 'forest_service_frontend'
       };
 
       localStorage.setItem("userData", JSON.stringify(userSession));
-      localStorage.setItem("authToken", "authenticated");
+      localStorage.setItem("authToken", "forest_authenticated");
 
       // Save user to backend
       await saveUser(userId.trim());
@@ -237,13 +319,19 @@ function Login() {
       navigate("/geo");
 
     } catch (error) {
-      console.error("Login Error:", error);
+      console.error("🔴 Login Error:", error);
       
       // Handle specific error cases
       if (error.code === 'ECONNABORTED') {
         setError(text[language].timeout);
-      } else if (error.message === 'INVALID_CREDENTIALS') {
+      } else if (error.message === 'INVALID_CREDENTIALS' || error.message === 'FOREST_AUTH_FAILED') {
         setError(text[language].errorInvalid);
+      } else if (error.message === 'FOREST_TIMEOUT') {
+        setError(text[language].timeout);
+      } else if (error.message === 'FOREST_CONNECTION_FAILED') {
+        setError(text[language].forestConnectionFailed);
+      } else if (error.message === 'FOREST_SERVICE_UNAVAILABLE') {
+        setError(text[language].forestServiceUnavailable);
       } else if (error.response) {
         if (error.response.status === 401 || error.response.status === 403) {
           setError(text[language].errorInvalid);
@@ -435,6 +523,28 @@ function Login() {
             )}
             {loading ? text[language].loggingIn : text[language].loginButton}
           </button>
+
+          {/* Service Status Indicator */}
+          <div style={{
+            marginTop: "15px",
+            textAlign: "center",
+            fontSize: "12px",
+            color: "#666",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "5px"
+          }}>
+            <span style={{
+              display: "inline-block",
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              backgroundColor: "#4CAF50",
+              animation: "pulse 2s infinite"
+            }}></span>
+            <span>Gujarat Forest Service Authentication</span>
+          </div>
         </div>
 
         {/* Footer Bar */}
@@ -498,6 +608,11 @@ function Login() {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0% { opacity: 0.5; }
+          50% { opacity: 1; }
+          100% { opacity: 0.5; }
         }
       `}</style>
     </div>
