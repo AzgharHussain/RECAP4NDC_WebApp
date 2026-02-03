@@ -1,6 +1,14 @@
 import React, { useState, useEffect, Suspense, lazy } from "react";
-import { Table, Button, Input, DatePicker, Modal, Image, Select, Tag, Card, Row, Col, Statistic, Progress, Typography } from "antd";
-import { SearchOutlined, EyeOutlined, TeamOutlined, ClockCircleOutlined, DashboardOutlined, CalendarOutlined } from "@ant-design/icons";
+import { 
+  Table, Button, Input, DatePicker, Modal, Image, Select, Tag, 
+  Card, Row, Col, Statistic, Progress, Typography, Pagination, 
+  Space, Spin, Alert 
+} from "antd";
+import { 
+  SearchOutlined, EyeOutlined, TeamOutlined, ClockCircleOutlined, 
+  DashboardOutlined, CalendarOutlined, FilterOutlined,
+  ReloadOutlined 
+} from "@ant-design/icons";
 import "./PatrolIncidentLogs.css";
 import exportIcon from "../assets/excel.png";
 import dayjs from "dayjs";
@@ -271,6 +279,15 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
             icon: <TeamOutlined />,
             color: 'rgba(64, 0, 255, 0.3)',
             borderColor: 'rgba(64, 0, 255, 1)'
+          },
+          {
+            key: 'utilization',
+            value: utilizationPercentage,
+            title: language === "gu" ? "ઉપયોગિતા" : "Utilization",
+            suffix: "%",
+            icon: <ClockCircleOutlined />,
+            color: 'rgba(255, 165, 0, 0.3)',
+            borderColor: 'rgba(255, 165, 0, 1)'
           }
         ].map((item, index) => (
           <Col xs={24} sm={12} md={6} key={item.key}>
@@ -601,96 +618,97 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                     );
                     return (
                       <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <div style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: getTypeColor(mostActive.name),
-                      marginRight: 8,
-                      boxShadow: `0 0 8px ${getTypeColor(mostActive.name)}`
-                    }} />
-                    <span style={{ 
-                      color: '#000000ff',
-                      fontSize: '16px',
-                      fontWeight: 600
-                    }}>
-                      {getTypeDisplayName(mostActive.name)}
-                    </span>
-                    <span style={{ 
-                      color: 'rgba(0, 0, 0, 0.7)',
-                      marginLeft: 8,
-                      fontSize: '14px'
-                    }}>
-                      ({mostActive.count} {language === "gu" ? "પેટ્રોલિંગ" : "patrols"})
-                    </span>
+                        <div style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: getTypeColor(mostActive.name),
+                          marginRight: 8,
+                          boxShadow: `0 0 8px ${getTypeColor(mostActive.name)}`
+                        }} />
+                        <span style={{ 
+                          color: '#000000ff',
+                          fontSize: '16px',
+                          fontWeight: 600
+                        }}>
+                          {getTypeDisplayName(mostActive.name)}
+                        </span>
+                        <span style={{ 
+                          color: 'rgba(0, 0, 0, 0.7)',
+                          marginLeft: 8,
+                          fontSize: '14px'
+                        }}>
+                          ({mostActive.count} {language === "gu" ? "પેટ્રોલિંગ" : "patrols"})
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </Col>
+              <Col xs={24} sm={12}>
+                <div style={{
+                  padding: '16px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: 12,
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  height: '100%'
+                }}>
+                  <div style={{ 
+                    color: 'rgba(0, 0, 0, 0.7)',
+                    fontSize: '14px',
+                    marginBottom: 8
+                  }}>
+                    {language === "gu" ? "સૌથી વધુ અંતર" : "Longest Distance Type"}
                   </div>
-                );
-              })()}
-            </div>
-          </Col>
-          <Col xs={24} sm={12}>
-            <div style={{
-              padding: '16px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: 12,
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              height: '100%'
-            }}>
-              <div style={{ 
-                color: 'rgba(0, 0, 0, 0.7)',
-                fontSize: '14px',
-                marginBottom: 8
-              }}>
-                {language === "gu" ? "સૌથી વધુ અંતર" : "Longest Distance Type"}
-              </div>
-              {(() => {
-                const types = [
-                  { name: "Day patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
-                  { name: "Night patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
-                  { name: "Beat checking", distance: parseFloat(beatStats?.totalDistance || 0) }
-                ];
-                const longestDistance = types.reduce((prev, current) => 
-                  prev.distance > current.distance ? prev : current
-                );
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <div style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: getTypeColor(longestDistance.name),
-                      marginRight: 8,
-                      boxShadow: `0 0 8px ${getTypeColor(longestDistance.name)}`
-                    }} />
-                    <span style={{ 
-                      color: '#000000ff',
-                      fontSize: '16px',
-                      fontWeight: 600
-                    }}>
-                      {getTypeDisplayName(longestDistance.name)}
-                    </span>
-                    <span style={{ 
-                      color: 'rgba(0, 0, 0, 0.7)',
-                      marginLeft: 8,
-                      fontSize: '14px'
-                    }}>
-                      ({longestDistance.distance} km)
-                    </span>
-                  </div>
-                );
-              })()}
-            </div>
-          </Col>
-        </Row>
-      </div>
+                  {(() => {
+                    const types = [
+                      { name: "Day patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
+                      { name: "Night patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
+                      { name: "Beat checking", distance: parseFloat(beatStats?.totalDistance || 0) }
+                    ];
+                    const longestDistance = types.reduce((prev, current) => 
+                      prev.distance > current.distance ? prev : current
+                    );
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: getTypeColor(longestDistance.name),
+                          marginRight: 8,
+                          boxShadow: `0 0 8px ${getTypeColor(longestDistance.name)}`
+                        }} />
+                        <span style={{ 
+                          color: '#000000ff',
+                          fontSize: '16px',
+                          fontWeight: 600
+                        }}>
+                          {getTypeDisplayName(longestDistance.name)}
+                        </span>
+                        <span style={{ 
+                          color: 'rgba(0, 0, 0, 0.7)',
+                          marginLeft: 8,
+                          fontSize: '14px'
+                        }}>
+                          ({longestDistance.distance} km)
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </Col>
+            </Row>
+          </div>
+        </div>
+      )}
     </div>
-  )}
-</div>
   );
 };
 
 const PatrolIncidentLogs = () => {
   const [patrolData, setPatrolData] = useState([]);
+   const [patrolData2, setPatrolData2] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [startFilter, setStartFilter] = useState(null);
   const [endFilter, setEndFilter] = useState(null);
@@ -702,8 +720,17 @@ const PatrolIncidentLogs = () => {
   const { language } = useLanguage();
   const [showmaproute, setShowMapRoute] = useState(false);
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [paginationLoading, setPaginationLoading] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false);
+  
   // Hierarchy filter states
   const [forestTypes, setForestTypes] = useState([]);
+  const [divisions1, setDivisions1] = useState([]);
   const [divisions, setDivisions] = useState([]);
   const [beats, setBeats] = useState([]);
   const [coupes, setCoupes] = useState([]);
@@ -714,22 +741,36 @@ const PatrolIncidentLogs = () => {
   const [beatFilter, setBeatFilter] = useState("");
   const [coupeFilter, setCoupeFilter] = useState("");
 
-  const fetchPatrolData = async () => {
+  // Fetch patrol data with pagination
+  const fetchPatrolData = async (page = 1, limit = 5, filters = {}) => {
     setIsLoading(true);
+    setPaginationLoading(true);
     try {
-      const token = localStorage.getItem("token"); // 🔑 get JWT from localStorage
+      const token = localStorage.getItem("token");
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...filters
+      });
 
-const response = await fetch(`${API_BASE_URL}/api/patrol-info`, {
-  method: "GET",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`, // ✅ attach JWT
-  },
-});
-console.log("api/patrol-info");
+      // Remove empty filters
+      Object.keys(filters).forEach(key => {
+        if (!filters[key]) params.delete(key);
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      console.log("Fetched Patrol data:", data);
+      console.log("Fetched Patrol data with pagination:", data);
       
       let formattedData = Array.isArray(data.data)
         ? data.data
@@ -738,28 +779,227 @@ console.log("api/patrol-info");
         : [];
       
       formattedData = formattedData.map((item, index) => ({
-        key: item.patrol_id || index,
+        key: item.patrol_id || `patrol-${index}`,
         ...item,
       }));
       
       setPatrolData(formattedData);
-      setFilteredData(formattedData); // Initialize filteredData with all data
+      setFilteredData(formattedData);
+      
+      // Update pagination info
+      if (data.pagination) {
+        setCurrentPage(data.pagination.currentPage);
+        setPageSize(data.pagination.pageSize);
+        setTotalItems(data.pagination.totalItems);
+        setTotalPages(data.pagination.totalPages);
+      }
+      
     } catch (error) {
       console.error("Error fetching Patrol data:", error);
       setPatrolData([]);
       setFilteredData([]);
+      setTotalItems(0);
+      setTotalPages(0);
     }
     setIsLoading(false);
+    setPaginationLoading(false);
+  };
+  const fetchPatrolData2 = async () => {
+   
+    try {
+      const token = localStorage.getItem("token");
+      
+ 
+   
+
+      const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      console.log("Fetched Patgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggrol data with pagination:", data);
+      
+      let formattedData2 = Array.isArray(data.data)
+        ? data.data
+        : data.data && typeof data.data === "object"
+        ? [data.data]
+        : [];
+      
+      formattedData2 = formattedData2.map((item, index) => ({
+        key: item.patrol_id || `patrol-${index}`,
+        ...item,
+      }));
+      
+      setPatrolData2(formattedData2);
+     
+    } catch (error) {
+      console.error("Error fetching Patrol data:", error);
+      
+    }
+    
+  };
+  // Fetch filtered patrol data
+  const fetchFilteredPatrolData = async (page = 1, limit = 5) => {
+    setIsFiltering(true);
+    setPaginationLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Prepare filters object
+      const filters = {};
+      if (searchText) filters.officer_name = searchText;
+      if (startFilter) filters.start_date = startFilter.format('YYYY-MM-DD');
+      if (endFilter) filters.end_date = endFilter.format('YYYY-MM-DD');
+      if (typeFilter) filters.type_name = typeFilter;
+      if (divisionFilter) filters.division = divisionFilter;
+      if (beatFilter) filters.beat = beatFilter;
+      if (coupeFilter) filters.coupe = coupeFilter;
+      if (forestId) filters.forest_id = forestId;
+
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...filters
+      });
+
+      // Remove empty filters
+      Object.keys(filters).forEach(key => {
+        if (!filters[key]) params.delete(key);
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/patrol-info/filter?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      
+      let formattedData = Array.isArray(data.data)
+        ? data.data
+        : data.data && typeof data.data === "object"
+        ? [data.data]
+        : [];
+      
+      formattedData = formattedData.map((item, index) => ({
+        key: item.patrol_id || `patrol-filtered-${index}`,
+        ...item,
+      }));
+      
+      setPatrolData(formattedData);
+      setFilteredData(formattedData);
+      
+      // Update pagination info
+      if (data.pagination) {
+        setCurrentPage(data.pagination.currentPage);
+        setPageSize(data.pagination.pageSize);
+        setTotalItems(data.pagination.totalItems);
+        setTotalPages(data.pagination.totalPages);
+      }
+      
+    } catch (error) {
+      console.error("Error fetching filtered patrol data:", error);
+      // Fallback to client-side filtering if API fails
+      handleClientSideSearch();
+    }
+    setIsFiltering(false);
+    setPaginationLoading(false);
+  };
+
+  // Client-side search fallback
+  const handleClientSideSearch = () => {
+    let data = [...patrolData];
+    
+    // Text search filter
+    if (searchText.trim() !== "") {
+      const lower = searchText.toLowerCase();
+      data = data.filter((item) =>
+        item.patrol_officer_name?.toLowerCase().includes(lower)
+      );
+    }
+    
+    // Date filters
+    if (startFilter) {
+      data = data.filter((item) =>
+        dayjs(item.start_time).isSame(startFilter, "day")
+      );
+    }
+    
+    if (endFilter) {
+      data = data.filter((item) =>
+        dayjs(item.end_time).isSame(endFilter, "day")
+      );
+    }
+    
+    // Type filter
+    if (typeFilter) {
+      data = data.filter((item) => item.type_name === typeFilter);
+    }
+    
+    // Hierarchy filters
+    if (divisionFilter) {
+      data = data.filter((item) => 
+        item.division_name?.toLowerCase().includes(divisionFilter.toLowerCase())
+      );
+    }
+    
+    if (beatFilter) {
+      data = data.filter((item) => 
+        item.beat_name?.toLowerCase().includes(beatFilter.toLowerCase())
+      );
+    }
+    
+    if (coupeFilter) {
+      data = data.filter((item) => 
+        item.coupe_name?.toLowerCase().includes(coupeFilter.toLowerCase())
+      );
+    }
+    
+    setFilteredData(data);
+    setTotalItems(data.length);
+    setTotalPages(Math.ceil(data.length / pageSize));
+    setCurrentPage(1);
   };
 
   useEffect(() => {
-    fetchPatrolData();
+    fetchPatrolData(currentPage, pageSize);
+     fetchPatrolData2();
     console.log("api/forest-types");
     // Load forest types
     axios
       .get(`${API_BASE_URL}/api/forest-types`)
       .then((res) => setForestTypes(res.data))
       .catch((err) => console.error(err));
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/api/patrolling-district`)
+      .then((res) => {
+        const data = res.data;
+        if (Array.isArray(data)) {
+          setDivisions1(data);
+        } else if (data && data.data && Array.isArray(data.data)) {
+          setDivisions1(data.data);
+        } else if (data && Array.isArray(Object.values(data))) {
+          setDivisions1(Object.values(data));
+        } else {
+          setDivisions1([]);
+          console.warn("Unexpected data format for divisions:", data);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching divisions:", err);
+        setDivisions1([]);
+      });
   }, []);
 
   // Handle forest type change
@@ -778,23 +1018,23 @@ console.log("api/patrol-info");
     }
 
     try {
-      const token = localStorage.getItem("token"); // 🔑 get JWT from localStorage
-  if (!token) throw new Error("No token found. Please login first.");
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found. Please login first.");
 
-  const res = await axios.post(
-    `${API_BASE_URL}/api/get-divisions`,
-    {
-      forest_id: value, // payload
-    },
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`, // ✅ attach JWT
-      },
-    }
-  );
-  console.log("api/get-divisions");
-    console.log(value);
+      const res = await axios.post(
+        `${API_BASE_URL}/api/get-divisions`,
+        {
+          forest_id: value,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log("api/get-divisions");
+      console.log(value);
 
       setDivisions(res.data);
     } catch (error) {
@@ -867,58 +1107,10 @@ console.log("api/patrol-info");
     return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
   };
 
-  // Function to handle search with all filters
+  // Handle search with server-side filtering
   const handleSearch = () => {
-    let data = [...patrolData];
-    
-    // Text search filter
-    if (searchText.trim() !== "") {
-      const lower = searchText.toLowerCase();
-      data = data.filter((item) =>
-        item.patrol_officer_name?.toLowerCase().includes(lower)
-      );
-    }
-    
-    // Date filters
-    if (startFilter) {
-      data = data.filter((item) =>
-        dayjs(item.start_time).isSame(startFilter, "day")
-      );
-    }
-    
-    if (endFilter) {
-      data = data.filter((item) =>
-        dayjs(item.end_time).isSame(endFilter, "day")
-      );
-    }
-    
-    // Type filter
-    if (typeFilter) {
-      data = data.filter((item) => item.type_name === typeFilter);
-    }
-    
-    // Hierarchy filters
-    if (divisionFilter) {
-      data = data.filter((item) => 
-        item.division_name?.toLowerCase().includes(divisionFilter.toLowerCase())
-      );
-    }
-    
-    if (beatFilter) {
-      data = data.filter((item) => 
-        item.beat_name?.toLowerCase().includes(beatFilter.toLowerCase())
-      );
-    }
-    
-    if (coupeFilter) {
-      // Assuming there's a coupe field in patrol data
-      // You may need to adjust this based on your actual data structure
-      data = data.filter((item) => 
-        item.coupe_name?.toLowerCase().includes(coupeFilter.toLowerCase())
-      );
-    }
-    
-    setFilteredData(data);
+    setCurrentPage(1); // Reset to first page when searching
+    fetchFilteredPatrolData(1, pageSize);
   };
 
   // Function to clear all filters
@@ -934,13 +1126,38 @@ console.log("api/patrol-info");
     setDivisions([]);
     setBeats([]);
     setCoupes([]);
-    setFilteredData(patrolData);
+    setCurrentPage(1);
+    setIsFiltering(false);
+    fetchPatrolData(1, pageSize);
   };
 
-  // Apply filters when any filter changes
+  // Handle page change
+  const handlePageChange = (page, pageSize) => {
+    setCurrentPage(page);
+    setPageSize(pageSize);
+    
+    // Check if any filters are active
+    const hasFilters = searchText || startFilter || endFilter || typeFilter || 
+                      divisionFilter || beatFilter || coupeFilter || forestId;
+    
+    if (hasFilters) {
+      fetchFilteredPatrolData(page, pageSize);
+    } else {
+      fetchPatrolData(page, pageSize);
+    }
+  };
+
+  // Apply filters when any filter changes (debounced version)
   useEffect(() => {
-    handleSearch();
-  }, [searchText, startFilter, endFilter, typeFilter, divisionFilter, beatFilter, coupeFilter, patrolData]);
+    const timer = setTimeout(() => {
+      if (searchText || startFilter || endFilter || typeFilter || 
+          divisionFilter || beatFilter || coupeFilter || forestId) {
+        handleSearch();
+      }
+    }, 800); // 800ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchText, startFilter, endFilter, typeFilter, divisionFilter, beatFilter, coupeFilter, forestId]);
 
   const getTypeDisplayName = (type) => {
     if (language === "gu") {
@@ -970,6 +1187,16 @@ console.log("api/patrol-info");
   };
 
   const columns = [
+    {
+      title: language === "gu" ? "ક્રમાંક" : "Sr. No.",
+      key: "serial",
+      align: "center",
+      width: 80,
+      render: (text, record, index) => {
+        // Calculate serial number based on pagination
+        return (currentPage - 1) * pageSize + index + 1;
+      },
+    },
     {
       title: language === "gu" ? "પેટ્રોલિંગ આઈડી" : "Patrol ID",
       dataIndex: "patrol_id",
@@ -1002,20 +1229,20 @@ console.log("api/patrol-info");
     },
     {
       title: language === "gu" ? "વિભાગ" : "Division",
-      dataIndex: "division_name",
-      key: "division_name",
+      dataIndex: "division",
+      key: "division",
       align: "center",
     },
     {
       title: language === "gu" ? "રંગ" : "Range",
-      dataIndex: "range_name",
-      key: "range_name",
+      dataIndex: "range",
+      key: "range",
       align: "center",
     },
     {
       title: language === "gu" ? "બીટ" : "Beat",
-      dataIndex: "beat_name",
-      key: "beat_name",
+      dataIndex: "beat",
+      key: "beat",
       align: "center",
     },
     {
@@ -1088,14 +1315,14 @@ console.log("api/patrol-info");
   ];
 
   const handleExport = () => {
-    if (!filteredData.length) {
+    if (!patrolData2.length) {
       alert(language === "gu" ? "નિકાસ કરવા માટે કોઈ ડેટા નથી" : "No data to export");
       return;
     }
     
     // Group data by officer name
     const officers = {};
-    filteredData.forEach((item) => {
+    patrolData2.forEach((item) => {
       if (!officers[item.patrol_officer_name]) {
         officers[item.patrol_officer_name] = {
           dayPatrols: [],
@@ -1450,6 +1677,66 @@ console.log("api/patrol-info");
     );
   };
 
+  // Custom pagination component
+  const CustomPagination = () => (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      marginTop: 16,
+      padding: '16px',
+      // backgroundColor: '#fafafa',
+      borderRadius: '8px',
+      flexWrap: 'wrap',
+      gap: '16px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ color: '#666', fontSize: '14px' }}>
+          {language === "gu" ? "કુલ રેકોર્ડ:" : "Total Records:"} 
+          <strong style={{ marginLeft: '4px' }}>{totalItems}</strong>
+        </span>
+        {isFiltering && (
+          <Tag color="processing">
+            <FilterOutlined /> {language === "gu" ? "ફિલ્ટર થઈ રહ્યું છે" : "Filtering..."}
+          </Tag>
+        )}
+      </div>
+      
+      <Pagination
+        current={currentPage}
+        pageSize={pageSize}
+        total={totalItems}
+        onChange={handlePageChange}
+        showSizeChanger
+        showQuickJumper
+        showTotal={(total, range) => 
+          `${language === "gu" ? "બતાવી રહ્યા છીએ" : "Showing"} ${range[0]}-${range[1]} ${language === "gu" ? "ના" : "of"} ${total} ${language === "gu" ? "રેકોર્ડ" : "items"}`
+        }
+        pageSizeOptions={['5', '10', '20', '50', '100']}
+        disabled={paginationLoading || isLoading}
+      />
+      
+      {/* <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Select
+          value={pageSize}
+          onChange={(value) => {
+            setPageSize(value);
+            handlePageChange(1, value);
+          }}
+          style={{ width: 120 }}
+          disabled={paginationLoading || isLoading}
+        >
+          <Select.Option value={5}>5 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+          <Select.Option value={10}>10 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+          <Select.Option value={20}>20 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+          <Select.Option value={50}>50 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+          <Select.Option value={100}>100 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+        </Select>
+        {paginationLoading && <Spin size="small" />}
+      </div> */}
+    </div>
+  );
+
   return (
     <div className="container">
       {isLoading && <Loader />}
@@ -1472,93 +1759,28 @@ console.log("api/patrol-info");
               value={forestId}
               onChange={handleForestChange}
               allowClear
-            dropdownStyle={{
-              background: "#fff",
-            }}
-            dropdownRender={(menu) => (
-              <div style={{ background: "#fff" }}>
-                {menu}
-              </div>
-            )}
-            >
-              <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
-              {forestTypes.map((f) => (
-                <Option key={f.forest_id} value={f.forest_id}>
-                  {f.forest_type}
-                </Option>
-              ))}
-            </Select>
-
-            <Select
-              placeholder={language === "gu" ? "વિભાગ" : "Division"}
-              style={{
-                width: "180px",
-                border: "1px solid #d9d9d9",
-                borderRadius: "0px",
-                background: "#fff",
-              }}
-              value={divisionFilter}
-              onChange={handleDivisionChange}
-              allowClear
-              disabled={!forestId}
               dropdownStyle={{
-              background: "#fff",
-            }}
-            dropdownRender={(menu) => (
-              <div style={{ background: "#fff" }}>
-                {menu}
-              </div>
-            )}
-            >
-              <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
-              {divisions.map((d, index) => (
-                <Option key={index} value={d.DIVISION}>
-                  {d.DIVISION}
-                </Option>
-              ))}
-            </Select>
-
-            {/* <Select
-              placeholder={language === "gu" ? "બીટ" : "Beat"}
-              style={{
-                width: "180px",
-                border: "1px solid #d9d9d9",
-                borderRadius: "4px",
                 background: "#fff",
               }}
-              value={beatFilter}
-              onChange={handleBeatChange}
-              allowClear
-              disabled={!divisionFilter}
+              dropdownRender={(menu) => (
+                <div style={{ background: "#fff" }}>
+                  {menu}
+                </div>
+              )}
             >
               <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
-              {beats.map((b, index) => (
-                <Option key={index} value={b}>
-                  {b}
+              {Array.isArray(divisions1) && divisions1.length > 0 ? (
+                divisions1.map((f) => (
+                  <Option key={f.division || f.id || f.value} value={f.division || f.id || f.value}>
+                    {f.division || f.name || f.value}
+                  </Option>
+                ))
+              ) : (
+                <Option disabled value="no-data">
+                  {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
                 </Option>
-              ))}
+              )}
             </Select>
-
-            <Select
-              placeholder={language === "gu" ? "કૂપ" : "Coupe"}
-              style={{
-                width: "180px",
-                border: "1px solid #d9d9d9",
-                borderRadius: "4px",
-                background: "#fff",
-              }}
-              value={coupeFilter}
-              onChange={handleCoupeChange}
-              allowClear
-              disabled={!beatFilter}
-            >
-              <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
-              {coupes.map((c, index) => (
-                <Option key={index} value={c}>
-                  {c}
-                </Option>
-              ))}
-            </Select> */}
 
             {/* Existing filters */}
             <Input
@@ -1603,20 +1825,6 @@ console.log("api/patrol-info");
               onChange={(date) => setStartFilter(date)}
               allowClear
             />
-            {/* <DatePicker
-              placeholder={
-                language === "gu" ? "સમાપ્ત તારીખથી શોધો" : "Search by End Date"
-              }
-              style={{
-                width: "200px",
-                border: "1px solid #d9d9d9",
-                borderRadius: "4px",
-                background: "#fff",
-              }}
-              value={endFilter}
-              onChange={(date) => setEndFilter(date)}
-              allowClear
-            /> */}
             <Select
               placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકારથી શોધો" : "Search by Patrolling Type"}
               style={{
@@ -1645,6 +1853,7 @@ console.log("api/patrol-info");
             
             <Button 
               onClick={clearAllFilters}
+              icon={<ReloadOutlined />}
               style={{
                 marginRight: "10px",
                 background: "#f5f5f5",
@@ -1665,29 +1874,48 @@ console.log("api/patrol-info");
                 color: "#000",
               }}
             >
-              {language === "gu" ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Beat Patrol Coverage Analysis"}
+              {language === "gu" ? "બીટ પેટ્રોલ કવરેજ" : "Beat Patrol Coverage"}
             </Button>
             
-            <Button className="btn-Export" onClick={handleExport}>
+            <Button className="btn-Export" onClick={handleExport} disabled={!filteredData.length}>
               {language === "gu" ? "નિકાસ કરો" : "Export"}
               <img src={exportIcon} alt="Export Icon" className="btn-icon" />
             </Button>
           </div>
         </div>
         
-        {/* Analysis Dashboard - Shows statistics for current filtered data */}
-      
+        {/* Show pagination info */}
+        {/* {totalItems > 0 && (
+          <Alert
+            message={
+              <span>
+                {language === "gu" ? "કુલ" : "Total"} <strong>{totalItems}</strong> {language === "gu" ? "પેટ્રોલિંગ રેકોર્ડ મળ્યા" : "patrol records found"} 
+                {(searchText || startFilter || endFilter || typeFilter || divisionFilter || beatFilter || coupeFilter || forestId) && (
+                  <span style={{ marginLeft: '8px' }}>
+                    {language === "gu" ? "ફિલ્ટર લાગુ પાડ્યા પછી" : "after applying filters"}
+                  </span>
+                )}
+              </span>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            action={
+              <Button size="small" onClick={clearAllFilters}>
+                {language === "gu" ? "સાફ કરો" : "Clear"}
+              </Button>
+            }
+          />
+        )} */}
+
         <Table
           className="transparent-table"
           columns={columns}
           dataSource={filteredData}
-          pagination={{ pageSize: 5 }}
+          pagination={false} // We'll use custom pagination
           bordered
           scroll={{ x: 'max-content' }}
-          onChange={(pagination, filters, sorter) => {
-            // Handle table sorting and filtering
-            console.log('Table changed:', { pagination, filters, sorter });
-          }}
+          loading={isLoading || paginationLoading}
           locale={{
             emptyText: (
               <div style={{ textAlign: "center", padding: "50px 0" }}>
@@ -1711,9 +1939,14 @@ console.log("api/patrol-info");
             ),
           }}
         />
-      </div>
-        <PatrolAnalysisDashboard patrolData={filteredData} language={language} />
         
+        {/* Custom Pagination Component */}
+        {totalItems > 0 && <CustomPagination />}
+      </div>
+      
+      {/* Analysis Dashboard - Shows statistics for current filtered data */}
+      <PatrolAnalysisDashboard patrolData={patrolData2} language={language} />
+      
       <Modal
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
@@ -1880,225 +2113,3 @@ console.log("api/patrol-info");
 };
 
 export default PatrolIncidentLogs;
-
-
-
-
-
-//  <div style={{ margin: 4, backgroundColor: '#fafafa', padding: 20, borderRadius: 8 }}>
-//       <Title level={4} style={{ marginBottom: 20 }}>
-//         {language === "gu" ? "પેટ્રોલિંગ વિશ્લેષણ" : "Patrol Analysis"}
-//       </Title>
-      
-    
-//       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-//         <Col xs={24} sm={12} md={6}>
-//           <Card size="small">
-//             <Statistic
-//               title={language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"}
-//               value={totalPatrols}
-//               prefix={<CalendarOutlined />}
-//               valueStyle={{ color: '#1890ff' }}
-//             />
-//           </Card>
-//         </Col>
-//         <Col xs={24} sm={12} md={6}>
-//           <Card size="small">
-//             <Statistic
-//               title={language === "gu" ? "સરેરાશ અંતર" : "Average Distance"}
-//               value={avgDistanceOverall}
-//               suffix="km"
-//               prefix={<DashboardOutlined />}
-//               valueStyle={{ color: '#52c41a' }}
-//             />
-//           </Card>
-//         </Col>
-//         <Col xs={24} sm={12} md={6}>
-//           <Card size="small">
-//             <Statistic
-//               title={language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers"}
-//               value={uniqueOfficers.length}
-//               prefix={<TeamOutlined />}
-//               valueStyle={{ color: '#722ed1' }}
-//             />
-//           </Card>
-//         </Col>
-//         <Col xs={24} sm={12} md={6}>
-//           <Card size="small">
-//             <Statistic
-//               title={language === "gu" ? "ઉપયોગિતા" : "Utilization"}
-//               value={utilizationPercentage}
-//               suffix="%"
-//               prefix={<ClockCircleOutlined />}
-//               valueStyle={{ color: '#fa8c16' }}
-//             />
-//           </Card>
-//         </Col>
-//       </Row>
-
-     
-//       <div style={{ marginBottom: 24 }}>
-//         <Text strong style={{ display: 'block', marginBottom: 8 }}>
-//           {language === "gu" ? "પેટ્રોલિંગ વિતરણ" : "Patrol Distribution"}
-//         </Text>
-//         <Row gutter={8}>
-//           <Col span={8}>
-//             <div style={{ textAlign: 'center' }}>
-//               <Progress
-//                 type="dashboard"
-//                 percent={parseInt(dayPercentage)}
-//                 strokeColor="#1890ff"
-//                 format={percent => `${percent}%`}
-//               />
-//               <Text type="secondary">{getTypeDisplayName("Day patrolling")}</Text>
-//             </div>
-//           </Col>
-//           <Col span={8}>
-//             <div style={{ textAlign: 'center' }}>
-//               <Progress
-//                 type="dashboard"
-//                 percent={parseInt(nightPercentage)}
-//                 strokeColor="#722ed1"
-//                 format={percent => `${percent}%`}
-//               />
-//               <Text type="secondary">{getTypeDisplayName("Night patrolling")}</Text>
-//             </div>
-//           </Col>
-//           <Col span={8}>
-//             <div style={{ textAlign: 'center' }}>
-//               <Progress
-//                 type="dashboard"
-//                 percent={parseInt(beatPercentage)}
-//                 strokeColor="#52c41a"
-//                 format={percent => `${percent}%`}
-//               />
-//               <Text type="secondary">{getTypeDisplayName("Beat checking")}</Text>
-//             </div>
-//           </Col>
-//         </Row>
-//       </div>
-
-     
-//       <Row gutter={[16, 16]}>
-//         {[dayStats, nightStats, beatStats].map((stats, index) => {
-//           if (!stats) return null;
-          
-//           const types = ["Day patrolling", "Night patrolling", "Beat checking"];
-//           const type = types[index];
-          
-//           return (
-//             <Col xs={24} md={8} key={type}>
-//               <Card 
-//                 size="small" 
-//                 title={
-//                   <div style={{ display: 'flex', alignItems: 'center' }}>
-//                     <div style={{
-//                       width: 12,
-//                       height: 12,
-//                       borderRadius: '50%',
-//                       backgroundColor: getTypeColor(type),
-//                       marginRight: 8
-//                     }} />
-//                     <span>{getTypeDisplayName(type)}</span>
-//                   </div>
-//                 }
-//                 headStyle={{ backgroundColor: getTypeColor(type) + '10', borderBottomColor: getTypeColor(type) + '30' }}
-//               >
-//                 <Statistic
-//                   title={language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"}
-//                   value={stats.totalPatrols}
-//                   valueStyle={{ fontSize: '24px' }}
-//                 />
-//                 <Row style={{ marginTop: 12 }}>
-//                   <Col span={12}>
-//                     <Text type="secondary">{language === "gu" ? "સરેરાશ અંતર:" : "Avg Distance:"}</Text>
-//                     <br />
-//                     <Text strong>{stats.avgDistance} km</Text>
-//                   </Col>
-//                   <Col span={12}>
-//                     <Text type="secondary">{language === "gu" ? "સરેરાશ સમય:" : "Avg Time:"}</Text>
-//                     <br />
-//                     <Text strong>{stats.avgHours} hrs</Text>
-//                   </Col>
-//                 </Row>
-//                 <Row style={{ marginTop: 12 }}>
-//                   <Col span={12}>
-//                     <Text type="secondary">{language === "gu" ? "સરેરાશ સ્ટાફ:" : "Avg Staff:"}</Text>
-//                     <br />
-//                     <Text strong>{stats.avgStaff}</Text>
-//                   </Col>
-//                   <Col span={12}>
-//                     <Text type="secondary">{language === "gu" ? "શ્રેષ્ઠ અધિકારી:" : "Top Officer:"}</Text>
-//                     <br />
-//                     <Text strong style={{ fontSize: '12px' }}>{stats.topOfficer}</Text>
-//                   </Col>
-//                 </Row>
-//                 <div style={{ marginTop: 12 }}>
-//                   <Text type="secondary">{language === "gu" ? "કુલ અંતર:" : "Total Distance:"}</Text>
-//                   <br />
-//                   <Text strong>{stats.totalDistance} km</Text>
-//                 </div>
-//               </Card>
-//             </Col>
-//           );
-//         })}
-//       </Row>
-
-     
-//       {(dayStats || nightStats || beatStats) && (
-//         <Card 
-//           size="small" 
-//           style={{ marginTop: 16 }}
-//           title={language === "gu" ? "વધારાની જાણકારી" : "Additional Insights"}
-//         >
-//           <Row gutter={[16, 16]}>
-//             <Col xs={24} sm={12}>
-//               <div>
-//                 <Text strong>
-//                   {language === "gu" ? "સૌથી વધુ પેટ્રોલિંગ:" : "Most Active Type:"}
-//                 </Text>
-//                 <br />
-//                 {(() => {
-//                   const types = [
-//                     { name: "Day patrolling", count: dayStats?.totalPatrols || 0 },
-//                     { name: "Night patrolling", count: nightStats?.totalPatrols || 0 },
-//                     { name: "Beat checking", count: beatStats?.totalPatrols || 0 }
-//                   ];
-//                   const mostActive = types.reduce((prev, current) => 
-//                     prev.count > current.count ? prev : current
-//                   );
-//                   return (
-//                     <Text>
-//                       {getTypeDisplayName(mostActive.name)} ({mostActive.count} {language === "gu" ? "પેટ્રોલિંગ" : "patrols"})
-//                     </Text>
-//                   );
-//                 })()}
-//               </div>
-//             </Col>
-//             <Col xs={24} sm={12}>
-//               <div>
-//                 <Text strong>
-//                   {language === "gu" ? "સૌથી વધુ અંતર:" : "Longest Distance Type:"}
-//                 </Text>
-//                 <br />
-//                 {(() => {
-//                   const types = [
-//                     { name: "Day patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
-//                     { name: "Night patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
-//                     { name: "Beat checking", distance: parseFloat(beatStats?.totalDistance || 0) }
-//                   ];
-//                   const longestDistance = types.reduce((prev, current) => 
-//                     prev.distance > current.distance ? prev : current
-//                   );
-//                   return (
-//                     <Text>
-//                       {getTypeDisplayName(longestDistance.name)} ({longestDistance.distance} km)
-//                     </Text>
-//                   );
-//                 })()}
-//               </div>
-//             </Col>
-//           </Row>
-//         </Card>
-//       )}
-//     </div>

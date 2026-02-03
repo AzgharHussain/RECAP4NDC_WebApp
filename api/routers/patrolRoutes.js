@@ -154,6 +154,37 @@ router.post('/patrol-post', verifyJwt, upload.any(), async (req, res) => {
   }
 });
 
+
+router.get('/patrol-info-all', verifyJwt, async (req, res) => {
+  try {
+    const query = `
+      SELECT
+        p.*,
+        pt.type_name
+       
+      FROM patrols p
+     
+      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      GROUP BY p.patrol_id, pt.type_name
+      ORDER BY p.patrol_id DESC;
+    `;
+
+    const result = await client.query(query);
+
+    const formattedData = result.rows.map(patrol => ({
+      ...patrol,
+      start_time: toUTC(patrol.start_time),
+      end_time: toUTC(patrol.end_time),
+     
+    }));
+
+    res.json({ message: 'All patrols fetched successfully', data: formattedData });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patrols' });
+  }
+});
 // GET all patrols with images and notes
 router.get('/patrol-info', verifyJwt, async (req, res) => {
   try {
@@ -194,6 +225,211 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch patrols' });
+  }
+});
+
+
+// Updated /patrol-info endpoint with pagination
+router.get('/patrol-info-page', verifyJwt, async (req, res) => {
+  try {
+    // Get pagination parameters from query string
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const offset = (page - 1) * limit;
+
+    // Main query with pagination
+    const query = `
+      SELECT
+        p.*,
+        pt.type_name,
+        json_agg(
+          json_build_object(
+            'image_id', pi.image_id,
+            'image_data', pi.image_data,
+            'image_type', pi.image_type,
+            'image_category', pi.image_category,
+            'note', pi.note
+          )
+        ) AS images
+      FROM patrols p
+      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
+      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      GROUP BY p.patrol_id, pt.type_name
+      ORDER BY p.patrol_id DESC
+      LIMIT $1 OFFSET $2;
+    `;
+
+    // Count query for total records
+    const countQuery = `
+      SELECT COUNT(*) as total_count
+      FROM patrols p
+      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+    `;
+
+    // Execute both queries in parallel
+    const [result, countResult] = await Promise.all([
+      client.query(query, [limit, offset]),
+      client.query(countQuery)
+    ]);
+
+    const totalCount = parseInt(countResult.rows[0].total_count);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    const formattedData = result.rows.map(patrol => ({
+      ...patrol,
+      start_time: toUTC(patrol.start_time),
+      end_time: toUTC(patrol.end_time),
+      images: patrol.images.map(img => ({
+        ...img,
+        image_data: img.image_data || null
+      }))
+    }));
+
+    res.json({ 
+      message: 'Patrols fetched successfully',
+      data: formattedData,
+      pagination: {
+        currentPage: page,
+        pageSize: limit,
+        totalItems: totalCount,
+        totalPages: totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patrols' });
+  }
+});
+
+// Optional: Add API endpoint for filtered pagination
+router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit =5,
+      type_name,
+      officer_name,
+      start_date,
+      end_date,
+      division,
+      beat
+    } = req.query;
+
+    const offset = (page - 1) * limit;
+    const whereConditions = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    // Build WHERE clause dynamically
+    if (type_name) {
+      whereConditions.push(`pt.type_name = $${paramIndex}`);
+      queryParams.push(type_name);
+      paramIndex++;
+    }
+
+    if (officer_name) {
+      whereConditions.push(`p.patrol_officer_name ILIKE $${paramIndex}`);
+      queryParams.push(`%${officer_name}%`);
+      paramIndex++;
+    }
+
+    if (start_date) {
+      whereConditions.push(`DATE(p.start_time) >= $${paramIndex}`);
+      queryParams.push(start_date);
+      paramIndex++;
+    }
+
+    if (end_date) {
+      whereConditions.push(`DATE(p.end_time) <= $${paramIndex}`);
+      queryParams.push(end_date);
+      paramIndex++;
+    }
+
+    if (division) {
+      whereConditions.push(`p.division_name ILIKE $${paramIndex}`);
+      queryParams.push(`%${division}%`);
+      paramIndex++;
+    }
+
+    if (beat) {
+      whereConditions.push(`p.beat_name ILIKE $${paramIndex}`);
+      queryParams.push(`%${beat}%`);
+      paramIndex++;
+    }
+
+    // Add pagination parameters
+    queryParams.push(limit, offset);
+
+    const whereClause = whereConditions.length > 0 
+      ? `WHERE ${whereConditions.join(' AND ')}`
+      : '';
+
+    const query = `
+      SELECT
+        p.*,
+        pt.type_name,
+        json_agg(
+          json_build_object(
+            'image_id', pi.image_id,
+            'image_data', pi.image_data,
+            'image_type', pi.image_type,
+            'image_category', pi.image_category,
+            'note', pi.note
+          )
+        ) AS images
+      FROM patrols p
+      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
+      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      ${whereClause}
+      GROUP BY p.patrol_id, pt.type_name
+      ORDER BY p.patrol_id DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) as total_count
+      FROM patrols p
+      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      ${whereClause}
+    `;
+
+    const [result, countResult] = await Promise.all([
+      client.query(query, queryParams),
+      client.query(countQuery, queryParams.slice(0, -2))
+    ]);
+
+    const totalCount = parseInt(countResult.rows[0].total_count);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    const formattedData = result.rows.map(patrol => ({
+      ...patrol,
+      start_time: toUTC(patrol.start_time),
+      end_time: toUTC(patrol.end_time),
+      images: patrol.images.map(img => ({
+        ...img,
+        image_data: img.image_data || null
+      }))
+    }));
+
+    res.json({
+      message: 'Filtered patrols fetched successfully',
+      data: formattedData,
+      pagination: {
+        currentPage: parseInt(page),
+        pageSize: parseInt(limit),
+        totalItems: totalCount,
+        totalPages: totalPages,
+        hasNextPage: parseInt(page) < totalPages,
+        hasPreviousPage: parseInt(page) > 1
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch filtered patrols' });
   }
 });
 
@@ -310,6 +546,40 @@ router.get('/patrolling-types', verifyJwt, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch patrolling types' });
+  }
+});
+
+router.get('/patrolling-district', async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT division
+      FROM patrols;
+    `;
+    const result = await client.query(query);
+    res.json({
+      message: 'All patrolling districts fetched successfully',
+      data: result.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patrolling districts' });
+  }
+});
+
+router.get('/patrolling-drb', async (req, res) => {
+  try {
+    const query = `
+      SELECT range, beat,division
+      FROM patrols;
+    `;
+    const result = await client.query(query);
+    res.json({
+      message: 'All patrolling districts fetched successfully',
+      data: result.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patrolling districts' });
   }
 });
 

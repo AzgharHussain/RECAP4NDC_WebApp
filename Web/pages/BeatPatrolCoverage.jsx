@@ -62,13 +62,12 @@ const PatrolLoader = () => (
 )
 
 const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
-  const [forestTypes, setForestTypes] = useState([]);
-  const [selectedForest, setSelectedForest] = useState(null);
-  const [hierarchyData, setHierarchyData] = useState([]);
+  const [divisions1, setDivisions1] = useState([]); // Add this line
   const [divisions, setDivisions] = useState([]);
   const [ranges, setRanges] = useState([]);
   const [beats, setBeats] = useState([]);
   
+  // Other states...
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
@@ -91,23 +90,62 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
 
   /* =========================
      Fetch Forest Types on mount
-  ========================= */
-  useEffect(() => {
-    const fetchForestTypes = async () => {
-      setLoading(prev => ({ ...prev, forest: true }));
-      try {
-        const response = await axios.get(`${API_BASE_URL}/api/forest-types`);
-        setForestTypes(response.data);
-      } catch (error) {
-        console.error("Error fetching forest types:", error);
-        alert("Failed to load forest types");
-      } finally {
-        setLoading(prev => ({ ...prev, forest: false }));
-      }
-    };
+  // ========================= */
+  // useEffect(() => {
+  //   const fetchForestTypes = async () => {
+  //     setLoading(prev => ({ ...prev, forest: true }));
+  //     try {
+  //       const response = await axios.get(`${API_BASE_URL}/api/forest-types`);
+  //       setForestTypes(response.data);
+  //     } catch (error) {
+  //       console.error("Error fetching forest types:", error);
+  //       alert("Failed to load forest types");
+  //     } finally {
+  //       setLoading(prev => ({ ...prev, forest: false }));
+  //     }
+  //   };
     
-    fetchForestTypes();
-  }, []);
+  //   fetchForestTypes();
+  // }, []);
+
+  useEffect(() => {
+  axios
+    .get(`${API_BASE_URL}/api/patrolling-drb`)
+    .then((res) => {
+      console.log("Patrolling DRB response:", res.data);
+      
+      // Check if response has data array
+      if (res.data && res.data.data && Array.isArray(res.data.data)) {
+        setDivisions1(res.data.data);
+        
+        // Extract unique divisions from the data
+        const uniqueDivisions = [...new Set(res.data.data.map(item => item.division))];
+        setDivisions(uniqueDivisions.map(div => ({
+          value: div,
+          label: div
+        })));
+      } else if (Array.isArray(res.data)) {
+        // If response is directly an array
+        setDivisions1(res.data);
+        
+        // Extract unique divisions from the data
+        const uniqueDivisions = [...new Set(res.data.map(item => item.division))];
+        setDivisions(uniqueDivisions.map(div => ({
+          value: div,
+          label: div
+        })));
+      } else {
+        console.warn("Unexpected data format for patrolling-drb:", res.data);
+        setDivisions1([]);
+        setDivisions([]);
+      }
+    })
+    .catch((err) => {
+      console.error("Error fetching patrolling divisions:", err);
+      setDivisions1([]);
+      setDivisions([]);
+    });
+}, []);
 
   /* =========================
      Handle Forest Selection
@@ -183,76 +221,57 @@ const response = await axios.post(
   /* =========================
      Handle Division Selection
   ========================= */
-  const handleDivisionChange = async (selectedOption) => {
-    setSelectedDivision(selectedOption);
-    setSelectedRange(null);
-    setSelectedBeat(null);
-    setRanges([]);
-    setBeats([]);
-    setSelectedImage(null);
-    setImageRotation(0);
-    setImageScale(1);
-    
-    if (!selectedOption) return;
+const handleDivisionChange = async (selectedOption) => {
+  setSelectedDivision(selectedOption);
+  setSelectedRange(null);
+  setSelectedBeat(null);
+  setRanges([]);
+  setBeats([]);
+  setSelectedImage(null);
+  setImageRotation(0);
+  setImageScale(1);
+  
+  if (!selectedOption) return;
 
-    let divisionname = selectedOption.value;
-    
-    try {
-        const response = await axios.post(`${API_BASE_URL}/api/hierarchy`, {
-            forest_id: selectedForest,
-            division_name: divisionname
-        });
-        console.log("api/hierarchy");
-        console.log("division_name:", divisionname);
-        // FIRST: Set the hierarchy data
-        setHierarchyData(response.data);
-        
-        // THEN: Filter ranges based on the response data
-        const divisionRanges = response.data
-            .filter(item => item.DIVISION === selectedOption.value)
-            .map(item => item.RANGE);
-        
-        const uniqueRanges = [...new Set(divisionRanges)];
-        setRanges(uniqueRanges.map(range => ({
-            value: range,
-            label: range
-        })));
-        
-    } catch (error) {
-        console.error("Error fetching hierarchy:", error);
-        alert("Failed to load hierarchy data");
-        setHierarchyData([]);
-        setRanges([]);
-    }
-  };
+  // Filter ranges based on the selected division from the patrolling-drb data
+  const divisionRanges = divisions1
+    .filter(item => item.division === selectedOption.value)
+    .map(item => item.range);
+  
+  const uniqueRanges = [...new Set(divisionRanges)];
+  setRanges(uniqueRanges.map(range => ({
+    value: range,
+    label: range
+  })));
+};
 
   /* =========================
      Handle Range Selection
   ========================= */
-  const handleRangeChange = (selectedOption) => {
-    setSelectedRange(selectedOption);
-    setSelectedBeat(null);
-    setBeats([]);
-    setSelectedImage(null);
-    setImageRotation(0);
-    setImageScale(1);
-    
-    if (!selectedOption || !hierarchyData.length || !selectedDivision) return;
-    
-    // Filter beats based on selected division and range
-    const divisionBeats = hierarchyData
-      .filter(item => 
-        item.DIVISION === selectedDivision.value && 
-        item.RANGE === selectedOption.value
-      )
-      .map(item => item.BEAT);
-    
-    const uniqueBeats = [...new Set(divisionBeats)];
-    setBeats(uniqueBeats.map(beat => ({
-      value: beat,
-      label: beat
-    })));
-  };
+const handleRangeChange = (selectedOption) => {
+  setSelectedRange(selectedOption);
+  setSelectedBeat(null);
+  setBeats([]);
+  setSelectedImage(null);
+  setImageRotation(0);
+  setImageScale(1);
+  
+  if (!selectedOption || !selectedDivision) return;
+  
+  // Filter beats based on selected division and range from patrolling-drb data
+  const divisionBeats = divisions1
+    .filter(item => 
+      item.division === selectedDivision.value && 
+      item.range === selectedOption.value
+    )
+    .map(item => item.beat);
+  
+  const uniqueBeats = [...new Set(divisionBeats)];
+  setBeats(uniqueBeats.map(beat => ({
+    value: beat,
+    label: beat
+  })));
+};
 
   /* =========================
      Handle Beat Selection
@@ -272,59 +291,58 @@ const response = await axios.post(
   /* =========================
      Fetch Beat Patrol Coverage
   ========================= */
-  const fetchCoverageData = async () => {
-    if (!selectedBeat) {
-      alert("Please select a beat first");
-      return;
-    }
-    
-    setLoading(prev => ({ ...prev, coverage: true }));
-    setSelectedImage(null);
-    setImageRotation(0);
-    setImageScale(1);
-    try {
-      const token = localStorage.getItem("token"); // your JWT
-
-const res = await axios.post(
-  `${API_BASE_URL}/api/beat-patrol-coverage`,
-  { 
-    beat: selectedBeat.value,
-    forest_id: selectedForest,
-    division: selectedDivision?.value,
-    range: selectedRange?.value
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+const fetchCoverageData = async () => {
+  if (!selectedBeat) {
+    alert("Please select a beat first");
+    return;
   }
-);
-console.log("api/beat-patrol-coverage");
-console.log("beat: ", selectedBeat?.value, " forest_id: ", selectedForest, " division: ", selectedDivision?.value, " range: ", selectedRange?.value);
+  
+  setLoading(prev => ({ ...prev, coverage: true }));
+  setSelectedImage(null);
+  setImageRotation(0);
+  setImageScale(1);
+  try {
+    const token = localStorage.getItem("token");
 
-      if (res.data.success) {
-        setCoverageData(res.data.data);
-
-        if (res.data.data.patrols_covering_beat && res.data.data.patrols_covering_beat.length > 0) {
-          const lines = res.data.data.patrols_covering_beat.map((p) =>
-            parseGeomCoordinates(p.patrol_geom)
-          ).filter(line => line.length > 0);
-          setPatrolLines(lines);
-        } else {
-          setPatrolLines([]);
-        }
-        
-      } else {
-        alert(res.data.message || "No coverage data found");
+    const res = await axios.post(
+      `${API_BASE_URL}/api/beat-patrol-coverage`,
+      { 
+        beat: selectedBeat.value,
+        division: selectedDivision?.value,
+        range: selectedRange?.value
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    } catch (err) {
-      console.error("Error fetching patrol coverage:", err);
-      alert("Failed to load patrol coverage data");
-    } finally {
-      setLoading(prev => ({ ...prev, coverage: false }));
+    );
+    console.log("api/beat-patrol-coverage");
+    console.log("beat: ", selectedBeat?.value, " division: ", selectedDivision?.value, " range: ", selectedRange?.value);
+
+    if (res.data.success) {
+      setCoverageData(res.data.data);
+console.log("Coverage Data:", res.data.data);
+      if (res.data.data.patrols_covering_beat && res.data.data.patrols_covering_beat.length > 0) {
+        const lines = res.data.data.patrols_covering_beat.map((p) =>
+          parseGeomCoordinates(p.patrol_geom)
+        ).filter(line => line.length > 0);
+        setPatrolLines(lines);
+      } else {
+        setPatrolLines([]);
+      }
+      
+    } else {
+      alert(res.data.message || "No coverage data found");
     }
-  };
+  } catch (err) {
+    console.error("Error fetching patrol coverage:", err);
+    alert("Failed to load patrol coverage data");
+  } finally {
+    setLoading(prev => ({ ...prev, coverage: false }));
+  }
+};
 
   /* =========================
      Fetch Patrol Details
@@ -388,7 +406,7 @@ const data = response.data;
 
     const summaryData = [
       {
-        "Beat": coverageData.beat_name,
+        "Beat": coverageData.beat,
         "Beat Area (sq m)": coverageData.beat_area_sq_m,
         "Patrol Covered Area (sq m)": coverageData.patrol_beat_area_sq_m,
         "Coverage %": coverageData.coverage_percentage,
@@ -480,24 +498,21 @@ const data = response.data;
   /* =========================
      Reset Selections
   ========================= */
-  const handleReset = () => {
-    setSelectedForest(null);
-    setSelectedDivision(null);
-    setSelectedRange(null);
-    setSelectedBeat(null);
-    setDivisions([]);
-    setRanges([]);
-    setBeats([]);
-    setHierarchyData([]);
-    setCoverageData(null);
-    setPatrolLines([]);
-    setSelectedPatrol(null);
-    setPatrolDetails(null);
-    setShowPatrolModal(false);
-    setSelectedImage(null);
-    setImageRotation(0);
-    setImageScale(1);
-  };
+const handleReset = () => {
+  setSelectedDivision(null);
+  setSelectedRange(null);
+  setSelectedBeat(null);
+  setRanges([]);
+  setBeats([]);
+  setCoverageData(null);
+  setPatrolLines([]);
+  setSelectedPatrol(null);
+  setPatrolDetails(null);
+  setShowPatrolModal(false);
+  setSelectedImage(null);
+  setImageRotation(0);
+  setImageScale(1);
+};
 
   /* =========================
      Format Date Time
@@ -1581,234 +1596,181 @@ const data = response.data;
         height: "calc(100% - 40px)",
       }}>
         <h1 style={{
-          fontSize: "32px",
-          fontWeight: "700",
-          marginBottom: "8px",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-        }}>
-          {language === "gu" ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Beat Patrol Coverage Analysis"}
-        </h1>
-        <p style={{
-          fontSize: "16px",
-          color: "#718096",
-          marginBottom: "30px",
-        }}>
-          {language === "gu" ? "ફોરેસ્ટ પ્રકાર અને બીટ પસંદ કરો અને પેટ્રોલ કવરેજ વિશ્લેષણ કરો" : "Select forest type and beat to analyze patrol coverage"}
-        </p>
+  fontSize: "32px",
+  fontWeight: "700",
+  marginBottom: "8px",
+  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+}}>
+  {language === "gu" ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Beat Patrol Coverage Analysis"}
+</h1>
+<p style={{
+  fontSize: "16px",
+  color: "#718096",
+  marginBottom: "30px",
+}}>
+  {language === "gu" ? "વિભાગ, રેન્જ અને બીટ પસંદ કરો અને પેટ્રોલ કવરેજ વિશ્લેષણ કરો" : "Select division, range and beat to analyze patrol coverage"}
+</p>
 
         {/* Selection Card */}
-        <div style={{
-          backgroundColor: "#fff",
-          borderRadius: "12px",
-          padding: "25px",
-          marginBottom: "25px",
-          border: "1px solid #e2e8f0",
-          boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)",
-        }}>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: "20px",
-            alignItems: "end",
-          }}>
-            {/* Forest Type Selection */}
-            <div>
-              <label style={{
-                display: "block",
-                fontWeight: "600",
-                marginBottom: "10px",
-                fontSize: "14px",
-                color: "#2d3748",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}>
-                {language === "gu" ? "ફોરેસ્ટ પ્રકાર" : "Forest Type"}
-              </label>
-              <div style={{ position: "relative" }}>
-                <select
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    borderRadius: "8px",
-                    border: "2px solid #e2e8f0",
-                    fontSize: "14px",
-                    backgroundColor: loading.divisions ? "#f7fafc" : "white",
-                    cursor: loading.divisions ? "not-allowed" : "pointer",
-                    appearance: "none",
-                    transition: "all 0.3s ease",
-                  }}
-                  value={selectedForest || ""}
-                  onChange={handleForestChange}
-                  disabled={loading.divisions}
-                  onFocus={(e) => e.target.style.borderColor = "#4299e1"}
-                  onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
-                >
-                  <option value="">{language === "gu" ? "ફોરેસ્ટ પ્રકાર પસંદ કરો" : "Select Forest Type"}</option>
-                  {forestTypes.map((forest) => (
-                    <option key={forest.forest_id} value={forest.forest_id}>
-                      {forest.forest_type}
-                    </option>
-                  ))}
-                </select>
-                <div style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                  color: "#a0aec0",
-                }}>
-                  ▼
-                </div>
-              </div>
-            </div>
+<div style={{
+  backgroundColor: "#fff",
+  borderRadius: "12px",
+  padding: "25px",
+  marginBottom: "25px",
+  border: "1px solid #e2e8f0",
+  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)",
+}}>
+  <div style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+    gap: "20px",
+    alignItems: "end",
+  }}>
+    {/* Division Selection */}
+    <div>
+      <label style={{
+        display: "block",
+        fontWeight: "600",
+        marginBottom: "10px",
+        fontSize: "14px",
+        color: "#2d3748",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+      }}>
+        {language === "gu" ? "વિભાગ" : "Division"}
+      </label>
+      <Select
+        value={selectedDivision}
+        onChange={handleDivisionChange}
+        options={divisions}
+        isSearchable
+        isClearable
+        placeholder={loading.divisions ? "Loading divisions..." : "Select Division..."}
+        isLoading={loading.divisions}
+        styles={customSelectStyles}
+        noOptionsMessage={() => "No divisions available"}
+      />
+    </div>
 
-            {/* Division Selection */}
-            <div>
-              <label style={{
-                display: "block",
-                fontWeight: "600",
-                marginBottom: "10px",
-                fontSize: "14px",
-                color: "#2d3748",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}>
-                {language === "gu" ? "વિભાગ" : "Division"}
-              </label>
-              <Select
-                value={selectedDivision}
-                onChange={handleDivisionChange}
-                options={divisions}
-                isSearchable
-                isClearable
-                placeholder={selectedForest ? "Select Division..." : "Select forest type first"}
-                isLoading={loading.divisions}
-                isDisabled={!selectedForest || loading.divisions}
-                styles={customSelectStyles}
-                noOptionsMessage={() => "No divisions available"}
-              />
-            </div>
+    {/* Range Selection */}
+    <div>
+      <label style={{
+        display: "block",
+        fontWeight: "600",
+        marginBottom: "10px",
+        fontSize: "14px",
+        color: "#2d3748",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+      }}>
+        {language === "gu" ? "રેન્જ" : "Range"}
+      </label>
+      <Select
+        value={selectedRange}
+        onChange={handleRangeChange}
+        options={ranges}
+        isSearchable
+        isClearable
+        placeholder={selectedDivision ? "Select Range..." : "Select division first"}
+        isDisabled={!selectedDivision}
+        styles={customSelectStyles}
+        noOptionsMessage={() => "No ranges available"}
+      />
+    </div>
 
-            {/* Range Selection */}
-            <div>
-              <label style={{
-                display: "block",
-                fontWeight: "600",
-                marginBottom: "10px",
-                fontSize: "14px",
-                color: "#2d3748",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}>
-                {language === "gu" ? "રેન્જ" : "Range"}
-              </label>
-              <Select
-                value={selectedRange}
-                onChange={handleRangeChange}
-                options={ranges}
-                isSearchable
-                isClearable
-                placeholder={selectedDivision ? "Select Range..." : "Select division first"}
-                isDisabled={!selectedDivision}
-                styles={customSelectStyles}
-                noOptionsMessage={() => "No ranges available"}
-              />
-            </div>
+    {/* Beat Selection */}
+    <div>
+      <label style={{
+        display: "block",
+        fontWeight: "600",
+        marginBottom: "10px",
+        fontSize: "14px",
+        color: "#2d3748",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+      }}>
+        {language === "gu" ? "બીટ" : "Beat"}
+      </label>
+      <Select
+        value={selectedBeat}
+        onChange={handleBeatChange}
+        options={beats}
+        isSearchable
+        isClearable
+        placeholder={selectedRange ? "Select Beat..." : "Select range first"}
+        isDisabled={!selectedRange}
+        styles={customSelectStyles}
+        noOptionsMessage={() => "No beats available"}
+      />
+    </div>
 
-            {/* Beat Selection */}
-            <div>
-              <label style={{
-                display: "block",
-                fontWeight: "600",
-                marginBottom: "10px",
-                fontSize: "14px",
-                color: "#2d3748",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}>
-                {language === "gu" ? "બીટ" : "Beat"}
-              </label>
-              <Select
-                value={selectedBeat}
-                onChange={handleBeatChange}
-                options={beats}
-                isSearchable
-                isClearable
-                placeholder={selectedRange ? "Select Beat..." : "Select range first"}
-                isDisabled={!selectedRange}
-                styles={customSelectStyles}
-                noOptionsMessage={() => "No beats available"}
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div style={{ display: "flex", gap: "12px", gridColumn: "span 2" }}>
-              <button
-                className="glow-button"
-                onClick={fetchCoverageData}
-                disabled={!selectedBeat || loading.coverage}
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  padding: "12px 24px",
-                }}
-              >
-                {loading.coverage ? (
-                  <>
-                    <div style={{
-                      border: "2px solid rgba(255,255,255,0.3)",
-                      borderTop: "2px solid white",
-                      borderRadius: "50%",
-                      width: "20px",
-                      height: "20px",
-                      animation: "spin 1s linear infinite",
-                    }} />
-                    {language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing..."}
-                  </>
-                ) : (
-                  <>
-                    <EyeOutlined />
-                    {language === "gu" ? "કવરેજ વિશ્લેષણ કરો" : "Analyze Coverage"}
-                  </>
-                )}
-              </button>
-              <button 
-                onClick={handleReset}
-                disabled={loading.coverage}
-                style={{
-                  padding: "12px 24px",
-                  borderRadius: "8px",
-                  border: "2px solid #e2e8f0",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  backgroundColor: "white",
-                  color: "#4a5568",
-                  fontWeight: "600",
-                  transition: "all 0.3s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.backgroundColor = "#f7fafc";
-                  e.currentTarget.borderColor = "#cbd5e0";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.backgroundColor = "white";
-                  e.currentTarget.borderColor = "#e2e8f0";
-                }}
-              >
-                {language === "gu" ? "રીસેટ" : "Reset"}
-              </button>
-            </div>
-          </div>
-        </div>
+    {/* Action Buttons */}
+    <div style={{ display: "flex", gap: "12px", gridColumn: "span 2" }}>
+      <button
+        className="glow-button"
+        onClick={fetchCoverageData}
+        disabled={!selectedBeat || loading.coverage}
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
+          padding: "12px 24px",
+        }}
+      >
+        {loading.coverage ? (
+          <>
+            <div style={{
+              border: "2px solid rgba(255,255,255,0.3)",
+              borderTop: "2px solid white",
+              borderRadius: "50%",
+              width: "20px",
+              height: "20px",
+              animation: "spin 1s linear infinite",
+            }} />
+            {language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing..."}
+          </>
+        ) : (
+          <>
+            <EyeOutlined />
+            {language === "gu" ? "કવરેજ વિશ્લેષણ કરો" : "Analyze Coverage"}
+          </>
+        )}
+      </button>
+      <button 
+        onClick={handleReset}
+        disabled={loading.coverage}
+        style={{
+          padding: "12px 24px",
+          borderRadius: "8px",
+          border: "2px solid #e2e8f0",
+          fontSize: "14px",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          backgroundColor: "white",
+          color: "#4a5568",
+          fontWeight: "600",
+          transition: "all 0.3s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.backgroundColor = "#f7fafc";
+          e.currentTarget.borderColor = "#cbd5e0";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.backgroundColor = "white";
+          e.currentTarget.borderColor = "#e2e8f0";
+        }}
+      >
+        {language === "gu" ? "રીસેટ" : "Reset"}
+      </button>
+    </div>
+  </div>
+</div>
 
         {/* Loading Spinner for hierarchy */}
         {loading.divisions && (
@@ -1875,7 +1837,7 @@ const data = response.data;
                     fontWeight: "600",
                     backdropFilter: "blur(10px)",
                   }}>
-                    {coverageData.beat_name}
+                    {coverageData.beat}
                   </div>
                 </div>
                 <div className="stats-card" style={{ background: "linear-gradient(135deg, #fbdf93ff 0%, #b8f557ff 100%)" }}>

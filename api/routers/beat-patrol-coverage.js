@@ -63,78 +63,105 @@ router.post("/beat-patrol-coverage",verifyJwt, async (req, res) => {
 
   try {
     const query = `
-      WITH beat AS (
-          SELECT 
-              geom AS beat_geom,
-              ST_Area(geom::geography)::numeric AS beat_area_sq_m
-          FROM public."Teritorial Circle_Beat_Boundary"
-          WHERE "Beat" = :beat
-      ),
+     WITH all_beats AS (
+    -- Wildlife beats
+    SELECT
+        "BEAT" AS beat,
+        geom
+    FROM public."Wildlife_Circle_Beat_Boundary"
 
-       
-      patrol_lines AS (
-          SELECT 
-              p.patrol_id,
-              p.geom AS patrol_geom_text,
-              ST_MakeLine(
-                  ST_SetSRID(ST_MakePoint(
-                      CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 1), ' ', 2) AS float),
-                      CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 1), ' ', 1) AS float)
-                  ), 4326),
-                  ST_SetSRID(ST_MakePoint(
-                      CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 2), ' ', 2) AS float),
-                      CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 2), ' ', 1) AS float)
-                  ), 4326)
-              ) AS line_geom
-          FROM public.patrols p
-          WHERE p.geom IS NOT NULL
-            AND p.geom LIKE '%,%'
-      ),
+    UNION ALL
 
-      patrol_buffers AS (
-          SELECT 
-              patrol_id,
-              patrol_geom_text,
-              ST_Buffer(line_geom::geography, 100)::geometry AS buffer_geom
-          FROM patrol_lines
-      ),
+    -- Social Forestry beats
+    SELECT
+        "BEAT" AS beat,
+        geom
+    FROM public."Social_Forestry_Beat_Boundary"
 
-      clipped_buffers AS (
-          SELECT 
-              pb.patrol_id,
-              pb.patrol_geom_text,
-              ST_Intersection(pb.buffer_geom, b.beat_geom) AS clipped_geom
-          FROM patrol_buffers pb
-          JOIN beat b
-            ON ST_Intersects(pb.buffer_geom, b.beat_geom)
-      ),
+    UNION ALL
 
-      unioned AS (
-          SELECT ST_Union(clipped_geom) AS union_geom
-          FROM clipped_buffers
-      )
+    -- Territorial beats
+    SELECT
+        "Beat" AS beat,
+        geom
+    FROM public."Teritorial Circle_Beat_Boundary"
+),
 
-      SELECT
-          :beat AS beat_name,
-          ROUND(b.beat_area_sq_m, 2) AS beat_area_sq_m,
-          ROUND(
-              ST_Area(u.union_geom::geography)::numeric,
-              2
-          ) AS patrol_beat_area_sq_m,
-          ROUND(
-              (ST_Area(u.union_geom::geography)::numeric / b.beat_area_sq_m) * 100,
-              2
-          ) AS coverage_percentage,
-          json_agg(
-              DISTINCT jsonb_build_object(
-                  'patrol_id', cb.patrol_id,
-                  'patrol_geom', cb.patrol_geom_text
-              )
-          ) AS patrols_covering_beat
-      FROM beat b
-      CROSS JOIN unioned u
-      LEFT JOIN clipped_buffers cb ON TRUE
-      GROUP BY b.beat_area_sq_m, u.union_geom;
+beat AS (
+    SELECT
+        geom AS beat_geom,
+        ST_Area(geom::geography)::numeric AS beat_area_sq_m
+    FROM all_beats
+    WHERE beat = :beat
+),
+
+patrol_lines AS (
+    SELECT
+        p.patrol_id,
+        p.geom AS patrol_geom_text,
+        ST_MakeLine(
+            ST_SetSRID(
+                ST_MakePoint(
+                    CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 1), ' ', 2) AS FLOAT),
+                    CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 1), ' ', 1) AS FLOAT)
+                ), 4326
+            ),
+            ST_SetSRID(
+                ST_MakePoint(
+                    CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 2), ' ', 2) AS FLOAT),
+                    CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 2), ' ', 1) AS FLOAT)
+                ), 4326
+            )
+        ) AS line_geom
+    FROM public.patrols p
+    WHERE p.geom IS NOT NULL
+      AND p.geom LIKE '%,%'
+),
+
+patrol_buffers AS (
+    SELECT
+        patrol_id,
+        patrol_geom_text,
+        ST_Buffer(line_geom::geography, 100)::geometry AS buffer_geom
+    FROM patrol_lines
+),
+
+clipped_buffers AS (
+    SELECT
+        pb.patrol_id,
+        pb.patrol_geom_text,
+        ST_Intersection(pb.buffer_geom, b.beat_geom) AS clipped_geom
+    FROM patrol_buffers pb
+    JOIN beat b
+      ON ST_Intersects(pb.buffer_geom, b.beat_geom)
+),
+
+unioned AS (
+    SELECT ST_Union(clipped_geom) AS union_geom
+    FROM clipped_buffers
+)
+
+SELECT
+    :beat AS beat,
+    ROUND(b.beat_area_sq_m, 2) AS beat_area_sq_m,
+    ROUND(
+        ST_Area(u.union_geom::geography)::numeric,
+        2
+    ) AS patrol_beat_area_sq_m,
+    ROUND(
+        (ST_Area(u.union_geom::geography)::numeric / b.beat_area_sq_m) * 100,
+        2
+    ) AS coverage_percentage,
+    json_agg(
+        DISTINCT jsonb_build_object(
+            'patrol_id', cb.patrol_id,
+            'patrol_geom', cb.patrol_geom_text
+        )
+    ) AS patrols_covering_beat
+FROM beat b
+CROSS JOIN unioned u
+LEFT JOIN clipped_buffers cb ON TRUE
+GROUP BY b.beat_area_sq_m, u.union_geom;
     `;
 
     const [result] = await sequelize.query(query, {
