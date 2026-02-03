@@ -264,6 +264,7 @@
   background: #e0e0e0; /* Lighter background for contrast */
   outline: none;
   -webkit-appearance: none;
+  appearance: none;
   transition: background 0.2s ease; /* Smooth transition for hover/focus */
 }
 
