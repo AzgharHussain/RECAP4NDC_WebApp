@@ -86,7 +86,8 @@ import {
   ExpandLess,
   FilterList,
   Search,
-  Refresh
+  Refresh,
+  OpenInFull, CloseFullscreen
 } from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -127,8 +128,13 @@ const NDVIChangeDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showOnlyWithNotes, setShowOnlyWithNotes] = useState(false);
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
-  const [sortConfig, setSortConfig] = useState({ key: 'pixle_id', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'pixel_id', direction: 'asc' });
   const [expandedChart, setExpandedChart] = useState(false);
+  
+  // Pagination states
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPageOptions] = useState([10, 25, 50, 100]);
   
   // Hierarchy states
   const [hierarchyData, setHierarchyData] = useState([]);
@@ -139,91 +145,80 @@ const NDVIChangeDashboard = () => {
   const [ranges, setRanges] = useState([]);
   const [beats, setBeats] = useState([]);
 
-  // Configuration
-  // const coupeOptions = [
-  //   { value: 'Banaskantha_RWD_WC_final', label: 'Banaskantha RWD WC' },
-  //   { value: 'Banaskantha_Wild Life_WC', label: 'Banaskantha Wildlife WC' },
-  //   { value: 'Banaskantha_Con_Cum_Imp_WC_OVLP', label: 'Banaskantha Con Cum Imp' },
-  //   { value: 'Bhavnagar_coupes', label: 'Bhavnagar Coupes' },
-  //   { value: 'Sabarkantha_North_Aravalli', label: 'Sabarkantha North Aravalli' }
-  // ];
-
   // Add state for coupeOptions
-const [coupeOptions, setCoupeOptions] = useState([
-  { value: 'Banaskantha_RWD_WC_final', label: 'Banaskantha RWD WC' },
-  { value: 'Banaskantha_Wild Life_WC', label: 'Banaskantha Wildlife WC' },
-  { value: 'Banaskantha_Con_Cum_Imp_WC_OVLP', label: 'Banaskantha Con Cum Imp' },
-  { value: 'Bhavnagar_coupes', label: 'Bhavnagar Coupes' },
-  { value: 'Sabarkantha_North_Aravalli', label: 'Sabarkantha North Aravalli' }
-]);
+  const [coupeOptions, setCoupeOptions] = useState([
+    { value: 'Banaskantha_RWD_WC_final', label: 'Banaskantha RWD WC' },
+    { value: 'Banaskantha_Wild Life_WC', label: 'Banaskantha Wildlife WC' },
+    { value: 'Banaskantha_Con_Cum_Imp_WC_OVLP', label: 'Banaskantha Con Cum Imp' },
+    { value: 'Bhavnagar_coupes', label: 'Bhavnagar Coupes' },
+    { value: 'Sabarkantha_North_Aravalli', label: 'Sabarkantha North Aravalli' }
+  ]);
 
-// Remove the hardcoded const coupeOptions declaration
-// const coupeOptions = [ ... ]; // Remove this line
+  // Add useEffect to fetch coupes
+  useEffect(() => {
+    const fetchCoupes = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        
+        // Try to fetch from API
+        const res = await axios.get(
+          `${API_BASE_URL}/api/admincoupes`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-// Add useEffect to fetch coupes
-useEffect(() => {
-  const fetchCoupes = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      
-      // Try to fetch from API
-      const res = await axios.get(
-        `${API_BASE_URL}/api/admincoupes`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        console.log("API Response for coupes:", res.data);
+
+        // Process API response - handle different response formats
+        let apiCoupes = [];
+        
+        if (Array.isArray(res.data)) {
+          // Direct array response
+          apiCoupes = res.data.map(coupe => ({
+            value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
+            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+          }));
+        } else if (res.data && res.data.success && Array.isArray(res.data.data)) {
+          // Success object with data array
+          apiCoupes = res.data.data.map(coupe => ({
+            value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
+            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+          }));
+        } else if (res.data && Array.isArray(res.data.data)) {
+          // Object with data array
+          apiCoupes = res.data.data.map(coupe => ({
+            value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
+            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+          }));
+        } else if (res.data && res.data.coupes && Array.isArray(res.data.coupes)) {
+          // Object with coupes array
+          apiCoupes = res.data.coupes.map(coupe => ({
+            value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
+            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+          }));
         }
-      );
 
-      console.log("API Response for coupes:", res.data);
-
-      // Process API response - handle different response formats
-      let apiCoupes = [];
-      
-      if (Array.isArray(res.data)) {
-        // Direct array response
-        apiCoupes = res.data.map(coupe => ({
-          value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
-          label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
-        }));
-      } else if (res.data && res.data.success && Array.isArray(res.data.data)) {
-        // Success object with data array
-        apiCoupes = res.data.data.map(coupe => ({
-          value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
-          label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
-        }));
-      } else if (res.data && Array.isArray(res.data.data)) {
-        // Object with data array
-        apiCoupes = res.data.data.map(coupe => ({
-          value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
-          label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
-        }));
-      } else if (res.data && res.data.coupes && Array.isArray(res.data.coupes)) {
-        // Object with coupes array
-        apiCoupes = res.data.coupes.map(coupe => ({
-          value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
-          label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
-        }));
+        // If we got valid coupes from API, use them
+        if (apiCoupes.length > 0) {
+          setCoupeOptions(apiCoupes);
+          console.log("Loaded coupes from API:", apiCoupes.length);
+        } else {
+          console.log("No valid coupes from API, using fallback");
+          // Keep the fallback coupes already set in initial state
+        }
+        
+      } catch (error) {
+        console.error("Failed to fetch coupes from API, using fallback:", error);
+        // Keep using the fallback coupes
       }
+    };
 
-      // If we got valid coupes from API, use them
-      if (apiCoupes.length > 0) {
-        setCoupeOptions(apiCoupes);
-        console.log("Loaded coupes from API:", apiCoupes.length);
-      } else {
-        console.log("No valid coupes from API, using fallback");
-        // Keep the fallback coupes already set in initial state
-      }
-      
-    } catch (error) {
-      console.error("Failed to fetch coupes from API, using fallback:", error);
-      // Keep using the fallback coupes
-    }
-  };
+    fetchCoupes();
+  }, []); // Empty dependency array - run once on mount
 
-  fetchCoupes();
-}, []); // Empty dependency array - run once on mount
   const monthOptions = [
     { value: '2025-01', label: 'January 2025' },
     { value: '2025-02', label: 'February 2025' },
@@ -238,13 +233,15 @@ useEffect(() => {
     { value: '2025-11', label: 'November 2025' },
     { value: '2025-12', label: 'December 2025' }
   ];
-useEffect(() => {
-  if (selectedCoupe) {
-    // When selectedCoupe changes, fetch the area and data
-    fetchTotalArea(selectedCoupe);
-    // Note: fetchNDVIData will be called after totalArea is set (from another useEffect)
-  }
-}, [selectedCoupe]);
+
+  useEffect(() => {
+    if (selectedCoupe) {
+      // When selectedCoupe changes, fetch the area and data
+      fetchTotalArea(selectedCoupe);
+      // Note: fetchNDVIData will be called after totalArea is set (from another useEffect)
+    }
+  }, [selectedCoupe]);
+
   // ============================================
   // FIXED: Fetch hierarchy and areas
   // ============================================
@@ -347,19 +344,19 @@ useEffect(() => {
     try {
       const token = localStorage.getItem("token");
 
-const response = await axios.post(
-  `${API_BASE_URL}/api/get-coupe-area`,
-  {
-    tableName: coupeName,
-  },
-  {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`, // ✅ token added
-    },
-  }
-);
-console.log("api/get-coupe-area");
+      const response = await axios.post(
+        `${API_BASE_URL}/api/get-coupe-area`,
+        {
+          tableName: coupeName,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // ✅ token added
+          },
+        }
+      );
+      console.log("api/get-coupe-area");
 
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
@@ -393,19 +390,19 @@ console.log("api/get-coupe-area");
       const tableName = `${month}-01_${coupeName}_NDVI_Change`;
       const token = localStorage.getItem("token");
 
-const response = await axios.post(
-  `${API_BASE_URL}/api/ndvi-change-degraded-area`,
-  {
-    tableName,
-  },
-  {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
-console.log("api/ndvi-change-degraded-area",response);
+      const response = await axios.post(
+        `${API_BASE_URL}/api/ndvi-change-degraded-area`,
+        {
+          tableName,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log("api/ndvi-change-degraded-area",response);
       
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km ;
@@ -438,17 +435,18 @@ console.log("api/ndvi-change-degraded-area",response);
       // Fetch data
       const token = localStorage.getItem("token");
 
-const dataResponse = await axios.post(
-  `${API_BASE_URL}/api/ndvi-change-get`,
-  { tableName },
-  {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
-console.log("api/ndvi-change-get",dataResponse);
+      const dataResponse = await axios.post(
+        `${API_BASE_URL}/api/ndvi-change-get`,
+        { tableName },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log(tableName);
+      console.log("api/ndvi-change-get",dataResponse);
       
       if (dataResponse.data.success) {
         const data = dataResponse.data.data;
@@ -479,7 +477,7 @@ console.log("api/ndvi-change-get",dataResponse);
             change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
             has_note: !!(item.note && item.note.trim() !== ''),
             has_image: !!(item.image_data),
-            pixle_id: item.pixle_id || item.Pixle_id || 'N/A'
+            pixel_id: item.pixel_id || item.pixel_id || 'N/A'
           };
         });
         
@@ -552,16 +550,16 @@ console.log("api/ndvi-change-get",dataResponse);
       const tableName = `${selectedMonth}-01_${selectedCoupe}_NDVI_Change`;
       const token = localStorage.getItem("token");
 
-const response = await axios.get(
-  `${API_BASE_URL}/api/ndvi-change/${id}?tableName=${tableName}`,
-  {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
-console.log("api/ndvi-change");
+      const response = await axios.get(
+        `${API_BASE_URL}/api/ndvi-change/${id}?tableName=${tableName}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log("api/ndvi-change");
       
       if (response.data.success) {
         setSelectedRecord(response.data.data[0]);
@@ -594,7 +592,7 @@ console.log("api/ndvi-change");
       direction = 'desc';
     }
     setSortConfig({ key, direction });
-    sortData(filteredData, key, direction);
+    sortData(currentTableData, key, direction);
   };
 
   // Handle coupe selection
@@ -633,7 +631,7 @@ console.log("api/ndvi-change");
     let filtered = currentTableData.filter(item => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = 
-        (item.pixle_id?.toString().toLowerCase().includes(searchLower)) ||
+        (item.pixel_id?.toString().toLowerCase().includes(searchLower)) ||
         (item.status?.toString().toLowerCase().includes(searchLower)) ||
         (item.note?.toLowerCase().includes(searchLower)) ||
         (item.latitude?.toString().includes(searchLower)) ||
@@ -658,6 +656,29 @@ console.log("api/ndvi-change");
       return 0;
     });
   }, [currentTableData, searchTerm, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
+
+  // Paginated data - MUST BE AFTER filteredData
+  const paginatedData = React.useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, page, rowsPerPage]);
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setPage(0);
+  }, [searchTerm, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
+
+  // Handle page change
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // Handle rows per page change
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0); // Reset to first page
+  };
 
   // Initialize on component mount
   useEffect(() => {
@@ -907,13 +928,11 @@ console.log("api/ndvi-change");
             '&:hover': { bgcolor: 'background.paper' }
           }}
         >
-          {expandedChart ? <ExpandLess /> : <ExpandMore />}
+          {expandedChart ? <CloseFullscreen /> : <OpenInFull />}
         </IconButton>
       </Box>
     );
   };
-
-
 
   // Export to PDF
   const handleExportToPDF = () => {
@@ -1090,7 +1109,7 @@ console.log("api/ndvi-change");
             <tbody>
               ${filteredData.slice(0, 20).map(item => `
                 <tr>
-                  <td>${item.pixle_id || 'N/A'}</td>
+                  <td>${item.pixel_id || 'N/A'}</td>
                   <td>
                     <span class="badge  'badge-degraded' >
                       'Degraded' 
@@ -1183,7 +1202,7 @@ console.log("api/ndvi-change");
               </Stack>
             </Grid>
             <Grid item>
-              <Stack direction="row" spacing={2}>
+              <Stack direction="row" spacing={2} sx={{ ml: '436px' }}>
                 <Button
                   variant="contained"
                   color="secondary"
@@ -1224,28 +1243,22 @@ console.log("api/ndvi-change");
           avatar={<Forest />}
         />
         <CardContent>
-         
-{/* <Grid >
-  <ForestHierarchyDropdowns setSelectedCoupe={setSelectedCoupe} />
-</Grid> */}
-
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Or Select Coupe Directly</InputLabel>
-                <Select
-                  value={selectedCoupe}
-                  label="Or Select Coupe Directly"
-                  onChange={handleCoupeChange}
-                >
-                  {coupeOptions.map(coupe => (
-                    <MenuItem key={coupe.value} value={coupe.value}>
-                      {coupe.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Select Coupe Directly</InputLabel>
+              <Select
+                value={selectedCoupe}
+                label="Or Select Coupe Directly"
+                onChange={handleCoupeChange}
+              >
+                {coupeOptions.map(coupe => (
+                  <MenuItem key={coupe.value} value={coupe.value}>
+                    {coupe.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
           
           {(selectedDivision || selectedRange || selectedBeat) && (
             <Box sx={{ mt: 3, p: 2, bgcolor: '#f0f9ff', borderRadius: 2 }}>
@@ -1294,7 +1307,7 @@ console.log("api/ndvi-change");
                     color: chartType === 'bar' ? 'black' : 'black',
                     borderColor: 'black',
                     '&:hover': {
-                      backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
+                      // backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
                     }
                   }}
                 >
@@ -1309,7 +1322,7 @@ console.log("api/ndvi-change");
                     color: chartType === 'bar' ? 'black' : 'black',
                     borderColor: 'black',
                     '&:hover': {
-                      backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
+                      // backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
                     }
                   }}
                 >
@@ -1324,7 +1337,7 @@ console.log("api/ndvi-change");
                     color: chartType === 'bar' ? 'black' : 'black',
                     borderColor: 'black',
                     '&:hover': {
-                      backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
+                      // backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
                     }
                   }}
                 >
@@ -1436,19 +1449,6 @@ console.log("api/ndvi-change");
                       </Typography>
                     </Box>
                   </Grid>
-                  {/* <Grid item xs={12} md={3}>
-                    <Box>
-                      <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                        Net Change
-                      </Typography>
-                      <Typography variant="h5" sx={{ 
-                        fontWeight: 800, 
-                        color: summaryStats && summaryStats.afforestedArea > summaryStats.degradedArea ? '#22c55e' : '#ef4444'
-                      }}>
-                        {summaryStats ? (summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2) : '0.00'} km²
-                      </Typography>
-                    </Box>
-                  </Grid> */}
                 </Grid>
               </Grid>
             </Grid>
@@ -1819,14 +1819,29 @@ console.log("api/ndvi-change");
                   borderRadius: 2, 
                   overflow: 'hidden',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                  bgcolor:'transparent'
+                  bgcolor:'transparent',
+                  display: 'flex',
+                  flexDirection: 'column'
                 }}>
-                  <TableContainer sx={{ maxHeight: 500 }}>
-                    <Table stickyHeader size="small">
+                  <TableContainer sx={{ 
+                    maxHeight: 500,
+                    position: 'relative'
+                  }}>
+                    <Table stickyHeader size="small" sx={{ minWidth: 1200 }}>
                       <TableHead>
-                        <TableRow sx={{ '& th': { bgcolor: 'transparent', fontWeight: 600 } }}>
+                        <TableRow sx={{ 
+                          '& th': { 
+                            bgcolor: 'background.paper', 
+                            fontWeight: 600,
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 10,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            borderBottom: '2px solid #e2e8f0'
+                          }
+                        }}>
                           <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('pixle_id')}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('pixel_id')}>
                               <strong>Pixel ID</strong>
                               <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                             </Box>
@@ -1857,7 +1872,7 @@ console.log("api/ndvi-change");
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {filteredData.length === 0 ? (
+                        {paginatedData.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                               <Box sx={{ textAlign: 'center' }}>
@@ -1874,9 +1889,9 @@ console.log("api/ndvi-change");
                             </TableCell>
                           </TableRow>
                         ) : (
-                          filteredData.slice(0, 100).map((row) => (
+                          paginatedData.map((row) => (
                             <TableRow 
-                              key={row.pixle_id}
+                              key={row.pixel_id}
                               hover
                               sx={{ 
                                 '&:hover': { bgcolor: '#f8fafc' },
@@ -1886,13 +1901,13 @@ console.log("api/ndvi-change");
                             >
                               <TableCell>
                                 <Typography variant="body2" fontWeight={600} color="primary">
-                                  #{row.pixle_id}
+                                  #{row.pixel_id}
                                 </Typography>
                               </TableCell>
                               <TableCell>
                                 <Chip
-                                  label= 'Degraded'
-                                  color='error' 
+                                  label={row.status ? 'Afforested' : 'Degraded'}
+                                  color={row.status ? 'success' : 'error'} 
                                   size="small"
                                   sx={{ fontWeight: 600 }}
                                 />
@@ -1911,7 +1926,7 @@ console.log("api/ndvi-change");
                                   color: row.change_category === 'Degradation' ? '#ef4444' : '#22c55e',
                                   fontWeight: 600
                                 }}>
-                                  {row.change_category || 'Degradation'}
+                                  {row.change_category || (row.status ? 'Degradation' : 'Afforestation')}
                                 </Typography>
                               </TableCell>
                               <TableCell>
@@ -1979,8 +1994,11 @@ console.log("api/ndvi-change");
                                   size="small"
                                   variant="outlined"
                                   startIcon={<Visibility />}
-                                  onClick={() => fetchRecordDetails(row.pixle_id)}
-                                  disabled={!row.pixle_id}
+                                  onClick={() => {
+                                    setSelectedRecord(row);
+                                    setModalOpen(true);
+                                  }}
+                                  disabled={!row.pixel_id}
                                   sx={{ 
                                     borderRadius: 2,
                                     textTransform: 'none',
@@ -1997,30 +2015,129 @@ console.log("api/ndvi-change");
                     </Table>
                   </TableContainer>
                   
+                  {/* Pagination Controls */}
                   {filteredData.length > 0 && (
-                    <Box sx={{ 
-                      p: 2, 
-                      borderTop: '1px solid #e2e8f0',
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      flexWrap: 'wrap',
-                     
-                    }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <strong>Showing:</strong> {Math.min(100, filteredData.length)} of {filteredData.length.toLocaleString()} records
-                        {showOnlyWithNotes && ' (with notes)'}
-                        {showOnlyWithImages && ' (with images)'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <strong>Sorted by:</strong> {sortConfig.key} ({sortConfig.direction})
-                      </Typography>
-                      {searchTerm && (
-                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <strong>Filtered by:</strong> "{searchTerm}"
-                        </Typography>
+                    <>
+                      <Box sx={{ 
+                        p: 2, 
+                        borderTop: '1px solid #e2e8f0',
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        flexWrap: 'wrap',
+                        // bgcolor: 'background.paper'
+                      }}>
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filteredData.length)} of {filteredData.length.toLocaleString()} records
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Typography variant="body2" sx={{ mr: 1 }}>Rows per page:</Typography>
+                            <Select
+                              value={rowsPerPage}
+                              onChange={handleChangeRowsPerPage}
+                              size="small"
+                              sx={{ minWidth: 80 }}
+                            >
+                              {rowsPerPageOptions.map((option) => (
+                                <MenuItem key={option} value={option}>
+                                  {option}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Button
+                              size="small"
+                              onClick={() => setPage(page - 1)}
+                              disabled={page === 0}
+                              variant="outlined"
+                            >
+                              Previous
+                            </Button>
+                            <Typography variant="body2">
+                              Page {page + 1} of {Math.ceil(filteredData.length / rowsPerPage)}
+                            </Typography>
+                            <Button
+                              size="small"
+                              onClick={() => setPage(page + 1)}
+                              disabled={page >= Math.ceil(filteredData.length / rowsPerPage) - 1}
+                              variant="outlined"
+                            >
+                              Next
+                            </Button>
+                          </Box>
+                        </Box>
+                      </Box>
+                      
+                      {/* Optional: Page number buttons */}
+                      {filteredData.length > rowsPerPage && (
+                        <Box sx={{ 
+                          p: 1, 
+                          borderTop: '1px solid #f1f5f9',
+                          display: 'flex', 
+                          justifyContent: 'center', 
+                          gap: 0.5,
+                          flexWrap: 'wrap'
+                        }}>
+                          {Array.from({ length: Math.min(5, Math.ceil(filteredData.length / rowsPerPage)) }, (_, i) => {
+                            // Show pages around current page
+                            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+                            let pageNum;
+                            
+                            if (totalPages <= 5) {
+                              pageNum = i;
+                            } else if (page < 3) {
+                              pageNum = i;
+                            } else if (page > totalPages - 4) {
+                              pageNum = totalPages - 5 + i;
+                            } else {
+                              pageNum = page - 2 + i;
+                            }
+                            
+                            return (
+                              <Button
+                                key={pageNum}
+                                size="small"
+                                variant={page === pageNum ? "contained" : "outlined"}
+                                onClick={() => setPage(pageNum)}
+                                sx={{ 
+                                  minWidth: 32, 
+                                  height: 32,
+                                  fontSize: '0.75rem',
+                                  color: 'black'
+                                }}
+                              >
+                                {pageNum + 1}
+                              </Button>
+                            );
+                          })}
+                          
+                          {Math.ceil(filteredData.length / rowsPerPage) > 5 && (
+                            <>
+                              <Typography variant="body2" sx={{ mx: 1, alignSelf: 'center' }}>
+                                ...
+                              </Typography>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => setPage(Math.ceil(filteredData.length / rowsPerPage) - 1)}
+                                sx={{ 
+                                  minWidth: 32, 
+                                  height: 32,
+                                  fontSize: '0.75rem',
+                                  color: 'black'
+                                }}
+                              >
+                                {Math.ceil(filteredData.length / rowsPerPage)}
+                              </Button>
+                            </>
+                          )}
+                        </Box>
                       )}
-                    </Box>
+                    </>
                   )}
                 </Paper>
               </Box>
@@ -2114,11 +2231,8 @@ console.log("api/ndvi-change");
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               <Visibility sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Pixel Details - ID: {selectedRecord?.pixle_id || selectedRecord?.Pixle_id}
+              Pixel Details - ID: {selectedRecord?.pixel_id || selectedRecord?.pixel_id}
             </Typography>
-            <IconButton onClick={() => setModalOpen(false)} sx={{ color: 'white' }}>
-              <Close />
-            </IconButton>
           </Box>
         </DialogTitle>
         <DialogContent dividers sx={{ p: 3 }}>
@@ -2136,8 +2250,8 @@ console.log("api/ndvi-change");
                         <Typography variant="body2">
                           <strong>Status:</strong> 
                           <Chip 
-                            label={selectedRecord.status ? 'Degraded' : 'Afforested'} 
-                            color={selectedRecord.status ? 'error' : 'success'} 
+                            label={selectedRecord.status ? 'Afforested' : 'Degraded'} 
+                            color={selectedRecord.status ? 'success' : 'error'} 
                             size="small" 
                             sx={{ ml: 1 }}
                           />
@@ -2155,17 +2269,17 @@ console.log("api/ndvi-change");
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>Last Month NDVI:</strong> {selectedRecord.january_ndvi || 'N/A'}
+                          <strong>Last Month NDVI:</strong> {selectedRecord.nov_ndvi?.toFixed(6) || 'N/A'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>Current Month NDVI:</strong> {selectedRecord.february_ndvi || 'N/A'}
+                          <strong>Current Month NDVI:</strong> {selectedRecord.dec_ndvi?.toFixed(6) || 'N/A'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>Area:</strong> {selectedRecord.area_sq_km?.toFixed(6) || '0.000000'} km²
+                          <strong>Area:</strong> {selectedRecord.area_sq_km?.toFixed(6) || 'N/A'} km²
                         </Typography>
                       </Grid>
                     </Grid>
@@ -2319,7 +2433,7 @@ console.log("api/ndvi-change");
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Image Preview - Pixel ID: {selectedRecord?.pixle_id || selectedRecord?.Pixle_id}
+              Image Preview - Pixel ID: {selectedRecord?.pixel_id || selectedRecord?.pixel_id}
             </Typography>
             <IconButton onClick={() => setImageModalOpen(false)} sx={{ color: 'white' }}>
               <Close />
@@ -2332,7 +2446,7 @@ console.log("api/ndvi-change");
               <Box
                 component="img"
                 src={`data:image/jpeg;base64,${selectedRecord.image_data}`}
-                alt={`NDVI Image - Pixel ${selectedRecord.pixle_id || selectedRecord.Pixle_id}`}
+                alt={`NDVI Image - Pixel ${selectedRecord.pixel_id || selectedRecord.pixel_id}`}
                 sx={{
                   maxWidth: '100%',
                   maxHeight: '70vh',

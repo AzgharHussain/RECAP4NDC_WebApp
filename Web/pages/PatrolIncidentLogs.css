@@ -71,8 +71,17 @@
 
 /* Dropdown background */
 .ant-select-dropdown {
-  background: rgba(0, 0, 0, 0.8) !important;
+  /* background: rgba(0, 0, 0, 0.8) !important; */
   color: #000 !important;  /* black text */
+}
+
+.ant-image-preview-operations{
+  background-color: black;
+}
+
+.ant-image-preview-close {
+    top: 132px;
+    right: 632px;
 }
 
 /* === Export Button === */

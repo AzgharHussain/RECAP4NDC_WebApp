@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, useLocation,BrowserRouter  } from "react-router-dom";
-import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown } from "react-icons/fa"; 
+import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight} from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
 import brand from "../assets/logogiz.png";
@@ -20,6 +20,7 @@ import patrollingIcon from "../assets/Patrolling.png";  // Import the Patrolling
 import incidentIcon from "../assets/Incident.png";  // Import the Incident image
 import { useLanguage } from "../context/LanguageContext";
 import "./DashboardLayout.css";
+
 
 export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar open/close state
@@ -102,16 +103,23 @@ export default function DashboardLayout() {
     </div>
 
     <div className="header-right">
-      <span className="user-icon">
-        <img src={userIcon} alt="User Icon" className="user-icon-img" />
-      </span>
-      <span
-        className="username"
-        onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
-      >
-        Admin ▼
-      </span>
-    </div>
+      <img src={userIcon} alt="User Icon" className="user-icon-img" />
+
+    <span className="username">
+     <b>Admin</b> 
+    </span>
+  <div
+    className="admin-section"
+    onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+  >
+    
+
+    <span className="arrow-icon">
+      {isAdminMenuOpen ? <FaChevronDown /> : <FaChevronRight />}
+    </span>
+  </div>
+</div>
+
   </div>
 
   {/* ===== BOTTOM ROW (BUTTONS) ===== */}
@@ -158,18 +166,24 @@ export default function DashboardLayout() {
         </main>
      
      {isAdminMenuOpen && (  <div className="admin-dropdown ">
- <button
+
+<div> <button
                 className={`lang-chip ${language === "en" ? "active" : ""}`}
                 onClick={() => toggleLanguage("en")}
               >
                 EN
-              </button>
-              <button
+              </button></div>
+
+<div><br />
+  <button
                 className={`lang-chip ${language === "gu" ? "active" : ""}`}
                 onClick={() => toggleLanguage("gu")}
               >
                 જીયુ
               </button>
+              
+</div>
+              
       </div>
     )}
     </div>

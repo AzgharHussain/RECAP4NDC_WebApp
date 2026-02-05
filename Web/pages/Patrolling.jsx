@@ -742,68 +742,72 @@ const PatrolIncidentLogs = () => {
   const [coupeFilter, setCoupeFilter] = useState("");
 
   // Fetch patrol data with pagination
-  const fetchPatrolData = async (page = 1, limit = 5, filters = {}) => {
+// Fetch patrol data with pagination - FURTHER UPDATED
+const fetchPatrolData = async (page = 1, limit = 5, filters = {}) => {
+  // Set initial loading only if it's the first page
+  if (page === 1) {
     setIsLoading(true);
-    setPaginationLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      
-      // Build query parameters
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        ...filters
-      });
+  }
+  
+  // Always set pagination loading when fetching new data
+  setPaginationLoading(true);
+  
+  try {
+    const token = localStorage.getItem("token");
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...filters
+    });
 
-      // Remove empty filters
-      Object.keys(filters).forEach(key => {
-        if (!filters[key]) params.delete(key);
-      });
+    Object.keys(filters).forEach(key => {
+      if (!filters[key]) params.delete(key);
+    });
 
-      const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      console.log("Fetched Patrol data with pagination:", data);
-      
-      let formattedData = Array.isArray(data.data)
-        ? data.data
-        : data.data && typeof data.data === "object"
-        ? [data.data]
-        : [];
-      
-      formattedData = formattedData.map((item, index) => ({
-        key: item.patrol_id || `patrol-${index}`,
-        ...item,
-      }));
-      
-      setPatrolData(formattedData);
-      setFilteredData(formattedData);
-      
-      // Update pagination info
-      if (data.pagination) {
-        setCurrentPage(data.pagination.currentPage);
-        setPageSize(data.pagination.pageSize);
-        setTotalItems(data.pagination.totalItems);
-        setTotalPages(data.pagination.totalPages);
-      }
-      
-    } catch (error) {
-      console.error("Error fetching Patrol data:", error);
-      setPatrolData([]);
-      setFilteredData([]);
-      setTotalItems(0);
-      setTotalPages(0);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    
+    let formattedData = Array.isArray(data.data)
+      ? data.data
+      : data.data && typeof data.data === "object"
+      ? [data.data]
+      : [];
+    
+    formattedData = formattedData.map((item, index) => ({
+      key: item.patrol_id || `patrol-${index}`,
+      ...item,
+    }));
+    
+    setPatrolData(formattedData);
+    setFilteredData(formattedData);
+    
+    if (data.pagination) {
+      setCurrentPage(data.pagination.currentPage);
+      setPageSize(data.pagination.pageSize);
+      setTotalItems(data.pagination.totalItems);
+      setTotalPages(data.pagination.totalPages);
     }
+    
+  } catch (error) {
+    console.error("Error fetching Patrol data:", error);
+    setPatrolData([]);
+    setFilteredData([]);
+    setTotalItems(0);
+    setTotalPages(0);
+  } finally {
     setIsLoading(false);
     setPaginationLoading(false);
-  };
+  }
+};
   const fetchPatrolData2 = async () => {
    
     try {
@@ -1678,68 +1682,66 @@ const PatrolIncidentLogs = () => {
   };
 
   // Custom pagination component
-  const CustomPagination = () => (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
-      marginTop: 16,
-      padding: '16px',
-      // backgroundColor: '#fafafa',
-      borderRadius: '8px',
-      flexWrap: 'wrap',
-      gap: '16px'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ color: '#666', fontSize: '14px' }}>
-          {language === "gu" ? "કુલ રેકોર્ડ:" : "Total Records:"} 
-          <strong style={{ marginLeft: '4px' }}>{totalItems}</strong>
-        </span>
-        {isFiltering && (
-          <Tag color="processing">
-            <FilterOutlined /> {language === "gu" ? "ફિલ્ટર થઈ રહ્યું છે" : "Filtering..."}
-          </Tag>
-        )}
+// Custom pagination component - UPDATED to use your Loader
+const CustomPagination = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginTop: 16,
+    padding: '16px',
+    borderRadius: '8px',
+    flexWrap: 'wrap',
+    gap: '16px',
+    position: 'relative' // Added for positioning loader
+  }}>
+    {/* Your Loader component for pagination */}
+    {(paginationLoading || isFiltering) && (
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(255, 255, 255, 0.8)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10,
+        borderRadius: '8px'
+      }}>
+        <div style={{ transform: 'scale(0.5)' }}>
+          <Loader />
+        </div>
       </div>
-      
-      <Pagination
-        current={currentPage}
-        pageSize={pageSize}
-        total={totalItems}
-        onChange={handlePageChange}
-        showSizeChanger
-        showQuickJumper
-        showTotal={(total, range) => 
-          `${language === "gu" ? "બતાવી રહ્યા છીએ" : "Showing"} ${range[0]}-${range[1]} ${language === "gu" ? "ના" : "of"} ${total} ${language === "gu" ? "રેકોર્ડ" : "items"}`
-        }
-        pageSizeOptions={['5', '10', '20', '50', '100']}
-        disabled={paginationLoading || isLoading}
-      />
-      
-      {/* <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Select
-          value={pageSize}
-          onChange={(value) => {
-            setPageSize(value);
-            handlePageChange(1, value);
-          }}
-          style={{ width: 120 }}
-          disabled={paginationLoading || isLoading}
-        >
-          <Select.Option value={5}>5 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
-          <Select.Option value={10}>10 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
-          <Select.Option value={20}>20 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
-          <Select.Option value={50}>50 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
-          <Select.Option value={100}>100 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
-        </Select>
-        {paginationLoading && <Spin size="small" />}
-      </div> */}
+    )}
+    
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span style={{ color: '#666', fontSize: '14px' }}>
+        {language === "gu" ? "કુલ રેકોર્ડ:" : "Total Records:"} 
+        <strong style={{ marginLeft: '4px' }}>{totalItems}</strong>
+      </span>
     </div>
-  );
+    
+    <Pagination
+      current={currentPage}
+      pageSize={pageSize}
+      total={totalItems}
+      onChange={handlePageChange}
+      onShowSizeChange={handlePageChange}
+      showSizeChanger
+      showQuickJumper
+      showTotal={(total, range) => 
+        `${language === "gu" ? "બતાવી રહ્યા છીએ" : "Showing"} ${range[0]}-${range[1]} ${language === "gu" ? "ના" : "of"} ${total} ${language === "gu" ? "રેકોર્ડ" : "items"}`
+      }
+      pageSizeOptions={['5', '10', '20', '50', '100']}
+      disabled={paginationLoading || isLoading}
+    />
+  </div>
+);
 
   return (
     <div className="container">
-      {isLoading && <Loader />}
       <div className="section">
         <div className="heading-container">
           <h3 className="main-heading">
@@ -1883,65 +1885,57 @@ const PatrolIncidentLogs = () => {
             </Button>
           </div>
         </div>
-        
-        {/* Show pagination info */}
-        {/* {totalItems > 0 && (
-          <Alert
-            message={
-              <span>
-                {language === "gu" ? "કુલ" : "Total"} <strong>{totalItems}</strong> {language === "gu" ? "પેટ્રોલિંગ રેકોર્ડ મળ્યા" : "patrol records found"} 
-                {(searchText || startFilter || endFilter || typeFilter || divisionFilter || beatFilter || coupeFilter || forestId) && (
-                  <span style={{ marginLeft: '8px' }}>
-                    {language === "gu" ? "ફિલ્ટર લાગુ પાડ્યા પછી" : "after applying filters"}
-                  </span>
-                )}
-              </span>
-            }
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-            action={
-              <Button size="small" onClick={clearAllFilters}>
-                {language === "gu" ? "સાફ કરો" : "Clear"}
-              </Button>
-            }
-          />
-        )} */}
 
-        <Table
-          className="transparent-table"
-          columns={columns}
-          dataSource={filteredData}
-          pagination={false} // We'll use custom pagination
-          bordered
-          scroll={{ x: 'max-content' }}
-          loading={isLoading || paginationLoading}
-          locale={{
-            emptyText: (
-              <div style={{ textAlign: "center", padding: "50px 0" }}>
-                <img
-                  src={noDataImage}
-                  alt="No Data"
-                  style={{ width: 60, marginBottom: 16 }}
-                />
-                <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
-                  {language === "gu" ? "કોઈ ડેટા ઉપલબ્ધ નથી" : "No data available"}
-                </div>
-                {(searchText || startFilter || endFilter || typeFilter || divisionFilter || beatFilter || coupeFilter) && (
-                  <Button 
-                    onClick={clearAllFilters}
-                    style={{ marginTop: "16px" }}
-                  >
-                    {language === "gu" ? "બધા ફિલ્ટર સાફ કરો" : "Clear All Filters"}
-                  </Button>
-                )}
+        {/* Show loader over entire table area during initial load */}
+  {isLoading && currentPage === 1 ? (
+    <div style={{
+      minHeight: '300px',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      background: 'rgba(255, 255, 255, 0.8)',
+      borderRadius: '8px',
+      margin: '20px 0'
+    }}>
+      <Loader />
+    </div>
+  ) : (
+    <>
+      <Table
+        className="transparent-table"
+        columns={columns}
+        dataSource={filteredData}
+        pagination={false}
+        bordered
+        scroll={{ x: 'max-content' }}
+        loading={false}
+        locale={{
+          emptyText: (
+            <div style={{ textAlign: "center", padding: "50px 0" }}>
+              <img
+                src={noDataImage}
+                alt="No Data"
+                style={{ width: 60, marginBottom: 16 }}
+              />
+              <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
+                {language === "gu" ? "કોઈ ડેટા ઉપલબ્ધ નથી" : "No data available"}
               </div>
-            ),
-          }}
-        />
-        
-        {/* Custom Pagination Component */}
-        {totalItems > 0 && <CustomPagination />}
+              {(searchText || startFilter || endFilter || typeFilter || divisionFilter || beatFilter || coupeFilter) && (
+                <Button 
+                  onClick={clearAllFilters}
+                  style={{ marginTop: "16px" }}
+                >
+                  {language === "gu" ? "બધા ફિલ્ટર સાફ કરો" : "Clear All Filters"}
+                </Button>
+              )}
+            </div>
+          ),
+        }}
+      />
+      
+      {totalItems > 0 && <CustomPagination />}
+    </>
+  )}
       </div>
       
       {/* Analysis Dashboard - Shows statistics for current filtered data */}
@@ -2019,7 +2013,7 @@ const PatrolIncidentLogs = () => {
                               src={`data:${image.image_type};base64,${image.image_data}`}
                               alt={getImageLabel()}
                               style={{ 
-                                width: '100%',
+                                width: '170px',
                                 height: 150,
                                 objectFit: 'cover',
                                 borderRadius: 2

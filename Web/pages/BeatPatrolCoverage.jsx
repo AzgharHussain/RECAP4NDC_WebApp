@@ -24,6 +24,8 @@ import "./RouterMap.css";
 import { API_BASE_URL } from "../config";
 import Select from 'react-select';
 import { Image } from 'antd';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 // Helper function to parse WKT (Well-Known Text) geometry to lat/lng array
 const parseGeomCoordinates = (geom) => {
@@ -747,7 +749,7 @@ const handleReset = () => {
             style={{
               position: "absolute",
               top: "20px",
-              right: "20px",
+              right: "510px",
               background: "rgba(255,255,255,0.9)",
               border: "none",
               borderRadius: "50%",
@@ -1055,7 +1057,7 @@ const handleReset = () => {
               <button
                 style={{
                   position: "absolute",
-                  left: "30px",
+                  left: "400px",
                   top: "50%",
                   transform: "translateY(-50%)",
                   background: "rgba(255,255,255,0.9)",
@@ -1092,14 +1094,14 @@ const handleReset = () => {
                   setImageScale(1);
                 }}
               >
-                ◀
+                <ArrowBackIcon sx={{ fontSize: 28 }} />
               </button>
               
               {/* Next button */}
               <button
                 style={{
                   position: "absolute",
-                  right: "30px",
+                  right: "400px",
                   top: "50%",
                   transform: "translateY(-50%)",
                   background: "rgba(255,255,255,0.9)",
@@ -1136,7 +1138,7 @@ const handleReset = () => {
                   setImageScale(1);
                 }}
               >
-                ▶
+                <ArrowForwardIcon sx={{ fontSize: 28 }} />
               </button>
             </>
           )}
@@ -1559,59 +1561,70 @@ const handleReset = () => {
           </div>
         </div>
       )}
-
-      <button
-        style={{
-          position: "absolute",
-          top: "15px",
-          right: "15px",
-          width: "45px",
-          height: "45px",
-          borderRadius: "50%",
-          background: "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)",
-          border: "none",
-          color: "white",
-          fontSize: "18px",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1001,
-          boxShadow: "0 4px 6px rgba(245, 101, 101, 0.3)",
-          transition: "all 0.3s ease",
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = "rotate(90deg)"}
-        onMouseLeave={(e) => e.currentTarget.style.transform = "rotate(0deg)"}
-        onClick={() => {
-          setShowMapRoute(!showmaproute);
-          handleReset();
-        }}
-      >
-        <CloseOutlined />
-      </button>
               
       <div style={{
         padding: "20px",
         overflow: "auto",
         height: "calc(100% - 40px)",
+        position: "relative", // Add this
       }}>
-        <h1 style={{
-  fontSize: "32px",
-  fontWeight: "700",
-  marginBottom: "8px",
-  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-  WebkitBackgroundClip: "text",
-  WebkitTextFillColor: "transparent",
-}}>
-  {language === "gu" ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Beat Patrol Coverage Analysis"}
-</h1>
-<p style={{
-  fontSize: "16px",
-  color: "#718096",
-  marginBottom: "30px",
-}}>
-  {language === "gu" ? "વિભાગ, રેન્જ અને બીટ પસંદ કરો અને પેટ્રોલ કવરેજ વિશ્લેષણ કરો" : "Select division, range and beat to analyze patrol coverage"}
-</p>
+        {/* Close button placed inside the scrollable content */}
+  <div style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: "30px",
+    position: "relative",
+  }}>
+    <div>
+      <h1 style={{
+        fontSize: "32px",
+        fontWeight: "700",
+        marginBottom: "8px",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+      }}>
+        {language === "gu" ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Beat Patrol Coverage Analysis"}
+      </h1>
+      <p style={{
+        fontSize: "16px",
+        color: "#718096",
+        marginBottom: "0",
+      }}>
+        {language === "gu" ? "વિભાગ, રેન્જ અને બીટ પસંદ કરો અને પેટ્રોલ કવરેજ વિશ્લેષણ કરો" : "Select division, range and beat to analyze patrol coverage"}
+      </p>
+    </div>
+    <button
+      style={{
+        width: "45px",
+        height: "45px",
+        borderRadius: "50%",
+        background: "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)",
+        border: "none",
+        color: "white",
+        fontSize: "18px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 4px 6px rgba(245, 101, 101, 0.3)",
+        transition: "all 0.3s ease",
+        flexShrink: 0,
+        marginLeft: "20px",
+        marginTop: "0", // Align with heading
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.transform = "rotate(90deg)"}
+      onMouseLeave={(e) => e.currentTarget.style.transform = "rotate(0deg)"}
+      onClick={() => {
+        setShowMapRoute(!showmaproute);
+        handleReset();
+      }}
+    >
+      <CloseOutlined />
+    </button>
+  </div>
+
 
         {/* Selection Card */}
 <div style={{

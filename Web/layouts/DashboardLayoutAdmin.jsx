@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, useLocation,BrowserRouter  } from "react-router-dom";
-import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown } from "react-icons/fa"; 
+import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight} from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
 import brand from "../assets/logogiz.png";
@@ -101,16 +101,22 @@ export default function DashboardLayoutAdmin() {
       <img src={logos11} alt="Logo 11" />
     </div>
 
-    <div className="header-right">
-      <span className="user-icon">
-        <img src={userIcon} alt="User Icon" className="user-icon-img" />
-      </span>
-      <span
-        className="username"
+        <div className="header-right">
+          <img src={userIcon} alt="User Icon" className="user-icon-img" />
+    
+        <span className="username">
+          Admin
+        </span>
+      <div
+        className="admin-section"
         onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
       >
-        Admin ▼
-      </span>
+        
+    
+        <span className="arrow-icon">
+          {isAdminMenuOpen ? <FaChevronDown /> : <FaChevronRight />}
+        </span>
+      </div>
     </div>
   </div>
 

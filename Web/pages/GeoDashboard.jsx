@@ -754,7 +754,7 @@ const handleToolSidebarClick = (toolName) => {
               zoom={6.8}
           style={{
   height: "92vh",
-  width:  "80vw" ,
+  width:  "76vw" ,
 }}
 
               whenCreated={(mapInstance) => {
