@@ -22,7 +22,7 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
         // 1️⃣ Create columns if NOT EXISTS
         const alterTableQuery = `
             ALTER TABLE public."${tableName}"
-            ADD COLUMN IF NOT EXISTS pixel_id SERIAL PRIMARY KEY,
+            ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
             ADD COLUMN IF NOT EXISTS note TEXT,
             ADD COLUMN IF NOT EXISTS image_data TEXT,
             ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT true,
@@ -34,7 +34,7 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
  
         // 2️⃣ Fetch all data
         const selectQuery = `
-            SELECT pixel_id, longitude, latitude
+            SELECT pixle_id, longitude, latitude
             FROM public."${tableName}"
             WHERE village = '${village_name}'
         ;
@@ -199,7 +199,7 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
          // 1️⃣ Create columns if NOT EXISTS
         const alterTableQuery = `
             ALTER TABLE public."${tableName}"
-            ADD COLUMN IF NOT EXISTS pixel_id SERIAL PRIMARY KEY,
+            ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
             ADD COLUMN IF NOT EXISTS note TEXT,
             ADD COLUMN IF NOT EXISTS image_data TEXT,
             ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
@@ -259,7 +259,7 @@ router.get('/ndvi-change/:id',verifyJwt, async (req, res) => {
         const selectQuery = `
            SELECT *
             FROM public."${tableName}"
-            WHERE pixel_id = ${id};
+            WHERE pixle_id = ${id};
         `;
 
         const [results] = await sequelize.query(selectQuery);
@@ -411,8 +411,8 @@ router.put('/ndvi-change/:id',verifyJwt, upload.single('image_data'), async (req
     const updateQuery = `
       UPDATE public."${tableName}"
       SET ${updates.join(', ')}, updated_at = NOW()
-      WHERE pixel_id = :id
-      RETURNING pixel_id, longitude, latitude, note, image_data, status;
+      WHERE pixle_id = :id
+      RETURNING pixle_id, longitude, latitude, note, image_data, status;
     `;
 
     const [results] = await sequelize.query(updateQuery, {

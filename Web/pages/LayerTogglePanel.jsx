@@ -169,7 +169,7 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
   return null;
 });
 
-const GEOSERVER_WMS = "http://68.178.167.216:8081/geoserver/wms";
+const GEOSERVER_WMS = "https://gisfy.co.in:8445/geoserver";
 
 // Complete nested data structure
 const layersData = {
@@ -224,7 +224,7 @@ const layersData = {
                     { Name: "danta_east", Layer: "Danta East" },
                     { Name: "danta_west", Layer: "Danta West" },
                     { Name: "dantiwada", Layer: "Dantiwada" },
-                    { Name: "iqbalgadh", Layer: "Iqbalgadh" },
+                    { Name: "iqbalgadh_wl", Layer: "Iqbalgadh" },
                     { Name: "palanpur", Layer: "Palanpur" },
                     { Name: "tharad", Layer: "Tharad" }
                   ]
@@ -235,7 +235,7 @@ const layersData = {
               title: "Nalsarovar & Thol Bird Sanctuary",
               type: "group",
               children: [
-                { Name: "nalsarovar___thol_bird_sanctuary__wildlife_division", Layer: "Nalsarovar Wildlife" },
+                { Name: "nalsarovar___thol_bird_sanctuary__wildlife_divisio", Layer: "Nalsarovar Wildlife" },
                 {
                   title: "Ranges",
                   type: "group",
@@ -275,7 +275,7 @@ const layersData = {
               title: "Gir East Wildlife Division",
               type: "group",
               children: [
-                { Name: "gir_east_wl", Layer: "Gir East WL" },
+                { Name: "gir_east_forest_division__dhari", Layer: "Gir East WL" },
                 {
                   title: "Ranges",
                   type: "group",
@@ -285,7 +285,7 @@ const layersData = {
                     { Name: "jasadhar", Layer: "Jasadhar" },
                     { Name: "paniya", Layer: "Paniya" },
                     { Name: "sarasiya", Layer: "Sarasiya" },
-                    { Name: "savar_kundala", Layer: "Savar Kundala" },
+                    { Name: "savar_kundla", Layer: "Savar Kundala" },
                     { Name: "tulsishyam", Layer: "Tulsishyam" }
                   ]
                 }
@@ -640,7 +640,7 @@ const layersData = {
                   title: "Ranges",
                   type: "group",
                   children: [
-                    { Name: "ghogamba", Layer: "Ghogamba" },
+                    { Name: "ghoghamba", Layer: "Ghogamba" },
                     { Name: "godhara", Layer: "Godhara" },
                     { Name: "halol", Layer: "Halol" },
                     { Name: "kadana", Layer: "Kadana" },

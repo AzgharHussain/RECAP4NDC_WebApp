@@ -205,7 +205,8 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
       LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       GROUP BY p.patrol_id, pt.type_name
-      ORDER BY p.patrol_id DESC;
+      ORDER BY p.patrol_id DESC
+      LIMIT 5;
     `;
 
     const result = await client.query(query);

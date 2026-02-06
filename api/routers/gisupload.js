@@ -20,7 +20,7 @@ const PG_USER = "postgres";
 const PG_PASS = "P$DB@25%$#!26";
 const PG_DB = "Recap4NDC_new";
 
-const GEOSERVER_URL = "http://68.178.167.216:8081/geoserver";
+const GEOSERVER_URL = "https://gisfy.co.in:8445/geoserver";
 const GEOSERVER_USER = "admin";
 const GEOSERVER_PASS = "geoserver";
 const WORKSPACE = "Recap4NDC";
