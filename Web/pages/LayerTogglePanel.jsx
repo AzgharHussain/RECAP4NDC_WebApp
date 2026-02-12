@@ -6,6 +6,7 @@ import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
 import { debounce } from 'lodash';
+import { API_BASE_URL } from "../config";
 
 const Loader = () => {
   console.log("loading");
@@ -2238,7 +2239,7 @@ const getLayerBoundsFromAPI = async (layerName) => {
     const cleanLayerName = layerName.replace(/^cite:/, '');
     
     // Use proxy URL - this will go through Vite proxy
-    const response = await fetch(`/api/layer-bounds/${cleanLayerName}`);
+    const response = await fetch(`${API_BASE_URL}/api/layer-bounds/${cleanLayerName}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

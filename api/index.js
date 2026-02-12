@@ -10,6 +10,8 @@ const jwt = require('jsonwebtoken');
 const { verifyJwt } = require("./middlewares/verifyJwt");
 const { sequelize, testConnection } = require('./config/database');
 
+const helmet = require("helmet");
+
 // Routers
 const patrolRoutes = require('./routers/patrolRoutes');
 const dropdownapis = require('./routers/dropdownapis');
@@ -22,6 +24,36 @@ const gisupload = require('./routers/gisupload');
 const forestLoginRoutes = require('./routers/forestLogin');
 
 const app = express();
+
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      fontSrc: ["'self'"],
+      connectSrc: ["'self'"],
+    },
+  })
+);
+
+app.use(helmet.frameguard({ action: "deny" }));
+
+app.use(
+  helmet.hsts({
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  })
+);
+
+app.use(helmet.noSniff());
+
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  next();
+});
 
 // ==================== MIDDLEWARE ==================== //
 app.use(cors({ 
@@ -106,7 +138,6 @@ app.post('/api/test-post', (req, res) => {
   });
 });
 
-// Admin login endpoint
 app.post('/api/admin', async (req, res) => {
   try {
     console.log('✅ /api/admin POST route accessed');

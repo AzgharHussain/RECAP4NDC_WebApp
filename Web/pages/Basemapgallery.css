@@ -9,6 +9,14 @@
   perspective: 500px;
 }
 
+@media only screen 
+  and (min-width: 834px) 
+  and (max-width: 1024px) {
+  
+  .basemap-deck {
+    left: 56%;
+  }
+}
 .basemap-card {
   position: absolute;
   width: 100%;

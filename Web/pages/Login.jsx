@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate ,NavLink} from "react-router-dom";
 import "../App.css";
 import { useLanguage } from "../context/LanguageContext";
 import "./Login.css";
@@ -12,6 +12,13 @@ import backImage from "../assets/G2.jpg";
 import leftLogos from "../assets/Logo.png";
 import Eyeclose from "../assets/Eyeclose.png";
 import user from "../assets/user.png";
+
+import "../layouts/DashboardLayout.css";
+
+import gujaratlogo from "../assets/FOREST DEPT.jpg";
+import Moef from "../assets/Moef.jpg";
+import giz from "../assets/giz.png";
+import recap4NDC from "../assets/RE.png";
 
 function Login() {
   const [showPwd, setShowPwd] = useState(false);
@@ -91,7 +98,6 @@ function Login() {
     // Store session in localStorage
     localStorage.setItem('session', JSON.stringify(sessionData));
     
-    // Also store user data separately for compatibility
     localStorage.setItem('userData', JSON.stringify(sessionData.user));
     
     if (isAdmin) {
@@ -295,7 +301,6 @@ function Login() {
     setError("");
 
     try {
-      // 1. Check if user is an admin via the API
       console.log("👑 Checking admin credentials...");
       
       try {
@@ -305,7 +310,6 @@ function Login() {
         });
         
         if (adminResponse.data.success) {
-          // Create admin session
           const adminUserData = {
             username: userId.trim(),
             name: adminResponse.data.user.name || "Administrator",
@@ -340,7 +344,6 @@ function Login() {
         // Continue to forest authentication
       }
 
-      // 2. Forest Authentication for regular users (only if admin login failed)
       console.log("🌲 Proceeding with Forest authentication...");
       const jsonMap = await forestLogin(userId.trim(), password.trim());
       
@@ -433,57 +436,71 @@ function Login() {
   };
 
   return (
-    <div
-      className="login-screen"
-    >
+    <>
+  <header id="header" style={{height:"13vh"}} >
+                <div className="newcontainer">
+                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'97%'}}>
+                        <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'35px'}}>
+                            {/* <a href="indexs.aspx">
+                                </a> */}
+                                <img src={gujaratlogo} alt="logo picture" style={{width:'50px'}}></img>
+                      
+                        <div className="portal-header">
+                            <div className="icon" aria-hidden="true"></div>
+                            <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>FOREST PATROLLING & MONITORING SYSTEM</b></h2>
+                        </div>  </div>
+                      
+                        <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', paddingRight:'45px'}}>
+                            <div className="l_1">
+                                {/* <a href="https://moef.gov.in/" target="_blank">
+                                    </a> */}
+                                    <img src={Moef} alt="picture" style={{width:'120px'}}></img>
+                            </div>
+                            <div className="l_2">
+                                {/* <a href="https://www.giz.de/de/html/index.html" target="_blank">
+                                    </a> */}
+                                    <img src={giz} alt="giz logo" style={{width:'160px'}}></img>
+                            </div>
+                            <div className="l_3">
+                                {/* <a href="#!" target="_blank">
+                                    </a> */}
+                                    <img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img>
+                            </div>
+                            {/* <div>
+<button
+              className="logout-btn"
+              onClick={handleLogout}
+            >
+              {text[language].logout}
+            </button>
+                            </div> */}
+                            
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+    
       {/* Left logos container */}
-      <div 
-        style={{
-          flex: "0 0 auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          width: "50%",
-          overflow: "hidden",
-          position: "relative",
-        }}
-      >
-        <img 
+      <div className="login-screen2222"> 
+           <img 
           src={leftLogos} 
           alt="Partner Logos" 
-          style={{
-            maxHeight: "85vh",
-            objectFit: "contain",
-            width: "auto",
-            padding: "25px",
-            borderRadius: "20px",
-            boxShadow: `
-              0 15px 35px rgba(0, 0, 0, 0.2),
-              inset 0 1px 0 rgba(255, 255, 255, 0.3)
-            `,
-            border: "2px solid rgba(255, 255, 255, 0.15)",
-            backdropFilter: "blur(20px)",
-            transition: "all 0.3s ease",
-          }}
+         style={{
+          width:"350px",
+          height:"620px",
+           
+           backgroundColor:"white"
+         }}
+         className="image22222222"
         />
-      </div>
 
-      {/* Right panel with login form */}
-      <div
-        className="right-Panel"
-        style={{
-          flex: 1,
-          display: "flex",
-          justifyContent: "center",
-          height: "90%",
-          maxHeight: "100vh",
-          overflow: "hidden",
-          position: "relative",
-        }}
+       
+       <div
+       className="right-Panel"
+        
       >
-        <div className="form-card">
-          <div>
+     
             <img src={brand} alt="RECAP4NDC" className="brand" />
             <h2 className="login-heading">{text[language].title}</h2>
 
@@ -559,18 +576,9 @@ function Login() {
               )}
               {loading ? text[language].loggingIn : text[language].loginButton}
             </button>
-          </div>
-
-          <div 
-            className="footer-bar"
-            style={{
-              position: "absolute",
-              width: "90%",
-              display: "flex",
-              justifyContent: "space-around",
-              alignItems: "center",
-              padding: "0 0px",
-            }}
+            <div 
+           style={{display:"flex",justifyContent:"space-between",marginTop:"20px"}}
+           
           >
             <button
               className={`lang-chip ${language === "en" ? "active" : ""}`}
@@ -587,22 +595,18 @@ function Login() {
             >
               જીયુ
             </button>
-          </div>
-        </div>
+       
       </div>
+          </div>
 
-      <style jsx="true">{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0% { opacity: 0.5; }
-          50% { opacity: 1; }
-          100% { opacity: 0.5; }
-        }
-      `}</style>
+          
+
+
+       
+
+    
     </div>
+  </>
   );
 }
 

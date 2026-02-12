@@ -56,9 +56,7 @@
   -webkit-backdrop-filter: blur(12px);
   border: 2.726px solid rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.23);
-  box-shadow:
-    -12.655px -12.655px 6.327px -14.764px #B3B3B3 inset,
-    16.873px 16.873px 9.491px -18.982px #FFF inset;
+  
   box-sizing: border-box;
 }
 
@@ -196,6 +194,7 @@
   box-shadow:
     -10.211px -10.211px 5.105px -11.913px #B3B3B3 inset,
     13.614px 13.614px 7.658px -15.316px #FFF inset;
+  justify-content: center;
 }
 
 .lang-chip.active {
@@ -231,12 +230,7 @@
     display: none; /* hides left-side logo */
   }
 
-  .login-screen {
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 40px 20px;
-  }
+  
 
   .right-Panel {
     width: 100%;

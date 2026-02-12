@@ -30,7 +30,7 @@ export default function DashboardLayoutAdmin() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar open/close state
   const [isPatrollingOpen, setIsPatrollingOpen] = useState(false); // State for dropdown
   const [isWorkingPlanOpen, setIsWorkingPlanOpen] = useState(false); // State for dropdown
- const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false); // State for Admin dropdown
+ const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const location = useLocation(); // Access current location (route)
   const { language,toggleLanguage  } = useLanguage();  // ✅ Access language context
   const navigate = useNavigate(); 
@@ -108,7 +108,7 @@ export default function DashboardLayoutAdmin() {
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
     });
 
-    // Close admin menu
+
     setIsAdminMenuOpen(false);
     
     // Navigate to login page
@@ -132,7 +132,6 @@ export default function DashboardLayoutAdmin() {
 
   // Helper function to check if a link is active
   const isActiveLink = (path) => location.pathname === path;
-  // Check if current user is admin
   const isAdminUser = () => {
     try {
       const sessionStr = localStorage.getItem('session');
@@ -168,7 +167,6 @@ useEffect(() => {
   return (
     <div className="layout">
       {/* Header */}
-    <header className="header">
           {/* ===== TOP ROW ===== */}
           {/* <div className="header-top">
             <div className="header-left">
@@ -220,82 +218,82 @@ useEffect(() => {
             </div>
             </div>
           </div> */}
-          <header id="header">
-                  <div className="container-fluid m-0">
-                      <div className="headAssets" style={{display:'flex', alignItems:'center', gap:'64px', height:'14vh', paddingLeft:'130px', paddingRight:'10px'}}>
-                          <div className="logo">
-                              {/* <a href="indexs.aspx">
-                                  </a> */}
-                                  <img src={gujaratlogo} alt="logo picture" style={{width:'70px'}}></img>
-                          </div>
-                          <div className="portal-header">
-                              <div className="icon" aria-hidden="true"></div>
-                              <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"Host Grotesk", sans-serif', fontWeight: 700,}}>FOREST PATROLLING & MONITORING SYSTEM</b></h2>
-                          </div>
-                          <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', justifyContent:'space-between', maxWidth:'5px'}}>
-                              <div className="l_1">
-                                  {/* <a href="https://moef.gov.in/" target="_blank">
-                                      </a> */}
-                                      <img src={Moef} alt="picture" style={{width:'160px'}}></img>
-                              </div>
-                              <div className="l_2">
-                                  {/* <a href="https://www.giz.de/de/html/index.html" target="_blank">
-                                      </a> */}
-                                      <img src={giz} alt="giz logo" style={{width:'210px'}}></img>
-                              </div>
-                              <div className="l_3">
-                                  {/* <a href="#!" target="_blank">
-                                      </a> */}
-                                      <img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img>
-                              </div>
-                              {/* <div>
-  <button
-                className="logout-btn"
-                onClick={handleLogout}
-              >
-                {text[language].logout}
-              </button>
-                              </div> */}
-                              
-                          </div>
-                      </div>
-                  </div>
-              </header>
-  <div >
-          {/* ===== BOTTOM ROW (BUTTONS) ===== */}
-          <div className="header-bottom2">
-            <div className="header-bottom">
-  
-           <NavLink
-                       to="admin"
-                       className={`menu-item ${
-                         isActiveLink("/") ? "active" : ""
-                       }`}
-                       onClick={handleLinkClick}
-                     >
-                       Admin Dashboard
-                     </NavLink>
-            
-             </div>
-           <div className="header-right">
-    <div className="user-dropdown">
-      {/* User icon and username as dropdown trigger */}
-      <div 
-        className="dropdown-trigger"
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-      >
-        <img src={userIcon} alt="User Icon" className="user-icon-img" />
-       
-      </div>
-      
-      {/* Dropdown menu */}
-   
-    </div>
-  </div>
-          </div>
-          </div>
+
+<div className="newcontainer">
+
+        <header id="header">
+                <div className="container-fluid22">
+                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'100%'}}>
+                        <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'25px'}}>
+                            {/* <a href="indexs.aspx">
+                                </a> */}
+                                <img src={gujaratlogo} alt="logo picture" style={{width:'50px'}}></img>
+                      
+                        <div className="portal-header">
+                            <div className="icon" aria-hidden="true"></div>
+                            <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>FOREST PATROLLING & MONITORING SYSTEM</b></h2>
+                        </div>  </div>
+                      
+                        <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', paddingRight:'45px'}}>
+                            <div className="l_1">
+                                {/* <a href="https://moef.gov.in/" target="_blank">
+                                    </a> */}
+                                    <img src={Moef} alt="picture" style={{width:'120px'}}></img>
+                            </div>
+                            <div className="l_2">
+                                {/* <a href="https://www.giz.de/de/html/index.html" target="_blank">
+                                    </a> */}
+                                    <img src={giz} alt="giz logo" style={{width:'160px'}}></img>
+                            </div>
+                            <div className="l_3">
+                                {/* <a href="#!" target="_blank">
+                                    </a> */}
+                                    <img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img>
+                            </div>
+                            {/* <div>
+<button
+              className="logout-btn"
+              onClick={handleLogout}
+            >
+              {text[language].logout}
+            </button>
+                            </div> */}
+                            
+                        </div>
+                    </div>
+                </div>
+            </header>
+        {/* ===== BOTTOM ROW (BUTTONS) ===== */}
+        <div className="header-bottom2">
+          <div className="header-bottom">
+
          
-        </header>
+          <NavLink
+            to="/admin"
+            className={`menu-item ${isActiveLink("/geo") ? "active" : ""}`}
+            onClick={handleLinkClick}
+          >
+            Admin Dashboard
+          </NavLink>
+           </div>
+         <div className="header-right">
+  <div className="user-dropdown">
+    {/* User icon and username as dropdown trigger */}
+    <div 
+      className="dropdown-trigger"
+      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+    >
+      <img src={userIcon} alt="User Icon" className="user-icon-img" />
+     
+    </div>
+    
+    {/* Dropdown menu */}
+ 
+  </div>
+</div>
+        </div>
+        </div>
+         
   
 
 
@@ -323,20 +321,7 @@ useEffect(() => {
       </div>
     )}  {isDropdownOpen && (
           <div className="dropdown-menu">
-            {/* {isAdmin && (
-              <div 
-                className="admin-section dropdown-item"
-                onClick={() => {
-                  // Handle admin menu toggle
-                  setIsAdminMenuOpen(!isAdminMenuOpen);
-                }}
-              >
-                <span>Admin Menu</span>
-                <span className="admin-arrow">
-                  {isAdminMenuOpen ? <FaChevronDown /> : <FaChevronRight />}
-                </span>
-              </div>
-            )} */}
+            
             
           
             <button

@@ -1242,6 +1242,7 @@ const NDVIChangeDashboard = () => {
           titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
           avatar={<Forest />}
         />
+        <p style={{paddingLeft:"25px",margin:"0px", fontSize:"20px", fontFamily:"arial"}}>Select Coupe:</p>
         <CardContent>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth size="small">
@@ -1631,7 +1632,7 @@ const NDVIChangeDashboard = () => {
                     color={chartType === 'line' ? 'primary' : 'default'}
                     icon={<ShowChart />}
                   />
-                  <Chip
+                  {/* <Chip
                     label="Area Distribution"
                     onClick={() => setChartType('pie')}
                     color={chartType === 'pie' ? 'primary' : 'default'}
@@ -1642,7 +1643,7 @@ const NDVIChangeDashboard = () => {
                     onClick={() => setChartType('polygon-pie')}
                     color={chartType === 'polygon-pie' ? 'primary' : 'default'}
                     icon={<PieChart />}
-                  />
+                  /> */}
                 </Box>
 
                 {/* Chart Display */}

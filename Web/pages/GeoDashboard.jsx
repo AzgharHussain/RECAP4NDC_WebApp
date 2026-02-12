@@ -26,6 +26,24 @@ import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
 
 
+const Loader = () => {
+  console.log("loading");
+  return (
+    <div className="map-loader">
+      <div className="map-loader__radar">
+        <div className="map-loader__center">
+          <div className="map-loader__satellite"></div>
+          <div className="map-loader__pulse"></div>
+          <div className="map-loader__pulse delay-1"></div>
+          <div className="map-loader__pulse delay-2"></div>
+        </div>
+        <div className="map-loader__sweep"></div>
+      </div>
+      <div className="map-loader__message">Loading...</div>
+    </div>
+  );
+};
+
 const LayerTogglePanel = lazy(() => import("./LayerTogglePanel"));
 const RightSidebar = lazy(() => import("./RightSidebar"));
 const BasemapGallery = lazy(() => import("./Basemapgallery"));
@@ -76,6 +94,8 @@ export default function MapView() {
   const [coupeLayers, setCoupeLayers] = useState([]);
   const navigate = useNavigate();
 
+  const [isLoading, setIsLoading] = useState(true);
+
   const [queryableLayers, setQueryableLayers] = useState([]);
 
 const ndviLayers = [
@@ -116,6 +136,17 @@ const changeLayers = [
   useEffect(() => {
     fetchCoupeLayers();
   }, []);
+
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    setIsLoading(false);
+  }, 10000); // 10 seconds
+
+  return () => clearTimeout(timer);
+}, []);
+
+
+  
   useEffect(() => {
     if (showIncidentLayer) {
       fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
@@ -214,6 +245,7 @@ const changeLayers = [
     coupeLayers,
   ]);
 
+  
 const handleFilter = ({ fromDate, toDate }) => {
   if (!fromDate && !toDate) {
     setFilteredNdviLayers(ndviLayers);
@@ -947,6 +979,7 @@ const handleLayerToggle = (layerType, isChecked) => {
       //  className="custom-scale-control" 
        />
               {activeToolSidebar === "search" && <DraggableZoomControl mapRef={mapRef} />}
+              {isLoading && <Loader />}
 
               <LatLngDisplay />
             

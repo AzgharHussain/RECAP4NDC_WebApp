@@ -441,16 +441,21 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
           { stats: nightStats, type: "Night patrolling", color: '#4000ffff' },
           { stats: beatStats, type: "Beat checking", color: '#00ffa2ff' }
         ].map(({ stats, type, color }, index) => {
-          if (!stats) return null;
+          // Check if stats exists - if not, show N/A values
+          const hasData = stats !== null;
           
           return (
             <Col xs={24} md={8} key={type}>
               <div style={{
-                background: `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.15)`,
+                background: hasData 
+                  ? `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.15)`
+                  : 'rgba(128, 128, 128, 0.15)',
                 backdropFilter: 'blur(12px)',
                 borderRadius: 16,
                 padding: 0,
-                border: `1px solid rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.3)`,
+                border: hasData
+                  ? `1px solid rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.3)`
+                  : '1px solid rgba(128, 128, 128, 0.3)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
                 height: '100%',
                 overflow: 'hidden'
@@ -458,8 +463,12 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 {/* Header */}
                 <div style={{
                   padding: '16px 20px',
-                  background: `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.25)`,
-                  borderBottom: `1px solid rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.4)`,
+                  background: hasData
+                    ? `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.25)`
+                    : 'rgba(128, 128, 128, 0.25)',
+                  borderBottom: hasData
+                    ? `1px solid rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.4)`
+                    : '1px solid rgba(128, 128, 128, 0.4)',
                   display: 'flex',
                   alignItems: 'center'
                 }}>
@@ -467,9 +476,9 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                     width: 12,
                     height: 12,
                     borderRadius: '50%',
-                    backgroundColor: color,
+                    backgroundColor: hasData ? color : 'gray',
                     marginRight: 12,
-                    boxShadow: `0 0 12px ${color}`
+                    boxShadow: hasData ? `0 0 12px ${color}` : 'none'
                   }} />
                   <span style={{ 
                     color: 'rgba(0, 0, 0, 0.95)',
@@ -480,7 +489,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                   </span>
                 </div>
                 
-                {/* Content */}
+                {/* Content - Show N/A when no data */}
                 <div style={{ padding: 20 }}>
                   <div style={{ 
                     textAlign: 'center',
@@ -503,16 +512,28 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                       fontWeight: 'bold',
                       textShadow: '0 2px 8px rgba(0,0,0,0.3)'
                     }}>
-                      {stats.totalPatrols}
+                      {hasData ? stats.totalPatrols : '0'}
                     </div>
                   </div>
                   
                   <Row gutter={[12, 12]}>
                     {[
-                      { label: language === "gu" ? "સરેરાશ અંતર" : "Avg Distance", value: `${stats.avgDistance} km` },
-                      { label: language === "gu" ? "સરેરાશ સમય" : "Avg Time", value: `${stats.avgHours} hrs` },
-                      { label: language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff", value: stats.avgStaff },
-                      { label: language === "gu" ? "કુલ અંતર" : "Total Distance", value: `${stats.totalDistance} km` }
+                      {
+                        label: language === "gu" ? "સરેરાશ અંતર" : "Avg Distance",
+                        value: hasData ? `${stats.avgDistance} km` : '0.0'
+                      },
+                      {
+                        label: language === "gu" ? "સરેરાશ સમય" : "Avg Time",
+                        value: hasData ? `${stats.avgHours} hrs` : '0.0 hrs'
+                      },
+                      {
+                        label: language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff",
+                        value: hasData ? stats.avgStaff : '0'
+                      },
+                      {
+                        label: language === "gu" ? "કુલ અંતર" : "Total Distance",
+                        value: hasData ? `${stats.totalDistance} km` : '0.0 km'
+                      }
                     ].map((item, idx) => (
                       <Col span={12} key={idx}>
                         <div style={{
@@ -541,34 +562,32 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                     ))}
                   </Row>
                   
-                  {/* Top Officer */}
-                  {stats.topOfficer && (
-                    <div style={{
-                      marginTop: 16,
-                      padding: '12px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      borderRadius: 8,
-                      border: '1px solid rgba(255, 255, 255, 0.08)'
+                  {/* Top Officer - Show N/A when no data */}
+                  <div style={{
+                    marginTop: 16,
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: 8,
+                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                  }}>
+                    <div style={{ 
+                      color: 'rgba(0, 0, 0, 0.7)',
+                      fontSize: '12px',
+                      marginBottom: 4
                     }}>
-                      <div style={{ 
-                        color: 'rgba(0, 0, 0, 0.7)',
-                        fontSize: '12px',
-                        marginBottom: 4
-                      }}>
-                        {language === "gu" ? "શ્રેષ્ઠ અધિકારી" : "Top Officer"}
-                      </div>
-                      <div style={{ 
-                        color: '#000000ff',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {stats.topOfficer}
-                      </div>
+                      {language === "gu" ? "શ્રેષ્ઠ અધિકારી" : "Top Officer"}
                     </div>
-                  )}
+                    <div style={{ 
+                      color: '#000000ff',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {hasData && stats.topOfficer ? stats.topOfficer : 'N/A'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </Col>

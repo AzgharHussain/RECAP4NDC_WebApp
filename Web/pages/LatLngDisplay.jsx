@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMapEvents } from 'react-leaflet';
+import "./LatLngDisplay.css";
 
 const LatLngDisplay = () => {
   const [latLng, setLatLng] = useState({ lat: 0, lng: 0 });
@@ -24,18 +25,6 @@ const LatLngDisplay = () => {
 
   return (
     <div className="lat-lng-display"
-     style={{
-      position: 'absolute',
-      bottom: '4%',
-      left: '13%',
-      zIndex: 10000,
-      backgroundColor: 'white',
-      padding: '5px 10px',
-      borderRadius: '4px',
-      boxShadow: '0 0 5px rgba(0,0,0,0.3)',
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '8px'
-    }}
     >
      {directions.lat},  {directions.lng}
     </div>

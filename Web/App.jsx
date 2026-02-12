@@ -53,7 +53,6 @@ export default function App() {
             <Route path="/ndvi-dashboard" element={<NDVIChangeDashboard />} />
           </Route>
 
-          {/* Protected Admin Routes */}
           <Route
             element={
               <ProtectedRoute>
