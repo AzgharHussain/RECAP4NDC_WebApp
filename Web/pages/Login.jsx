@@ -8,9 +8,8 @@ import { API_BASE_URL } from '../config';
 
 // === Images ===
 import brand from "../assets/logo-giz.png";
-import backImage from "../assets/backimage.jpg";
+import backImage from "../assets/G2.jpg";
 import leftLogos from "../assets/Logo.png";
-
 import Eyeclose from "../assets/Eyeclose.png";
 import user from "../assets/user.png";
 
@@ -72,6 +71,69 @@ function Login() {
       forestConnectionFailed: "ફોરેસ્ટ ઓથેન્ટિકેશન સેવા સાથે કનેક્ટ થઈ શકતું નથી",
       forestAuthFailed: "ફોરેસ્ટ ઓથેન્ટિકેશન નિષ્ફળ"
     },
+  };
+
+  // Session management functions
+  const createSession = (userData, isAdmin = false) => {
+    const sessionData = {
+      user: {
+        ...userData,
+        isAdmin,
+        loginTime: new Date().toISOString()
+      },
+      sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date().toISOString(),
+      lastActivity: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+      isActive: true
+    };
+
+    // Store session in localStorage
+    localStorage.setItem('session', JSON.stringify(sessionData));
+    
+    // Also store user data separately for compatibility
+    localStorage.setItem('userData', JSON.stringify(sessionData.user));
+    
+    if (isAdmin) {
+      console.log("✅ Admin session created:", sessionData.sessionId);
+    } else {
+      console.log("✅ User session created:", sessionData.sessionId);
+    }
+    
+    return sessionData;
+  };
+
+  const validateSession = () => {
+    try {
+      const sessionStr = localStorage.getItem('session');
+      if (!sessionStr) return false;
+      
+      const session = JSON.parse(sessionStr);
+      
+      // Check if session is expired
+      if (new Date(session.expiresAt) < new Date()) {
+        console.log("❌ Session expired");
+        clearSession();
+        return false;
+      }
+      
+      // Update last activity
+      session.lastActivity = new Date().toISOString();
+      localStorage.setItem('session', JSON.stringify(session));
+      
+      return true;
+    } catch (error) {
+      console.error("❌ Session validation error:", error);
+      return false;
+    }
+  };
+
+  const clearSession = () => {
+    localStorage.removeItem('session');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    console.log("✅ Session cleared");
   };
 
   // Event Handlers
@@ -209,7 +271,6 @@ function Login() {
 
       if (token) {
         localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
         console.log("🔐 JWT saved to localStorage");
       }
 
@@ -244,9 +305,20 @@ function Login() {
         });
         
         if (adminResponse.data.success) {
-          // Store the token and user info
+          // Create admin session
+          const adminUserData = {
+            username: userId.trim(),
+            name: adminResponse.data.user.name || "Administrator",
+            isAdmin: true,
+            permissions: adminResponse.data.user.permissions || ['all'],
+            source: 'admin_api'
+          };
+          
+          // Create session
+          createSession(adminUserData, true);
+          
+          // Store the token
           localStorage.setItem('token', adminResponse.data.token);
-          localStorage.setItem('user', JSON.stringify(adminResponse.data.user));
           
           // Test authenticated request
           await axios.get(
@@ -258,6 +330,7 @@ function Login() {
             }
           );
           
+          console.log("✅ Admin session created successfully");
           navigate("/admin");
           setLoading(false);
           return;
@@ -275,7 +348,7 @@ function Login() {
         throw new Error("INVALID_CREDENTIALS");
       }
 
-      console.log("✅ Authentication successful, user data:", jsonMap);
+      console.log("✅ Forest authentication successful, user data:", jsonMap);
 
       // Extract user data
       const userData = {
@@ -291,7 +364,10 @@ function Login() {
         email: jsonMap.EmailID || "-",
         userId: jsonMap.USER_ID || userId.trim(),
         userType: jsonMap.USER_TYPE || "-",
-        forestId: jsonMap.F_ID || "-"
+        forestId: jsonMap.F_ID || "-",
+        username: userId.trim(),
+        isAdmin: false,
+        source: 'forest_service_frontend'
       };
 
       // Check if user data is valid
@@ -299,27 +375,29 @@ function Login() {
         throw new Error("INVALID_CREDENTIALS");
       }
 
-      // Store user data
-      const userSession = {
-        ...userData,
-        username: userId.trim(),
-        isAuthenticated: true,
-        isAdmin: false,
-        loginTime: new Date().toISOString(),
-        source: 'forest_service_frontend'
-      };
-
-      localStorage.setItem("userData", JSON.stringify(userSession));
+      // Create user session
+      createSession(userData, false);
+      
+      // Store authentication token
       localStorage.setItem("authToken", "forest_authenticated");
 
       // Save user to backend
       await saveUser(userId.trim());
 
-      // Navigate to dashboard
-      navigate("/geo");
+      console.log("✅ User session created successfully");
+      
+      // Validate session before navigation
+      if (validateSession()) {
+        navigate("/geo");
+      } else {
+        throw new Error("SESSION_CREATION_FAILED");
+      }
 
     } catch (error) {
       console.error("🔴 Login Error:", error);
+      
+      // Clear any partial session data on error
+      clearSession();
       
       // Handle specific error cases
       if (error.code === 'ECONNABORTED') {
@@ -332,6 +410,8 @@ function Login() {
         setError(text[language].forestConnectionFailed);
       } else if (error.message === 'FOREST_SERVICE_UNAVAILABLE') {
         setError(text[language].forestServiceUnavailable);
+      } else if (error.message === 'SESSION_CREATION_FAILED') {
+        setError("Failed to create session. Please try again.");
       } else if (error.response) {
         if (error.response.status === 401 || error.response.status === 403) {
           setError(text[language].errorInvalid);
@@ -355,23 +435,6 @@ function Login() {
   return (
     <div
       className="login-screen"
-      style={{
-        backgroundImage: `
-          linear-gradient(180deg, rgba(48,144,89,0.85) -6.02%, rgba(234,194,147,0.85) 51.41%, rgba(54,117,165,0.85) 86.7%),
-          url(${backImage})
-        `,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        height: "100vh",
-        width: "100%",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "0 80px",
-        position: "relative",
-        overflow: "hidden",
-      }}
     >
       {/* Left logos container */}
       <div 
@@ -383,15 +446,25 @@ function Login() {
           height: "100%",
           width: "50%",
           overflow: "hidden",
+          position: "relative",
         }}
       >
         <img 
           src={leftLogos} 
           alt="Partner Logos" 
           style={{
-            maxHeight: "80vh",
+            maxHeight: "85vh",
             objectFit: "contain",
-            width: "auto"
+            width: "auto",
+            padding: "25px",
+            borderRadius: "20px",
+            boxShadow: `
+              0 15px 35px rgba(0, 0, 0, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.3)
+            `,
+            border: "2px solid rgba(255, 255, 255, 0.15)",
+            backdropFilter: "blur(20px)",
+            transition: "all 0.3s ease",
           }}
         />
       </div>
@@ -402,205 +475,119 @@ function Login() {
         style={{
           flex: 1,
           display: "flex",
-          flexDirection: "column",
           justifyContent: "center",
-          alignItems: "center",
-          height: "100%",
+          height: "90%",
           maxHeight: "100vh",
           overflow: "hidden",
           position: "relative",
         }}
       >
         <div className="form-card">
-          <img src={brand} alt="RECAP4NDC" className="brand" />
-          <h2 className="login-heading">{text[language].title}</h2>
+          <div>
+            <img src={brand} alt="RECAP4NDC" className="brand" />
+            <h2 className="login-heading">{text[language].title}</h2>
 
-          {/* Error Message Display */}
-          {error && (
-            <div className="error-message" style={{
-              color: "#d32f2f",
-              backgroundColor: "#ffebee",
-              padding: "10px",
-              borderRadius: "4px",
-              marginBottom: "15px",
-              border: "1px solid #ef9a9a",
-              fontSize: "14px",
-              textAlign: "center",
-              maxWidth: "100%",
-              overflow: "hidden",
-              wordWrap: "break-word"
-            }}>
-              {error}
+            {/* Error Message Display */}
+            {error && (
+              <div className="error-message" >
+                {error}
+              </div>
+            )}
+
+            <label className="input-label">{text[language].userId}</label>
+            <div className="field">
+              <input
+                ref={userIdRef}
+                type="text"
+                placeholder={text[language].userPlaceholder}
+                value={userId}
+                onChange={handleUserIdChange}
+                onKeyPress={handleKeyPress}
+                disabled={loading}
+                autoComplete="username"
+                style={{ fontSize: "16px" }}
+              />
+              <span className="icon">
+                <img src={user} alt="User" width="20" height="20" />
+              </span>
             </div>
-          )}
 
-          <label className="input-label">{text[language].userId}</label>
-          <div className="field">
-            <input
-              ref={userIdRef}
-              type="text"
-              placeholder={text[language].userPlaceholder}
-              value={userId}
-              onChange={handleUserIdChange}
-              onKeyPress={handleKeyPress}
-              disabled={loading}
-              autoComplete="username"
-              style={{ fontSize: "16px", padding: "12px" }}
-            />
-            <span className="icon">
-              <img src={user} alt="User" width="20" height="20" />
-            </span>
-          </div>
+            <label className="input-label">{text[language].password}</label>
+            <div className="field">
+              <input
+                type={showPwd ? "text" : "password"}
+                placeholder={text[language].passPlaceholder}
+                value={password}
+                onChange={handlePasswordChange}
+                onKeyPress={handleKeyPress}
+                disabled={loading}
+                autoComplete="current-password"
+                style={{ fontSize: "16px", padding: "12px" }}
+              />
+              <button
+                type="button"
+                className="eye"
+                onClick={() => setShowPwd((s) => !s)}
+                disabled={loading}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  padding: "5px"
+                }}
+              >
+                {showPwd ? (
+                  "👁"
+                ) : (
+                  <img
+                    src={Eyeclose}
+                    alt="Closed Eye"
+                    width="20"
+                    height="20"
+                  />
+                )}
+              </button>
+            </div>
 
-          <label className="input-label">{text[language].password}</label>
-          <div className="field">
-            <input
-              type={showPwd ? "text" : "password"}
-              placeholder={text[language].passPlaceholder}
-              value={password}
-              onChange={handlePasswordChange}
-              onKeyPress={handleKeyPress}
+            <button 
+              className="btn-login" 
+              onClick={handleLogin}
               disabled={loading}
-              autoComplete="current-password"
-              style={{ fontSize: "16px", padding: "12px" }}
-            />
-            <button
-              type="button"
-              className="eye"
-              onClick={() => setShowPwd((s) => !s)}
-              disabled={loading}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: loading ? "not-allowed" : "pointer",
-                padding: "5px"
-              }}
             >
-              {showPwd ? (
-                "👁"
-              ) : (
-                <img
-                  src={Eyeclose}
-                  alt="Closed Eye"
-                  width="20"
-                  height="20"
-                />
+              {loading && (
+                <span></span> // The span for spinner will be styled by CSS
               )}
+              {loading ? text[language].loggingIn : text[language].loginButton}
             </button>
           </div>
 
-          <button 
-            className="btn-login" 
-            onClick={handleLogin}
-            disabled={loading}
+          <div 
+            className="footer-bar"
             style={{
-              backgroundColor: loading ? "#cccccc" : "#4CAF50",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1,
-              transition: "all 0.3s ease",
-              position: "relative",
-              width: "100%",
-              padding: "14px",
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              marginTop: "20px"
+              position: "absolute",
+              width: "90%",
+              display: "flex",
+              justifyContent: "space-around",
+              alignItems: "center",
+              padding: "0 0px",
             }}
           >
-            {loading && (
-              <span style={{
-                display: "inline-block",
-                width: "16px",
-                height: "16px",
-                border: "2px solid #fff",
-                borderTop: "2px solid transparent",
-                borderRadius: "50%",
-                animation: "spin 1s linear infinite",
-                marginRight: "8px"
-              }}></span>
-            )}
-            {loading ? text[language].loggingIn : text[language].loginButton}
-          </button>
-
-          {/* Service Status Indicator */}
-          <div style={{
-            marginTop: "15px",
-            textAlign: "center",
-            fontSize: "12px",
-            color: "#666",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "5px"
-          }}>
-            <span style={{
-              display: "inline-block",
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              backgroundColor: "#4CAF50",
-              animation: "pulse 2s infinite"
-            }}></span>
-            <span>Gujarat Forest Service Authentication</span>
+            <button
+              className={`lang-chip ${language === "en" ? "active" : ""}`}
+              onClick={() => handleLanguageToggle("en")}
+              disabled={loading}
+            >
+              EN
+            </button>
+            
+            <button
+              className={`lang-chip ${language === "gu" ? "active" : ""}`}
+              onClick={() => handleLanguageToggle("gu")}
+              disabled={loading}
+            >
+              જીયુ
+            </button>
           </div>
-        </div>
-
-        {/* Footer Bar */}
-        <div 
-          className="footer-bar"
-          style={{
-            position: "absolute",
-            bottom: "20px",
-            width: "100%",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "0 20px",
-            boxSizing: "border-box"
-          }}
-        >
-          <button
-            className={`lang-chip ${language === "en" ? "active" : ""}`}
-            onClick={() => handleLanguageToggle("en")}
-            disabled={loading}
-            style={{
-              padding: "5px 15px",
-              borderRadius: "20px",
-              border: "1px solid #ccc",
-              background: language === "en" ? "#4CAF50" : "#fff",
-              color: language === "en" ? "#fff" : "#333",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.5 : 1
-            }}
-          >
-            EN
-          </button>
-          <div className="footer-note" style={{
-            color: "#fff",
-            fontSize: "14px",
-            textAlign: "center",
-            fontWeight: "500"
-          }}>
-            {text[language].footer}
-          </div>
-          <button
-            className={`lang-chip ${language === "gu" ? "active" : ""}`}
-            onClick={() => handleLanguageToggle("gu")}
-            disabled={loading}
-            style={{
-              padding: "5px 15px",
-              borderRadius: "20px",
-              border: "1px solid #ccc",
-              background: language === "gu" ? "#4CAF50" : "#fff",
-              color: language === "gu" ? "#fff" : "#333",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.5 : 1
-            }}
-          >
-            જીયુ
-          </button>
         </div>
       </div>
 

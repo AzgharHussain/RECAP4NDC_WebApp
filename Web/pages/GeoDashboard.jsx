@@ -47,12 +47,12 @@ const basemaps = {
 
 // Utility function to fetch legend for a WMS layer
 const getLegendUrl = (layerName) =>
-  `https://www.gisfy.co.in:8443/geoserver/cite/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=${encodeURIComponent(
+  `https://www.gisfy.co.in:8445/geoserver/cite/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=${encodeURIComponent(
     layerName
   )}`;
 export default function MapView() {
   const mapRef = useRef(null);
-  const [activeBasemap, setActiveBasemap] = useState("Imagery");
+  const [activeBasemap, setActiveBasemap] = useState("LightGray");
   const [activeTool, setActiveTool] = useState("layers");
   const [activetoolone, setActivetoolone] = useState("");
   const [userdata, setuserdata] = useState("");
@@ -75,6 +75,9 @@ export default function MapView() {
   const [filteredChangeLayers, setFilteredChangeLayers] = useState([]);
   const [coupeLayers, setCoupeLayers] = useState([]);
   const navigate = useNavigate();
+
+  const [queryableLayers, setQueryableLayers] = useState([]);
+
 const ndviLayers = [
   "cite:2025_09_01_BIO_W_C_COUPE_ndvi",
   "cite:2025_09_01_AFF_W_C_COUPE_ndvi_",
@@ -270,7 +273,7 @@ const handleFilter = ({ fromDate, toDate }) => {
   const zoomIn = () => mapRef.current?.zoomIn();
   const zoomOut = () => mapRef.current?.zoomOut();
   const resetView = () => mapRef.current?.setView(position, 7);
-  const toggleInfoTool = () => setIsInfoToolActive((s) => !s);
+  
 
   useEffect(() => {
     const token = Cookies.get("token");
@@ -474,6 +477,12 @@ const handleToolSidebarClick = (toolName) => {
   setActiveToolSidebar(prevTool => prevTool === toolName ? null : toolName);
 };
 
+const handleInfoToolClick = () => {
+  const newTool = activeToolSidebar === "info" ? null : "info";
+  setActiveToolSidebar(newTool);
+  setIsInfoToolActive(!isInfoToolActive);
+};
+
   const zoomToLayer = (layerName) => {
   const map = mapRef.current;
   if (!map) return;
@@ -495,37 +504,52 @@ const handleToolSidebarClick = (toolName) => {
   map.fitBounds(bounds, { padding: [50, 50] }); // You can adjust padding
 };
 
-  const handleLayerToggle = (layerType, isChecked) => {
-    // keep your UI state toggles here & legend effect will pick up those changes
-    switch (layerType) {
-      case "stateLayer":
-        setShowStateLayer(isChecked);
-        break;
-      case "districtLayer":
-        setShowDistrictLayer(isChecked);
-        break;
-      case "coupeLayer":
-        setShowCoupeLayer(isChecked);
-        break;
-      case "ndviLayer":
-        setShowNdviLayer(isChecked);
-        break;
-      case "ndwiLayer":
-        setShowNdwiLayer(isChecked);
-        break;
-      case "changeLayer":
-        setShowChangeLayer(isChecked);
-        break;
-      case "patrollingLayer":
-        setShowPatrollingLayer(isChecked);
-        break;
-      case "incidentLayer":
-        setShowIncidentLayer(isChecked);
-        break;
-      default:
-        break;
-    }
-  };
+const handleLayerToggle = (layerType, isChecked) => {
+  switch (layerType) {
+    case "stateLayer":
+      setShowStateLayer(isChecked);
+      break;
+    case "districtLayer":
+      setShowDistrictLayer(isChecked);
+      if (isChecked) {
+        setQueryableLayers(prev => [...prev, 'cite:Gujarat_district']);
+      } else {
+        setQueryableLayers(prev => prev.filter(l => l !== 'cite:Gujarat_district'));
+      }
+      break;
+    case "coupeLayer":
+      setShowCoupeLayer(isChecked);
+      // Add coupe layers if needed
+      break;
+    case "ndviLayer":
+      setShowNdviLayer(isChecked);
+      break;
+    case "ndwiLayer":
+      setShowNdwiLayer(isChecked);
+      break;
+    case "changeLayer":
+      setShowChangeLayer(isChecked);
+      break;
+    case "patrollingLayer":
+      setShowPatrollingLayer(isChecked);
+      if (isChecked) {
+        setQueryableLayers(prev => [...prev, 'cite:patrols']);
+      } else {
+        setQueryableLayers(prev => prev.filter(l => l !== 'cite:patrols'));
+      }
+      break;
+    case "incidentLayer":
+      setShowIncidentLayer(isChecked);
+      if (isChecked) {
+        setQueryableLayers(prev => [...prev, 'cite:incidents']);
+      } else {
+        setQueryableLayers(prev => prev.filter(l => l !== 'cite:incidents'));
+      }
+      break;
+    default:
+      break;
+  }
+};
 
   // Print handler (kept same)
   const mapWrapperRef = useRef();
@@ -607,14 +631,14 @@ const handleToolSidebarClick = (toolName) => {
   </button> */}
 
   {/* Search */}
- {/* <button
+ <button
   title="Search"
   type="button"
   onClick={() => handleToolSidebarClick("search")}
   className={activeToolSidebar === "search" ? "tool-button-active" : "tool-button"}
 >
   <i className="bi bi-search" />
-</button> */}
+</button>
 
 
   {/* Zoom In */}
@@ -670,21 +694,14 @@ const handleToolSidebarClick = (toolName) => {
     <span className="material-icons-outlined">straighten</span>
   </button>
 
-  {/* <button
-    title="Attribute Infomation"
-    type="button"
-    onClick={() => {
-      const newTool = activeToolSidebar === "info" ? null : "info";
-      setActiveToolSidebar(newTool);
-
-      if (newTool !== "info" && mapRef.current) {
-        mapRef.current.pm.removeControls();
-      }
-    }}
-    className={activeToolSidebar === "info" ? "tool-button-active" : "tool-button"}
-  >
-   <FaInfoCircle />
-  </button> */}
+<button
+  title="Attribute Information"
+  type="button"
+  onClick={handleInfoToolClick}
+  className={activeToolSidebar === "info" ? "tool-button-active" : "tool-button"}
+>
+  <FaInfoCircle />
+</button>
 
 
   {/* Home */}
@@ -741,9 +758,9 @@ const handleToolSidebarClick = (toolName) => {
             <div>
               <Suspense fallback={<div>Loading...</div>}>
                 <LayerTogglePanel
-                 activeToolSidebar={activeToolSidebar}
-                
+                 isInfoToolActive={isInfoToolActive}
                   mapRef={mapRef}
+                  
                 />
               </Suspense>
             </div>
@@ -753,8 +770,8 @@ const handleToolSidebarClick = (toolName) => {
               center={position}
               zoom={6.8}
           style={{
-  height: "92vh",
-  width:  "76vw" ,
+  height: "82vh",
+  width:  "80vw" ,
 }}
 
               whenCreated={(mapInstance) => {
@@ -805,7 +822,7 @@ const handleToolSidebarClick = (toolName) => {
 
               {showDistrictLayer && (
                 <WMSTileLayer
-                  url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                  url="https://gisfy.co.in:8445/geoserver/cite/wms"
                   layers="cite:Gujarat_district"
                   format="image/png"
                   transparent
@@ -816,7 +833,7 @@ const handleToolSidebarClick = (toolName) => {
                 coupeLayers.map((layer) => (
                   <WMSTileLayer
                     key={layer.input_table_name || layer}
-                    url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                    url="https://gisfy.co.in:8445/geoserver/cite/wms"
                     layers={layer.input_table_name || layer}
                     format="image/png"
                     transparent={true}
@@ -830,7 +847,7 @@ const handleToolSidebarClick = (toolName) => {
                   ? filteredNdviLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -841,7 +858,7 @@ const handleToolSidebarClick = (toolName) => {
                   : ndviLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -855,7 +872,7 @@ const handleToolSidebarClick = (toolName) => {
                   ? filteredNdwiLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -866,7 +883,7 @@ const handleToolSidebarClick = (toolName) => {
                   : ndwiLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -880,7 +897,7 @@ const handleToolSidebarClick = (toolName) => {
                   ? filteredChangeLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -891,7 +908,7 @@ const handleToolSidebarClick = (toolName) => {
                   : changeLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -903,7 +920,7 @@ const handleToolSidebarClick = (toolName) => {
               {showPatrollingLayer && (
                 <WMSTileLayer
                   key="patrols"
-                  url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                  url="https://gisfy.co.in:8445/geoserver/cite/wms"
                   layers="cite:patrols"
                   format="image/png"
                   transparent={true}
@@ -915,7 +932,7 @@ const handleToolSidebarClick = (toolName) => {
               {showIncidentLayer && (
                 <WMSTileLayer
                   key="incidents"
-                  url="https://gisfy.co.in:8443/geoserver/cite/wms"
+                  url="https://gisfy.co.in:8445/geoserver/cite/wms"
                   layers="cite:incidents"
                   format="image/png"
                   transparent={true}
@@ -932,6 +949,7 @@ const handleToolSidebarClick = (toolName) => {
               {activeToolSidebar === "search" && <DraggableZoomControl mapRef={mapRef} />}
 
               <LatLngDisplay />
+            
       </MapContainer>
       </div>       
         </div>

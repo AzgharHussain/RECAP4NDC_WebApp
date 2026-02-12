@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "./context/LanguageContext";
+import ProtectedRoute from "./pages/components/ProtectedRoute";
 
 // === Components ===
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -30,14 +31,18 @@ export default function App() {
     <LanguageProvider>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          {/* Public Routes (no layout) */}
-          <Route path="/" element={<Login />} />
-          
-          {/* Admin Route - SEPARATE layout (no sidebar) */}
-          
 
-          {/* Protected Routes with DashboardLayout (sidebar) */}
-          <Route element={<DashboardLayout />}>
+          {/* Public */}
+          <Route path="/" element={<Login />} />
+
+          {/* Protected User Routes */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/geo" element={<GeoDashboard />} />
             <Route path="/petrolling-incident/patrolling" element={<Patrolling />} />
@@ -48,13 +53,20 @@ export default function App() {
             <Route path="/ndvi-dashboard" element={<NDVIChangeDashboard />} />
           </Route>
 
-          <Route element={<DashboardLayoutAdmin />}>
+          {/* Protected Admin Routes */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <DashboardLayoutAdmin />
+              </ProtectedRoute>
+            }
+          >
             <Route path="/admin" element={<AdminDashboard />} />
-            
           </Route>
 
-          {/* Catch-all fallback */}
+          {/* Fallback */}
           <Route path="*" element={<Login />} />
+
         </Routes>
       </Suspense>
     </LanguageProvider>

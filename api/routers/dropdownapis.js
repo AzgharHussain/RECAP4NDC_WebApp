@@ -555,6 +555,72 @@ router.post("/get-centroid", verifyJwt, async (req, res) => {
   }
 });
 
+// ndviRoutes.js - CORRECTED version with proper Sequelize syntax
+router.get('/layer-bounds/:layerName', async (req, res) => {
+  const { layerName } = req.params;
+  
+  try {
+    // Sanitize layer name to prevent SQL injection
+    const validTableName = layerName.replace(/[^a-zA-Z0-9_]/g, '');
+    
+    console.log(`Fetching bounds for table: ${validTableName}`);
+    
+    // IMPORTANT: Sequelize.query returns [results, metadata]
+    // The first element is the actual data rows
+    const query = `
+      SELECT 
+        ST_XMin(ST_Extent(geom)) AS min_x,
+        ST_YMin(ST_Extent(geom)) AS min_y,
+        ST_XMax(ST_Extent(geom)) AS max_x,
+        ST_YMax(ST_Extent(geom)) AS max_y,
+        ST_X(ST_Centroid(ST_Union(geom))) AS centroid_x,
+        ST_Y(ST_Centroid(ST_Union(geom))) AS centroid_y,
+        COUNT(*) AS feature_count
+      FROM "${validTableName}";
+    `;
+    
+    // Execute query - Sequelize returns [results, metadata]
+    const [results, metadata] = await sequelize.query(query);
+    
+    console.log('Query results:', results);
+    
+    // Check if we got any results
+    if (!results || results.length === 0 || !results[0] || !results[0].min_x) {
+      return res.status(404).json({ 
+        error: 'Layer not found or has no geometry',
+        table: validTableName 
+      });
+    }
+    
+    const bounds = {
+      minX: parseFloat(results[0].min_x),
+      minY: parseFloat(results[0].min_y),
+      maxX: parseFloat(results[0].max_x),
+      maxY: parseFloat(results[0].max_y),
+      centroid: {
+        x: parseFloat(results[0].centroid_x),
+        y: parseFloat(results[0].centroid_y)
+      },
+      featureCount: parseInt(results[0].feature_count),
+      metadata: {
+        range: results[0].range || 'N/A',
+        division: results[0].division || 'N/A',
+        circle: results[0].circle || 'N/A'
+      }
+    };
+    
+    console.log('Sending bounds:', bounds);
+    res.json(bounds);
+    
+  } catch (error) {
+    console.error('Error fetching layer bounds:', error);
+    res.status(500).json({ 
+      error: error.message,
+      hint: 'Check if table exists and has PostGIS geometry column'
+    });
+  }
+});
+
 router.post('/get-coupe-area', verifyJwt, async (req, res) => {
     const { tableName } = req.body;
 

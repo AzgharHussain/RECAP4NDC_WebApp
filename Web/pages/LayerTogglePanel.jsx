@@ -41,7 +41,7 @@ const NestedLayerGroup = React.memo(({
   const isExpanded = openGroups[groupId] || false;
 
   return (
-    <div className="nested-layer-group" style={{ marginLeft: `${nestingLevel * 15}px` }}>
+    <div className="nested-layer-group" >
       {/* Group Header */}
       <button
         type="button"
@@ -165,11 +165,213 @@ const LayerItem = React.memo(({
 });
 
 const AttributePopup = React.memo(({ position, data, onClose }) => {
-  // ... (keep the existing AttributePopup implementation)
-  return null;
+  if (!position || !data) return null;
+
+  const popupRef = useRef(null);
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popupRef.current && !popupRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
+
+  const formatValue = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    if (typeof value === 'number') {
+      return value % 1 === 0 ? value.toString() : value.toFixed(2);
+    }
+    return value.toString();
+  };
+
+  // Clean the key name for display
+  const formatKeyName = (key) => {
+    // Remove layer prefix and clean up
+    let cleanKey = key
+      .replace(/^layer_\d+_/, '') // Remove layer_1_, layer_2_, etc.
+      .replace(/^Wildlife_Circle_Boundary_/, '') // Remove layer name prefix
+      .replace(/_/g, ' ') // Replace underscores with spaces
+      .replace(/\b\w/g, char => char.toUpperCase()); // Capitalize first letter of each word
+    
+    return cleanKey;
+  };
+
+  // Filter out geometry and long coordinate strings
+  const filteredEntries = Object.entries(data).filter(([key, value]) => {
+    // Skip geometry, coordinates, and any key containing 'geometry' or 'coord'
+    if (key.toLowerCase().includes('geometry') || 
+        key.toLowerCase().includes('coord') ||
+        key === 'layer_1_geometry' ||
+        key.includes('geometry')) {
+      return false;
+    }
+    
+    // Skip very long string values (likely coordinates)
+    if (typeof value === 'string' && value.length > 100) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // Separate coordinates for display at the top
+  const coordinates = data.coordinates || 
+                     (data.layer_1_coordinates ? data.layer_1_coordinates : null);
+
+  return (
+    <div
+      ref={popupRef}
+      className="attribute-popup"
+      style={{
+        position: 'absolute',
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        zIndex: 10000,
+        backgroundColor: 'white',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+        padding: '15px',
+        minWidth: '300px',
+        maxWidth: '400px',
+        maxHeight: '300px',
+        overflow: 'auto',
+        fontFamily:'arial'
+      }}
+    >
+      <div className="attribute-popup-header" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '10px',
+        borderBottom: '1px solid #eee',
+        paddingBottom: '8px'
+      }}>
+        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
+          Feature Information
+        </h4>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '20px',
+            cursor: 'pointer',
+            color: '#666',
+            padding: '0 5px'
+          }}
+        >
+          ×
+        </button>
+      </div>
+      
+      <div className="attribute-popup-content">
+        {/* Display coordinates at the top if available */}
+        {coordinates && (
+          <div style={{
+            marginBottom: '15px',
+            padding: '8px',
+            backgroundColor: '#f5f5f5',
+            borderRadius: '4px',
+            fontSize: '12px'
+          }}>
+            <strong style={{ color: '#333' }}>Location:</strong>
+            <span style={{ marginLeft: '8px', color: '#666' }}>
+              {coordinates}
+            </span>
+          </div>
+        )}
+
+        {/* Display layer name if available */}
+        {data.layer_1_name && (
+          <div style={{
+            marginBottom: '10px',
+            padding: '8px',
+            backgroundColor: '#e3f2fd',
+            borderRadius: '4px',
+            borderLeft: '4px solid #2196f3'
+          }}>
+            <strong style={{ color: '#1976d2' }}>Layer:</strong>
+            <span style={{ marginLeft: '8px', color: '#0d47a1' }}>
+              {data.layer_1_name}
+            </span>
+          </div>
+        )}
+
+        {/* Display all other attributes in a clean table */}
+        {filteredEntries.length > 0 ? (
+          <table style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: '13px'
+          }}>
+            <tbody>
+              {filteredEntries.map(([key, value], index) => {
+                // Skip if this is coordinates or layer name (already displayed)
+                if (key === 'coordinates' || key === 'layer_1_name') {
+                  return null;
+                }
+                
+                const formattedKey = formatKeyName(key);
+                const formattedValue = formatValue(value);
+                
+                // Skip empty values
+                if (!formattedValue || formattedValue === 'N/A') {
+                  return null;
+                }
+
+                return (
+                  <tr key={index} style={{
+                    borderBottom: '1px solid #f0f0f0'
+                  }}>
+                    <td style={{
+                      padding: '8px 8px 8px 0',
+                      fontWeight: '600',
+                      color: '#555',
+                      verticalAlign: 'top',
+                      width: '40%',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {formattedKey}
+                    </td>
+                    <td style={{
+                      padding: '8px 0 8px 8px',
+                      color: '#333',
+                      verticalAlign: 'top',
+                      wordBreak: 'break-word'
+                    }}>
+                      {formattedValue}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <div style={{
+            padding: '20px',
+            textAlign: 'center',
+            color: '#999',
+            fontStyle: 'italic'
+          }}>
+            No attribute data available
+          </div>
+        )}
+      </div>
+    </div>
+  );
 });
 
-const GEOSERVER_WMS = "https://gisfy.co.in:8445/geoserver";
+const GEOSERVER_WMS = "/geoserver/wms";
+
+
 
 // Complete nested data structure
 const layersData = {
@@ -482,8 +684,8 @@ const layersData = {
                   type: "group",
                   children: [
                     { Name: "kamrej", Layer: "Kamrej" },
-                    { Name: "mahuva", Layer: "Mahuva" },
-                    { Name: "mandvi", Layer: "Mandvi" },
+                    { Name: "surat_mahuva_new", Layer: "Mahuva" },
+                    { Name: "mandavi", Layer: "Mandavi" },
                     { Name: "mangrol", Layer: "Mangrol" },
                     { Name: "olpad", Layer: "Olpad" },
                     { Name: "palsana", Layer: "Palsana" },
@@ -644,7 +846,7 @@ const layersData = {
                     { Name: "godhara", Layer: "Godhara" },
                     { Name: "halol", Layer: "Halol" },
                     { Name: "kadana", Layer: "Kadana" },
-                    { Name: "kalol", Layer: "Kalol" },
+                    // { Name: "kalol", Layer: "Kalol" },
                     { Name: "khanpur", Layer: "Khanpur" },
                     { Name: "lunawada", Layer: "Lunawada" },
                     { Name: "morwa_hadaf", Layer: "Morwa Hadaf" },
@@ -672,7 +874,7 @@ const layersData = {
                     { Name: "pavi_jetpur", Layer: "Pavi Jetpur" },
                     { Name: "sankheda", Layer: "Sankheda" },
                     { Name: "savli", Layer: "Savli" },
-                    { Name: "sihor", Layer: "Sihor" },
+                    { Name: "shinor", Layer: "Shinor" },
                     { Name: "vadodara", Layer: "Vadodara" },
                     { Name: "vaghodia", Layer: "Vaghodia" }
                   ]
@@ -802,7 +1004,7 @@ const layersData = {
                     { Name: "ghogha", Layer: "Ghogha" },
                     { Name: "palitana", Layer: "Palitana" },
                     { Name: "ranpur", Layer: "Ranpur" },
-                    { Name: "shihori", Layer: "Shihori" },
+                    { Name: "sihora", Layer: "Sihor" },
                     { Name: "talaja", Layer: "Talaja" },
                     { Name: "umrala", Layer: "Umrala" }
                   ]
@@ -843,13 +1045,13 @@ const layersData = {
                   type: "group",
                   children: [
                     { Name: "bhesan", Layer: "Bhesan" },
-                    { Name: "gadhada", Layer: "Gadhada" },
+                    // { Name: "gadhada", Layer: "Gadhada" },
                     { Name: "junagadh", Layer: "Junagadh" },
                     { Name: "keshod", Layer: "Keshod" },
                     { Name: "kodinar", Layer: "Kodinar" },
-                    { Name: "malia", Layer: "Malia" },
+                    { Name: "maliya", Layer: "Maliya" },
                     { Name: "manavadar", Layer: "Manavadar" },
-                    { Name: "mangrol", Layer: "Mangrol" },
+                    { Name: "mangrola", Layer: "Mangrol" },
                     { Name: "mendarda", Layer: "Mendarda" },
                     { Name: "prabhash_patan", Layer: "Prabhash Patan" },
                     { Name: "una", Layer: "Una" },
@@ -872,7 +1074,7 @@ const layersData = {
                     { Name: "jamkandorna", Layer: "Jamkandorna" },
                     { Name: "jetpur", Layer: "Jetpur" },
                     { Name: "kotda_sangani", Layer: "Kotda Sangani" },
-                    { Name: "malia", Layer: "Malia" },
+                    // { Name: "malia", Layer: "Malia" },
                     { Name: "morbi", Layer: "Morbi" },
                     { Name: "paddhari", Layer: "Paddhari" },
                     { Name: "rajkot_n", Layer: "Rajkot N" },
@@ -910,12 +1112,12 @@ const layersData = {
           title: "Gandhinagar Circle",
           type: "group",
           children: [
-            { Name: "gandhinagar_circle", Layer: "Gandhinagar Circle" },
+            { Name: "gandhinagar", Layer: "Gandhinagar Circle" },
             {
               title: "Arvalli (Sabarkantha South Forest)",
               type: "group",
               children: [
-                { Name: "arvalli_forest_division", Layer: "Arvalli Forest Division" },
+                // { Name: "arvalli_forest_division", Layer: "Arvalli Forest Division" },
                 {
                   title: "Ranges",
                   type: "group",
@@ -924,7 +1126,7 @@ const layersData = {
                     { Name: "malpur", Layer: "Malpur" },
                     { Name: "meghraj", Layer: "Meghraj" },
                     { Name: "modasa", Layer: "Modasa" },
-                    { Name: "shamlaji", Layer: "Shamlaji" }
+                    { Name: "shamalaji", Layer: "Shamlaji" }
                   ]
                 }
               ]
@@ -986,7 +1188,7 @@ const layersData = {
                   type: "group",
                   children: [
                     { Name: "bhavnagar", Layer: "Bhavnagar" },
-                    { Name: "mahuva", Layer: "Mahuva" },
+                    { Name: "bhanvnagar_mahuva_new", Layer: "Mahuva" },
                     { Name: "palitana", Layer: "Palitana" },
                     { Name: "sihor", Layer: "Sihor" },
                     { Name: "vallabhipur", Layer: "Vallabhipur" }
@@ -1161,7 +1363,7 @@ const layersData = {
                   title: "Ranges",
                   type: "group",
                   children: [
-                    { Name: "dumas", Layer: "Dumas" },
+                    { Name: "dummas", Layer: "Dumas" },
                     { Name: "mahuva", Layer: "Mahuva" },
                     { Name: "mandvi_north", Layer: "Mandvi North" },
                     { Name: "mandvi_south", Layer: "Mandvi South" },
@@ -1638,7 +1840,7 @@ const text = {
   },
 };
 
-const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolSidebar }) => {
+const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolSidebar, isInfoToolActive }) => {
   const { language } = useLanguage();
   const [addedLayers, setAddedLayers] = useState({});
   const [opacity, setOpacity] = useState({});
@@ -1650,7 +1852,9 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
   const [isCoupesDataOpen, setIsCoupesDataOpen] = useState(false);
   
   const layerCounterRef = useRef(0);
-
+  const clickHandlerRef = useRef(null);
+  const layersInfoCache = useRef(new Map()); // Cache for GetFeatureInfo responses
+  
   // Initialize open groups for nested structure
   useEffect(() => {
     const initialOpenState = {};
@@ -1680,6 +1884,212 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
   const getLegendUrl = (layerName) => {
     return `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${layerName}`;
   };
+
+
+
+
+
+
+// Replace your entire getFeatureInfo function with this:
+
+const getFeatureInfo = useCallback(async (latlng, layerName) => {
+  const map = mapRef.current;
+  if (!map) return null;
+  
+  const cacheKey = `${layerName}-${latlng.lat.toFixed(6)}-${latlng.lng.toFixed(6)}`;
+  
+  // Check cache first
+  if (layersInfoCache.current.has(cacheKey)) {
+    console.log(`Cache hit for ${layerName}`);
+    return layersInfoCache.current.get(cacheKey);
+  }
+
+  try {
+    const bounds = map.getBounds();
+    const size = map.getSize();
+    const point = map.latLngToContainerPoint(latlng);
+    
+    const params = new URLSearchParams({
+      REQUEST: 'GetFeatureInfo',
+      SERVICE: 'WMS',
+      VERSION: '1.1.1',
+      LAYERS: layerName,
+      STYLES: '',
+      SRS: 'EPSG:4326',
+      BBOX: `${bounds.getSouthWest().lng},${bounds.getSouthWest().lat},${bounds.getNorthEast().lng},${bounds.getNorthEast().lat}`,
+      WIDTH: size.x,
+      HEIGHT: size.y,
+      QUERY_LAYERS: layerName,
+      INFO_FORMAT: 'application/json',
+      X: Math.round(point.x),
+      Y: Math.round(point.y),
+      FEATURE_COUNT: 10,
+      BUFFER: 10
+    });
+
+    const url = `${GEOSERVER_WMS}?${params.toString()}`;
+    console.log('GetFeatureInfo URL:', url);
+    
+    // Simple fetch - proxy will handle CORS
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('GetFeatureInfo response:', data);
+    
+    if (data.features && data.features.length > 0) {
+      const combinedProperties = {};
+      
+      data.features.forEach((feature, index) => {
+        if (feature.properties) {
+          Object.entries(feature.properties).forEach(([key, value]) => {
+            if (key !== 'geometry' && value !== null && value !== undefined) {
+              const prefixedKey = `${key}`;
+              combinedProperties[prefixedKey] = value;
+            }
+          });
+        }
+      });
+
+      if (data.features[0]?.geometry) {
+        combinedProperties.geometry = data.features[0].geometry;
+      }
+
+      layersInfoCache.current.set(cacheKey, combinedProperties);
+      return combinedProperties;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching feature info for ${layerName}:`, error);
+    return null;
+  }
+}, [mapRef]);
+
+  // Map click handler for info tool
+  const handleMapClick = useCallback(async (e) => {
+    if (!isInfoToolActive || !mapRef.current) return;
+    
+    const { latlng } = e;
+    const containerPoint = mapRef.current.latLngToContainerPoint(latlng);
+    
+    // Get all visible layers
+    const visibleLayers = Object.values(addedLayers);
+    if (visibleLayers.length === 0) {
+      // No layers to query
+      setAttributeData({ 
+        message: "No visible layers to query.",
+        coordinates: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`
+      });
+      setClickPosition({ x: containerPoint.x, y: containerPoint.y });
+      return;
+    }
+
+    // Query each visible layer
+    const queries = visibleLayers.map(async (layer) => {
+      const layerName = layer._metadata?.name;
+      if (!layerName) return null;
+      
+      console.log('Querying layer:', layerName);
+      const featureInfo = await getFeatureInfo(latlng, layerName);
+      if (featureInfo) {
+        return {
+          layerName: layer._metadata?.label || layerName,
+          data: featureInfo
+        };
+      }
+      return null;
+    });
+
+    try {
+      const results = await Promise.all(queries);
+      const validResults = results.filter(result => result !== null);
+      
+      if (validResults.length === 0) {
+        setAttributeData({ 
+          message: "No data found at this location.",
+          coordinates: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`
+        });
+      } else {
+        // Combine all results
+        const combinedData = {};
+        
+        // Add coordinates first
+        combinedData.coordinates = `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`;
+        
+        // Add layer results
+        validResults.forEach((result, index) => {
+          const layerKey = `layer_${index + 1}`;
+          combinedData[`${layerKey}_name`] = result.layerName;
+          
+          // Add all properties from the feature info
+          Object.entries(result.data).forEach(([key, value]) => {
+            if (key !== 'geometry') {
+              combinedData[`${layerKey}_${key}`] = value;
+            }
+          });
+          
+          // Add geometry if available
+          if (result.data.geometry) {
+            combinedData[`${layerKey}_geometry`] = JSON.stringify(result.data.geometry.coordinates);
+          }
+        });
+        
+        setAttributeData(combinedData);
+      }
+      
+      setClickPosition({ x: containerPoint.x, y: containerPoint.y });
+    } catch (error) {
+      console.error('Error querying layers:', error);
+      setAttributeData({ 
+        error: "Failed to query layers. Please try again.",
+        coordinates: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`
+      });
+      setClickPosition({ x: containerPoint.x, y: containerPoint.y });
+    }
+  }, [isInfoToolActive, mapRef, addedLayers, getFeatureInfo]);
+
+  // Setup map click handler
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const setupClickHandler = () => {
+      if (isInfoToolActive && !clickHandlerRef.current) {
+        clickHandlerRef.current = (e) => {
+          handleMapClick(e);
+        };
+        mapRef.current.on('click', clickHandlerRef.current);
+        console.log('Map click handler added for info tool');
+      } else if (!isInfoToolActive && clickHandlerRef.current) {
+        mapRef.current.off('click', clickHandlerRef.current);
+        clickHandlerRef.current = null;
+        console.log('Map click handler removed');
+        
+        // Close any open popup when info tool is deactivated
+        if (attributeData || clickPosition) {
+          setAttributeData(null);
+          setClickPosition(null);
+        }
+      }
+    };
+
+    setupClickHandler();
+
+    // Cleanup on unmount
+    return () => {
+      if (clickHandlerRef.current && mapRef.current) {
+        mapRef.current.off('click', clickHandlerRef.current);
+      }
+    };
+  }, [isInfoToolActive, mapRef.current, handleMapClick, attributeData, clickPosition]);
 
   const getLayerTitle = (layerName) => {
     // Search for layer title in all groups
@@ -1798,39 +2208,452 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
     },
   };
 
-  const toggleLayer = useCallback(
-    async (layerConfig, groupId) => {
-      const uniqueKey = `${layerConfig.Name}-${groupId}`;
+  const clearAllLayers = useCallback(async () => {
+    try {
+      // Clear cache when clearing all layers
+      layersInfoCache.current.clear();
       
-      try {
-        if (addedLayers[uniqueKey]) {
-          // Remove the layer
-          await layerManager.removeLayer(layerConfig.Name);
-          setAddedLayers((prev) => {
-            const { [uniqueKey]: removedLayer, ...rest } = prev;
-            return rest;
-          });
-          setOpacity((prev) => {
-            const { [uniqueKey]: removedOpacity, ...rest } = prev;
-            return rest;
-          });
-        } else {
-          // Add the new layer
-          const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer);
-          if (!layer) throw new Error(`Failed to add layer: ${layerConfig.Name}`);
-          
-          const layerOpacity = 0.7;
-          setAddedLayers((prev) => ({ ...prev, [uniqueKey]: layer }));
-          setOpacity((prev) => ({ ...prev, [uniqueKey]: layerOpacity }));
-          layer.setOpacity(layerOpacity);
-        }
-      } catch (err) {
-        console.error(`Layer toggle failed for ${layerConfig.Name}:`, err);
-        setIsLayerLoading(false);
+      // Remove all layers from the map
+      const removePromises = Object.keys(addedLayers).map(async (uniqueKey) => {
+        const layerName = uniqueKey.split('-')[0];
+        await layerManager.removeLayer(layerName);
+      });
+      
+      await Promise.all(removePromises);
+      
+      // Clear all states
+      setAddedLayers({});
+      setOpacity({});
+      
+      console.log("All layers cleared successfully");
+    } catch (error) {
+      console.error("Error clearing all layers:", error);
+    }
+  }, [addedLayers, layerManager]);
+
+
+// In LayerTogglePanel.js - Update the API call to use proxy
+const getLayerBoundsFromAPI = async (layerName) => {
+  try {
+    const cleanLayerName = layerName.replace(/^cite:/, '');
+    
+    // Use proxy URL - this will go through Vite proxy
+    const response = await fetch(`/api/layer-bounds/${cleanLayerName}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    return null;
+  }
+};
+// Update your toggleLayer function
+const toggleLayer = useCallback(
+  async (layerConfig, groupId) => {
+    const uniqueKey = `${layerConfig.Name}-${groupId}`;
+
+    try {
+      if (addedLayers[uniqueKey]) {
+        // Remove the layer
+        await layerManager.removeLayer(layerConfig.Name);
+        setAddedLayers((prev) => {
+          const { [uniqueKey]: removedLayer, ...rest } = prev;
+          return rest;
+        });
+        setOpacity((prev) => {
+          const { [uniqueKey]: removedOpacity, ...rest } = prev;
+          return rest;
+        });
+      } else {
+        // Add the new layer
+        const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer);
+        if (!layer) throw new Error(`Failed to add layer: ${layerConfig.Name}`);
+
+        const layerOpacity = 0.7;
+        setAddedLayers((prev) => ({ ...prev, [uniqueKey]: layer }));
+        setOpacity((prev) => ({ ...prev, [uniqueKey]: layerOpacity }));
+        layer.setOpacity(layerOpacity);
+
+        // Get bounds from API and zoom
+        setTimeout(async () => {
+          try {
+            const bounds = await getLayerBoundsFromAPI(layerConfig.Name);
+            
+            if (bounds && mapRef.current) {
+              // Create bounds from the API response
+              const sw = L.latLng(bounds.minY, bounds.minX);
+              const ne = L.latLng(bounds.maxY, bounds.maxX);
+              const layerBounds = L.latLngBounds(sw, ne);
+              
+              console.log(`🎯 Zooming to ${layerConfig.Name}:`, {
+                sw: [bounds.minY, bounds.minX],
+                ne: [bounds.maxY, bounds.maxX]
+              });
+              
+              // Zoom to bounds with animation
+              mapRef.current.fitBounds(layerBounds, {
+                padding: [50, 50],
+                maxZoom: 14,
+                animate: true,
+                duration: 1
+              });
+              
+              // Optional: Add a marker at the centroid
+              if (bounds.centroid) {
+                L.marker([bounds.centroid.y, bounds.centroid.x], {
+                  title: layerConfig.Layer,
+                  icon: L.divIcon({
+                    className: 'centroid-marker',
+                    html: '📍',
+                    iconSize: [20, 20]
+                  })
+                }).addTo(mapRef.current)
+                  .bindPopup(`
+                    <div style="font-family: Arial, sans-serif; padding: 5px;">
+                      <h4 style="margin: 0 0 5px 0; color: #2c3e50;">${layerConfig.Layer}</h4>
+                      <hr style="margin: 5px 0;">
+                      <table style="border-collapse: collapse; width: 100%;">
+                        <tr><td><strong>Division:</strong></td><td>${bounds.metadata?.division || 'N/A'}</td></tr>
+                        <tr><td><strong>Range:</strong></td><td>${bounds.metadata?.range || 'N/A'}</td></tr>
+                        <tr><td><strong>Circle:</strong></td><td>${bounds.metadata?.circle || 'N/A'}</td></tr>
+                        <tr><td><strong>Features:</strong></td><td>${bounds.featureCount || 'N/A'}</td></tr>
+                        <tr><td><strong>Centroid:</strong></td><td>${bounds.centroid.y.toFixed(6)}, ${bounds.centroid.x.toFixed(6)}</td></tr>
+                      </table>
+                    </div>
+                  `);
+              }
+              
+              console.log(`✅ Successfully zoomed to ${layerConfig.Name}`);
+            } else {
+              console.warn(`⚠️ No bounds found for ${layerConfig.Name}, using fallback`);
+              // Fallback to WMS GetCapabilities
+              const wmsBounds = await getLayerBoundsSimple(layerConfig.Name);
+              if (wmsBounds && mapRef.current) {
+                const sw = L.latLng(wmsBounds.minY, wmsBounds.minX);
+                const ne = L.latLng(wmsBounds.maxY, wmsBounds.maxX);
+                mapRef.current.fitBounds(L.latLngBounds(sw, ne), {
+                  padding: [50, 50],
+                  maxZoom: 12
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Error zooming to layer ${layerConfig.Name}:`, error);
+          }
+        }, 1000); // Wait 1 second for layer to load
       }
-    },
-    [addedLayers, layerManager]
-  );
+    } catch (err) {
+      console.error(`❌ Layer toggle failed for ${layerConfig.Name}:`, err);
+      setIsLayerLoading(false);
+    }
+  },
+  [addedLayers, layerManager, mapRef]
+);
+
+// Add this function to get layer bounds via WFS
+// Add this function to get layer bounds via WFS
+const getLayerBounds = async (layerName) => {
+  try {
+    // Try WFS GetFeature with JSON output first
+    const params = new URLSearchParams({
+      SERVICE: 'WFS',
+      VERSION: '2.0.0', // Try newer version
+      REQUEST: 'GetFeature',
+      TYPENAME: layerName,
+      OUTPUTFORMAT: 'application/json', // Explicitly request JSON
+      SRSNAME: 'EPSG:4326',
+      COUNT: 1, // Only get 1 feature
+      PROPERTYNAME: 'none' // Don't fetch attributes, just geometry/bbox
+    });
+
+    const url = `${GEOSERVER_WMS}?${params.toString()}`;
+    console.log('Getting bounds for layer:', url);
+    
+    const response = await fetch(url);
+    const contentType = response.headers.get('content-type');
+    
+    // Handle JSON response
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      return extractBoundsFromGeoJSON(data, layerName);
+    } 
+    // Handle XML response (capabilities or error)
+    else {
+      const text = await response.text();
+      
+      // Check if it's an error XML
+      if (text.includes('ServiceException')) {
+        console.warn('WFS GetFeature failed, trying WMS GetCapabilities...');
+        // Fallback to WMS GetCapabilities
+        return await getLayerBoundsFromWMSCapabilities(layerName);
+      }
+      
+      // Try to parse as WFS GetFeature response in XML format
+      return extractBoundsFromWFSXML(text, layerName);
+    }
+  } catch (error) {
+    console.error('Error in primary bounds method:', error);
+    
+    // Fallback to WMS GetCapabilities
+    try {
+      return await getLayerBoundsFromWMSCapabilities(layerName);
+    } catch (fallbackError) {
+      console.error('All bounds retrieval methods failed:', fallbackError);
+      return null;
+    }
+  }
+};
+
+// Extract bounds from GeoJSON response
+const extractBoundsFromGeoJSON = (data, layerName) => {
+  if (data.bbox) {
+    return {
+      minX: data.bbox[0],
+      minY: data.bbox[1],
+      maxX: data.bbox[2],
+      maxY: data.bbox[3]
+    };
+  } else if (data.features && data.features.length > 0) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    data.features.forEach(feature => {
+      if (feature.bbox) {
+        minX = Math.min(minX, feature.bbox[0]);
+        minY = Math.min(minY, feature.bbox[1]);
+        maxX = Math.max(maxX, feature.bbox[2]);
+        maxY = Math.max(maxY, feature.bbox[3]);
+      } else if (feature.geometry) {
+        // Calculate bounds from geometry
+        const bounds = calculateBoundsFromGeometry(feature.geometry);
+        if (bounds) {
+          minX = Math.min(minX, bounds.minX);
+          minY = Math.min(minY, bounds.minY);
+          maxX = Math.max(maxX, bounds.maxX);
+          maxY = Math.max(maxY, bounds.maxY);
+        }
+      }
+    });
+    
+    if (minX !== Infinity) {
+      return { minX, minY, maxX, maxY };
+    }
+  }
+  return null;
+};
+
+// Extract bounds from WFS XML response
+const extractBoundsFromWFSXML = (xmlText, layerName) => {
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+    
+    // Check for wfs:FeatureCollection
+    const featureCollection = xmlDoc.querySelector('FeatureCollection, wfs\\:FeatureCollection');
+    if (featureCollection) {
+      const bbox = featureCollection.querySelector('bbox, ogc\\:bbox, gml\\:boundedBy');
+      if (bbox) {
+        const corners = bbox.querySelectorAll('coord, gml\\:coord, coordinates, gml\\:coordinates');
+        // Extract bounds from GML format
+        // This is simplified - you might need to adjust based on your GML format
+      }
+    }
+    
+    // If we can't parse XML bounds, try WMS capabilities as fallback
+    return null;
+  } catch (error) {
+    console.error('Error parsing WFS XML:', error);
+    return null;
+  }
+};
+
+// Get bounds from WMS GetCapabilities
+const getLayerBoundsFromWMSCapabilities = async (layerName) => {
+  try {
+    const params = new URLSearchParams({
+      SERVICE: 'WMS',
+      VERSION: '1.3.0',
+      REQUEST: 'GetCapabilities'
+    });
+
+    const url = `${GEOSERVER_WMS}?${params.toString()}`;
+    console.log('Getting bounds from WMS capabilities:', url);
+    
+    const response = await fetch(url);
+    const text = await response.text();
+    
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(text, 'text/xml');
+    
+    // Find the layer by name
+    const layers = xmlDoc.getElementsByTagName('Layer');
+    for (let layer of layers) {
+      const name = layer.getElementsByTagName('Name')[0]?.textContent;
+      const title = layer.getElementsByTagName('Title')[0]?.textContent;
+      
+      if (name === layerName || title === layerName) {
+        // Try different bounding box formats
+        const bbox = layer.getElementsByTagName('LatLonBoundingBox')[0] ||
+                    layer.getElementsByTagName('EX_GeographicBoundingBox')[0] ||
+                    layer.getElementsByTagName('BoundingBox')[0];
+        
+        if (bbox) {
+          // For LatLonBoundingBox
+          if (bbox.tagName === 'LatLonBoundingBox') {
+            return {
+              minX: parseFloat(bbox.getAttribute('minx')),
+              minY: parseFloat(bbox.getAttribute('miny')),
+              maxX: parseFloat(bbox.getAttribute('maxx')),
+              maxY: parseFloat(bbox.getAttribute('maxy'))
+            };
+          }
+          // For EX_GeographicBoundingBox
+          else if (bbox.tagName === 'EX_GeographicBoundingBox') {
+            const westBound = bbox.getElementsByTagName('westBoundLongitude')[0]?.textContent;
+            const eastBound = bbox.getElementsByTagName('eastBoundLongitude')[0]?.textContent;
+            const southBound = bbox.getElementsByTagName('southBoundLatitude')[0]?.textContent;
+            const northBound = bbox.getElementsByTagName('northBoundLatitude')[0]?.textContent;
+            
+            if (westBound && eastBound && southBound && northBound) {
+              return {
+                minX: parseFloat(westBound),
+                minY: parseFloat(southBound),
+                maxX: parseFloat(eastBound),
+                maxY: parseFloat(northBound)
+              };
+            }
+          }
+          // For generic BoundingBox
+          else {
+            return {
+              minX: parseFloat(bbox.getAttribute('minx') || bbox.getAttribute('minX')),
+              minY: parseFloat(bbox.getAttribute('miny') || bbox.getAttribute('minY')),
+              maxX: parseFloat(bbox.getAttribute('maxx') || bbox.getAttribute('maxX')),
+              maxY: parseFloat(bbox.getAttribute('maxy') || bbox.getAttribute('maxY'))
+            };
+          }
+        }
+      }
+    }
+    
+    // If layer not found or no bounds, try to get from WMS DescribeLayer
+    return await getLayerBoundsFromWMSDescribeLayer(layerName);
+  } catch (error) {
+    console.error('Error getting bounds from WMS capabilities:', error);
+    return null;
+  }
+};
+
+// Additional fallback using WMS DescribeLayer
+const getLayerBoundsFromWMSDescribeLayer = async (layerName) => {
+  try {
+    const params = new URLSearchParams({
+      SERVICE: 'WMS',
+      VERSION: '1.1.1',
+      REQUEST: 'DescribeLayer',
+      LAYERS: layerName,
+      OUTPUTFORMAT: 'application/json'
+    });
+
+    const url = `${GEOSERVER_WMS}?${params.toString()}`;
+    const response = await fetch(url);
+    const contentType = response.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      if (data.owsType === 'WFS' && data.wfs) {
+        // If it points to a WFS layer, try to get bounds from there
+        return await getLayerBounds(data.wfs.typeName || layerName);
+      }
+    }
+  } catch (error) {
+    console.error('Error in DescribeLayer:', error);
+  }
+  return null;
+};
+
+// Helper function to calculate bounds from geometry
+const calculateBoundsFromGeometry = (geometry) => {
+  if (!geometry) return null;
+  
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  
+  const processCoordinates = (coords) => {
+    if (Array.isArray(coords) && Array.isArray(coords[0])) {
+      coords.forEach(coord => processCoordinates(coord));
+    } else if (Array.isArray(coords) && typeof coords[0] === 'number') {
+      minX = Math.min(minX, coords[0]);
+      minY = Math.min(minY, coords[1]);
+      maxX = Math.max(maxX, coords[0]);
+      maxY = Math.max(maxY, coords[1]);
+    }
+  };
+  
+  if (geometry.coordinates) {
+    processCoordinates(geometry.coordinates);
+  }
+  
+  if (minX !== Infinity) {
+    return { minX, minY, maxX, maxY };
+  }
+  return null;
+};
+
+// Simplified version if you just want something that works quickly:
+const getLayerBoundsSimple = async (layerName) => {
+  try {
+    const cleanLayerName = layerName.replace(/^cite:/, '');
+    
+    // Use WMS GetCapabilities
+    const capsUrl = `${GEOSERVER_WMS}?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities`;
+    const response = await fetch(capsUrl);
+    const text = await response.text();
+    
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(text, 'text/xml');
+    
+    // Find the layer
+    const layers = xmlDoc.getElementsByTagName('Layer');
+    for (let layer of layers) {
+      const nameElement = layer.getElementsByTagName('Name')[0];
+      if (!nameElement) continue;
+      
+      const name = nameElement.textContent;
+      if (name === cleanLayerName || name === `cite:${cleanLayerName}`) {
+        const bbox = layer.getElementsByTagName('LatLonBoundingBox')[0];
+        if (bbox) {
+          return {
+            minX: parseFloat(bbox.getAttribute('minx')),
+            minY: parseFloat(bbox.getAttribute('miny')),
+            maxX: parseFloat(bbox.getAttribute('maxx')),
+            maxY: parseFloat(bbox.getAttribute('maxy'))
+          };
+        }
+      }
+    }
+    
+    // Default Gujarat bounds
+    return {
+      minX: 68.5,
+      minY: 20.5,
+      maxX: 74.5,
+      maxY: 24.5
+    };
+    
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      minX: 68.5,
+      minY: 20.5,
+      maxX: 74.5,
+      maxY: 24.5
+    };
+  }
+};
+
 
   const toggleGroup = useCallback((groupId) => {
     setOpenGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
@@ -1941,7 +2764,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
 
     return (
       <div className="legend-panel">
-        <h4 className="legend-title">Layer Legends</h4>
+        <h4 className="legend-title">Map Legend</h4>
         <div className="legend-items-container">
           {activeLayers.map((layerKey) => {
             const layerName = layerKey.split('-')[0]; // Extract layer name from key
@@ -1979,6 +2802,24 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         <h3 className="sidebar-title">
           <FaLayerGroup style={{ marginRight: "8px" }} />
           {text[language].exploreData}
+          <button 
+          style={{
+            alignItems: 'end',
+            marginLeft: 'auto',
+            backgroundColor: '#e74c3c',
+            color: '#fff',
+            border: 'none', 
+            padding: '5px 10px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+            onClick={clearAllLayers}
+            className="clear-all-btn"
+            title="Clear all layers"
+            disabled={Object.keys(addedLayers).length === 0}
+          >
+            Clear All
+          </button>
         </h3>
         
         <div className="layer-groups-container">

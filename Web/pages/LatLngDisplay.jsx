@@ -26,7 +26,7 @@ const LatLngDisplay = () => {
     <div className="lat-lng-display"
      style={{
       position: 'absolute',
-      bottom: '9%',
+      bottom: '4%',
       left: '13%',
       zIndex: 10000,
       backgroundColor: 'white',

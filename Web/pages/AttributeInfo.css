@@ -1,0 +1,80 @@
+.attribute-info-panel {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  width: 300px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.info-header {
+  padding: 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  border-radius: 8px 8px 0 0;
+}
+
+.info-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+}
+
+.instructions {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.info-content {
+  padding: 12px;
+}
+
+.loading, .initial-message, .no-data {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.feature-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.coordinates {
+  font-size: 11px;
+  color: #888;
+  background: #f9f9f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.attribute-table {
+  width: 100%;
+  font-size: 13px;
+}
+
+.attribute-table tr {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.attribute-key {
+  font-weight: 600;
+  color: #333;
+  padding: 4px 8px 4px 0;
+  white-space: nowrap;
+}
+
+.attribute-value {
+  color: #666;
+  padding: 4px 0;
+  word-break: break-word;
+}

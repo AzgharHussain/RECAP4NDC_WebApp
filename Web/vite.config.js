@@ -19,6 +19,18 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/forest-proxy/, '')
+      },
+      '/geoserver': {
+        target: 'https://www.gisfy.co.in:8445',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/geoserver/, '/geoserver'),
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            // Add CORS headers
+            proxyReq.setHeader('Origin', 'https://www.gisfy.co.in:8445');
+          });
+        }
       }
     },
   },

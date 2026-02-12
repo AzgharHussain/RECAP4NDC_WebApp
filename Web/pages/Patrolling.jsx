@@ -18,6 +18,9 @@ import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
 import axios from "axios";
+
+import DOMPurify from 'dompurify';
+
 const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
 
 import {
@@ -48,6 +51,14 @@ const Loader = () => {
       <div className="map-loader__message">Loading...</div>
     </div>
   );
+};
+
+const stripHtmlTags = (htmlString) => {
+  if (!htmlString) return '';
+  
+  // Sanitize and get text content
+  const cleanString = DOMPurify.sanitize(htmlString, { ALLOWED_TAGS: [] });
+  return cleanString.trim();
 };
 
 const { Title, Text } = Typography;
@@ -742,30 +753,149 @@ const PatrolIncidentLogs = () => {
   const [coupeFilter, setCoupeFilter] = useState("");
 
   // Fetch patrol data with pagination
-// Fetch patrol data with pagination - FURTHER UPDATED
+// Fetch patrol data with pagination
 const fetchPatrolData = async (page = 1, limit = 5, filters = {}) => {
-  // Set initial loading only if it's the first page
-  if (page === 1) {
-    setIsLoading(true);
-  }
-  
-  // Always set pagination loading when fetching new data
+  setIsLoading(true);
   setPaginationLoading(true);
-  
   try {
     const token = localStorage.getItem("token");
     
+    // Build query parameters
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
       ...filters
     });
 
+    // Remove empty filters
+    Object.keys(filters).forEach(key => {
+      if (!filters[key]) params.delete(key);
+    });
+    console.log("55555555555555",page, limit, filters);
+
+    const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    console.log("Fetched Patrol data with pagination:", data);
+    
+    let formattedData = Array.isArray(data.data)
+      ? data.data
+      : data.data && typeof data.data === "object"
+      ? [data.data]
+      : [];
+    
+    // Clean HTML tags from officer names and other text fields
+    formattedData = formattedData.map((item, index) => ({
+      key: item.patrol_id || `patrol-${index}`,
+      ...item,
+      patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+      division: stripHtmlTags(item.division),
+      range: stripHtmlTags(item.range),
+      beat: stripHtmlTags(item.beat),
+      start_location: stripHtmlTags(item.start_location),
+      end_location: stripHtmlTags(item.end_location)
+    }));
+    
+    setPatrolData(formattedData);
+    setFilteredData(formattedData);
+    
+    // Update pagination info
+    if (data.pagination) {
+      setCurrentPage(data.pagination.currentPage);
+      setPageSize(data.pagination.pageSize);
+      setTotalItems(data.pagination.totalItems);
+      setTotalPages(data.pagination.totalPages);
+    }
+    
+  } catch (error) {
+    console.error("Error fetching Patrol data:", error);
+    setPatrolData([]);
+    setFilteredData([]);
+    setTotalItems(0);
+    setTotalPages(0);
+  }
+  setIsLoading(false);
+  setPaginationLoading(false);
+};
+
+const fetchPatrolData2 = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    
+    const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    console.log("Fetched Patrol data:", data);
+    
+    let formattedData2 = Array.isArray(data.data)
+      ? data.data
+      : data.data && typeof data.data === "object"
+      ? [data.data]
+      : [];
+    
+    // Clean HTML tags from officer names and other text fields
+    formattedData2 = formattedData2.map((item, index) => ({
+      key: item.patrol_id || `patrol-${index}`,
+      ...item,
+      patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+      division: stripHtmlTags(item.division),
+      range: stripHtmlTags(item.range),
+      beat: stripHtmlTags(item.beat),
+      start_location: stripHtmlTags(item.start_location),
+      end_location: stripHtmlTags(item.end_location)
+    }));
+    
+    setPatrolData2(formattedData2);
+     
+  } catch (error) {
+    console.error("Error fetching Patrol data:", error);
+  }
+};
+
+// Fetch filtered patrol data
+const fetchFilteredPatrolData = async (page = 1, limit = 5) => {
+  setIsFiltering(true);
+  setPaginationLoading(true);
+  try {
+    const token = localStorage.getItem("token");
+    
+    // Prepare filters object
+    const filters = {};
+    if (searchText) filters.officer_name = searchText;
+    if (startFilter) filters.start_date = startFilter.format('YYYY-MM-DD');
+    if (endFilter) filters.end_date = endFilter.format('YYYY-MM-DD');
+    if (typeFilter) filters.type_name = typeFilter;
+    if (divisionFilter) filters.division = divisionFilter;
+    if (beatFilter) filters.beat = beatFilter;
+    if (coupeFilter) filters.coupe = coupeFilter;
+    if (forestId) filters.forest_id = forestId;
+
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...filters
+    });
+
+    // Remove empty filters
     Object.keys(filters).forEach(key => {
       if (!filters[key]) params.delete(key);
     });
 
-    const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+    const response = await fetch(`${API_BASE_URL}/api/patrol-info/filter?${params.toString()}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -782,14 +912,22 @@ const fetchPatrolData = async (page = 1, limit = 5, filters = {}) => {
       ? [data.data]
       : [];
     
+    // Clean HTML tags from officer names and other text fields
     formattedData = formattedData.map((item, index) => ({
-      key: item.patrol_id || `patrol-${index}`,
+      key: item.patrol_id || `patrol-filtered-${index}`,
       ...item,
+      patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+      division: stripHtmlTags(item.division),
+      range: stripHtmlTags(item.range),
+      beat: stripHtmlTags(item.beat),
+      start_location: stripHtmlTags(item.start_location),
+      end_location: stripHtmlTags(item.end_location)
     }));
     
     setPatrolData(formattedData);
     setFilteredData(formattedData);
     
+    // Update pagination info
     if (data.pagination) {
       setCurrentPage(data.pagination.currentPage);
       setPageSize(data.pagination.pageSize);
@@ -798,180 +936,84 @@ const fetchPatrolData = async (page = 1, limit = 5, filters = {}) => {
     }
     
   } catch (error) {
-    console.error("Error fetching Patrol data:", error);
-    setPatrolData([]);
-    setFilteredData([]);
-    setTotalItems(0);
-    setTotalPages(0);
-  } finally {
-    setIsLoading(false);
-    setPaginationLoading(false);
+    console.error("Error fetching filtered patrol data:", error);
+    // Fallback to client-side filtering if API fails
+    handleClientSideSearch();
   }
+  setIsFiltering(false);
+  setPaginationLoading(false);
 };
-  const fetchPatrolData2 = async () => {
-   
-    try {
-      const token = localStorage.getItem("token");
-      
- 
-   
 
-      const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      console.log("Fetched Patgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggrol data with pagination:", data);
+// Client-side search fallback
+const handleClientSideSearch = () => {
+  let data = [...patrolData];
+  
+  // Text search filter - use cleaned names
+  if (searchText.trim() !== "") {
+    const lower = searchText.toLowerCase();
+    data = data.filter((item) => {
+      const cleanOfficerName = stripHtmlTags(item.patrol_officer_name);
+      const cleanDivision = stripHtmlTags(item.division);
+      const cleanRange = stripHtmlTags(item.range);
+      const cleanBeat = stripHtmlTags(item.beat);
       
-      let formattedData2 = Array.isArray(data.data)
-        ? data.data
-        : data.data && typeof data.data === "object"
-        ? [data.data]
-        : [];
-      
-      formattedData2 = formattedData2.map((item, index) => ({
-        key: item.patrol_id || `patrol-${index}`,
-        ...item,
-      }));
-      
-      setPatrolData2(formattedData2);
-     
-    } catch (error) {
-      console.error("Error fetching Patrol data:", error);
-      
-    }
-    
-  };
-  // Fetch filtered patrol data
-  const fetchFilteredPatrolData = async (page = 1, limit = 5) => {
-    setIsFiltering(true);
-    setPaginationLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      
-      // Prepare filters object
-      const filters = {};
-      if (searchText) filters.officer_name = searchText;
-      if (startFilter) filters.start_date = startFilter.format('YYYY-MM-DD');
-      if (endFilter) filters.end_date = endFilter.format('YYYY-MM-DD');
-      if (typeFilter) filters.type_name = typeFilter;
-      if (divisionFilter) filters.division = divisionFilter;
-      if (beatFilter) filters.beat = beatFilter;
-      if (coupeFilter) filters.coupe = coupeFilter;
-      if (forestId) filters.forest_id = forestId;
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        ...filters
-      });
-
-      // Remove empty filters
-      Object.keys(filters).forEach(key => {
-        if (!filters[key]) params.delete(key);
-      });
-
-      const response = await fetch(`${API_BASE_URL}/api/patrol-info/filter?${params.toString()}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      
-      let formattedData = Array.isArray(data.data)
-        ? data.data
-        : data.data && typeof data.data === "object"
-        ? [data.data]
-        : [];
-      
-      formattedData = formattedData.map((item, index) => ({
-        key: item.patrol_id || `patrol-filtered-${index}`,
-        ...item,
-      }));
-      
-      setPatrolData(formattedData);
-      setFilteredData(formattedData);
-      
-      // Update pagination info
-      if (data.pagination) {
-        setCurrentPage(data.pagination.currentPage);
-        setPageSize(data.pagination.pageSize);
-        setTotalItems(data.pagination.totalItems);
-        setTotalPages(data.pagination.totalPages);
-      }
-      
-    } catch (error) {
-      console.error("Error fetching filtered patrol data:", error);
-      // Fallback to client-side filtering if API fails
-      handleClientSideSearch();
-    }
-    setIsFiltering(false);
-    setPaginationLoading(false);
-  };
-
-  // Client-side search fallback
-  const handleClientSideSearch = () => {
-    let data = [...patrolData];
-    
-    // Text search filter
-    if (searchText.trim() !== "") {
-      const lower = searchText.toLowerCase();
-      data = data.filter((item) =>
-        item.patrol_officer_name?.toLowerCase().includes(lower)
+      return (
+        cleanOfficerName?.toLowerCase().includes(lower) ||
+        cleanDivision?.toLowerCase().includes(lower) ||
+        cleanRange?.toLowerCase().includes(lower) ||
+        cleanBeat?.toLowerCase().includes(lower)
       );
-    }
-    
-    // Date filters
-    if (startFilter) {
-      data = data.filter((item) =>
-        dayjs(item.start_time).isSame(startFilter, "day")
-      );
-    }
-    
-    if (endFilter) {
-      data = data.filter((item) =>
-        dayjs(item.end_time).isSame(endFilter, "day")
-      );
-    }
-    
-    // Type filter
-    if (typeFilter) {
-      data = data.filter((item) => item.type_name === typeFilter);
-    }
-    
-    // Hierarchy filters
-    if (divisionFilter) {
-      data = data.filter((item) => 
-        item.division_name?.toLowerCase().includes(divisionFilter.toLowerCase())
-      );
-    }
-    
-    if (beatFilter) {
-      data = data.filter((item) => 
-        item.beat_name?.toLowerCase().includes(beatFilter.toLowerCase())
-      );
-    }
-    
-    if (coupeFilter) {
-      data = data.filter((item) => 
-        item.coupe_name?.toLowerCase().includes(coupeFilter.toLowerCase())
-      );
-    }
-    
-    setFilteredData(data);
-    setTotalItems(data.length);
-    setTotalPages(Math.ceil(data.length / pageSize));
-    setCurrentPage(1);
-  };
+    });
+  }
+  
+  // Date filters
+  if (startFilter) {
+    data = data.filter((item) =>
+      dayjs(item.start_time).isSame(startFilter, "day")
+    );
+  }
+  
+  if (endFilter) {
+    data = data.filter((item) =>
+      dayjs(item.end_time).isSame(endFilter, "day")
+    );
+  }
+  
+  // Type filter
+  if (typeFilter) {
+    data = data.filter((item) => item.type_name === typeFilter);
+  }
+  
+  // Hierarchy filters
+  if (divisionFilter) {
+    const cleanDivisionFilter = divisionFilter.toLowerCase();
+    data = data.filter((item) => {
+      const cleanDivision = stripHtmlTags(item.division_name || item.division);
+      return cleanDivision?.toLowerCase().includes(cleanDivisionFilter);
+    });
+  }
+  
+  if (beatFilter) {
+    const cleanBeatFilter = beatFilter.toLowerCase();
+    data = data.filter((item) => {
+      const cleanBeat = stripHtmlTags(item.beat_name || item.beat);
+      return cleanBeat?.toLowerCase().includes(cleanBeatFilter);
+    });
+  }
+  
+  if (coupeFilter) {
+    const cleanCoupeFilter = coupeFilter.toLowerCase();
+    data = data.filter((item) => {
+      const cleanCoupe = stripHtmlTags(item.coupe_name);
+      return cleanCoupe?.toLowerCase().includes(cleanCoupeFilter);
+    });
+  }
+  
+  setFilteredData(data);
+  setTotalItems(data.length);
+  setTotalPages(Math.ceil(data.length / pageSize));
+  setCurrentPage(1);
+};
 
   useEffect(() => {
     fetchPatrolData(currentPage, pageSize);
@@ -1398,6 +1440,7 @@ const fetchPatrolData = async (page = 1, limit = 5, filters = {}) => {
 
     // Add data for each officer
     Object.keys(officers).forEach(officerName => {
+      const cleanOfficerName = stripHtmlTags(officerName);
       const officerData = officers[officerName];
       const dayStats = calculateStats(officerData.dayPatrols);
       const nightStats = calculateStats(officerData.nightPatrols);
@@ -1682,66 +1725,68 @@ const fetchPatrolData = async (page = 1, limit = 5, filters = {}) => {
   };
 
   // Custom pagination component
-// Custom pagination component - UPDATED to use your Loader
-const CustomPagination = () => (
-  <div style={{ 
-    display: 'flex', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginTop: 16,
-    padding: '16px',
-    borderRadius: '8px',
-    flexWrap: 'wrap',
-    gap: '16px',
-    position: 'relative' // Added for positioning loader
-  }}>
-    {/* Your Loader component for pagination */}
-    {(paginationLoading || isFiltering) && (
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(255, 255, 255, 0.8)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 10,
-        borderRadius: '8px'
-      }}>
-        <div style={{ transform: 'scale(0.5)' }}>
-          <Loader />
-        </div>
+  const CustomPagination = () => (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      marginTop: 16,
+      padding: '16px',
+      // backgroundColor: '#fafafa',
+      borderRadius: '8px',
+      flexWrap: 'wrap',
+      gap: '16px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ color: '#666', fontSize: '14px' }}>
+          {language === "gu" ? "કુલ રેકોર્ડ:" : "Total Records:"} 
+          <strong style={{ marginLeft: '4px' }}>{totalItems}</strong>
+        </span>
+        {isFiltering && (
+          <Tag color="processing">
+            <FilterOutlined /> {language === "gu" ? "ફિલ્ટર થઈ રહ્યું છે" : "Filtering..."}
+          </Tag>
+        )}
       </div>
-    )}
-    
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span style={{ color: '#666', fontSize: '14px' }}>
-        {language === "gu" ? "કુલ રેકોર્ડ:" : "Total Records:"} 
-        <strong style={{ marginLeft: '4px' }}>{totalItems}</strong>
-      </span>
+      
+      <Pagination
+        current={currentPage}
+        pageSize={pageSize}
+        total={totalItems}
+        onChange={handlePageChange}
+        showSizeChanger
+        showQuickJumper
+        showTotal={(total, range) => 
+          `${language === "gu" ? "બતાવી રહ્યા છીએ" : "Showing"} ${range[0]}-${range[1]} ${language === "gu" ? "ના" : "of"} ${total} ${language === "gu" ? "રેકોર્ડ" : "items"}`
+        }
+        pageSizeOptions={['5', '10', '20', '50', '100']}
+        disabled={paginationLoading || isLoading}
+      />
+      
+      {/* <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Select
+          value={pageSize}
+          onChange={(value) => {
+            setPageSize(value);
+            handlePageChange(1, value);
+          }}
+          style={{ width: 120 }}
+          disabled={paginationLoading || isLoading}
+        >
+          <Select.Option value={5}>5 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+          <Select.Option value={10}>10 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+          <Select.Option value={20}>20 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+          <Select.Option value={50}>50 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+          <Select.Option value={100}>100 {language === "gu" ? "પ્રતિ પેજ" : "per page"}</Select.Option>
+        </Select>
+        {paginationLoading && <Spin size="small" />}
+      </div> */}
     </div>
-    
-    <Pagination
-      current={currentPage}
-      pageSize={pageSize}
-      total={totalItems}
-      onChange={handlePageChange}
-      onShowSizeChange={handlePageChange}
-      showSizeChanger
-      showQuickJumper
-      showTotal={(total, range) => 
-        `${language === "gu" ? "બતાવી રહ્યા છીએ" : "Showing"} ${range[0]}-${range[1]} ${language === "gu" ? "ના" : "of"} ${total} ${language === "gu" ? "રેકોર્ડ" : "items"}`
-      }
-      pageSizeOptions={['5', '10', '20', '50', '100']}
-      disabled={paginationLoading || isLoading}
-    />
-  </div>
-);
+  );
 
   return (
     <div className="container">
+      {isLoading && <Loader />}
       <div className="section">
         <div className="heading-container">
           <h3 className="main-heading">
@@ -1754,7 +1799,7 @@ const CustomPagination = () => (
               placeholder={language === "gu" ? "ફોરેસ્ટ પ્રકાર" : "Forest Type"}
               style={{
                 width: "180px",
-                border: "1px solid #d9d9d9",
+                // border: "1px solid #d9d9d9",
                 borderRadius: "0px",
                 background: "#fff",
               }}
@@ -1885,57 +1930,65 @@ const CustomPagination = () => (
             </Button>
           </div>
         </div>
+        
+        {/* Show pagination info */}
+        {/* {totalItems > 0 && (
+          <Alert
+            message={
+              <span>
+                {language === "gu" ? "કુલ" : "Total"} <strong>{totalItems}</strong> {language === "gu" ? "પેટ્રોલિંગ રેકોર્ડ મળ્યા" : "patrol records found"} 
+                {(searchText || startFilter || endFilter || typeFilter || divisionFilter || beatFilter || coupeFilter || forestId) && (
+                  <span style={{ marginLeft: '8px' }}>
+                    {language === "gu" ? "ફિલ્ટર લાગુ પાડ્યા પછી" : "after applying filters"}
+                  </span>
+                )}
+              </span>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            action={
+              <Button size="small" onClick={clearAllFilters}>
+                {language === "gu" ? "સાફ કરો" : "Clear"}
+              </Button>
+            }
+          />
+        )} */}
 
-        {/* Show loader over entire table area during initial load */}
-  {isLoading && currentPage === 1 ? (
-    <div style={{
-      minHeight: '300px',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      background: 'rgba(255, 255, 255, 0.8)',
-      borderRadius: '8px',
-      margin: '20px 0'
-    }}>
-      <Loader />
-    </div>
-  ) : (
-    <>
-      <Table
-        className="transparent-table"
-        columns={columns}
-        dataSource={filteredData}
-        pagination={false}
-        bordered
-        scroll={{ x: 'max-content' }}
-        loading={false}
-        locale={{
-          emptyText: (
-            <div style={{ textAlign: "center", padding: "50px 0" }}>
-              <img
-                src={noDataImage}
-                alt="No Data"
-                style={{ width: 60, marginBottom: 16 }}
-              />
-              <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
-                {language === "gu" ? "કોઈ ડેટા ઉપલબ્ધ નથી" : "No data available"}
+        <Table
+          className="transparent-table"
+          columns={columns}
+          dataSource={filteredData}
+          pagination={false} // We'll use custom pagination
+          bordered
+          scroll={{ x: 'max-content' }}
+          loading={isLoading || paginationLoading}
+          locale={{
+            emptyText: (
+              <div style={{ textAlign: "center", padding: "50px 0" }}>
+                <img
+                  src={noDataImage}
+                  alt="No Data"
+                  style={{ width: 60, marginBottom: 16 }}
+                />
+                <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
+                  {language === "gu" ? "કોઈ ડેટા ઉપલબ્ધ નથી" : "No data available"}
+                </div>
+                {(searchText || startFilter || endFilter || typeFilter || divisionFilter || beatFilter || coupeFilter) && (
+                  <Button 
+                    onClick={clearAllFilters}
+                    style={{ marginTop: "16px" }}
+                  >
+                    {language === "gu" ? "બધા ફિલ્ટર સાફ કરો" : "Clear All Filters"}
+                  </Button>
+                )}
               </div>
-              {(searchText || startFilter || endFilter || typeFilter || divisionFilter || beatFilter || coupeFilter) && (
-                <Button 
-                  onClick={clearAllFilters}
-                  style={{ marginTop: "16px" }}
-                >
-                  {language === "gu" ? "બધા ફિલ્ટર સાફ કરો" : "Clear All Filters"}
-                </Button>
-              )}
-            </div>
-          ),
-        }}
-      />
-      
-      {totalItems > 0 && <CustomPagination />}
-    </>
-  )}
+            ),
+          }}
+        />
+        
+        {/* Custom Pagination Component */}
+        {totalItems > 0 && <CustomPagination />}
       </div>
       
       {/* Analysis Dashboard - Shows statistics for current filtered data */}
@@ -2013,7 +2066,7 @@ const CustomPagination = () => (
                               src={`data:${image.image_type};base64,${image.image_data}`}
                               alt={getImageLabel()}
                               style={{ 
-                                width: '170px',
+                                width: '100%',
                                 height: 150,
                                 objectFit: 'cover',
                                 borderRadius: 2

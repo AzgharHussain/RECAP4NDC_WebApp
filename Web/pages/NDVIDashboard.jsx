@@ -128,7 +128,7 @@ const NDVIChangeDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showOnlyWithNotes, setShowOnlyWithNotes] = useState(false);
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
-  const [sortConfig, setSortConfig] = useState({ key: 'pixel_id', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'pixle_id', direction: 'asc' });
   const [expandedChart, setExpandedChart] = useState(false);
   
   // Pagination states
@@ -477,7 +477,7 @@ const NDVIChangeDashboard = () => {
             change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
             has_note: !!(item.note && item.note.trim() !== ''),
             has_image: !!(item.image_data),
-            pixel_id: item.pixel_id || item.pixel_id || 'N/A'
+            pixle_id: item.pixle_id || item.pixle_id || 'N/A'
           };
         });
         
@@ -631,7 +631,7 @@ const NDVIChangeDashboard = () => {
     let filtered = currentTableData.filter(item => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = 
-        (item.pixel_id?.toString().toLowerCase().includes(searchLower)) ||
+        (item.pixle_id?.toString().toLowerCase().includes(searchLower)) ||
         (item.status?.toString().toLowerCase().includes(searchLower)) ||
         (item.note?.toLowerCase().includes(searchLower)) ||
         (item.latitude?.toString().includes(searchLower)) ||
@@ -1109,7 +1109,7 @@ const NDVIChangeDashboard = () => {
             <tbody>
               ${filteredData.slice(0, 20).map(item => `
                 <tr>
-                  <td>${item.pixel_id || 'N/A'}</td>
+                  <td>${item.pixle_id || 'N/A'}</td>
                   <td>
                     <span class="badge  'badge-degraded' >
                       'Degraded' 
@@ -1841,7 +1841,7 @@ const NDVIChangeDashboard = () => {
                           }
                         }}>
                           <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('pixel_id')}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('pixle_id')}>
                               <strong>Pixel ID</strong>
                               <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                             </Box>
@@ -1891,7 +1891,7 @@ const NDVIChangeDashboard = () => {
                         ) : (
                           paginatedData.map((row) => (
                             <TableRow 
-                              key={row.pixel_id}
+                              key={row.pixle_id}
                               hover
                               sx={{ 
                                 '&:hover': { bgcolor: '#f8fafc' },
@@ -1901,7 +1901,7 @@ const NDVIChangeDashboard = () => {
                             >
                               <TableCell>
                                 <Typography variant="body2" fontWeight={600} color="primary">
-                                  #{row.pixel_id}
+                                  #{row.pixle_id}
                                 </Typography>
                               </TableCell>
                               <TableCell>
@@ -1998,7 +1998,7 @@ const NDVIChangeDashboard = () => {
                                     setSelectedRecord(row);
                                     setModalOpen(true);
                                   }}
-                                  disabled={!row.pixel_id}
+                                  disabled={!row.pixle_id}
                                   sx={{ 
                                     borderRadius: 2,
                                     textTransform: 'none',
@@ -2231,7 +2231,7 @@ const NDVIChangeDashboard = () => {
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               <Visibility sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Pixel Details - ID: {selectedRecord?.pixel_id || selectedRecord?.pixel_id}
+              Pixel Details - ID: {selectedRecord?.pixle_id || selectedRecord?.pixle_id}
             </Typography>
           </Box>
         </DialogTitle>
@@ -2433,7 +2433,7 @@ const NDVIChangeDashboard = () => {
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Image Preview - Pixel ID: {selectedRecord?.pixel_id || selectedRecord?.pixel_id}
+              Image Preview - Pixel ID: {selectedRecord?.pixle_id || selectedRecord?.pixle_id}
             </Typography>
             <IconButton onClick={() => setImageModalOpen(false)} sx={{ color: 'white' }}>
               <Close />
@@ -2446,7 +2446,7 @@ const NDVIChangeDashboard = () => {
               <Box
                 component="img"
                 src={`data:image/jpeg;base64,${selectedRecord.image_data}`}
-                alt={`NDVI Image - Pixel ${selectedRecord.pixel_id || selectedRecord.pixel_id}`}
+                alt={`NDVI Image - Pixel ${selectedRecord.pixle_id || selectedRecord.pixle_id}`}
                 sx={{
                   maxWidth: '100%',
                   maxHeight: '70vh',

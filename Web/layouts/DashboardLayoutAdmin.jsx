@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { NavLink, Outlet, useLocation,BrowserRouter  } from "react-router-dom";
+import React, { useState, useEffect,useRef } from "react";
+import { NavLink, Outlet, useLocation,BrowserRouter,useNavigate } from "react-router-dom";
 import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight} from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
@@ -21,6 +21,11 @@ import incidentIcon from "../assets/Incident.png";  // Import the Incident image
 import { useLanguage } from "../context/LanguageContext";
 import "./DashboardLayout.css";
 
+import gujaratlogo from "../assets/FOREST DEPT.jpg";
+import Moef from "../assets/Moef.jpg";
+import giz from "../assets/giz.png";
+import recap4NDC from "../assets/RE.png";
+
 export default function DashboardLayoutAdmin() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar open/close state
   const [isPatrollingOpen, setIsPatrollingOpen] = useState(false); // State for dropdown
@@ -28,6 +33,7 @@ export default function DashboardLayoutAdmin() {
  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false); // State for Admin dropdown
   const location = useLocation(); // Access current location (route)
   const { language,toggleLanguage  } = useLanguage();  // ✅ Access language context
+  const navigate = useNavigate(); 
 
   // Language Texts
   const text = {
@@ -55,6 +61,62 @@ export default function DashboardLayoutAdmin() {
       patrollingIncident: "પેટ્રોલિંગ",
     },
   };
+ const getUserName = () => {
+    try {
+      // Try to get from session storage first
+      const sessionStr = localStorage.getItem('session');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        return session.user?.name || session.user?.username || 'User';
+      }
+      
+      // Fallback to userData
+      const userDataStr = localStorage.getItem('userData');
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        return userData.name || userData.username || 'User';
+      }
+      
+      return 'User';
+    } catch (error) {
+      console.error("Error getting username:", error);
+      return 'User';
+    }
+  };
+    const username = getUserName();
+  const handleLogout = () => {
+    // Clear all session data
+    const itemsToRemove = [
+      'session',
+      'userData',
+      'token',
+      'authToken',
+      'forest_authenticated',
+      'user',
+      'admin_token'
+    ];
+
+    itemsToRemove.forEach(item => {
+      localStorage.removeItem(item);
+      sessionStorage.removeItem(item);
+    });
+
+    // Clear cookies (if any)
+    document.cookie.split(";").forEach(cookie => {
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+    });
+
+    // Close admin menu
+    setIsAdminMenuOpen(false);
+    
+    // Navigate to login page
+    navigate("/login");
+    
+    // Force reload to ensure clean state
+    window.location.reload();
+  };
 
 
   // Open the "Patrolling and Incident Logs" dropdown if we're on a relevant page
@@ -70,58 +132,171 @@ export default function DashboardLayoutAdmin() {
 
   // Helper function to check if a link is active
   const isActiveLink = (path) => location.pathname === path;
+  // Check if current user is admin
+  const isAdminUser = () => {
+    try {
+      const sessionStr = localStorage.getItem('session');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        return session.user?.isAdmin === true;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
+  };
 
+  const isAdmin = isAdminUser();
+
+ 
+const dropdownRef = useRef(null);
+const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+// Close dropdown when clicking outside
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsDropdownOpen(false);
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside);
+  };
+}, []);
   return (
     <div className="layout">
       {/* Header */}
     <header className="header">
-  {/* ===== TOP ROW ===== */}
-  <div className="header-top">
-    <div className="header-left">
-      <button
-        className="hamburger-btn"
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          {/* ===== TOP ROW ===== */}
+          {/* <div className="header-top">
+            <div className="header-left">
+              <button
+                className="hamburger-btn"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              >
+                {isSidebarOpen ? <FaTimes /> : <FaBars />}
+              </button>
+              <img src={brand} alt="RECAP4NDC" className="header-logo" />
+            </div>
+  
+            <div className="header-logos">
+              <img src={logos1} alt="Logo 1" />
+              <img src={logos2} alt="Logo 2" />
+              <img src={logos3} alt="Logo 3" />
+              <img src={logos4} alt="Logo 4" />
+              <img src={logos5} alt="Logo 5" />
+              <img src={logos6} alt="Logo 6" />
+              <img src={logos7} alt="Logo 7" />
+              <img src={logos8} alt="Logo 8" />
+              <img src={logos9} alt="Logo 9" />
+              <img src={logos10} alt="Logo 10" />
+              <img src={logos11} alt="Logo 11" />
+            </div>
+  
+            <div className="header-right">
+              <img src={userIcon} alt="User Icon" className="user-icon-img" />
+              <span className="username">
+                <b>{username}</b>
+                {isAdmin && <span className="admin-badge"> (Admin)</span>}
+              </span>
+              
+              <div
+                className="admin-section"
+                onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+              >
+                <span className="arrow-icon">
+                  {isAdminMenuOpen ? <FaChevronDown /> : <FaChevronRight />}
+                </span>
+              </div>
+              <div className="admin-dropdown-section">
+              <button
+                className="logout-btn"
+                onClick={handleLogout}
+              >
+                {text[language].logout}
+              </button>
+            </div>
+            </div>
+          </div> */}
+          <header id="header">
+                  <div className="container-fluid m-0">
+                      <div className="headAssets" style={{display:'flex', alignItems:'center', gap:'64px', height:'14vh', paddingLeft:'130px', paddingRight:'10px'}}>
+                          <div className="logo">
+                              {/* <a href="indexs.aspx">
+                                  </a> */}
+                                  <img src={gujaratlogo} alt="logo picture" style={{width:'70px'}}></img>
+                          </div>
+                          <div className="portal-header">
+                              <div className="icon" aria-hidden="true"></div>
+                              <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"Host Grotesk", sans-serif', fontWeight: 700,}}>FOREST PATROLLING & MONITORING SYSTEM</b></h2>
+                          </div>
+                          <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', justifyContent:'space-between', maxWidth:'5px'}}>
+                              <div className="l_1">
+                                  {/* <a href="https://moef.gov.in/" target="_blank">
+                                      </a> */}
+                                      <img src={Moef} alt="picture" style={{width:'160px'}}></img>
+                              </div>
+                              <div className="l_2">
+                                  {/* <a href="https://www.giz.de/de/html/index.html" target="_blank">
+                                      </a> */}
+                                      <img src={giz} alt="giz logo" style={{width:'210px'}}></img>
+                              </div>
+                              <div className="l_3">
+                                  {/* <a href="#!" target="_blank">
+                                      </a> */}
+                                      <img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img>
+                              </div>
+                              {/* <div>
+  <button
+                className="logout-btn"
+                onClick={handleLogout}
+              >
+                {text[language].logout}
+              </button>
+                              </div> */}
+                              
+                          </div>
+                      </div>
+                  </div>
+              </header>
+  <div >
+          {/* ===== BOTTOM ROW (BUTTONS) ===== */}
+          <div className="header-bottom2">
+            <div className="header-bottom">
+  
+           <NavLink
+                       to="admin"
+                       className={`menu-item ${
+                         isActiveLink("/") ? "active" : ""
+                       }`}
+                       onClick={handleLinkClick}
+                     >
+                       Admin Dashboard
+                     </NavLink>
+            
+             </div>
+           <div className="header-right">
+    <div className="user-dropdown">
+      {/* User icon and username as dropdown trigger */}
+      <div 
+        className="dropdown-trigger"
+        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
       >
-        {isSidebarOpen ? <FaTimes /> : <FaBars />}
-      </button>
-      <img src={brand} alt="RECAP4NDC" className="header-logo" />
-    </div>
-
-    <div className="header-logos">
-      <img src={logos1} alt="Logo 1" />
-      <img src={logos2} alt="Logo 2" />
-      <img src={logos3} alt="Logo 3" />
-      <img src={logos4} alt="Logo 4" />
-      <img src={logos5} alt="Logo 5" />
-      <img src={logos6} alt="Logo 6" />
-      <img src={logos7} alt="Logo 7" />
-      <img src={logos8} alt="Logo 8" />
-      <img src={logos9} alt="Logo 9" />
-      <img src={logos10} alt="Logo 10" />
-      <img src={logos11} alt="Logo 11" />
-    </div>
-
-        <div className="header-right">
-          <img src={userIcon} alt="User Icon" className="user-icon-img" />
-    
-        <span className="username">
-          Admin
-        </span>
-      <div
-        className="admin-section"
-        onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
-      >
-        
-    
-        <span className="arrow-icon">
-          {isAdminMenuOpen ? <FaChevronDown /> : <FaChevronRight />}
-        </span>
+        <img src={userIcon} alt="User Icon" className="user-icon-img" />
+       
       </div>
+      
+      {/* Dropdown menu */}
+   
     </div>
   </div>
-
-  {/* ===== BOTTOM ROW (BUTTONS) ===== */}
-</header>
+          </div>
+          </div>
+         
+        </header>
+  
 
 
           
@@ -146,7 +321,32 @@ export default function DashboardLayoutAdmin() {
                 જીયુ
               </button>
       </div>
-    )}
+    )}  {isDropdownOpen && (
+          <div className="dropdown-menu">
+            {/* {isAdmin && (
+              <div 
+                className="admin-section dropdown-item"
+                onClick={() => {
+                  // Handle admin menu toggle
+                  setIsAdminMenuOpen(!isAdminMenuOpen);
+                }}
+              >
+                <span>Admin Menu</span>
+                <span className="admin-arrow">
+                  {isAdminMenuOpen ? <FaChevronDown /> : <FaChevronRight />}
+                </span>
+              </div>
+            )} */}
+            
+          
+            <button
+              className="logout-btn dropdown-item"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </div>
+        )}
     </div>
   );
 }
