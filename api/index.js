@@ -45,10 +45,9 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://forestrecap.gisfy.co.in", "http://localhost:5002"],
+      connectSrc: ["'self'", "https://forestrecap.gisfy.co.in", "http://localhost:5002", "http://68.178.167.216:5002"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
-      upgradeInsecureRequests: [], // Force HTTPS
     },
   },
   hsts: {
@@ -108,9 +107,9 @@ const validateNoDuplicateParams = (req, res, next) => {
 
 const allowedOrigins = [
   'https://forestrecap.gisfy.co.in',
-  // 'http://localhost:5002',
+  'http://localhost:5002',
   'http://68.178.167.216:5002',
-// 'http://localhost:5173'
+'http://localhost:5173'
 ];
 
 app.use(cors({
