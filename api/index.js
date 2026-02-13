@@ -42,12 +42,11 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'", "https://forestrecap.gisfy.co.in", "http://localhost:5002", "http://68.178.167.216:5002"],
-      frameSrc: ["'none'"],
-      objectSrc: ["'none'"],
+      
     },
   },
   hsts: {
