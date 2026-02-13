@@ -1895,7 +1895,7 @@ const handleClientSideSearch = () => {
               placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકારથી શોધો" : "Search by Patrolling Type"}
               style={{
                 width: "100px",
-                border: "1px solid #d9d9d9",
+                // border: "1px solid #d9d9d9",
                 borderRadius: "0px",
                 background: "#fff",
               }}

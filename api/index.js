@@ -5,6 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
+require('dotenv').config();
 // REMOVE THIS: const bodyParser = require('body-parser'); // ❌ Remove this line
 
 const { verifyJwt } = require("./middlewares/verifyJwt");
@@ -25,52 +26,157 @@ const forestLoginRoutes = require('./routers/forestLogin');
 
 const app = express();
 
-app.use(
-  helmet.contentSecurityPolicy({
+// Strict Express settings
+app.set('query parser', 'simple');
+app.set('x-powered-by', false);
+app.set('etag', false);
+
+// ✅ MUST be at the VERY TOP - before any routes
+app.use(helmet()); // This enables all default Helmet protections
+
+// ✅ Explicitly set all required headers
+// In app.js, enhance your Helmet configuration
+
+app.use(helmet({
+  contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:"],
-      fontSrc: ["'self'"],
-      connectSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://forestrecap.gisfy.co.in", "http://localhost:5002"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [], // Force HTTPS
     },
-  })
-);
-
-app.use(helmet.frameguard({ action: "deny" }));
-
-app.use(
-  helmet.hsts({
+  },
+  hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
-    preload: true,
-  })
-);
+    preload: true
+  },
+  referrerPolicy: {
+    policy: 'strict-origin-when-cross-origin'
+  },
+  xssFilter: true, // Enable XSS filter
+  noSniff: true, // Set X-Content-Type-Options
+  frameguard: {
+    action: 'deny' // Set X-Frame-Options
+  },
+  hidePoweredBy: true // Remove X-Powered-By header
+}));
 
-app.use(helmet.noSniff());
-
-app.use((req, res, next) => {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
-  next();
+// ✅ Your routes AFTER middleware
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/build/index.html");
 });
 
 // ==================== MIDDLEWARE ==================== //
-app.use(cors({ 
-  origin: '*', 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
+
+const validateHttpHeaders = require('./middlewares/validateHttpHeaders');
+app.use('/api', validateHttpHeaders);
+
+const validateNoDuplicateParams = (req, res, next) => {
+  // Check for duplicate keys in body
+  if (req.body && typeof req.body === 'object') {
+    const keys = Object.keys(req.body);
+    const uniqueKeys = new Set(keys);
+    
+    if (keys.length !== uniqueKeys.size) {
+      return res.status(400).json({
+        success: false,
+        error: 'Duplicate parameters not allowed'
+      });
+    }
+  }
+  
+  // Check for parameters in both body and query
+  if (req.query && req.body) {
+    for (const key in req.query) {
+      if (req.body[key] !== undefined) {
+        return res.status(400).json({
+          success: false,
+          error: `Parameter '${key}' cannot be in both body and query`
+        });
+      }
+    }
+  }
+  
+  next();
+};
+
+const allowedOrigins = [
+  'https://forestrecap.gisfy.co.in',
+  // 'http://localhost:5002',
+  'http://68.178.167.216:5002',
+// 'http://localhost:5173'
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
 // Use express built-in JSON parser (remove body-parser)
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ 
+  limit: '10mb',
+  type: ['application/json', 'application/*+json'] // Explicitly set accepted content types
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logger
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   console.log('Request Body:', req.body); // Add this for debugging
+  next();
+});
+
+
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function(data) {
+    // Recursively sanitize strings in the response
+    function sanitizeOutput(obj) {
+      if (typeof obj === 'string') {
+        // Escape HTML entities
+        return obj.replace(/[&<>"']/g, function(match) {
+          return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+          }[match];
+        });
+      } else if (Array.isArray(obj)) {
+        return obj.map(item => sanitizeOutput(item));
+      } else if (obj && typeof obj === 'object') {
+        const sanitized = {};
+        for (const key in obj) {
+          sanitized[key] = sanitizeOutput(obj[key]);
+        }
+        return sanitized;
+      }
+      return obj;
+    }
+    
+    // Sanitize the response data
+    const sanitizedData = sanitizeOutput(data);
+    return originalJson.call(this, sanitizedData);
+  };
   next();
 });
 
@@ -101,23 +207,13 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 // ==================== JWT CONFIG ==================== //
-const SECRET_KEY = process.env.JWT_SECRET || "mysecret123";
+const SECRET_KEY = process.env.JWT_SECRET;
+if (!SECRET_KEY || SECRET_KEY.length < 32) {
+    throw new Error('JWT_SECRET must be set and at least 32 characters');
+}
 
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, error: 'Access denied. No token provided.' });
-  }
 
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token.' });
-  }
-};
+
 
 // ==================== ROUTES ==================== //
 
@@ -138,12 +234,19 @@ app.post('/api/test-post', (req, res) => {
   });
 });
 
-app.post('/api/admin', async (req, res) => {
+app.post('/api/admin', validateNoDuplicateParams, async (req, res) => {
   try {
     console.log('✅ /api/admin POST route accessed');
     console.log('Request body:', req.body);
     
     const { username, password } = req.body;
+
+    if (req.query.username || req.query.password) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Credentials must be sent in request body, not URL' 
+            });
+        }
     
     if (!username || username.trim() === '') {
       return res.status(400).json({ 
@@ -206,17 +309,57 @@ app.post('/api/admin', async (req, res) => {
 });
 
 // Save user endpoint
-app.post("/api/saveuser", async (req, res) => {
+app.post("/api/saveuser", validateNoDuplicateParams, async (req, res) => {
   try {
     console.log('✅ /api/saveuser POST route accessed');
     console.log('Request body:', req.body);
+    console.log('Request body type:', typeof req.body);
+    console.log('Content-Type:', req.get('Content-Type'));
     
-    const username = req.body?.username || req.query?.username;
-    if (!username || username.trim() === "") {
-      return res.status(400).json({ success: false, error: "Username required" });
+    // Reject query params
+    if (req.query.username) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Credentials must be sent in request body, not URL' 
+      });
+    }
+
+    // Check if body exists
+    if (!req.body) {
+      console.error('❌ Request body is empty or undefined');
+      return res.status(400).json({ 
+        success: false, 
+        error: "Request body is required" 
+      });
+    }
+
+    const username = req.body?.username;
+    console.log('Extracted username:', username);
+    console.log('Username type:', typeof username);
+    
+    if (username === undefined || username === null) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Username field is missing in request body" 
+      });
+    }
+    
+    if (typeof username !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Username must be a string" 
+      });
+    }
+    
+    if (username.trim() === "") {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Username cannot be empty" 
+      });
     }
 
     const trimmedUsername = username.trim();
+    console.log('Processing username:', trimmedUsername);
 
     // Check if user exists
     const [users] = await sequelize.query(
@@ -224,15 +367,19 @@ app.post("/api/saveuser", async (req, res) => {
       { bind: [trimmedUsername] }
     );
 
+    console.log('User query result:', users);
+
     let user;
     if (users.length > 0) {
       user = users[0];
+      console.log('User already exists:', user);
     } else {
       const [result] = await sequelize.query(
         `INSERT INTO public.government_department_users (username) VALUES ($1) RETURNING user_id, username`,
         { bind: [trimmedUsername] }
       );
       user = result[0];
+      console.log('New user created:', user);
     }
 
     // Generate JWT
@@ -241,14 +388,17 @@ app.post("/api/saveuser", async (req, res) => {
       SECRET_KEY
     );
 
+    console.log('JWT generated successfully');
+
     res.json({
       success: true,
       message: users.length > 0 ? "User already exists" : "User created",
       user,
       token,
     });
+    
   } catch (err) {
-    console.error("Error /api/saveuser:", err);
+    console.error("❌ Error in /api/saveuser:", err);
     res.status(500).json({ 
       success: false, 
       error: "Server error", 
@@ -301,7 +451,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     success: false,
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 

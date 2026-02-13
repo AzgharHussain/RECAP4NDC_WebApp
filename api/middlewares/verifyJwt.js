@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const SECRET_KEY = process.env.JWT_SECRET || "mysecret123"; // fallback secret
+const SECRET_KEY = process.env.JWT_SECRET; // fallback secret
 
 const verifyJwt = (req, res, next) => {
   const authHeader = req.headers.authorization;

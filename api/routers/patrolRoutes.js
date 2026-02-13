@@ -567,7 +567,7 @@ router.get('/patrolling-district', async (req, res) => {
   }
 });
 
-router.get('/patrolling-drb', async (req, res) => {
+router.get('/patrolling-drb', verifyJwt, async (req, res) => {
   try {
     const query = `
       SELECT range, beat,division

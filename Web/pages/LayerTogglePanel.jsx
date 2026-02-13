@@ -2304,29 +2304,29 @@ const toggleLayer = useCallback(
               });
               
               // Optional: Add a marker at the centroid
-              if (bounds.centroid) {
-                L.marker([bounds.centroid.y, bounds.centroid.x], {
-                  title: layerConfig.Layer,
-                  icon: L.divIcon({
-                    className: 'centroid-marker',
-                    html: '📍',
-                    iconSize: [20, 20]
-                  })
-                }).addTo(mapRef.current)
-                  .bindPopup(`
-                    <div style="font-family: Arial, sans-serif; padding: 5px;">
-                      <h4 style="margin: 0 0 5px 0; color: #2c3e50;">${layerConfig.Layer}</h4>
-                      <hr style="margin: 5px 0;">
-                      <table style="border-collapse: collapse; width: 100%;">
-                        <tr><td><strong>Division:</strong></td><td>${bounds.metadata?.division || 'N/A'}</td></tr>
-                        <tr><td><strong>Range:</strong></td><td>${bounds.metadata?.range || 'N/A'}</td></tr>
-                        <tr><td><strong>Circle:</strong></td><td>${bounds.metadata?.circle || 'N/A'}</td></tr>
-                        <tr><td><strong>Features:</strong></td><td>${bounds.featureCount || 'N/A'}</td></tr>
-                        <tr><td><strong>Centroid:</strong></td><td>${bounds.centroid.y.toFixed(6)}, ${bounds.centroid.x.toFixed(6)}</td></tr>
-                      </table>
-                    </div>
-                  `);
-              }
+              // if (bounds.centroid) {
+              //   L.marker([bounds.centroid.y, bounds.centroid.x], {
+              //     title: layerConfig.Layer,
+              //     icon: L.divIcon({
+              //       className: 'centroid-marker',
+              //       html: '📍',
+              //       iconSize: [20, 20]
+              //     })
+              //   }).addTo(mapRef.current)
+              //     .bindPopup(`
+              //       <div style="font-family: Arial, sans-serif; padding: 5px;">
+              //         <h4 style="margin: 0 0 5px 0; color: #2c3e50;">${layerConfig.Layer}</h4>
+              //         <hr style="margin: 5px 0;">
+              //         <table style="border-collapse: collapse; width: 100%;">
+              //           <tr><td><strong>Division:</strong></td><td>${bounds.metadata?.division || 'N/A'}</td></tr>
+              //           <tr><td><strong>Range:</strong></td><td>${bounds.metadata?.range || 'N/A'}</td></tr>
+              //           <tr><td><strong>Circle:</strong></td><td>${bounds.metadata?.circle || 'N/A'}</td></tr>
+              //           <tr><td><strong>Features:</strong></td><td>${bounds.featureCount || 'N/A'}</td></tr>
+              //           <tr><td><strong>Centroid:</strong></td><td>${bounds.centroid.y.toFixed(6)}, ${bounds.centroid.x.toFixed(6)}</td></tr>
+              //         </table>
+              //       </div>
+              //     `);
+              // }
               
               console.log(`✅ Successfully zoomed to ${layerConfig.Name}`);
             } else {

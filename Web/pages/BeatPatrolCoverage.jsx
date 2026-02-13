@@ -111,8 +111,13 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   // }, []);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
   axios
-    .get(`${API_BASE_URL}/api/patrolling-drb`)
+    .get(`${API_BASE_URL}/api/patrolling-drb`,{
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
     .then((res) => {
       console.log("Patrolling DRB response:", res.data);
       

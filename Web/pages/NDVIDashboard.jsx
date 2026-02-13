@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -61,14 +64,12 @@ import {
   LinearProgress as MuiLinearProgress
 } from '@mui/material';
 import {
-  TrendingUp,
-  TrendingDown,
+
   Visibility,
   Image as ImageIcon,
   Note,
   Close,
   ZoomIn,
-  Download,
   CalendarMonth,
   Forest,
   Warning,
@@ -131,6 +132,8 @@ const NDVIChangeDashboard = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'pixle_id', direction: 'asc' });
   const [expandedChart, setExpandedChart] = useState(false);
   
+    const [selectedDate, setSelectedDate] = useState(new Date(2025, 1, 1)); // February 2025
+  
   // Pagination states
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -153,6 +156,34 @@ const NDVIChangeDashboard = () => {
     { value: 'Bhavnagar_coupes', label: 'Bhavnagar Coupes' },
     { value: 'Sabarkantha_North_Aravalli', label: 'Sabarkantha North Aravalli' }
   ]);
+
+  const handleDateChange = (newDate) => {
+    if (newDate) {
+      setSelectedDate(newDate);
+      
+      // Format as YYYY-MM for your API calls
+      const year = newDate.getFullYear();
+      const month = String(newDate.getMonth() + 1).padStart(2, '0');
+      const formattedMonth = `${year}-${month}`;
+      
+      setSelectedMonth(formattedMonth);
+      
+      console.log('Selected Year:', year);
+      console.log('Selected Month:', month);
+      console.log('Formatted:', formattedMonth);
+      
+      // Fetch data for selected year-month
+      if (selectedCoupe) {
+        if (monthlyData[formattedMonth]) {
+          setCurrentTableData(monthlyData[formattedMonth].data);
+          sortData(monthlyData[formattedMonth].data, sortConfig.key, sortConfig.direction);
+          setSummaryStats(monthlyData[formattedMonth].stats);
+        } else {
+          fetchNDVIData(selectedCoupe, formattedMonth);
+        }
+      }
+    }
+  };
 
   // Add useEffect to fetch coupes
   useEffect(() => {
@@ -1281,19 +1312,33 @@ const NDVIChangeDashboard = () => {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={6}>
               <FormControl fullWidth size="small">
-                <InputLabel>Select Month for Analysis</InputLabel>
-                <Select
-                  value={selectedMonth}
-                  label="Select Month for Analysis"
-                  onChange={handleMonthChange}
-                  startAdornment={<CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />}
-                >
-                  {monthOptions.map(month => (
-                    <MenuItem key={month.value} value={month.value}>
-                      {month.label}
-                    </MenuItem>
-                  ))}
-                </Select>
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  views={['year', 'month']}
+                  label="Select Month & Year"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  minDate={new Date(2020, 0, 1)}
+                  maxDate={new Date(2030, 11, 31)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                      size="small"
+                      helperText="Select month and year for analysis"
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <>
+                            <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+                            {params.InputProps?.startAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                />
+              </LocalizationProvider>
               </FormControl>
             </Grid>
             
@@ -1351,7 +1396,7 @@ const NDVIChangeDashboard = () => {
       </Card>
 
       {/* Error Alert */}
-      {error && (
+      {/* {error && (
         <Alert 
           severity="error" 
           sx={{ mb: 4, borderRadius: 2 }}
@@ -1368,7 +1413,7 @@ const NDVIChangeDashboard = () => {
         >
           <Typography fontWeight={600}>{error}</Typography>
         </Alert>
-      )}
+      )} */}
 
       {/* Loading States */}
       {(loading || loadingArea || loadingNDVIArea) && (

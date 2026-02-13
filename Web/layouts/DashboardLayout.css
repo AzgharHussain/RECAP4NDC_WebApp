@@ -170,7 +170,7 @@ background: rgb(255, 255, 255);
 
 a{
   text-decoration: none;
-  font-family: "Host Grotesk", sans-serif !important;
+  font-family: "arial" !important;
 }
 
 .sidebar a {
@@ -590,6 +590,6 @@ body{
   and (max-width: 1024px) {
   
   .newcontainer {
-    height: 13vh;
+    height: 11vh;
   }
 }

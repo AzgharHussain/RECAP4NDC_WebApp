@@ -266,29 +266,78 @@ function Login() {
     }
   };
 
-  const saveUser = async (username) => {
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/api/saveuser`,
-        { username }
-      );
-
-      const { token, user } = response.data;
-
-      if (token) {
-        localStorage.setItem("token", token);
-        console.log("🔐 JWT saved to localStorage");
-      }
-
-      return response.data;
-    } catch (err) {
-      console.error(
-        "❌ Failed to save user:",
-        err.response?.data || err.message
-      );
+const saveUser = async (username) => {
+  try {
+    console.log("📝 Attempting to save user:", username);
+    
+    // Validate input
+    if (!username || username.trim() === "") {
+      console.error("❌ Username is empty or invalid");
       return null;
     }
-  };
+
+    // Log the request details
+    console.log("Sending request to:", `${API_BASE_URL}/api/saveuser`);
+    console.log("Request payload:", { username: username.trim() });
+
+    const response = await axios.post(
+      `${API_BASE_URL}/api/saveuser`,
+      { username: username.trim() },  // Send as object with trimmed username
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 10000 // 10 second timeout
+      }
+    );
+
+    console.log("✅ Save user response received:", {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data
+    });
+
+    const { token, user } = response.data;
+
+    if (token) {
+      localStorage.setItem("token", token);
+      console.log("🔐 JWT saved to localStorage");
+    }
+
+    return response.data;
+  } catch (err) {
+    // Detailed error logging
+    console.error("❌ Failed to save user:");
+    
+    if (err.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error("Server responded with error:", {
+        status: err.response.status,
+        statusText: err.response.statusText,
+        data: err.response.data,
+        headers: err.response.headers
+      });
+      
+      // Check if it's a validation error from backend
+      if (err.response.status === 400) {
+        console.error("Validation error:", err.response.data.error);
+      }
+    } else if (err.request) {
+      // The request was made but no response was received
+      console.error("No response received from server:", {
+        request: err.request,
+        message: err.message
+      });
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error("Request setup error:", err.message);
+    }
+    
+    return null;
+  }
+};
 
   const handleLogin = async () => {
     // Validation

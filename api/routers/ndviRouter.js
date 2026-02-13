@@ -334,11 +334,20 @@ const imageToBase64 = (imagePath) => {
   }
 };
 
+const sanitizeHtml = require('sanitize-html');
 
 // PUT: Update NDVI record by ID with image handling - FIXED VERSION
 router.put('/ndvi-change/:id',verifyJwt, upload.single('image_data'), async (req, res) => {
   const { tableName, note, status } = req.body;
   const { id } = req.params;
+
+    if (note) {
+    req.body.note = sanitizeHtml(note, {
+      allowedTags: [], // No HTML tags allowed
+      allowedAttributes: {} // No attributes allowed
+    });
+  }
+  
   const imageFile = req.file;
 
 

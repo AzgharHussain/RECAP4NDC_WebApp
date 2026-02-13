@@ -53,6 +53,7 @@ height: 90vh;
   font-weight: 600;
   margin-bottom: 25px;
   color: #2c3e50;
+  font-family: "arial";
 }
 
 /* ===== Labels ===== */
@@ -111,6 +112,7 @@ height: 90vh;
   cursor: pointer;
   color: #fff;
   background: linear-gradient(135deg, #309059, #4CAF50);
+  font-family: 'arial';
   transition: 0.3s;
 }
 
