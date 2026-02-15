@@ -58,6 +58,77 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
     }
 });
 
+// Add this endpoint to your backend
+router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
+    const { tableName, range, round, beat } = req.body;
+
+    if (!tableName) {
+        return res.status(400).json({
+            success: false,
+            message: 'tableName is required'
+        });
+    }
+
+    try {
+        // Build WHERE clause based on hierarchy filters
+        let whereClause = '';
+        const conditions = [];
+        
+        
+        if (range) {
+            conditions.push(`range = '${range}'`);
+        }
+        if (round) {
+            conditions.push(`round = '${round}'`);
+        }
+        if (beat) {
+            conditions.push(`beat = '${beat}'`);
+        }
+        
+        if (conditions.length > 0) {
+            whereClause = 'WHERE ' + conditions.join(' AND ');
+        }
+
+        // First ensure columns exist
+        const alterTableQuery = `
+            ALTER TABLE public."${tableName}"
+            ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
+            ADD COLUMN IF NOT EXISTS note TEXT,
+            ADD COLUMN IF NOT EXISTS image_data TEXT,
+            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        `;
+
+        await sequelize.query(alterTableQuery);
+
+        // Fetch filtered data
+        const selectQuery = `
+           SELECT *
+            FROM public."${tableName}"
+            ${whereClause};
+        `;
+
+        const [results] = await sequelize.query(selectQuery);
+
+        res.json({
+            success: true,
+            message: 'Filtered data fetched successfully',
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Error in filtered NDVI API:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch filtered NDVI data',
+            error: error.message
+        });
+    }
+});
+
+// Add filtered degraded area endpoint
+
 
 router.post('/get-coupe-area', verifyJwt, async (req, res) => {
     const { tableName } = req.body;
@@ -101,7 +172,7 @@ FROM
 });
 
 router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
-    const { tableName } = req.body;
+    const { tableName, range, round, beat } = req.body;
 
     if (!tableName) {
         return res.status(400).json({
@@ -111,35 +182,92 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
     }
 
     try {
-       
+        // Build WHERE clause based on hierarchy filters
+        let whereClause = '';
+        const conditions = [];
+        
+        
+        if (range) {
+            conditions.push(`range = '${range}'`);
+        }
+        if (round) {
+            conditions.push(`round = '${round}'`);
+        }
+        if (beat) {
+            conditions.push(`beat = '${beat}'`);
+        }
+        
+        if (conditions.length > 0) {
+            whereClause = 'WHERE ' + conditions.join(' AND ');
+        }
 
-       
-
-        // 2️⃣ Fetch all data
+        // Fetch filtered area
         const selectQuery = `
             SELECT
-    SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
-FROM
-    public."${tableName}";
+                SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
+            FROM
+                public."${tableName}"
+            ${whereClause};
         `;
 
         const [results] = await sequelize.query(selectQuery);
 
         res.json({
             success: true,
-            message: 'Columns verified and data fetched successfully',
+            message: 'Filtered area fetched successfully',
             data: results
         });
 
     } catch (error) {
-        console.error('Error in NDVI change API:', error);
+        console.error('Error in filtered degraded area API:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to process NDVI change data',
+            message: 'Failed to fetch filtered degraded area',
             error: error.message
         });
     }
 });
+
+// router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
+//     const { tableName } = req.body;
+
+//     if (!tableName) {
+//         return res.status(400).json({
+//             success: false,
+//             message: 'tableName is required'
+//         });
+//     }
+
+//     try {
+       
+
+       
+
+//         // 2️⃣ Fetch all data
+//         const selectQuery = `
+//             SELECT
+//     SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
+// FROM
+//     public."${tableName}";
+//         `;
+
+//         const [results] = await sequelize.query(selectQuery);
+
+//         res.json({
+//             success: true,
+//             message: 'Columns verified and data fetched successfully',
+//             data: results
+//         });
+
+//     } catch (error) {
+//         console.error('Error in NDVI change API:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Failed to process NDVI change data',
+//             error: error.message
+//         });
+//     }
+// });
 
 
 
@@ -347,7 +475,7 @@ router.put('/ndvi-change/:id',verifyJwt, upload.single('image_data'), async (req
       allowedAttributes: {} // No attributes allowed
     });
   }
-  
+
   const imageFile = req.file;
 
 

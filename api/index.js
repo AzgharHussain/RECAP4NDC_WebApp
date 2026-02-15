@@ -11,7 +11,10 @@ require('dotenv').config();
 const { verifyJwt } = require("./middlewares/verifyJwt");
 const { sequelize, testConnection } = require('./config/database');
 
+const setNoCacheHeaders = require('./middlewares/cacheControl');
+
 const helmet = require("helmet");
+const crypto = require('crypto');
 
 // Routers
 const patrolRoutes = require('./routers/patrolRoutes');
@@ -31,6 +34,13 @@ app.set('query parser', 'simple');
 app.set('x-powered-by', false);
 app.set('etag', false);
 
+app.use((req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
+app.use(setNoCacheHeaders);
+
 // ✅ MUST be at the VERY TOP - before any routes
 app.use(helmet()); // This enables all default Helmet protections
 
@@ -41,8 +51,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`,
+        'https://fonts.googleapis.com',
+        'https://fonts.gstatic.com'],
+      styleSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`, "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'", "https://forestrecap.gisfy.co.in", "http://localhost:5002", "http://68.178.167.216:5002"],
@@ -406,29 +418,42 @@ app.post("/api/saveuser", validateNoDuplicateParams, async (req, res) => {
 });
 
 
+// Replace the existing /api/villages endpoint
 app.get("/api/villages", async (req, res) => {
   try {
     const { name } = req.query;
 
     if (!name) {
-      return res.status(400).json({ error: "name is required" });
+      return res.status(400).json({ 
+        success: false,
+        error: "name parameter is required" 
+      });
     }
 
+    // ✅ Use parameterized query - FIXES SQL INJECTION
     const query = `
       SELECT DISTINCT village_name, id
       FROM public.coupe_village_master
-      WHERE coupe_name = '${name}'
+      WHERE coupe_name = $1
     `;
 
-    const result =  await sequelize.query(query, [name]);
+    const result = await sequelize.query(query, {
+      bind: [name],
+      type: sequelize.QueryTypes.SELECT
+    });
 
     res.json({
       success: true,
-      data: result[0],
+      data: result
     });
+    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error('Error in /api/villages:', error);
+    // Return generic error message
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to fetch villages" 
+    });
   }
 });
 

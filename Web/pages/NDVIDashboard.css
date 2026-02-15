@@ -1,0 +1,17 @@
+body {
+  font-family: arial !important;
+}
+
+/* If you need to override other Ant Design text elements */
+.ant-col,
+.ant-typography,
+.ant-btn,
+.ant-input,
+.ant-select,
+.ant-dropdown-menu,
+.ant-statistic,
+.ant-table-cell,
+.ant-table-wrapper,
+.ant-menu {
+  font-family: arial !important;
+}

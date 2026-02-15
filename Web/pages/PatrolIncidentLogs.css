@@ -1,4 +1,20 @@
+body {
+  font-family: arial !important;
+}
 
+/* If you need to override other Ant Design text elements */
+.ant-col,
+.ant-typography,
+.ant-btn,
+.ant-input,
+.ant-select,
+.ant-dropdown-menu,
+.ant-statistic,
+.ant-table-cell,
+.ant-table-wrapper,
+.ant-menu {
+  font-family: arial !important;
+}
 
 /* === Transparent Table === */
 .transparent-table .ant-table {
@@ -14,9 +30,8 @@
 
 /* === Transparent Table Header === */
 .transparent-table .ant-table-thead > tr > th {
-  background: rgba(0, 0, 0, 0.05) !important;
-  color: #000;  /* black text */
-  font-weight: bold;
+  background: #009245 !important;
+  color: white;  /* black text */
   border-bottom: 1px solid rgba(0, 0, 0, 0.2);
   border: 1.949px solid rgba(0, 0, 0, 0.23);
   box-shadow: -9.048px -9.048px 4.524px -10.556px #fff inset, 
@@ -134,11 +149,7 @@
               13.681px 13.681px 7.696px -15.391px #fff inset;
 }
 
-/* === Force ONLY table headings (column titles) to light blue === */
-.transparent-table .ant-table-thead > tr > th {
-  color: #000 !important;   /* light blue */
-  font-weight: bold;
-}
+
 
 /* Sorting icons in table headers */
 .transparent-table .ant-table-column-sorter,
@@ -209,7 +220,6 @@
     min-width: 32px;
     height: 32px;
     margin-inline-end: 8px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     line-height: 30px;
     text-align: center;
     vertical-align: middle;

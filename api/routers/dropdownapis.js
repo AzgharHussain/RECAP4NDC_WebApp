@@ -621,45 +621,151 @@ router.get('/layer-bounds/:layerName', async (req, res) => {
   }
 });
 
-router.post('/get-coupe-area', verifyJwt, async (req, res) => {
-    const { tableName } = req.body;
+// router.post('/get-coupe-area', verifyJwt, async (req, res) => {
+//     const { tableName } = req.body;
 
-    if (!tableName) {
-        return res.status(400).json({
-            success: false,
-            message: 'tableName is required'
-        });
-    }
+//     if (!tableName) {
+//         return res.status(400).json({
+//             success: false,
+//             message: 'tableName is required'
+//         });
+//     }
 
-    try {
+//     try {
        
 
        
 
-        // 2️⃣ Fetch all data
-        const selectQuery = `
-            SELECT
-    SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
-FROM
-    public."${tableName}";
-        `;
+//         // 2️⃣ Fetch all data
+//         const selectQuery = `
+//             SELECT
+//     SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
+// FROM
+//     public."${tableName}";
+//         `;
 
-        const [results] = await sequelize.query(selectQuery);
+//         const [results] = await sequelize.query(selectQuery);
 
-        res.json({
-            success: true,
-            message: 'Columns verified and data fetched successfully',
-            data: results
-        });
+//         res.json({
+//             success: true,
+//             message: 'Columns verified and data fetched successfully',
+//             data: results
+//         });
 
-    } catch (error) {
-        console.error('Error in NDVI change API:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to process NDVI change data',
-            error: error.message
-        });
-    }
+//     } catch (error) {
+//         console.error('Error in NDVI change API:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Failed to process NDVI change data',
+//             error: error.message
+//         });
+//     }
+// });
+
+// Get all divisions
+router.get('/coupe-divisions', async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT division
+      FROM public.coupe_dropdown_master
+      ORDER BY division
+    `;
+    
+    const result = await sequelize.query(query);
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching divisions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
+
+// Get ranges based on selected division - POST with body
+router.post('/coupe-ranges', async (req, res) => {
+  try {
+    const { division } = req.body;
+    
+    if (!division) {
+      return res.status(400).json({ error: 'division is required' });
+    }
+
+    const query = `
+      SELECT DISTINCT range
+      FROM public.coupe_dropdown_master
+      WHERE division = ?
+      ORDER BY range
+    `;
+    
+    // Using parameterized query with replacements
+    const result = await sequelize.query(query, {
+      replacements: [division],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching ranges:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/coupe-rounds', async (req, res) => {
+  try {
+    const { division, range } = req.body;
+    
+    if (!division || !range) {
+      return res.status(400).json({ error: 'division and range are required' });
+    }
+
+    const query = `
+      SELECT DISTINCT round
+      FROM public.coupe_dropdown_master
+      WHERE division = ?
+      AND range = ?
+      ORDER BY round
+    `;
+    
+    // Using parameterized query with replacements
+    const result = await sequelize.query(query, {
+      replacements: [division, range],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching beats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get beats based on selected division and range - POST with body
+router.post('/coupe-beats', async (req, res) => {
+  try {
+    const { division, range , round} = req.body;
+    
+    if (!division || !range) {
+      return res.status(400).json({ error: 'division and range are required' });
+    }
+
+    const query = `
+      SELECT DISTINCT beat
+      FROM public.coupe_dropdown_master
+      WHERE division = ?
+      AND range = ? AND round = ?
+      ORDER BY beat
+    `;
+    
+    // Using parameterized query with replacements
+    const result = await sequelize.query(query, {
+      replacements: [division, range, round],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching beats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 module.exports = router;

@@ -16,7 +16,7 @@ import {
   LineElement
 } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
-import ForestHierarchyDropdowns from "./dropdown"
+
 import {
   Card,
   CardContent,
@@ -38,7 +38,6 @@ import {
   Paper,
   Chip,
   Button,
-  Modal,
   Tabs,
   Tab,
   Avatar,
@@ -46,7 +45,6 @@ import {
   ListItem,
   ListItemText,
   ListItemAvatar,
-  Divider,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -54,17 +52,14 @@ import {
   TextField,
   IconButton,
   Tooltip as MuiTooltip,
-  Badge,
   Switch,
   FormControlLabel,
   Container,
   Stack,
   CardHeader,
-  CardActions,
   LinearProgress as MuiLinearProgress
 } from '@mui/material';
 import {
-
   Visibility,
   Image as ImageIcon,
   Note,
@@ -81,17 +76,13 @@ import {
   Map,
   Calculate,
   PictureAsPdf,
-  InsertDriveFile,
   Sort,
-  ExpandMore,
-  ExpandLess,
   FilterList,
   Search,
-  Refresh,
-  OpenInFull, CloseFullscreen
+  OpenInFull,
+  CloseFullscreen,
+  Send
 } from '@mui/icons-material';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import { API_BASE_URL } from '../config';
 
 // Register ChartJS components
@@ -107,13 +98,286 @@ ChartJS.register(
   LineElement
 );
 
+// ============================================
+// NDVIMyCoups_dropdown Component
+// ============================================
+const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
+  const [divisions, setDivisions] = useState([]);
+  const [ranges, setRanges] = useState([]);
+  const [rounds, setRounds] = useState([]);
+  const [beats, setBeats] = useState([]);
+  const [division, setDivision] = useState("");
+  const [range, setRange] = useState("");
+  const [round, setRound] = useState("");
+  const [beat, setBeat] = useState("");
+
+  /* ------------------ Load Divisions from coupe_dropdown_master ------------------ */
+  useEffect(() => {
+    const fetchDivisions = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          `${API_BASE_URL}/api/coupe-divisions`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        console.log("api/coupe-divisions", res.data);
+        setDivisions(res.data[0] || []);
+      } catch (error) {
+        console.error("Error fetching divisions:", error);
+      }
+    };
+
+    fetchDivisions();
+  }, []);
+
+  /* ------------------ Load Ranges based on selected Division ------------------ */
+  const handleDivisionChange = async (e) => {
+    const selectedDivision = e.target.value;
+    setDivision(selectedDivision);
+    setRange("");
+    setRound("");
+    setBeat("");
+    setRanges([]);
+    setRounds([]);
+    setBeats([]);
+
+    if (!selectedDivision) {
+      onHierarchyChange({ division: null, range: null, round: null, beat: null });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API_BASE_URL}/api/coupe-ranges`,
+        { division: selectedDivision },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log("api/coupe-ranges", res.data);
+      setRanges(res.data);
+      onHierarchyChange({ division: selectedDivision, range: null, round: null, beat: null });
+    } catch (error) {
+      console.error("Error fetching ranges:", error);
+    }
+  };
+
+  /* ------------------ Load Rounds based on selected Division and Range ------------------ */
+  const handleRangeChange = async (e) => {
+    const selectedRange = e.target.value;
+    setRange(selectedRange);
+    setRound("");
+    setBeat("");
+    setRounds([]);
+    setBeats([]);
+
+    if (!selectedRange || !division) {
+      onHierarchyChange({ division, range: null, round: null, beat: null });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API_BASE_URL}/api/coupe-rounds`,
+        {
+          division: division,
+          range: selectedRange
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log("api/coupe-rounds", res.data);
+      setRounds(res.data);
+      onHierarchyChange({ division, range: selectedRange, round: null, beat: null });
+    } catch (error) {
+      console.error("Error fetching rounds:", error);
+    }
+  };
+
+  /* ------------------ Load Beats based on selected Division, Range, and Round ------------------ */
+  const handleRoundChange = async (e) => {
+    const selectedRound = e.target.value;
+    setRound(selectedRound);
+    setBeat("");
+    setBeats([]);
+
+    if (!selectedRound || !range || !division) {
+      onHierarchyChange({ division, range, round: null, beat: null });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API_BASE_URL}/api/coupe-beats`,
+        {
+          division: division,
+          range: range,
+          round: selectedRound
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log("api/coupe-beats", res.data);
+      setBeats(res.data);
+      onHierarchyChange({ division, range, round: selectedRound, beat: null });
+    } catch (error) {
+      console.error("Error fetching beats:", error);
+    }
+  };
+
+  /* ------------------ Handle Beat Selection ------------------ */
+  const handleBeatChange = async (e) => {
+    const selectedBeat = e.target.value;
+    setBeat(selectedBeat);
+    
+    if (selectedBeat && division && range && round) {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.post(
+          `${API_BASE_URL}/api/get-coupe-by-beat`,
+          {
+            division: division,
+            range: range,
+            round: round,
+            beat: selectedBeat
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        
+        if (res.data.success && res.data.coupe_name) {
+          onHierarchyChange({ 
+            division, 
+            range, 
+            round,
+            beat: selectedBeat,
+            coupe_name: res.data.coupe_name 
+          });
+        } else {
+          onHierarchyChange({ division, range, round, beat: selectedBeat });
+        }
+      } catch (error) {
+        console.error("Error fetching coupe for beat:", error);
+        onHierarchyChange({ division, range, round, beat: selectedBeat });
+      }
+    } else {
+      onHierarchyChange({ division, range, round, beat: selectedBeat });
+    }
+  };
+
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      gap: 2, 
+      flexWrap: 'wrap',
+      p: 2
+    }}>
+      {/* Division Dropdown */}
+      <FormControl size="small" sx={{ minWidth: 200 }}>
+        <InputLabel>Division</InputLabel>
+        <Select
+          value={division}
+          onChange={handleDivisionChange}
+          label="Division"
+        >
+          <MenuItem value="">Select Division</MenuItem>
+          {divisions.map((d, index) => (
+            <MenuItem key={index} value={d.division}>
+              {d.division}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {/* Range Dropdown */}
+      <FormControl size="small" sx={{ minWidth: 200 }}>
+        <InputLabel>Range</InputLabel>
+        <Select
+          value={range}
+          onChange={handleRangeChange}
+          label="Range"
+          disabled={!division}
+        >
+          <MenuItem value="">Select Range</MenuItem>
+          {ranges.map((r, index) => (
+            <MenuItem key={index} value={r.range}>
+              {r.range}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {/* Round Dropdown */}
+      <FormControl size="small" sx={{ minWidth: 200 }}>
+        <InputLabel>Round</InputLabel>
+        <Select
+          value={round}
+          onChange={handleRoundChange}
+          label="Round"
+          disabled={!range}
+        >
+          <MenuItem value="">Select Round</MenuItem>
+          {rounds.map((r, index) => (
+            <MenuItem key={index} value={r.round}>
+              {r.round}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {/* Beat Dropdown */}
+      <FormControl size="small" sx={{ minWidth: 200 }}>
+        <InputLabel>Beat</InputLabel>
+        <Select
+          value={beat}
+          onChange={handleBeatChange}
+          label="Beat"
+          disabled={!round}
+        >
+          <MenuItem value="">Select Beat</MenuItem>
+          {beats.map((b, index) => (
+            <MenuItem key={index} value={b.beat}>
+              {b.beat}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Box>
+  );
+};
+
+// ============================================
+// Main NDVIChangeDashboard Component
+// ============================================
 const NDVIChangeDashboard = () => {
   // State management
   const [selectedCoupe, setSelectedCoupe] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('2025-02');
   const [monthlyData, setMonthlyData] = useState({});
   const [currentTableData, setCurrentTableData] = useState([]);
-  const [sortedData, setSortedData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingArea, setLoadingArea] = useState(false);
   const [loadingNDVIArea, setLoadingNDVIArea] = useState(false);
@@ -122,7 +386,6 @@ const NDVIChangeDashboard = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [totalArea, setTotalArea] = useState(0);
-  const [degradedArea, setDegradedArea] = useState(0);
   const [summaryStats, setSummaryStats] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const [chartType, setChartType] = useState('bar');
@@ -131,8 +394,12 @@ const NDVIChangeDashboard = () => {
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'pixle_id', direction: 'asc' });
   const [expandedChart, setExpandedChart] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date(2025, 1, 1));
   
-    const [selectedDate, setSelectedDate] = useState(new Date(2025, 1, 1)); // February 2025
+  // New state for date range
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [tableNames, setTableNames] = useState([]);
   
   // Pagination states
   const [page, setPage] = useState(0);
@@ -140,13 +407,11 @@ const NDVIChangeDashboard = () => {
   const [rowsPerPageOptions] = useState([10, 25, 50, 100]);
   
   // Hierarchy states
-  const [hierarchyData, setHierarchyData] = useState([]);
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
+  const [selectedRound, setSelectedRound] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
-  const [divisions, setDivisions] = useState([]);
-  const [ranges, setRanges] = useState([]);
-  const [beats, setBeats] = useState([]);
+  const [hierarchyCoupeName, setHierarchyCoupeName] = useState(null);
 
   // Add state for coupeOptions
   const [coupeOptions, setCoupeOptions] = useState([
@@ -157,379 +422,188 @@ const NDVIChangeDashboard = () => {
     { value: 'Sabarkantha_North_Aravalli', label: 'Sabarkantha North Aravalli' }
   ]);
 
-  const handleDateChange = (newDate) => {
-    if (newDate) {
-      setSelectedDate(newDate);
-      
-      // Format as YYYY-MM for your API calls
-      const year = newDate.getFullYear();
-      const month = String(newDate.getMonth() + 1).padStart(2, '0');
-      const formattedMonth = `${year}-${month}`;
-      
-      setSelectedMonth(formattedMonth);
-      
-      console.log('Selected Year:', year);
-      console.log('Selected Month:', month);
-      console.log('Formatted:', formattedMonth);
-      
-      // Fetch data for selected year-month
-      if (selectedCoupe) {
-        if (monthlyData[formattedMonth]) {
-          setCurrentTableData(monthlyData[formattedMonth].data);
-          sortData(monthlyData[formattedMonth].data, sortConfig.key, sortConfig.direction);
-          setSummaryStats(monthlyData[formattedMonth].stats);
-        } else {
-          fetchNDVIData(selectedCoupe, formattedMonth);
-        }
-      }
+  // Function to transform division name to coupe name
+  const transformDivisionToCoupe = (divisionName) => {
+    if (!divisionName) return null;
+    
+    // Remove " Forest Division" and replace with "_coupe"
+    // Also convert to lowercase and replace spaces with underscores
+    let coupeName = divisionName
+      .replace(/ Forest Division$/i, '') // Remove " Forest Division" at the end
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .toLowerCase(); // Convert to lowercase
+    
+    // Add "_coupe" at the end
+    coupeName = `${coupeName}_coupe`;
+    
+    console.log(`Transformed "${divisionName}" to "${coupeName}"`);
+    return coupeName;
+  };
+
+  // Handle hierarchy change from dropdown
+  const handleHierarchyChange = (hierarchy) => {
+    console.log("Hierarchy changed:", hierarchy);
+    
+    setSelectedDivision(hierarchy.division);
+    setSelectedRange(hierarchy.range);
+    setSelectedRound(hierarchy.round);
+    setSelectedBeat(hierarchy.beat);
+    setHierarchyCoupeName(hierarchy.coupe_name || null);
+    
+    // If division is selected and we have the division name, transform it to coupe name
+    if (hierarchy.division && !hierarchy.coupe_name) {
+      const transformedCoupe = transformDivisionToCoupe(hierarchy.division);
+      setHierarchyCoupeName(transformedCoupe);
+      console.log("Set hierarchy coupe name to:", transformedCoupe);
     }
   };
 
-  // Add useEffect to fetch coupes
-  useEffect(() => {
-    const fetchCoupes = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        
-        // Try to fetch from API
-        const res = await axios.get(
-          `${API_BASE_URL}/api/admincoupes`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        console.log("API Response for coupes:", res.data);
-
-        // Process API response - handle different response formats
-        let apiCoupes = [];
-        
-        if (Array.isArray(res.data)) {
-          // Direct array response
-          apiCoupes = res.data.map(coupe => ({
-            value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
-            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
-          }));
-        } else if (res.data && res.data.success && Array.isArray(res.data.data)) {
-          // Success object with data array
-          apiCoupes = res.data.data.map(coupe => ({
-            value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
-            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
-          }));
-        } else if (res.data && Array.isArray(res.data.data)) {
-          // Object with data array
-          apiCoupes = res.data.data.map(coupe => ({
-            value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
-            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
-          }));
-        } else if (res.data && res.data.coupes && Array.isArray(res.data.coupes)) {
-          // Object with coupes array
-          apiCoupes = res.data.coupes.map(coupe => ({
-            value: coupe.coupe_name || coupe.coupe_id || coupe.id || coupe.value,
-            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
-          }));
-        }
-
-        // If we got valid coupes from API, use them
-        if (apiCoupes.length > 0) {
-          setCoupeOptions(apiCoupes);
-          console.log("Loaded coupes from API:", apiCoupes.length);
-        } else {
-          console.log("No valid coupes from API, using fallback");
-          // Keep the fallback coupes already set in initial state
-        }
-        
-      } catch (error) {
-        console.error("Failed to fetch coupes from API, using fallback:", error);
-        // Keep using the fallback coupes
-      }
-    };
-
-    fetchCoupes();
-  }, []); // Empty dependency array - run once on mount
-
-  const monthOptions = [
-    { value: '2025-01', label: 'January 2025' },
-    { value: '2025-02', label: 'February 2025' },
-    { value: '2025-03', label: 'March 2025' },
-    { value: '2025-04', label: 'April 2025' },
-    { value: '2025-05', label: 'May 2025' },
-    { value: '2025-06', label: 'June 2025' },
-    { value: '2025-07', label: 'July 2025' },
-    { value: '2025-08', label: 'August 2025' },
-    { value: '2025-09', label: 'September 2025' },
-    { value: '2025-10', label: 'October 2025' },
-    { value: '2025-11', label: 'November 2025' },
-    { value: '2025-12', label: 'December 2025' }
-  ];
-
-  useEffect(() => {
-    if (selectedCoupe) {
-      // When selectedCoupe changes, fetch the area and data
-      fetchTotalArea(selectedCoupe);
-      // Note: fetchNDVIData will be called after totalArea is set (from another useEffect)
-    }
-  }, [selectedCoupe]);
-
-  // ============================================
-  // FIXED: Fetch hierarchy and areas
-  // ============================================
-  const fetchHierarchyAndAreas = async () => {
-    try {
-      // Fetch hierarchy data
-      const hierarchyResponse = await axios.get(`${API_BASE_URL}/api/get-hierarchy`);
-      if (hierarchyResponse.data.success) {
-        const data = hierarchyResponse.data.data;
-        setHierarchyData(data);
-        
-        // Extract unique divisions
-        const uniqueDivisions = [...new Set(data.map(item => item.DIVISION))];
-        setDivisions(uniqueDivisions.map(div => ({
-          value: div,
-          label: div
-        })));
-      }
-      console.log("api/hierarchy");
-      // Fetch area for default coupe
-      fetchTotalArea(selectedCoupe);
+  // Generate table names based on date range
+  const generateTableNames = (start, end) => {
+    if (!start || !end) return [];
+    
+    const tableNames = [];
+    const startYear = start.getFullYear();
+    const startMonth = start.getMonth();
+    const endYear = end.getFullYear();
+    const endMonth = end.getMonth();
+    
+    // Loop through months from start to end
+    let currentDate = new Date(startYear, startMonth, 1);
+    while (currentDate <= end) {
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
       
-    } catch (err) {
-      console.error('Error fetching hierarchy:', err);
-      setError('Failed to fetch hierarchy data');
-    }
-  };
-
-  // ============================================
-  // FIXED: Handle division selection
-  // ============================================
-  const handleDivisionChange = async (event) => {
-    const divisionName = event.target.value;
-    setSelectedDivision(divisionName);
-    setSelectedRange(null);
-    setSelectedBeat(null);
-    setRanges([]);
-    setBeats([]);
-    
-    if (!divisionName) return;
-    
-    // Filter ranges for selected division
-    const divisionRanges = hierarchyData
-      .filter(item => item.DIVISION === divisionName)
-      .map(item => item.RANGE);
-    
-    const uniqueRanges = [...new Set(divisionRanges)];
-    setRanges(uniqueRanges.map(range => ({
-      value: range,
-      label: range
-    })));
-  };
-
-  const handleRangeChange = (event) => {
-    const rangeName = event.target.value;
-    setSelectedRange(rangeName);
-    setSelectedBeat(null);
-    setBeats([]);
-    
-    if (!rangeName || !selectedDivision) return;
-    
-    // Filter beats for selected division and range
-    const divisionBeats = hierarchyData
-      .filter(item => 
-        item.DIVISION === selectedDivision && 
-        item.RANGE === rangeName
-      )
-      .map(item => item.BEAT);
-    
-    const uniqueBeats = [...new Set(divisionBeats)];
-    setBeats(uniqueBeats.map(beat => ({
-      value: beat,
-      label: beat
-    })));
-  };
-
-  const handleBeatChange = (event) => {
-    const beatName = event.target.value;
-    setSelectedBeat(beatName);
-    
-    // Find corresponding coupe for the beat
-    const beatData = hierarchyData.find(item => 
-      item.DIVISION === selectedDivision && 
-      item.RANGE === selectedRange && 
-      item.BEAT === beatName
-    );
-    
-    if (beatData && beatData.coupe_name) {
-      // Set the coupe and fetch its data
-      setSelectedCoupe(beatData.coupe_name);
-      fetchTotalArea(beatData.coupe_name);
-    }
-  };
-
-  // ============================================
-  // FIXED: Fetch total area for selected coupe
-  // ============================================
-  const fetchTotalArea = async (coupeName) => {
-    setLoadingArea(true);
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await axios.post(
-        `${API_BASE_URL}/api/get-coupe-area`,
-        {
-          tableName: coupeName,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // ✅ token added
-          },
-        }
-      );
-      console.log("api/get-coupe-area");
-
-      if (response.data.success) {
-        const area = response.data.data[0]?.total_area_sq_km || 0;
-        const areaValue = parseFloat(area);
-        console.log("coupe area 222222222",response.data)
-        
-        // FIX: Ensure area is positive and reasonable
-        if (areaValue <= 0) {
-          console.warn('Total area is zero or negative, using default');
-          setTotalArea(100); // Default reasonable value
-        } else {
-          setTotalArea(areaValue);
-        }
-      } else {
-        setTotalArea(100); // Default fallback
-      }
-    } catch (err) {
-      console.error('Error fetching area:', err);
-      setTotalArea(100); // Default fallback
-    } finally {
-      setLoadingArea(false);
-    }
-  };
-
-  // ============================================
-  // FIXED: Fetch NDVI degraded area (CORRECTED)
-  // ============================================
-  const fetchNDVIDegradedArea = async (coupeName, month) => {
-    setLoadingNDVIArea(true);
-    try {
-      const tableName = `${month}-01_${coupeName}_NDVI_Change`;
-      const token = localStorage.getItem("token");
-
-      const response = await axios.post(
-        `${API_BASE_URL}/api/ndvi-change-degraded-area`,
-        {
-          tableName,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      console.log("api/ndvi-change-degraded-area",response);
+      // We'll fetch data for each month based on hierarchy, not by table name
+      // This will be handled in the fetch function
+      tableNames.push(`${year}-${month}`);
       
-      if (response.data.success) {
-        const area = response.data.data[0]?.total_area_sq_km ;
-        const areaValue = parseFloat(area);
-        console.log(response.data,"area1234")
-        // FIX: Ensure degraded area is not larger than total area
-        const safeDegradedArea = Math.min(areaValue, totalArea);
-        setDegradedArea(safeDegradedArea);
-        return safeDegradedArea;
-      }
-      return 0;
-    } catch (err) {
-      console.error('Error fetching NDVI degraded area:', err);
-      return 0;
-    } finally {
-      setLoadingNDVIArea(false);
+      // Move to next month
+      currentDate.setMonth(currentDate.getMonth() + 1);
     }
+    
+    return tableNames;
   };
 
-  // ============================================
-  // FIXED: Fetch NDVI change data (WITH CORRECTED CALCULATIONS)
-  // ============================================
-  const fetchNDVIData = async (coupeName, month) => {
+  // Handle submit button click
+  const handleSubmit = async () => {
+    // Check if we have hierarchy selection
+    if (!selectedDivision) {
+      setError('Please select at least a division');
+      return;
+    }
+    
+    if (!startDate || !endDate) {
+      setError('Please select both start and end dates');
+      return;
+    }
+    
+    if (startDate > endDate) {
+      setError('Start date must be before end date');
+      return;
+    }
+    
+    // Generate month list
+    const months = generateTableNames(startDate, endDate);
+    setTableNames(months);
+    
+    if (months.length === 0) {
+      setError('No months selected in the date range');
+      return;
+    }
+    
+    // Fetch data for all months with hierarchy filters
+    await fetchFilteredData(months);
+  };
+
+  // Fetch filtered data based on hierarchy and date
+  const fetchFilteredData = async (months) => {
     setLoading(true);
     setError(null);
+    setMonthlyData({});
     
     try {
-      const tableName = `${month}-01_${coupeName}_NDVI_Change`;
-      
-      // Fetch data
       const token = localStorage.getItem("token");
-
-      const dataResponse = await axios.post(
-        `${API_BASE_URL}/api/ndvi-change-get`,
-        { tableName },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      console.log(tableName);
-      console.log("api/ndvi-change-get",dataResponse);
       
-      if (dataResponse.data.success) {
-        const data = dataResponse.data.data;
-        
-        // Fetch degraded area
-        const degradedAreaValue = await fetchNDVIDegradedArea(coupeName, month);
-        
-        // FIXED: Calculate afforested area correctly
-        // Afforested area = Total area - Degraded area (minimum 0)
-        const afforestedAreaValue = Math.max(0, totalArea - degradedAreaValue);
-        
-        const degradedPolygons = data.filter(item => item.status === true).length;
-        const afforestedPolygons = data.filter(item => item.status === false).length;
-        
-        // Calculate area per polygon
-        const degradedAreaPerPolygon = degradedPolygons > 0 ? degradedAreaValue / degradedPolygons : 0;
-        const afforestedAreaPerPolygon = afforestedPolygons > 0 ? afforestedAreaValue / afforestedPolygons : 0;
-        
-        // Enhance data with area information
-        const enhancedData = data.map(item => {
-          const isDegraded = item.status === true;
-          return {
-            ...item,
-            // Use appropriate area per polygon based on status
-            area_sq_km: isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon,
-            month: month,
-            status: isDegraded,
-            change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
-            has_note: !!(item.note && item.note.trim() !== ''),
-            has_image: !!(item.image_data),
-            pixle_id: item.pixle_id || item.pixle_id || 'N/A'
-          };
-        });
-        
-        setCurrentTableData(enhancedData);
-        sortData(enhancedData, sortConfig.key, sortConfig.direction);
-        
-        // Calculate statistics with CORRECTED area calculations
-        const stats = calculateStatistics(enhancedData, totalArea, degradedAreaValue, afforestedAreaValue);
-        setSummaryStats(stats);
-        
-        // Update monthly data tracking
-        setMonthlyData(prev => ({
-          ...prev,
-          [month]: {
-            data: enhancedData,
-            stats,
-            month: month,
-            degradedArea: degradedAreaValue,
-            afforestedArea: afforestedAreaValue
+      // First, get the coupe name from division if not already set
+      let coupeToUse = hierarchyCoupeName;
+      if (!coupeToUse && selectedDivision) {
+        coupeToUse = transformDivisionToCoupe(selectedDivision);
+      }
+      
+      if (!coupeToUse) {
+        setError('Could not determine coupe name');
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch total area for the coupe
+      await fetchTotalArea(coupeToUse);
+      
+      // For each month, fetch data filtered by hierarchy
+      for (const month of months) {
+        try {
+          // Construct table name for this month
+          const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
+          
+          // Fetch data with hierarchy filters
+          const dataResponse = await axios.post(
+            `${API_BASE_URL}/api/ndvi-change-get-filtered`,
+            {
+              tableName,
+              division: selectedDivision,
+              range: selectedRange,
+              round: selectedRound,
+              beat: selectedBeat
+            },
+            { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+          );
+          
+          if (dataResponse.data.success) {
+            const data = dataResponse.data.data;
+            
+            if (data.length > 0) {
+              // Fetch degraded area for this month with filters
+              const degradedAreaValue = await fetchFilteredDegradedArea(tableName);
+              const afforestedAreaValue = Math.max(0, totalArea - degradedAreaValue);
+              
+              const degradedPolygons = data.filter(item => item.status === true).length;
+              const afforestedPolygons = data.filter(item => item.status === false).length;
+              
+              const degradedAreaPerPolygon = degradedPolygons > 0 ? degradedAreaValue / degradedPolygons : 0;
+              const afforestedAreaPerPolygon = afforestedPolygons > 0 ? afforestedAreaValue / afforestedPolygons : 0;
+              
+              const enhancedData = data.map(item => {
+                const isDegraded = item.status === true;
+                return {
+                  ...item,
+                  area_sq_km: isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon,
+                  month: month,
+                  status: isDegraded,
+                  change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
+                  has_note: !!(item.note && item.note.trim() !== ''),
+                  has_image: !!(item.image_data),
+                  pixle_id: item.pixle_id || 'N/A'
+                };
+              });
+              
+              const stats = calculateStatistics(enhancedData, totalArea, degradedAreaValue, afforestedAreaValue);
+              
+              setMonthlyData(prev => ({
+                ...prev,
+                [month]: {
+                  data: enhancedData,
+                  stats,
+                  month: month,
+                  degradedArea: degradedAreaValue,
+                  afforestedArea: afforestedAreaValue
+                }
+              }));
+            }
           }
-        }));
+        } catch (err) {
+          console.error(`Error fetching data for month ${month}:`, err);
+        }
       }
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Failed to fetch NDVI data';
@@ -540,9 +614,124 @@ const NDVIChangeDashboard = () => {
     }
   };
 
-  // ============================================
-  // FIXED: Calculate statistics
-  // ============================================
+  // Helper function to fetch filtered degraded area
+  const fetchFilteredDegradedArea = async (tableName) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_BASE_URL}/api/ndvi-change-degraded-area`,
+        {
+          tableName,
+          division: selectedDivision,
+          range: selectedRange,
+          round: selectedRound,
+          beat: selectedBeat
+        },
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        const area = response.data.data[0]?.total_area_sq_km || 0;
+        return parseFloat(area);
+      }
+      return 0;
+    } catch (err) {
+      console.error('Error fetching filtered degraded area:', err);
+      return 0;
+    }
+  };
+
+  const handleDateChange = (newDate) => {
+    if (newDate) {
+      setSelectedDate(newDate);
+      const year = newDate.getFullYear();
+      const month = String(newDate.getMonth() + 1).padStart(2, '0');
+      const formattedMonth = `${year}-${month}`;
+      setSelectedMonth(formattedMonth);
+      
+      // Single month selection - only if we have data for that month
+      if (monthlyData[formattedMonth]) {
+        setCurrentTableData(monthlyData[formattedMonth].data);
+        sortData(monthlyData[formattedMonth].data, sortConfig.key, sortConfig.direction);
+        setSummaryStats(monthlyData[formattedMonth].stats);
+      }
+    }
+  };
+
+  // Handle start date change
+  const handleStartDateChange = (newDate) => {
+    setStartDate(newDate);
+    setError(null);
+  };
+
+  // Handle end date change
+  const handleEndDateChange = (newDate) => {
+    setEndDate(newDate);
+    setError(null);
+  };
+
+  // Fetch coupes
+  useEffect(() => {
+    const fetchCoupes = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          `${API_BASE_URL}/api/admincoupes`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        let apiCoupes = [];
+        
+        if (Array.isArray(res.data)) {
+          apiCoupes = res.data.map(coupe => ({
+            value: coupe.coupe_name || coupe.coupe_id || coupe.id,
+            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+          }));
+        } else if (res.data?.success && Array.isArray(res.data.data)) {
+          apiCoupes = res.data.data.map(coupe => ({
+            value: coupe.coupe_name || coupe.coupe_id || coupe.id,
+            label: coupe.coupe_name || coupe.label || `Coupe ${coupe.coupe_id || ''}`
+          }));
+        }
+
+        if (apiCoupes.length > 0) {
+          setCoupeOptions(apiCoupes);
+        }
+      } catch (error) {
+        console.error("Failed to fetch coupes from API:", error);
+      }
+    };
+
+    fetchCoupes();
+  }, []);
+
+  // Fetch total area for selected coupe
+  const fetchTotalArea = async (coupeName) => {
+    setLoadingArea(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_BASE_URL}/api/get-coupe-area`,
+        { tableName: coupeName },
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        const area = response.data.data[0]?.total_area_sq_km || 0;
+        const areaValue = parseFloat(area);
+        setTotalArea(areaValue > 0 ? areaValue : 100);
+      } else {
+        setTotalArea(100);
+      }
+    } catch (err) {
+      console.error('Error fetching area:', err);
+      setTotalArea(100);
+    } finally {
+      setLoadingArea(false);
+    }
+  };
+
+  // Calculate statistics for a specific month
   const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforestedAreaValue) => {
     if (!data || data.length === 0) return null;
 
@@ -551,10 +740,9 @@ const NDVIChangeDashboard = () => {
     const withNotes = data.filter(item => item.has_note).length;
     const withImages = data.filter(item => item.has_image).length;
     
-    // FIXED: Ensure values are reasonable
-    const totalCoupeAreaKm = Math.max(0.1, totalCoupeArea); // Minimum 0.1 sq km
-    const degradedAreaKm = Math.min(degradedAreaValue, totalCoupeAreaKm); // Can't exceed total
-    const afforestedAreaKm = Math.max(0, totalCoupeAreaKm - degradedAreaKm); // Minimum 0
+    const totalCoupeAreaKm = Math.max(0.1, totalCoupeArea);
+    const degradedAreaKm = Math.min(degradedAreaValue, totalCoupeAreaKm);
+    const afforestedAreaKm = Math.max(0, totalCoupeAreaKm - degradedAreaKm);
     
     const degradedPercentage = (degradedAreaKm / totalCoupeAreaKm) * 100;
     const afforestedPercentage = (afforestedAreaKm / totalCoupeAreaKm) * 100;
@@ -569,37 +757,43 @@ const NDVIChangeDashboard = () => {
       totalArea: totalCoupeAreaKm,
       totalPolygons: degradedPolygons + afforestedPolygons,
       degradedPercentage,
-      afforestedPercentage,
-      degradedAreaPercentage: degradedPercentage,
-      afforestedAreaPercentage: afforestedPercentage
+      afforestedPercentage
     };
   };
 
-  // Fetch record details by ID
-  const fetchRecordDetails = async (id) => {
-    try {
-      const tableName = `${selectedMonth}-01_${selectedCoupe}_NDVI_Change`;
-      const token = localStorage.getItem("token");
-
-      const response = await axios.get(
-        `${API_BASE_URL}/api/ndvi-change/${id}?tableName=${tableName}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      console.log("api/ndvi-change");
-      
-      if (response.data.success) {
-        setSelectedRecord(response.data.data[0]);
-        setModalOpen(true);
-      }
-    } catch (err) {
-      console.error('Error fetching record details:', err);
-      setError('Failed to fetch record details');
-    }
+  // Calculate overall statistics across all months
+  const calculateOverallStats = () => {
+    if (Object.keys(monthlyData).length === 0) return null;
+    
+    const months = Object.keys(monthlyData);
+    let totalDegradedArea = 0;
+    let totalAfforestedArea = 0;
+    let totalRecords = 0;
+    let totalWithNotes = 0;
+    let totalWithImages = 0;
+    
+    months.forEach(month => {
+      const monthData = monthlyData[month];
+      totalDegradedArea += monthData.stats.degradedArea;
+      totalAfforestedArea += monthData.stats.afforestedArea;
+      totalRecords += monthData.stats.totalPolygons;
+      totalWithNotes += monthData.stats.withNotes;
+      totalWithImages += monthData.stats.withImages;
+    });
+    
+    const monthsCount = months.length;
+    
+    return {
+      totalDegradedArea,
+      totalAfforestedArea,
+      avgDegradedArea: totalDegradedArea / monthsCount,
+      avgAfforestedArea: totalAfforestedArea / monthsCount,
+      totalRecords,
+      totalWithNotes,
+      totalWithImages,
+      monthsCount,
+      avgRecordsPerMonth: Math.round(totalRecords / monthsCount)
+    };
   };
 
   // Sort data
@@ -614,7 +808,7 @@ const NDVIChangeDashboard = () => {
       if (a[key] > b[key]) return direction === 'asc' ? 1 : -1;
       return 0;
     });
-    setSortedData(sorted);
+    return sorted;
   };
 
   const handleSort = (key) => {
@@ -626,30 +820,20 @@ const NDVIChangeDashboard = () => {
     sortData(currentTableData, key, direction);
   };
 
-  // Handle coupe selection
+  // Handle coupe selection (optional direct selection)
   const handleCoupeChange = (event) => {
     const newCoupe = event.target.value;
     setSelectedCoupe(newCoupe);
     setSelectedDivision(null);
     setSelectedRange(null);
+    setSelectedRound(null);
     setSelectedBeat(null);
+    setHierarchyCoupeName(newCoupe);
     setMonthlyData({});
+    setCurrentTableData([]);
+    setSummaryStats(null);
+    setTableNames([]);
     fetchTotalArea(newCoupe);
-    setTimeout(() => fetchNDVIData(newCoupe, selectedMonth), 100);
-  };
-
-  // Handle month selection
-  const handleMonthChange = (event) => {
-    const newMonth = event.target.value;
-    setSelectedMonth(newMonth);
-    
-    if (monthlyData[newMonth]) {
-      setCurrentTableData(monthlyData[newMonth].data);
-      sortData(monthlyData[newMonth].data, sortConfig.key, sortConfig.direction);
-      setSummaryStats(monthlyData[newMonth].stats);
-    } else {
-      fetchNDVIData(selectedCoupe, newMonth);
-    }
   };
 
   // Handle tab change
@@ -657,12 +841,28 @@ const NDVIChangeDashboard = () => {
     setActiveTab(newValue);
   };
 
-  // Filter and sort data
+  // Combine data from all months for the table
+  const combinedData = React.useMemo(() => {
+    let allData = [];
+    Object.entries(monthlyData).forEach(([month, data]) => {
+      if (data && data.data) {
+        const monthDataWithMonth = data.data.map(item => ({
+          ...item,
+          monthDisplay: month // Add month for display in table
+        }));
+        allData = [...allData, ...monthDataWithMonth];
+      }
+    });
+    return allData;
+  }, [monthlyData]);
+
+  // Filter and sort combined data
   const filteredData = React.useMemo(() => {
-    let filtered = currentTableData.filter(item => {
+    let filtered = combinedData.filter(item => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = 
         (item.pixle_id?.toString().toLowerCase().includes(searchLower)) ||
+        (item.monthDisplay?.toLowerCase().includes(searchLower)) ||
         (item.status?.toString().toLowerCase().includes(searchLower)) ||
         (item.note?.toLowerCase().includes(searchLower)) ||
         (item.latitude?.toString().includes(searchLower)) ||
@@ -675,7 +875,6 @@ const NDVIChangeDashboard = () => {
       return matchesSearch && matchesNotes && matchesImages;
     });
 
-    // Apply sorting
     return [...filtered].sort((a, b) => {
       if (sortConfig.key === 'has_note' || sortConfig.key === 'has_image') {
         if (a[sortConfig.key] === b[sortConfig.key]) return 0;
@@ -686,9 +885,9 @@ const NDVIChangeDashboard = () => {
       if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [currentTableData, searchTerm, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
+  }, [combinedData, searchTerm, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
 
-  // Paginated data - MUST BE AFTER filteredData
+  // Paginated data
   const paginatedData = React.useMemo(() => {
     const startIndex = page * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
@@ -708,26 +907,18 @@ const NDVIChangeDashboard = () => {
   // Handle rows per page change
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0); // Reset to first page
+    setPage(0);
   };
-
-  // Initialize on component mount
-  useEffect(() => {
-    fetchHierarchyAndAreas();
-  }, []);
-
-  useEffect(() => {
-    if (totalArea > 0) {
-      fetchNDVIData(selectedCoupe, selectedMonth);
-    }
-  }, [totalArea]);
 
   // Prepare chart data
   const prepareMonthlyChartData = () => {
-    const months = monthOptions.map(m => m.value);
-    const monthLabels = monthOptions.map(m => m.label.split(' ')[0]);
+    const months = Object.keys(monthlyData).sort();
+    const monthLabels = months.map(month => {
+      const [year, monthNum] = month.split('-');
+      const date = new Date(year, parseInt(monthNum) - 1, 1);
+      return date.toLocaleString('default', { month: 'short' }) + ' ' + year;
+    });
     
-    // Use AREA data instead of polygon count
     const degradedAreaData = months.map(month => 
       monthlyData[month]?.stats?.degradedArea || 0
     );
@@ -757,8 +948,12 @@ const NDVIChangeDashboard = () => {
   };
 
   const prepareAreaChartData = () => {
-    const months = monthOptions.map(m => m.value);
-    const monthLabels = monthOptions.map(m => m.label.split(' ')[0]);
+    const months = Object.keys(monthlyData).sort();
+    const monthLabels = months.map(month => {
+      const [year, monthNum] = month.split('-');
+      const date = new Date(year, parseInt(monthNum) - 1, 1);
+      return date.toLocaleString('default', { month: 'short' }) + ' ' + year;
+    });
     
     const degradedAreaData = months.map(month => 
       monthlyData[month]?.stats?.degradedArea || 0
@@ -790,63 +985,16 @@ const NDVIChangeDashboard = () => {
     };
   };
 
-  const preparePieChartData = () => {
-    if (!summaryStats) return null;
-    
-    return {
-      labels: ['Degraded Area', 'Afforested Area'],
-      datasets: [{
-        data: [summaryStats.degradedArea, summaryStats.afforestedArea],
-        backgroundColor: [
-          'rgba(239, 68, 68, 0.8)',
-          'rgba(34, 197, 94, 0.8)'
-        ],
-        borderColor: [
-          'rgba(239, 68, 68, 1)',
-          'rgba(34, 197, 94, 1)'
-        ],
-        borderWidth: 2,
-        hoverOffset: 15
-      }]
-    };
-  };
-
-  const preparePolygonPieChartData = () => {
-    if (!summaryStats) return null;
-    
-    return {
-      labels: ['Degraded Polygons', 'Afforested Polygons'],
-      datasets: [{
-        data: [summaryStats.degradedPolygons, summaryStats.afforestedPolygons],
-        backgroundColor: [
-          'rgba(239, 68, 68, 0.8)',
-          'rgba(34, 197, 94, 0.8)'
-        ],
-        borderColor: [
-          'rgba(239, 68, 68, 1)',
-          'rgba(34, 197, 94, 1)'
-        ],
-        borderWidth: 2,
-        hoverOffset: 15
-      }]
-    };
-  };
-
   // Chart options
   const barChartOptions = {
     responsive: true,
     maintainAspectRatio: !expandedChart,
     plugins: {
-      legend: {
-        position: 'top',
-      },
+      legend: { position: 'top' },
       title: {
         display: true,
         text: 'Monthly NDVI Change - Area Analysis',
-        font: {
-          size: 16,
-          weight: 'bold'
-        }
+        font: { size: 16, weight: 'bold' }
       },
       tooltip: {
         mode: 'index',
@@ -854,9 +1002,7 @@ const NDVIChangeDashboard = () => {
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
-            if (label) {
-              label += ': ';
-            }
+            if (label) label += ': ';
             label += context.parsed.y.toFixed(2) + ' sq km';
             return label;
           }
@@ -869,9 +1015,7 @@ const NDVIChangeDashboard = () => {
         title: {
           display: true,
           text: 'Area (Square Kilometers)',
-          font: {
-            weight: 'bold'
-          }
+          font: { weight: 'bold' }
         },
         ticks: {
           callback: function(value) {
@@ -883,9 +1027,7 @@ const NDVIChangeDashboard = () => {
         title: {
           display: true,
           text: 'Month',
-          font: {
-            weight: 'bold'
-          }
+          font: { weight: 'bold' }
         }
       }
     }
@@ -898,48 +1040,26 @@ const NDVIChangeDashboard = () => {
       title: {
         display: true,
         text: 'Monthly Area Change Trend',
-        font: {
-          size: 16,
-          weight: 'bold'
-        }
-      }
-    }
-  };
-
-  const pieChartOptions = {
-    responsive: true,
-    maintainAspectRatio: !expandedChart,
-    plugins: {
-      legend: {
-        position: 'right',
-      },
-      title: {
-        display: true,
-        text: 'Area Distribution (Square Kilometers)',
-        font: {
-          size: 16,
-          weight: 'bold'
-        }
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            const label = context.label || '';
-            const value = context.raw || 0;
-            return `${label}: ${value.toFixed(2)} km²`;
-          }
-        }
+        font: { size: 16, weight: 'bold' }
       }
     }
   };
 
   // Render different charts based on selection
   const renderChart = () => {
+    if (Object.keys(monthlyData).length === 0) {
+      return (
+        <Box sx={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Typography variant="h6" color="text.secondary">
+            No data available for the selected criteria
+          </Typography>
+        </Box>
+      );
+    }
+
     const chartData = {
       'bar': <Bar data={prepareMonthlyChartData()} options={barChartOptions} />,
-      'line': <Line data={prepareAreaChartData()} options={lineChartOptions} />,
-      'pie': <Pie data={preparePieChartData()} options={pieChartOptions} />,
-      'polygon-pie': <Pie data={preparePolygonPieChartData()} options={pieChartOptions} />
+      'line': <Line data={prepareAreaChartData()} options={lineChartOptions} />
     }[chartType];
 
     return (
@@ -967,125 +1087,50 @@ const NDVIChangeDashboard = () => {
 
   // Export to PDF
   const handleExportToPDF = () => {
+    const overallStats = calculateOverallStats();
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>NDVI Report - ${selectedCoupe} - ${selectedMonth}</title>
+          <title>NDVI Report - ${selectedDivision || selectedCoupe} - ${tableNames.length} months</title>
           <style>
-            body { 
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-              padding: 30px; 
-              color: #333;
-              line-height: 1.6;
-            }
-            .header { 
-              text-align: center; 
-              border-bottom: 3px solid #2c3e50;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
-            }
-            h1 { 
-              color: #2c3e50; 
-              margin-bottom: 10px;
-              font-size: 28px;
-            }
-            .subtitle {
-              color: #7f8c8d;
-              font-size: 14px;
-            }
-            .summary-card {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-              padding: 25px;
-              border-radius: 12px;
-              margin: 25px 0;
-              box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            }
-            .stats-grid {
-              display: grid;
-              grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-              gap: 20px;
-              margin: 25px 0;
-            }
-            .stat-card {
-              background: white;
-              border: 1px solid #e1e8ed;
-              border-radius: 10px;
-              padding: 20px;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            }
-            .stat-card.degraded {
-              border-left: 5px solid #ef4444;
-            }
-            .stat-card.afforested {
-              border-left: 5px solid #22c55e;
-            }
-            .stat-value {
-              font-size: 32px;
-              font-weight: bold;
-              margin: 10px 0;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 30px;
-              font-size: 13px;
-            }
-            th {
-              background-color: #2c3e50;
-              color: white;
-              padding: 12px 15px;
-              text-align: left;
-              font-weight: 600;
-            }
-            td {
-              padding: 10px 15px;
-              border-bottom: 1px solid #e1e8ed;
-            }
-            tr:nth-child(even) {
-              background-color: #f8f9fa;
-            }
-            .badge {
-              padding: 4px 10px;
-              border-radius: 20px;
-              font-size: 12px;
-              font-weight: 600;
-            }
-            .badge-degraded {
-              background-color: #fee2e2;
-              color: #dc2626;
-            }
-            .badge-afforested {
-              background-color: #dcfce7;
-              color: #16a34a;
-            }
-            .footer {
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #e1e8ed;
-              font-size: 12px;
-              color: #7f8c8d;
-              text-align: center;
-            }
-            @media print {
-              body { padding: 15px; }
-              .summary-card { break-inside: avoid; }
-              table { break-inside: avoid; }
-            }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #333; line-height: 1.6; }
+            .header { text-align: center; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; margin-bottom: 30px; }
+            h1 { color: #2c3e50; margin-bottom: 10px; font-size: 28px; }
+            .subtitle { color: #7f8c8d; font-size: 14px; }
+            .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 12px; margin: 25px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+            .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 25px 0; }
+            .stat-card { background: white; border: 1px solid #e1e8ed; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+            .stat-card.degraded { border-left: 5px solid #ef4444; }
+            .stat-card.afforested { border-left: 5px solid #22c55e; }
+            .stat-value { font-size: 32px; font-weight: bold; margin: 10px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 13px; }
+            th { background-color: #2c3e50; color: white; padding: 12px 15px; text-align: left; font-weight: 600; }
+            td { padding: 10px 15px; border-bottom: 1px solid #e1e8ed; }
+            tr:nth-child(even) { background-color: #f8f9fa; }
+            .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+            .badge-degraded { background-color: #fee2e2; color: #dc2626; }
+            .badge-afforested { background-color: #dcfce7; color: #16a34a; }
+            .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e1e8ed; font-size: 12px; color: #7f8c8d; text-align: center; }
+            @media print { body { padding: 15px; } .summary-card { break-inside: avoid; } table { break-inside: avoid; } }
           </style>
         </head>
         <body>
           <div class="header">
             <h1>Forest Cover Change Monitoring System</h1>
-            <div class="subtitle">NDVI Change Analysis Report</div>
+            <div class="subtitle">NDVI Change Analysis Report - Multiple Months</div>
           </div>
           
           <div class="summary-card">
             <h2 style="margin-top: 0; color: white;">Summary Report</h2>
-            <p><strong>Coupe:</strong> ${coupeOptions.find(c => c.value === selectedCoupe)?.label || selectedCoupe}</p>
-            <p><strong>Month:</strong> ${monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth}</p>
+            <p><strong>Division:</strong> ${selectedDivision || 'N/A'}</p>
+            <p><strong>Range:</strong> ${selectedRange || 'N/A'}</p>
+            <p><strong>Round:</strong> ${selectedRound || 'N/A'}</p>
+            <p><strong>Beat:</strong> ${selectedBeat || 'N/A'}</p>
+            <p><strong>Date Range:</strong> ${startDate ? startDate.toLocaleDateString() : ''} to ${endDate ? endDate.toLocaleDateString() : ''}</p>
+            <p><strong>Number of Months:</strong> ${tableNames.length}</p>
+            <p><strong>Total Records:</strong> ${combinedData.length}</p>
             <p><strong>Generated:</strong> ${new Date().toLocaleString('en-IN', { 
               timeZone: 'Asia/Kolkata',
               dateStyle: 'full',
@@ -1093,41 +1138,65 @@ const NDVIChangeDashboard = () => {
             })}</p>
           </div>
           
-          ${summaryStats ? `
+          ${overallStats ? `
             <div class="stats-grid">
               <div class="stat-card degraded">
-                <h3>Degraded Area</h3>
-                <div class="stat-value">${summaryStats.degradedArea.toFixed(2)} km²</div>
-                <p>${summaryStats.degradedPolygons.toLocaleString()} polygons (${summaryStats.degradedPercentage.toFixed(1)}% of total)</p>
+                <h3>Total Degraded Area</h3>
+                <div class="stat-value">${overallStats.totalDegradedArea.toFixed(2)} km²</div>
+                <p>Across ${overallStats.monthsCount} months</p>
               </div>
-              
               <div class="stat-card afforested">
-                <h3>Afforested Area</h3>
-                <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)} km²</div>
-                <p>${summaryStats.afforestedPolygons.toLocaleString()} polygons (${summaryStats.afforestedPercentage.toFixed(1)}% of total)</p>
+                <h3>Total Afforested Area</h3>
+                <div class="stat-value">${overallStats.totalAfforestedArea.toFixed(2)} km²</div>
+                <p>Across ${overallStats.monthsCount} months</p>
               </div>
-              
               <div class="stat-card">
-                <h3>Total Area</h3>
-                <div class="stat-value">${totalArea.toFixed(2)} km²</div>
-                <p>Complete coupe coverage</p>
+                <h3>Monthly Average</h3>
+                <div class="stat-value">${overallStats.avgRecordsPerMonth}</div>
+                <p>Records per month</p>
               </div>
-              
               <div class="stat-card">
-                <h3>Net Change</h3>
-                <div class="stat-value" style="color: ${summaryStats.afforestedArea > summaryStats.degradedArea ? '#16a34a' : '#dc2626'}">
-                  ${(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)} km²
+                <h3>Net Change (Total)</h3>
+                <div class="stat-value" style="color: ${overallStats.totalAfforestedArea > overallStats.totalDegradedArea ? '#16a34a' : '#dc2626'}">
+                  ${(overallStats.totalAfforestedArea - overallStats.totalDegradedArea).toFixed(2)} km²
                 </div>
-                <p>${summaryStats.afforestedArea > summaryStats.degradedArea ? 'Positive' : 'Negative'} change</p>
+                <p>${overallStats.totalAfforestedArea > overallStats.totalDegradedArea ? 'Positive' : 'Negative'} change</p>
               </div>
             </div>
           ` : ''}
           
-          <h2>Data Sample (First 20 Records)</h2>
+          <h2>Monthly Summary</h2>
           <table>
             <thead>
               <tr>
-                <th>Pixel ID</th>
+                <th>Month</th>
+                <th>Degraded Area (km²)</th>
+                <th>Afforested Area (km²)</th>
+                <th>Degraded %</th>
+                <th>Afforested %</th>
+                <th>Records</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Object.entries(monthlyData).sort().map(([month, data]) => `
+                <tr>
+                  <td>${month}</td>
+                  <td>${data.stats.degradedArea.toFixed(2)}</td>
+                  <td>${data.stats.afforestedArea.toFixed(2)}</td>
+                  <td>${data.stats.degradedPercentage.toFixed(1)}%</td>
+                  <td>${data.stats.afforestedPercentage.toFixed(1)}%</td>
+                  <td>${data.stats.totalPolygons}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <h2>Data Sample (First 50 Records)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Month</th>
+                
                 <th>Status</th>
                 <th>NDVI Change</th>
                 <th>Area (km²)</th>
@@ -1138,14 +1207,11 @@ const NDVIChangeDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              ${filteredData.slice(0, 20).map(item => `
+              ${filteredData.slice(0, 50).map(item => `
                 <tr>
-                  <td>${item.pixle_id || 'N/A'}</td>
-                  <td>
-                    <span class="badge  'badge-degraded' >
-                      'Degraded' 
-                    </span>
-                  </td>
+                  <td>${item.monthDisplay || 'N/A'}</td>
+                  
+                  <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? 'Afforested' : 'Degraded'}</span></td>
                   <td>${item.ndvi_change?.toFixed(4) || 'N/A'}</td>
                   <td>${item.area_sq_km?.toFixed(6) || 'N/A'}</td>
                   <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
@@ -1159,16 +1225,14 @@ const NDVIChangeDashboard = () => {
           
           <div class="footer">
             <p>Forest Cover Change Monitoring System © ${new Date().getFullYear()}</p>
-            <p>Data Source: NDVI Satellite Analysis | Report ID: ${Date.now()}</p>
+            <p>Data Source: Sentinel-2 NDVI Satellite Analysis | Report ID: ${Date.now()}</p>
             <p><em>Note: All area measurements are in square kilometers (km²). Afforested area is calculated as (Total Coupe Area - Degraded Area).</em></p>
           </div>
           
           <script>
             window.onload = function() {
               window.print();
-              setTimeout(function() {
-                window.close();
-              }, 1000);
+              setTimeout(function() { window.close(); }, 1000);
             }
           </script>
         </body>
@@ -1179,31 +1243,19 @@ const NDVIChangeDashboard = () => {
 
   // Refresh data
   const handleRefresh = () => {
-    fetchTotalArea(selectedCoupe);
-    fetchNDVIData(selectedCoupe, selectedMonth);
+    if (tableNames.length > 0) {
+      fetchFilteredData(tableNames);
+    }
   };
 
   return (
     <Container maxWidth="xl" sx={{ py: 3, minHeight: '100vh' }}>
       {/* Header */}
-      <Card sx={{ 
-        mb: 4, 
-        bgcolor: 'transparent', 
-        color: 'black',
-        borderRadius: 3,
-        boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
-      }}>
+      <Card sx={{ mb: 4, bgcolor: 'transparent', color: 'black', borderRadius: 3, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
         <CardContent>
           <Grid container alignItems="center" spacing={3}>
             <Grid item>
-              <Box sx={{
-                p: 2,
-                bgcolor: 'rgba(255,255,255,0.2)',
-                borderRadius: 3,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
+              <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Forest sx={{ fontSize: 48 }} />
               </Box>
             </Grid>
@@ -1214,49 +1266,16 @@ const NDVIChangeDashboard = () => {
               <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
                 Real-time NDVI Change Analysis Dashboard
               </Typography>
-              <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                <Chip 
-                  label="Satellite Data" 
-                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'black' }} 
-                  size="small"
-                />
-                <Chip 
-                  label="GIS Analysis" 
-                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'black' }} 
-                  size="small"
-                />
-                <Chip 
-                  label="Real-time Updates" 
-                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'black' }} 
-                  size="small"
-                />
-              </Stack>
             </Grid>
             <Grid item>
-              <Stack direction="row" spacing={2} sx={{ ml: '436px' }}>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={<Refresh />}
-                  onClick={handleRefresh}
-                  sx={{ 
-                    borderRadius: 2,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    bgcolor:'#00a651'
-                  }}
-                >
-                  Refresh
-                </Button>
-               
+              <Stack direction="row" spacing={2}>
                 <Button
                   variant="contained"
                   color="error"
                   startIcon={<PictureAsPdf />}
                   onClick={handleExportToPDF}
-                  sx={{ 
-                    borderRadius: 2,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                  }}
+                  disabled={Object.keys(monthlyData).length === 0}
+                  sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 >
                   PDF
                 </Button>
@@ -1267,153 +1286,91 @@ const NDVIChangeDashboard = () => {
       </Card>
 
       {/* Hierarchy Navigation */}
-      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor : "transparent" }}>
+      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor: "transparent" }}>
         <CardHeader 
           title="Forest Hierarchy Navigation"
           titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
           avatar={<Forest />}
         />
-        <p style={{paddingLeft:"25px",margin:"0px", fontSize:"20px", fontFamily:"arial"}}>Select Coupe:</p>
-        <CardContent>
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Select Coupe Directly</InputLabel>
-              <Select
-                value={selectedCoupe}
-                label="Or Select Coupe Directly"
-                onChange={handleCoupeChange}
-              >
-                {coupeOptions.map(coupe => (
-                  <MenuItem key={coupe.value} value={coupe.value}>
-                    {coupe.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          
-          {(selectedDivision || selectedRange || selectedBeat) && (
-            <Box sx={{ mt: 3, p: 2, bgcolor: '#f0f9ff', borderRadius: 2 }}>
-              <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600 }}>
-                Selected Hierarchy: 
-                {selectedDivision && ` Division: ${selectedDivision}`}
-                {selectedRange && ` → Range: ${selectedRange}`}
-                {selectedBeat && ` → Beat: ${selectedBeat}`}
-                {selectedCoupe && ` → Coupe: ${coupeOptions.find(c => c.value === selectedCoupe)?.label}`}
-              </Typography>
-            </Box>
-          )}
-        </CardContent>
+        <NDVIMyCoups_dropdown onHierarchyChange={handleHierarchyChange} />
       </Card>
 
       {/* Main Filters */}
       <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor: "transparent" }}>
         <CardContent>
-          <Grid container spacing={3} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth size="small">
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  views={['year', 'month']}
-                  label="Select Month & Year"
-                  value={selectedDate}
-                  onChange={handleDateChange}
-                  minDate={new Date(2020, 0, 1)}
-                  maxDate={new Date(2030, 11, 31)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      fullWidth
-                      size="small"
-                      helperText="Select month and year for analysis"
-                      InputProps={{
-                        ...params.InputProps,
-                        startAdornment: (
-                          <>
-                            <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
-                            {params.InputProps?.startAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-              </LocalizationProvider>
-              </FormControl>
+          <Grid container spacing={3}>
+            {/* Date Range Selection */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                Select Date Range
+              </Typography>
             </Grid>
             
             <Grid item xs={12} md={6}>
-              <Stack direction="row" spacing={2} justifyContent="flex-end">
-                <Button
-                  variant={chartType === 'bar' ? 'contained' : 'outlined'}
-                  onClick={() => setChartType('bar')}
-                  startIcon={<BarChart />}
-                  size="small"
-                  sx={{
-                    color: chartType === 'bar' ? 'black' : 'black',
-                    borderColor: 'black',
-                    '&:hover': {
-                      // backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  views={['year', 'month']}
+                  label="Start Date"
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  minDate={new Date(2020, 0, 1)}
+                  maxDate={new Date(2030, 11, 31)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                      InputProps: {
+                        startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+                      }
                     }
                   }}
-                >
-                  Bar Chart
-                </Button>
-                <Button
-                  variant={chartType === 'line' ? 'contained' : 'outlined'}
-                  onClick={() => setChartType('line')}
-                  startIcon={<ShowChart />}
-                  size="small"
-                  sx={{
-                    color: chartType === 'bar' ? 'black' : 'black',
-                    borderColor: 'black',
-                    '&:hover': {
-                      // backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
+                />
+              </LocalizationProvider>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  views={['year', 'month']}
+                  label="End Date"
+                  value={endDate}
+                  onChange={handleEndDateChange}
+                  minDate={startDate || new Date(2020, 0, 1)}
+                  maxDate={new Date(2030, 11, 31)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                      InputProps: {
+                        startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+                      }
                     }
                   }}
-                >
-                  Trend Line
-                </Button>
-                <Button
-                  variant={chartType === 'pie' ? 'contained' : 'outlined'}
-                  onClick={() => setChartType('pie')}
-                  startIcon={<PieChart />}
-                  size="small"
-                  sx={{
-                    color: chartType === 'bar' ? 'black' : 'black',
-                    borderColor: 'black',
-                    '&:hover': {
-                      // backgroundColor: chartType === 'bar' ? '#333' : 'rgba(0, 0, 0, 0.04)',
-                    }
-                  }}
-                >
-                  Area Pie
-                </Button>
-              </Stack>
+                />
+              </LocalizationProvider>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Send />}
+                onClick={handleSubmit}
+                sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              >
+                Submit
+              </Button>
             </Grid>
           </Grid>
         </CardContent>
       </Card>
 
       {/* Error Alert */}
-      {/* {error && (
-        <Alert 
-          severity="error" 
-          sx={{ mb: 4, borderRadius: 2 }}
-          action={
-            <IconButton
-              aria-label="close"
-              color="inherit"
-              size="small"
-              onClick={() => setError(null)}
-            >
-              <Close fontSize="inherit" />
-            </IconButton>
-          }
-        >
-          <Typography fontWeight={600}>{error}</Typography>
+      {error && (
+        <Alert severity="error" sx={{ mb: 4, borderRadius: 2 }} onClose={() => setError(null)}>
+          {error}
         </Alert>
-      )} */}
+      )}
 
       {/* Loading States */}
       {(loading || loadingArea || loadingNDVIArea) && (
@@ -1428,7 +1385,7 @@ const NDVIChangeDashboard = () => {
                 <Typography variant="caption" color="text.secondary">
                   {loadingArea ? 'Fetching coupe area...' : 
                    loadingNDVIArea ? 'Calculating degraded area...' : 
-                   'Loading NDVI change data...'}
+                   'Loading NDVI change data for multiple months...'}
                 </Typography>
                 <MuiLinearProgress sx={{ mt: 1 }} />
               </Box>
@@ -1439,62 +1396,54 @@ const NDVIChangeDashboard = () => {
 
       {/* Area Information */}
       {totalArea > 0 && (
-        <Card sx={{ 
-          mb: 4, 
-          borderRadius: 3,
-          background: 'transparent',
-          color: 'black',
-          boxShadow: '0 20px 40px rgba(102, 126, 234, 0.3)'
-        }}>
+        <Card sx={{ mb: 4, borderRadius: 3, background: 'transparent', color: 'black', boxShadow: '0 20px 40px rgba(102, 126, 234, 0.3)' }}>
           <CardContent>
             <Grid container spacing={2} alignItems="center">
               <Grid item>
-                <Box sx={{
-                  p: 2,
-                  bgcolor: 'rgba(255,255,255,0.2)',
-                  borderRadius: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
+                <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Calculate sx={{ fontSize: 36 }} />
                 </Box>
               </Grid>
-              <Grid item xs >
+              
+              <Grid item xs>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 700 }}>
-                  Coupe Area Analysis - {coupeOptions.find(c => c.value === selectedCoupe)?.label}
+                  Area Analysis - {selectedDivision || selectedCoupe || hierarchyCoupeName}
                 </Typography>
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={3}>
+                  <Grid item xs={12} md={4}>
                     <Box>
                       <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                        Total Coupe Area
+                        Total Area
                       </Typography>
                       <Typography variant="h5" sx={{ fontWeight: 800 }}>
                         {totalArea.toFixed(2)} km²
                       </Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Box>
-                      <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                        Afforested Area
-                      </Typography>
-                      <Typography variant="h5" sx={{ fontWeight: 800, color: '#22c55e' }}>
-                        {summaryStats ? summaryStats.afforestedArea.toFixed(2) : '0.00'} km²
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Box>
-                      <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                        Degraded Area
-                      </Typography>
-                      <Typography variant="h5" sx={{ fontWeight: 800, color: '#ef4444' }}>
-                        {summaryStats ? summaryStats.degradedArea.toFixed(2) : '0.00'} km²
-                      </Typography>
-                    </Box>
-                  </Grid>
+                  {Object.keys(monthlyData).length > 0 && (
+                    <>
+                      <Grid item xs={12} md={4}>
+                        <Box>
+                          <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                            Total Records
+                          </Typography>
+                          <Typography variant="h5" sx={{ fontWeight: 800, color: '#3b82f6' }}>
+                            {combinedData.length}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Box>
+                          <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                            Months Analyzed
+                          </Typography>
+                          <Typography variant="h5" sx={{ fontWeight: 800, color: '#f59e0b' }}>
+                            {Object.keys(monthlyData).length}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </>
+                  )}
                 </Grid>
               </Grid>
             </Grid>
@@ -1502,84 +1451,59 @@ const NDVIChangeDashboard = () => {
         </Card>
       )}
 
-      {/* Summary Cards */}
-      {summaryStats && !loading && (
+      {/* Overall Summary Cards - Show only if data is available */}
+      {Object.keys(monthlyData).length > 0 && !loading && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              borderRadius: 3, 
-              borderLeft: '6px solid #ef4444',
-              boxShadow: '0 8px 24px rgba(239, 68, 68, 0.1)',
-              height: '100%'
-            }}>
+            <Card sx={{ borderRadius: 3, borderLeft: '6px solid #ef4444', boxShadow: '0 8px 24px rgba(239, 68, 68, 0.1)', height: '100%' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
                     <Typography color="text.secondary" variant="body2" sx={{ fontWeight: 600 }}>
-                      Degraded Area
+                      Total Degraded Area
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#ef4444' }}>
-                      {summaryStats.degradedArea.toFixed(2)}
+                      {calculateOverallStats()?.totalDegradedArea.toFixed(2) || 0}
                       <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
                         km²
                       </Typography>
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {summaryStats.degradedPolygons.toLocaleString()} polygons
+                      Across {calculateOverallStats()?.monthsCount || 0} months
                     </Typography>
                   </Box>
                   <Warning sx={{ fontSize: 40, color: '#ef4444', opacity: 0.8 }} />
                 </Box>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {summaryStats.degradedPercentage.toFixed(1)}% of total area
-                  </Typography>
-                </Box>
               </CardContent>
             </Card>
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              borderRadius: 3, 
-              borderLeft: '6px solid #22c55e',
-              boxShadow: '0 8px 24px rgba(34, 197, 94, 0.1)',
-              height: '100%'
-            }}>
+            <Card sx={{ borderRadius: 3, borderLeft: '6px solid #22c55e', boxShadow: '0 8px 24px rgba(34, 197, 94, 0.1)', height: '100%' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
                     <Typography color="text.secondary" variant="body2" sx={{ fontWeight: 600 }}>
-                      Afforested Area
+                      Total Afforested Area
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#22c55e' }}>
-                      {summaryStats.afforestedArea.toFixed(2)}
+                      {calculateOverallStats()?.totalAfforestedArea.toFixed(2) || 0}
                       <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
                         km²
                       </Typography>
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {summaryStats.afforestedPolygons.toLocaleString()} polygons
+                      Across {calculateOverallStats()?.monthsCount || 0} months
                     </Typography>
                   </Box>
                   <CheckCircle sx={{ fontSize: 40, color: '#22c55e', opacity: 0.8 }} />
-                </Box>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {summaryStats.afforestedPercentage.toFixed(1)}% of total area
-                  </Typography>
                 </Box>
               </CardContent>
             </Card>
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              borderRadius: 3, 
-              borderLeft: '6px solid #3b82f6',
-              boxShadow: '0 8px 24px rgba(59, 130, 246, 0.1)',
-              height: '100%'
-            }}>
+            <Card sx={{ borderRadius: 3, borderLeft: '6px solid #3b82f6', boxShadow: '0 8px 24px rgba(59, 130, 246, 0.1)', height: '100%' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
@@ -1587,10 +1511,10 @@ const NDVIChangeDashboard = () => {
                       Records with Notes
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#3b82f6' }}>
-                      {summaryStats.withNotes}
+                      {calculateOverallStats()?.totalWithNotes || 0}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {((summaryStats.withNotes / summaryStats.totalPolygons) * 100).toFixed(1)}% of total
+                      of {calculateOverallStats()?.totalRecords || 0} total
                     </Typography>
                   </Box>
                   <Note sx={{ fontSize: 40, color: '#3b82f6', opacity: 0.8 }} />
@@ -1600,12 +1524,7 @@ const NDVIChangeDashboard = () => {
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              borderRadius: 3, 
-              borderLeft: '6px solid #f59e0b',
-              boxShadow: '0 8px 24px rgba(245, 158, 11, 0.1)',
-              height: '100%'
-            }}>
+            <Card sx={{ borderRadius: 3, borderLeft: '6px solid #f59e0b', boxShadow: '0 8px 24px rgba(245, 158, 11, 0.1)', height: '100%' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
@@ -1613,10 +1532,10 @@ const NDVIChangeDashboard = () => {
                       Records with Images
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#f59e0b' }}>
-                      {summaryStats.withImages}
+                      {calculateOverallStats()?.totalWithImages || 0}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {((summaryStats.withImages / summaryStats.totalPolygons) * 100).toFixed(1)}% of total
+                      of {calculateOverallStats()?.totalRecords || 0} total
                     </Typography>
                   </Box>
                   <ImageIcon sx={{ fontSize: 40, color: '#f59e0b', opacity: 0.8 }} />
@@ -1645,26 +1564,16 @@ const NDVIChangeDashboard = () => {
               }
             }}
           >
-            <Tab label="Charts & Analysis" icon={<BarChart />} />
-            <Tab label="Data Table" icon={<Visibility />} />
-            <Tab label="Monthly Overview" icon={<CalendarMonth />} />
+            <Tab label="Charts & Analysis" icon={<BarChart />} disabled={Object.keys(monthlyData).length === 0} />
+            <Tab label="Data Table" icon={<Visibility />} disabled={Object.keys(monthlyData).length === 0} />
+            <Tab label="Monthly Overview" icon={<CalendarMonth />} disabled={Object.keys(monthlyData).length === 0} />
           </Tabs>
 
           <Box sx={{ p: 3 }}>
             {activeTab === 0 && (
               <Box>
                 {/* Chart Type Selection */}
-                <Box sx={{ 
-                  mb: 4, 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  gap: 2, 
-                  flexWrap: 'wrap',
-                  '& .MuiChip-root': {
-                    borderRadius: 2,
-                    fontWeight: 600
-                  }
-                }}>
+                <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
                   <Chip
                     label="Area Bar Chart"
                     onClick={() => setChartType('bar')}
@@ -1677,136 +1586,25 @@ const NDVIChangeDashboard = () => {
                     color={chartType === 'line' ? 'primary' : 'default'}
                     icon={<ShowChart />}
                   />
-                  {/* <Chip
-                    label="Area Distribution"
-                    onClick={() => setChartType('pie')}
-                    color={chartType === 'pie' ? 'primary' : 'default'}
-                    icon={<PieChart />}
-                  />
-                  <Chip
-                    label="Polygon Distribution"
-                    onClick={() => setChartType('polygon-pie')}
-                    color={chartType === 'polygon-pie' ? 'primary' : 'default'}
-                    icon={<PieChart />}
-                  /> */}
                 </Box>
 
                 {/* Chart Display */}
-                <Box sx={{ 
-                  position: 'relative',
-                  borderRadius: 2,
-                  overflow: 'hidden'
-                }}>
+                <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden' }}>
                   {renderChart()}
                 </Box>
-
-                {/* Analysis Notes */}
-                {summaryStats && (
-                  <Card sx={{ mt: 4, borderRadius: 2 ,bgcolor:'transparent'}}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Info color="primary" />
-                        Analysis Summary - {monthOptions.find(m => m.value === selectedMonth)?.label}
-                      </Typography>
-                      <Grid container spacing={3}>
-                        <Grid item xs={12} md={6}>
-                          <Box sx={{ 
-                            p: 2, 
-                            bgcolor: 'transparent', 
-                            borderRadius: 2,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                          }}>
-                            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
-                              Key Findings
-                            </Typography>
-                            <Stack spacing={1.5}>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Box sx={{ 
-                                  width: 8, 
-                                  height: 8, 
-                                  bgcolor: '#ef4444', 
-                                  borderRadius: '50%', 
-                                  mr: 1.5 
-                                }} />
-                                <Typography variant="body2">
-                                  <strong>Degraded Area:</strong> {summaryStats.degradedArea.toFixed(2)} km² ({summaryStats.degradedPercentage.toFixed(1)}% of total)
-                                </Typography>
-                              </Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Box sx={{ 
-                                  width: 8, 
-                                  height: 8, 
-                                  bgcolor: '#22c55e', 
-                                  borderRadius: '50%', 
-                                  mr: 1.5 
-                                }} />
-                                <Typography variant="body2">
-                                  <strong>Afforested Area:</strong> {summaryStats.afforestedArea.toFixed(2)} km² ({summaryStats.afforestedPercentage.toFixed(1)}% of total)
-                                </Typography>
-                              </Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Box sx={{ 
-                                  width: 8, 
-                                  height: 8, 
-                                  bgcolor: '#3b82f6', 
-                                  borderRadius: '50%', 
-                                  mr: 1.5 
-                                }} />
-                                <Typography variant="body2">
-                                  <strong>Net Change:</strong> 
-                                  <span style={{ 
-                                    color: summaryStats.afforestedArea > summaryStats.degradedArea ? '#22c55e' : '#ef4444',
-                                    fontWeight: 600,
-                                    marginLeft: 4
-                                  }}>
-                                    {(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)} km²
-                                  </span>
-                                  ({summaryStats.afforestedArea > summaryStats.degradedArea ? 'Positive' : 'Negative'} change)
-                                </Typography>
-                              </Box>
-                            </Stack>
-                          </Box>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <Box sx={{ 
-                            p: 2, 
-                            bgcolor: 'transparent', 
-                            borderRadius: 2,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                          }}>
-                            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
-                              Data Quality
-                            </Typography>
-                            <Stack spacing={1.5}>
-                              <Typography variant="body2">
-                                <strong>Records with notes:</strong> {summaryStats.withNotes} ({((summaryStats.withNotes / summaryStats.totalPolygons) * 100).toFixed(1)}%)
-                              </Typography>
-                              <Typography variant="body2">
-                                <strong>Records with images:</strong> {summaryStats.withImages} ({((summaryStats.withImages / summaryStats.totalPolygons) * 100).toFixed(1)}%)
-                              </Typography>
-                              <Typography variant="body2">
-                                <strong>Total polygons analyzed:</strong> {summaryStats.totalPolygons.toLocaleString()}
-                              </Typography>
-                            </Stack>
-                          </Box>
-                        </Grid>
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                )}
               </Box>
             )}
 
             {activeTab === 1 && (
               <Box>
                 {/* Search and Filter Controls */}
-                <Card sx={{ mb: 3, borderRadius: 2 ,bgcolor: 'transparent'}}>
+                <Card sx={{ mb: 3, borderRadius: 2, bgcolor: 'transparent' }}>
                   <CardContent>
                     <Grid container spacing={2} alignItems="center">
                       <Grid item xs={12} md={6}>
                         <TextField
                           fullWidth
-                          placeholder="Search by ID, status, coordinates, notes..."
+                          placeholder="Search by month, ID, status, coordinates, notes..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           variant="outlined"
@@ -1861,39 +1659,25 @@ const NDVIChangeDashboard = () => {
                 </Card>
 
                 {/* Data Table */}
-                <Paper sx={{ 
-                  borderRadius: 2, 
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                  bgcolor:'transparent',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}>
-                  <TableContainer sx={{ 
-                    maxHeight: 500,
-                    position: 'relative'
-                  }}>
-                    <Table stickyHeader size="small" sx={{ minWidth: 1200 }}>
+                <Paper sx={{ borderRadius: 2, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', bgcolor:'transparent' }}>
+                  <TableContainer sx={{ maxHeight: 500, position: 'relative' }}>
+                    <Table stickyHeader size="small" sx={{ minWidth: 1300 }}>
                       <TableHead>
-                        <TableRow sx={{ 
-                          '& th': { 
-                            bgcolor: 'background.paper', 
-                            fontWeight: 600,
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 10,
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                            borderBottom: '2px solid #e2e8f0'
-                          }
-                        }}>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('pixle_id')}>
-                              <strong>Pixel ID</strong>
+                        <TableRow>
+                          <TableCell onClick={() => handleSort('monthDisplay')} sx={{ cursor: 'pointer' }}>
+                            <Box display="flex" alignItems="center">
+                              <strong>Month</strong>
                               <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                             </Box>
                           </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('status')}>
+                          {/* <TableCell onClick={() => handleSort('pixle_id')} sx={{ cursor: 'pointer' }}>
+                            <Box display="flex" alignItems="center">
+                              <strong>Pixel ID</strong>
+                              <Sort sx={{ fontSize: 16, ml: 0.5 }} />
+                            </Box>
+                          </TableCell> */}
+                          <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
+                            <Box display="flex" alignItems="center">
                               <strong>Status</strong>
                               <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                             </Box>
@@ -1902,14 +1686,14 @@ const NDVIChangeDashboard = () => {
                           <TableCell><strong>Category</strong></TableCell>
                           <TableCell><strong>Location</strong></TableCell>
                           <TableCell><strong>Area (km²)</strong></TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('has_note')}>
+                          <TableCell onClick={() => handleSort('has_note')} sx={{ cursor: 'pointer' }}>
+                            <Box display="flex" alignItems="center">
                               <strong>Has Note</strong>
                               <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                             </Box>
                           </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort('has_image')}>
+                          <TableCell onClick={() => handleSort('has_image')} sx={{ cursor: 'pointer' }}>
+                            <Box display="flex" alignItems="center">
                               <strong>Has Image</strong>
                               <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                             </Box>
@@ -1920,7 +1704,7 @@ const NDVIChangeDashboard = () => {
                       <TableBody>
                         {paginatedData.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                            <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
                               <Box sx={{ textAlign: 'center' }}>
                                 <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                 <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -1935,21 +1719,22 @@ const NDVIChangeDashboard = () => {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          paginatedData.map((row) => (
-                            <TableRow 
-                              key={row.pixle_id}
-                              hover
-                              sx={{ 
-                                '&:hover': { bgcolor: '#f8fafc' },
-                                borderLeft: row.has_note || row.has_image ? '4px solid #f59e0b' : 'none',
-                                transition: 'background-color 0.2s'
-                              }}
-                            >
+                          paginatedData.map((row, index) => (
+                            <TableRow key={`${row.monthDisplay}-${row.pixle_id}-${index}`} hover>
                               <TableCell>
+                                <Chip
+                                  label={row.monthDisplay}
+                                  size="small"
+                                  color="primary"
+                                  variant="outlined"
+                                  sx={{ fontWeight: 600 }}
+                                />
+                              </TableCell>
+                              {/* <TableCell>
                                 <Typography variant="body2" fontWeight={600} color="primary">
                                   #{row.pixle_id}
                                 </Typography>
-                              </TableCell>
+                              </TableCell> */}
                               <TableCell>
                                 <Chip
                                   label={row.status ? 'Afforested' : 'Degraded'}
@@ -1987,28 +1772,16 @@ const NDVIChangeDashboard = () => {
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" fontWeight={600}>
-                                  {row.area_sq_km?.toFixed(6) || '0.000000'} km²
+                                  {row.area_sq_km?.toFixed(6) || '0.000000'}
                                 </Typography>
                               </TableCell>
                               <TableCell>
                                 {row.has_note ? (
                                   <MuiTooltip title={row.note || 'Note available'}>
-                                    <Chip
-                                      label="Yes"
-                                      color="primary"
-                                      size="small"
-                                      icon={<Note />}
-                                      sx={{ fontWeight: 600 }}
-                                    />
+                                    <Chip label="Yes" color="primary" size="small" icon={<Note />} />
                                   </MuiTooltip>
                                 ) : (
-                                  <Chip
-                                    label="No"
-                                    color="default"
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ fontWeight: 600 }}
-                                  />
+                                  <Chip label="No" color="default" size="small" variant="outlined" />
                                 )}
                               </TableCell>
                               <TableCell>
@@ -2023,16 +1796,9 @@ const NDVIChangeDashboard = () => {
                                       setImageModalOpen(true);
                                     }}
                                     clickable
-                                    sx={{ fontWeight: 600 }}
                                   />
                                 ) : (
-                                  <Chip
-                                    label="No"
-                                    color="default"
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ fontWeight: 600 }}
-                                  />
+                                  <Chip label="No" color="default" size="small" variant="outlined" />
                                 )}
                               </TableCell>
                               <TableCell>
@@ -2043,12 +1809,6 @@ const NDVIChangeDashboard = () => {
                                   onClick={() => {
                                     setSelectedRecord(row);
                                     setModalOpen(true);
-                                  }}
-                                  disabled={!row.pixle_id}
-                                  sx={{ 
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    fontWeight: 600
                                   }}
                                 >
                                   Details
@@ -2061,129 +1821,36 @@ const NDVIChangeDashboard = () => {
                     </Table>
                   </TableContainer>
                   
-                  {/* Pagination Controls */}
+                  {/* Pagination */}
                   {filteredData.length > 0 && (
-                    <>
-                      <Box sx={{ 
-                        p: 2, 
-                        borderTop: '1px solid #e2e8f0',
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        flexWrap: 'wrap',
-                        // bgcolor: 'background.paper'
-                      }}>
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filteredData.length)} of {filteredData.length.toLocaleString()} records
+                    <Box sx={{ p: 2, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filteredData.length)} of {filteredData.length.toLocaleString()} records
+                      </Typography>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <Select
+                          value={rowsPerPage}
+                          onChange={handleChangeRowsPerPage}
+                          size="small"
+                          sx={{ minWidth: 80 }}
+                        >
+                          {rowsPerPageOptions.map(option => (
+                            <MenuItem key={option} value={option}>{option}</MenuItem>
+                          ))}
+                        </Select>
+                        <Box display="flex" gap={1}>
+                          <Button size="small" onClick={() => setPage(page - 1)} disabled={page === 0}>
+                            Previous
+                          </Button>
+                          <Typography variant="body2" sx={{ alignSelf: 'center' }}>
+                            Page {page + 1} of {Math.ceil(filteredData.length / rowsPerPage)}
                           </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Typography variant="body2" sx={{ mr: 1 }}>Rows per page:</Typography>
-                            <Select
-                              value={rowsPerPage}
-                              onChange={handleChangeRowsPerPage}
-                              size="small"
-                              sx={{ minWidth: 80 }}
-                            >
-                              {rowsPerPageOptions.map((option) => (
-                                <MenuItem key={option} value={option}>
-                                  {option}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Button
-                              size="small"
-                              onClick={() => setPage(page - 1)}
-                              disabled={page === 0}
-                              variant="outlined"
-                            >
-                              Previous
-                            </Button>
-                            <Typography variant="body2">
-                              Page {page + 1} of {Math.ceil(filteredData.length / rowsPerPage)}
-                            </Typography>
-                            <Button
-                              size="small"
-                              onClick={() => setPage(page + 1)}
-                              disabled={page >= Math.ceil(filteredData.length / rowsPerPage) - 1}
-                              variant="outlined"
-                            >
-                              Next
-                            </Button>
-                          </Box>
+                          <Button size="small" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(filteredData.length / rowsPerPage) - 1}>
+                            Next
+                          </Button>
                         </Box>
                       </Box>
-                      
-                      {/* Optional: Page number buttons */}
-                      {filteredData.length > rowsPerPage && (
-                        <Box sx={{ 
-                          p: 1, 
-                          borderTop: '1px solid #f1f5f9',
-                          display: 'flex', 
-                          justifyContent: 'center', 
-                          gap: 0.5,
-                          flexWrap: 'wrap'
-                        }}>
-                          {Array.from({ length: Math.min(5, Math.ceil(filteredData.length / rowsPerPage)) }, (_, i) => {
-                            // Show pages around current page
-                            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-                            let pageNum;
-                            
-                            if (totalPages <= 5) {
-                              pageNum = i;
-                            } else if (page < 3) {
-                              pageNum = i;
-                            } else if (page > totalPages - 4) {
-                              pageNum = totalPages - 5 + i;
-                            } else {
-                              pageNum = page - 2 + i;
-                            }
-                            
-                            return (
-                              <Button
-                                key={pageNum}
-                                size="small"
-                                variant={page === pageNum ? "contained" : "outlined"}
-                                onClick={() => setPage(pageNum)}
-                                sx={{ 
-                                  minWidth: 32, 
-                                  height: 32,
-                                  fontSize: '0.75rem',
-                                  color: 'black'
-                                }}
-                              >
-                                {pageNum + 1}
-                              </Button>
-                            );
-                          })}
-                          
-                          {Math.ceil(filteredData.length / rowsPerPage) > 5 && (
-                            <>
-                              <Typography variant="body2" sx={{ mx: 1, alignSelf: 'center' }}>
-                                ...
-                              </Typography>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={() => setPage(Math.ceil(filteredData.length / rowsPerPage) - 1)}
-                                sx={{ 
-                                  minWidth: 32, 
-                                  height: 32,
-                                  fontSize: '0.75rem',
-                                  color: 'black'
-                                }}
-                              >
-                                {Math.ceil(filteredData.length / rowsPerPage)}
-                              </Button>
-                            </>
-                          )}
-                        </Box>
-                      )}
-                    </>
+                    </Box>
                   )}
                 </Paper>
               </Box>
@@ -2196,13 +1863,12 @@ const NDVIChangeDashboard = () => {
                   Monthly Comparison Overview
                 </Typography>
                 <Grid container spacing={3}>
-                  {monthOptions.map((month) => (
-                    <Grid item xs={12} sm={6} md={4} lg={3} key={month.value}>
+                  {Object.entries(monthlyData).sort().reverse().map(([month, data]) => (
+                    <Grid item xs={12} sm={6} md={4} lg={3} key={month}>
                       <Card 
                         sx={{ 
-                          cursor: 'pointer',
                           borderRadius: 3,
-                          border: selectedMonth === month.value ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                          border: '1px solid #e2e8f0',
                           transition: 'all 0.2s ease-in-out',
                           '&:hover': {
                             transform: 'translateY(-4px)',
@@ -2210,43 +1876,38 @@ const NDVIChangeDashboard = () => {
                           },
                           bgcolor: 'transparent',
                         }}
-                        onClick={() => {
-                          setSelectedMonth(month.value);
-                          setActiveTab(0);
-                        }}
                       >
                         <CardContent sx={{ p: 2.5 }}>
                           <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ color: 'black' }}>
-                            {month.label}
+                            {month}
                           </Typography>
-                          {monthlyData[month.value]?.stats ? (
+                          {data.stats && (
                             <>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                                 <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
-                                  Degraded: {monthlyData[month.value].stats.degradedArea?.toFixed(2)} km²
+                                  Degraded: {data.stats.degradedArea?.toFixed(2)} km²
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 }}>
-                                  Afforested: {monthlyData[month.value].stats.afforestedArea?.toFixed(2)} km²
+                                  Afforested: {data.stats.afforestedArea?.toFixed(2)} km²
                                 </Typography>
                               </Box>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                 <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
-                                  Δ: {(monthlyData[month.value].stats.afforestedArea - monthlyData[month.value].stats.degradedArea).toFixed(2)} km²
+                                  Δ: {(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
                                 </Typography>
                                 <Typography variant="caption" sx={{ 
-                                  color: monthlyData[month.value].stats.afforestedArea > monthlyData[month.value].stats.degradedArea ? '#22c55e' : '#ef4444',
+                                  color: data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444',
                                   fontWeight: 600
                                 }}>
-                                  {monthlyData[month.value].stats.afforestedArea > monthlyData[month.value].stats.degradedArea ? '↑ Positive' : '↓ Negative'}
+                                  {data.stats.afforestedArea > data.stats.degradedArea ? '↑ Positive' : '↓ Negative'}
+                                </Typography>
+                              </Box>
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                  Records: {data.data.length}
                                 </Typography>
                               </Box>
                             </>
-                          ) : (
-                            <Box sx={{ textAlign: 'center', py: 2 }}>
-                              <Typography variant="caption" sx={{ color: '#64748b' }}>
-                                Click to load data
-                              </Typography>
-                            </Box>
                           )}
                         </CardContent>
                       </Card>
@@ -2260,67 +1921,46 @@ const NDVIChangeDashboard = () => {
       </Card>
 
       {/* Record Detail Modal */}
-      <Dialog
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 3 }
-        }}
-      >
-        <DialogTitle sx={{ 
-          bgcolor: 'primary.main', 
-          color: 'white',
-          borderBottom: '1px solid #e2e8f0'
-        }}>
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Typography variant="h6">
               <Visibility sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Pixel Details - ID: {selectedRecord?.pixle_id || selectedRecord?.pixle_id}
+              Pixel Details - ID: {selectedRecord?.pixle_id} ({selectedRecord?.monthDisplay})
             </Typography>
           </Box>
         </DialogTitle>
-        <DialogContent dividers sx={{ p: 3 }}>
+        <DialogContent dividers>
           {selectedRecord && (
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                <Card variant="outlined">
                   <CardContent>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Info color="primary" />
                       NDVI Change Information
                     </Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
                         <Typography variant="body2">
+                          <strong>Month:</strong> {selectedRecord.monthDisplay}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2">
                           <strong>Status:</strong> 
-                          <Chip 
-                            label={selectedRecord.status ? 'Afforested' : 'Degraded'} 
-                            color={selectedRecord.status ? 'success' : 'error'} 
-                            size="small" 
-                            sx={{ ml: 1 }}
-                          />
+                          <Chip label={selectedRecord.status ? 'Afforested' : 'Degraded'} 
+                                color={selectedRecord.status ? 'success' : 'error'} size="small" sx={{ ml: 1 }} />
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>Category:</strong> {selectedRecord.change_category || 'Degradation'}
+                          <strong>Category:</strong> {selectedRecord.change_category || 'N/A'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>NDVI Change:</strong> {selectedRecord.ndvi_change ? selectedRecord.ndvi_change.toFixed(4) : 'N/A'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Typography variant="body2">
-                          <strong>Last Month NDVI:</strong> {selectedRecord.nov_ndvi?.toFixed(6) || 'N/A'}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Typography variant="body2">
-                          <strong>Current Month NDVI:</strong> {selectedRecord.dec_ndvi?.toFixed(6) || 'N/A'}
+                          <strong>NDVI Change:</strong> {selectedRecord.ndvi_change?.toFixed(4) || 'N/A'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
@@ -2334,32 +1974,25 @@ const NDVIChangeDashboard = () => {
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <Card variant="outlined" sx={{ borderRadius: 2, height: '100%' }}>
+                <Card variant="outlined">
                   <CardContent>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Map color="primary" />
                       Geographic Information
                     </Typography>
-                    <List dense disablePadding>
-                      <ListItem disableGutters>
+                    <List dense>
+                      <ListItem>
                         <ListItemAvatar>
-                          <Avatar sx={{ bgcolor: 'primary.light', width: 40, height: 40 }}>
-                            <Map />
-                          </Avatar>
+                          <Avatar sx={{ bgcolor: 'primary.light' }}><Map /></Avatar>
                         </ListItemAvatar>
                         <ListItemText
                           primary="Coordinates"
                           secondary={
-                            <Box sx={{ mt: 1 }}>
-                              <Typography variant="body2" display="block" sx={{ fontWeight: 600 }}>
-                                Latitude: {selectedRecord.latitude?.toFixed(6) || 'N/A'}
-                              </Typography>
-                              <Typography variant="body2" display="block" sx={{ fontWeight: 600 }}>
-                                Longitude: {selectedRecord.longitude?.toFixed(6) || 'N/A'}
-                              </Typography>
-                            </Box>
+                            <>
+                              <Typography variant="body2">Lat: {selectedRecord.latitude?.toFixed(6) || 'N/A'}</Typography>
+                              <Typography variant="body2">Lon: {selectedRecord.longitude?.toFixed(6) || 'N/A'}</Typography>
+                            </>
                           }
-                          secondaryTypographyProps={{ component: 'div' }}
                         />
                       </ListItem>
                     </List>
@@ -2368,51 +2001,31 @@ const NDVIChangeDashboard = () => {
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <Card variant="outlined" sx={{ borderRadius: 2, height: '100%' }}>
+                <Card variant="outlined">
                   <CardContent>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Note color="primary" />
                       Additional Information
                     </Typography>
-                    <List dense disablePadding>
-                      <ListItem disableGutters>
+                    <List dense>
+                      <ListItem>
                         <ListItemAvatar>
-                          <Avatar sx={{ bgcolor: 'warning.light', width: 40, height: 40 }}>
-                            <Note />
-                          </Avatar>
+                          <Avatar sx={{ bgcolor: 'warning.light' }}><Note /></Avatar>
                         </ListItemAvatar>
                         <ListItemText
                           primary="Notes"
-                          secondary={
-                            <Typography variant="body2" sx={{ 
-                              fontStyle: selectedRecord.note ? 'normal' : 'italic',
-                              color: selectedRecord.note ? 'text.primary' : 'text.secondary'
-                            }}>
-                              {selectedRecord.note || 'No additional notes'}
-                            </Typography>
-                          }
+                          secondary={selectedRecord.note || 'No additional notes'}
                         />
                       </ListItem>
                       {selectedRecord.image_data && (
-                        <ListItem disableGutters sx={{ mt: 2 }}>
+                        <ListItem>
                           <ListItemAvatar>
-                            <Avatar sx={{ bgcolor: 'info.light', width: 40, height: 40 }}>
-                              <ImageIcon />
-                            </Avatar>
+                            <Avatar sx={{ bgcolor: 'info.light' }}><ImageIcon /></Avatar>
                           </ListItemAvatar>
                           <ListItemText
                             primary="Image Available"
                             secondary={
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  color: 'primary.main',
-                                  cursor: 'pointer',
-                                  fontWeight: 600,
-                                  '&:hover': { textDecoration: 'underline' }
-                                }}
-                                onClick={() => setImageModalOpen(true)}
-                              >
+                              <Typography color="primary" sx={{ cursor: 'pointer' }} onClick={() => setImageModalOpen(true)}>
                                 Click to view image
                               </Typography>
                             }
@@ -2423,38 +2036,13 @@ const NDVIChangeDashboard = () => {
                   </CardContent>
                 </Card>
               </Grid>
-
-              {selectedRecord.created_at && (
-                <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <span>
-                      <strong>Created:</strong> {new Date(selectedRecord.created_at).toLocaleString()}
-                    </span>
-                    <span>|</span>
-                    <span>
-                      <strong>Updated:</strong> {new Date(selectedRecord.updated_at).toLocaleString()}
-                    </span>
-                  </Typography>
-                </Grid>
-              )}
             </Grid>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: '1px solid #e2e8f0' }}>
-          <Button 
-            onClick={() => setModalOpen(false)} 
-            variant="outlined"
-            sx={{ borderRadius: 2 }}
-          >
-            Close
-          </Button>
+        <DialogActions>
+          <Button onClick={() => setModalOpen(false)}>Close</Button>
           {selectedRecord?.image_data && (
-            <Button 
-              variant="contained" 
-              startIcon={<ZoomIn />}
-              onClick={() => setImageModalOpen(true)}
-              sx={{ borderRadius: 2 }}
-            >
+            <Button variant="contained" startIcon={<ZoomIn />} onClick={() => setImageModalOpen(true)}>
               View Image
             </Button>
           )}
@@ -2462,84 +2050,49 @@ const NDVIChangeDashboard = () => {
       </Dialog>
 
       {/* Image Preview Modal */}
-      <Dialog
-        open={imageModalOpen}
-        onClose={() => setImageModalOpen(false)}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 3 }
-        }}
-      >
-        <DialogTitle sx={{ 
-          bgcolor: 'primary.main', 
-          color: 'white',
-          borderBottom: '1px solid #e2e8f0'
-        }}>
+      <Dialog open={imageModalOpen} onClose={() => setImageModalOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {/* <Typography variant="h6">
               <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Image Preview - Pixel ID: {selectedRecord?.pixle_id || selectedRecord?.pixle_id}
-            </Typography>
+              Image Preview - Pixel ID: {selectedRecord?.pixle_id} ({selectedRecord?.monthDisplay})
+            </Typography> */}
             <IconButton onClick={() => setImageModalOpen(false)} sx={{ color: 'white' }}>
               <Close />
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent dividers sx={{ p: 3 }}>
+        <DialogContent>
           {selectedRecord?.image_data ? (
-            <Box display="flex" justifyContent="center" alignItems="center" sx={{ minHeight: '60vh' }}>
+            <Box display="flex" justifyContent="center" sx={{ minHeight: '60vh' }}>
               <Box
                 component="img"
                 src={`data:image/jpeg;base64,${selectedRecord.image_data}`}
-                alt={`NDVI Image - Pixel ${selectedRecord.pixle_id || selectedRecord.pixle_id}`}
-                sx={{
-                  maxWidth: '100%',
-                  maxHeight: '70vh',
-                  borderRadius: 2,
-                  objectFit: 'contain',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
-                }}
+                alt={`NDVI Image - Pixel ${selectedRecord.pixle_id}`}
+                sx={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
               />
             </Box>
           ) : (
-            <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Box textAlign="center" py={8}>
               <ImageIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                No Image Available
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                No satellite image is available for this record
-              </Typography>
+              <Typography variant="h6" color="text.secondary">No Image Available</Typography>
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: '1px solid #e2e8f0' }}>
-          <Button 
-            onClick={() => setImageModalOpen(false)} 
-            variant="outlined"
-            sx={{ borderRadius: 2 }}
-          >
-            Close
-          </Button>
+        <DialogActions>
+          <Button onClick={() => setImageModalOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 
       {/* Footer */}
-      <Box sx={{ 
-        mt: 6, 
-        pt: 4, 
-        borderTop: '1px solid #e2e8f0',
-        textAlign: 'center'
-      }}>
+      <Box sx={{ mt: 6, pt: 4, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           <strong>Forest Cover Change Monitoring System</strong> © {new Date().getFullYear()} | 
           Data Source: Sentinel-2 Satellite NDVI Analysis
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block">
           <strong>Note:</strong> All area measurements are in square kilometers (km²). 
-          Afforested area is calculated as (Total Coupe Area - Degraded Area from NDVI analysis). 
-          Last Updated: {new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+          Afforested area is calculated as (Total Coupe Area - Degraded Area from NDVI analysis).
         </Typography>
       </Box>
     </Container>

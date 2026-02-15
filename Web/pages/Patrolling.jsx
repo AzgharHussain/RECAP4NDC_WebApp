@@ -264,7 +264,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
       </Title>
       
       {/* Overall Statistics */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[8, 8]} style={{ marginBottom: 24 }}>
         {[
           {
             key: 'total',
@@ -272,7 +272,8 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
             title: language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols",
             icon: <CalendarOutlined />,
             color: 'rgba(56, 189, 248, 0.3)',
-            borderColor: 'rgba(56, 189, 248, 0.5)'
+            borderColor: 'rgba(56, 189, 248, 0.5)',
+
           },
           {
             key: 'distance',
@@ -319,7 +320,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 title={
                   <span style={{ 
                     color: 'rgba(0, 0, 0, 0.9)',
-                    fontSize: '12px',
+                    fontSize: '20px',
                     fontWeight: 500
                   }}>
                     {item.title}
@@ -336,12 +337,14 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                     borderRadius: '50%',
                     background: 'rgba(0, 0, 0, 0.2)',
                     marginRight: 8,
-                    border: '1px solid rgba(0, 0, 0, 0.3)'
+                    border: '1px solid rgba(0, 0, 0, 0.3)',
+                    marginLeft: '120px'
                   }}>
                     {React.cloneElement(item.icon, { 
                       style: { 
                         color: 'white',
-                        fontSize: '16px'
+                        fontSize: '16px',
+                        
                       } 
                     })}
                   </div>
@@ -365,15 +368,17 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
         marginBottom: 44,
         background: 'rgba(255, 255, 255, 0.08)',
         backdropFilter: 'blur(12px)',
-        padding: 20,
+        
         borderRadius: 16,
         border: '1px solid rgba(255, 255, 255, 0.15)'
       }}>
         <Text strong style={{ 
           display: 'block', 
           marginBottom: 16,
+          marginRight: 10,
           color: 'rgba(0, 0, 0, 0.95)',
-          fontSize: '16px'
+          fontSize: '20px',
+          textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"
         }}>
           {language === "gu" ? "પેટ્રોલિંગ વિતરણ" : "Patrol Distribution"}
         </Text>
@@ -388,7 +393,8 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 <div style={{
                   position: 'relative',
                   display: 'inline-block',
-                  marginBottom: 8
+                  marginBottom: 8,
+                  padding: 20,
                 }}>
                   <Progress
                     type="dashboard"
@@ -422,7 +428,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 </div>
                 <Text style={{ 
                   color: 'rgba(0, 0, 0, 0.9)',
-                  fontSize: '14px',
+                  fontSize: '18px',
                   display: 'block',
                   marginTop: 8
                 }}>
@@ -483,7 +489,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                   <span style={{ 
                     color: 'rgba(0, 0, 0, 0.95)',
                     fontWeight: 600,
-                    fontSize: '16px'
+                    fontSize: '20px'
                   }}>
                     {getTypeDisplayName(type)}
                   </span>
@@ -501,14 +507,14 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                   }}>
                     <div style={{ 
                       color: 'rgba(0, 0, 0, 0.7)',
-                      fontSize: '14px',
+                      fontSize: '18px',
                       marginBottom: 4
                     }}>
                       {language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"}
                     </div>
                     <div style={{ 
                       color: '#000000ff',
-                      fontSize: '32px',
+                      fontSize: '50px',
                       fontWeight: 'bold',
                       textShadow: '0 2px 8px rgba(0,0,0,0.3)'
                     }}>
@@ -545,14 +551,14 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                         }}>
                           <div style={{ 
                             color: 'rgba(0, 0, 0, 0.7)',
-                            fontSize: '12px',
+                            fontSize: '18px',
                             marginBottom: 4
                           }}>
                             {item.label}
                           </div>
                           <div style={{ 
                             color: '#000000ff',
-                            fontSize: '16px',
+                            fontSize: '20px',
                             fontWeight: 600
                           }}>
                             {item.value}
@@ -572,14 +578,14 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                   }}>
                     <div style={{ 
                       color: 'rgba(0, 0, 0, 0.7)',
-                      fontSize: '12px',
+                      fontSize: '20px',
                       marginBottom: 4
                     }}>
                       {language === "gu" ? "શ્રેષ્ઠ અધિકારી" : "Top Officer"}
                     </div>
                     <div style={{ 
                       color: '#000000ff',
-                      fontSize: '14px',
+                      fontSize: '18px',
                       fontWeight: 500,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -614,18 +620,19 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
             <span style={{ 
               color: 'rgba(0, 0, 0, 0.95)',
               fontWeight: 600,
-              fontSize: '16px'
+              fontSize: '20px',
+              textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"
             }}>
               {language === "gu" ? "વધારાની જાણકારી" : "Additional Insights"}
             </span>
           </div>
           
-          <div style={{ padding: 20 }}>
+          <div style={{ padding: 20, borderRadius: 12, }}>
             <Row gutter={[16, 16]}>
               <Col xs={24} sm={12}>
                 <div style={{
                   padding: '16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: 'rgba(56, 189, 248, 0.3)',
                   borderRadius: 12,
                   border: '1px solid rgba(255, 255, 255, 0.1)',
                   height: '100%'
@@ -658,7 +665,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                         }} />
                         <span style={{ 
                           color: '#000000ff',
-                          fontSize: '16px',
+                          fontSize: '20px',
                           fontWeight: 600
                         }}>
                           {getTypeDisplayName(mostActive.name)}
@@ -666,7 +673,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                         <span style={{ 
                           color: 'rgba(0, 0, 0, 0.7)',
                           marginLeft: 8,
-                          fontSize: '14px'
+                          fontSize: '20px'
                         }}>
                           ({mostActive.count} {language === "gu" ? "પેટ્રોલિંગ" : "patrols"})
                         </span>
@@ -678,7 +685,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
               <Col xs={24} sm={12}>
                 <div style={{
                   padding: '16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: 'rgba(0, 255, 162, 0.3)',
                   borderRadius: 12,
                   border: '1px solid rgba(255, 255, 255, 0.1)',
                   height: '100%'
@@ -711,7 +718,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                         }} />
                         <span style={{ 
                           color: '#000000ff',
-                          fontSize: '16px',
+                          fontSize: '20px',
                           fontWeight: 600
                         }}>
                           {getTypeDisplayName(longestDistance.name)}
@@ -719,7 +726,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                         <span style={{ 
                           color: 'rgba(0, 0, 0, 0.7)',
                           marginLeft: 8,
-                          fontSize: '14px'
+                          fontSize: '20px'
                         }}>
                           ({longestDistance.distance} km)
                         </span>
@@ -762,7 +769,9 @@ const PatrolIncidentLogs = () => {
   const [forestTypes, setForestTypes] = useState([]);
   const [divisions1, setDivisions1] = useState([]);
   const [divisions, setDivisions] = useState([]);
-  const [beats, setBeats] = useState([]);
+  const [beats1, setBeats1] = useState([]);
+  const [rounds1, setRounds1] = useState([]);
+const [ranges1, setRanges1] = useState([]);
   const [coupes, setCoupes] = useState([]);
   const [hierarchyData, setHierarchyData] = useState([]);
   
@@ -770,6 +779,13 @@ const PatrolIncidentLogs = () => {
   const [divisionFilter, setDivisionFilter] = useState("");
   const [beatFilter, setBeatFilter] = useState("");
   const [coupeFilter, setCoupeFilter] = useState("");
+  const [rangeFilter, setRangeFilter] = useState("");
+const [roundFilter, setRoundFilter] = useState("");
+
+  const [divisionSearch, setDivisionSearch] = useState("");
+const [rangeSearch, setRangeSearch] = useState("");
+const [beatSearch, setBeatSearch] = useState("");
+const [locationSearch, setLocationSearch] = useState("");
 
   // Fetch patrol data with pagination
 // Fetch patrol data with pagination
@@ -885,36 +901,36 @@ const fetchPatrolData2 = async () => {
   }
 };
 
-// Fetch filtered patrol data
 const fetchFilteredPatrolData = async (page = 1, limit = 5) => {
   setIsFiltering(true);
   setPaginationLoading(true);
   try {
     const token = localStorage.getItem("token");
     
-    // Prepare filters object
+    // Prepare filters object - only add if they have values
     const filters = {};
-    if (searchText) filters.officer_name = searchText;
+    if (searchText?.trim()) filters.officer_name = searchText.trim();
     if (startFilter) filters.start_date = startFilter.format('YYYY-MM-DD');
     if (endFilter) filters.end_date = endFilter.format('YYYY-MM-DD');
     if (typeFilter) filters.type_name = typeFilter;
     if (divisionFilter) filters.division = divisionFilter;
+    if (rangeFilter) filters.range = rangeFilter;
+    if (roundFilter) filters.round = roundFilter;
     if (beatFilter) filters.beat = beatFilter;
-    if (coupeFilter) filters.coupe = coupeFilter;
     if (forestId) filters.forest_id = forestId;
 
-    const params = new URLSearchParams({
+    // Build URL with filters using the same endpoint
+    const queryParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
       ...filters
     });
 
-    // Remove empty filters
-    Object.keys(filters).forEach(key => {
-      if (!filters[key]) params.delete(key);
-    });
+    const url = `${API_BASE_URL}/api/patrol-info-page?${queryParams}`;
+    console.log('Fetching from URL:', url);
+    console.log('Filters being sent:', filters);
 
-    const response = await fetch(`${API_BASE_URL}/api/patrol-info/filter?${params.toString()}`, {
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -924,20 +940,18 @@ const fetchFilteredPatrolData = async (page = 1, limit = 5) => {
 
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
+    console.log('Filtered data response:', data);
     
-    let formattedData = Array.isArray(data.data)
-      ? data.data
-      : data.data && typeof data.data === "object"
-      ? [data.data]
-      : [];
+    let formattedData = Array.isArray(data.data) ? data.data : [];
     
-    // Clean HTML tags from officer names and other text fields
+    // Clean HTML tags
     formattedData = formattedData.map((item, index) => ({
       key: item.patrol_id || `patrol-filtered-${index}`,
       ...item,
       patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
       division: stripHtmlTags(item.division),
       range: stripHtmlTags(item.range),
+      round: stripHtmlTags(item.round),
       beat: stripHtmlTags(item.beat),
       start_location: stripHtmlTags(item.start_location),
       end_location: stripHtmlTags(item.end_location)
@@ -956,28 +970,32 @@ const fetchFilteredPatrolData = async (page = 1, limit = 5) => {
     
   } catch (error) {
     console.error("Error fetching filtered patrol data:", error);
-    // Fallback to client-side filtering if API fails
-    handleClientSideSearch();
   }
   setIsFiltering(false);
   setPaginationLoading(false);
 };
 
-// Client-side search fallback
 const handleClientSideSearch = () => {
   let data = [...patrolData];
   
-  // Text search filter - use cleaned names
+  // Officer name search
   if (searchText.trim() !== "") {
     const lower = searchText.toLowerCase();
     data = data.filter((item) => {
       const cleanOfficerName = stripHtmlTags(item.patrol_officer_name);
+      return cleanOfficerName?.toLowerCase().includes(lower);
+    });
+  }
+  
+  // Combined location search (Division, Range, Beat)
+  if (locationSearch.trim() !== "") {
+    const lower = locationSearch.toLowerCase();
+    data = data.filter((item) => {
       const cleanDivision = stripHtmlTags(item.division);
       const cleanRange = stripHtmlTags(item.range);
       const cleanBeat = stripHtmlTags(item.beat);
       
       return (
-        cleanOfficerName?.toLowerCase().includes(lower) ||
         cleanDivision?.toLowerCase().includes(lower) ||
         cleanRange?.toLowerCase().includes(lower) ||
         cleanBeat?.toLowerCase().includes(lower)
@@ -1001,31 +1019,6 @@ const handleClientSideSearch = () => {
   // Type filter
   if (typeFilter) {
     data = data.filter((item) => item.type_name === typeFilter);
-  }
-  
-  // Hierarchy filters
-  if (divisionFilter) {
-    const cleanDivisionFilter = divisionFilter.toLowerCase();
-    data = data.filter((item) => {
-      const cleanDivision = stripHtmlTags(item.division_name || item.division);
-      return cleanDivision?.toLowerCase().includes(cleanDivisionFilter);
-    });
-  }
-  
-  if (beatFilter) {
-    const cleanBeatFilter = beatFilter.toLowerCase();
-    data = data.filter((item) => {
-      const cleanBeat = stripHtmlTags(item.beat_name || item.beat);
-      return cleanBeat?.toLowerCase().includes(cleanBeatFilter);
-    });
-  }
-  
-  if (coupeFilter) {
-    const cleanCoupeFilter = coupeFilter.toLowerCase();
-    data = data.filter((item) => {
-      const cleanCoupe = stripHtmlTags(item.coupe_name);
-      return cleanCoupe?.toLowerCase().includes(cleanCoupeFilter);
-    });
   }
   
   setFilteredData(data);
@@ -1064,6 +1057,73 @@ const handleClientSideSearch = () => {
       .catch((err) => {
         console.error("Error fetching divisions:", err);
         setDivisions1([]);
+      });
+  }, []);
+
+  
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/api/patrolling-beat`)
+      .then((res) => {
+        const data = res.data;
+        if (Array.isArray(data)) {
+          setBeats1(data);
+        } else if (data && data.data && Array.isArray(data.data)) {
+          setBeats1(data.data);
+        } else if (data && Array.isArray(Object.values(data))) {
+          setBeats1(Object.values(data));
+        } else {
+          setBeats1([]);
+          console.warn("Unexpected data format for beats:", data);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching beats:", err);
+        setBeats1([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/api/patrolling-round`)
+      .then((res) => {
+        const data = res.data;
+        if (Array.isArray(data)) {
+          setRounds1(data);
+        } else if (data && data.data && Array.isArray(data.data)) {
+          setRounds1(data.data);
+        } else if (data && Array.isArray(Object.values(data))) {
+          setRounds1(Object.values(data));
+        } else {
+          setRounds1([]);
+          console.warn("Unexpected data format for rounds:", data);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching rounds:", err);
+        setRounds1([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/api/patrolling-range`)
+      .then((res) => {
+        const data = res.data;
+        if (Array.isArray(data)) {
+          setRanges1(data);
+        } else if (data && data.data && Array.isArray(data.data)) {
+          setRanges1(data.data);
+        } else if (data && Array.isArray(Object.values(data))) {
+          setRanges1(Object.values(data));
+        } else {
+          setRanges1([]);
+          console.warn("Unexpected data format for ranges:", data);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching ranges:", err);
+        setRanges1([]);
       });
   }, []);
 
@@ -1178,51 +1238,54 @@ const handleClientSideSearch = () => {
     fetchFilteredPatrolData(1, pageSize);
   };
 
-  // Function to clear all filters
-  const clearAllFilters = () => {
-    setSearchText("");
-    setStartFilter(null);
-    setEndFilter(null);
-    setTypeFilter("");
-    setForestId("");
-    setDivisionFilter("");
-    setBeatFilter("");
-    setCoupeFilter("");
-    setDivisions([]);
-    setBeats([]);
-    setCoupes([]);
-    setCurrentPage(1);
-    setIsFiltering(false);
-    fetchPatrolData(1, pageSize);
-  };
+const clearAllFilters = () => {
+  setSearchText("");
+  setLocationSearch("");
+  setRangeSearch("");
+  setStartFilter(null);
+  setEndFilter(null);
+  setTypeFilter("");
+  setForestId("");
+  setDivisionFilter("");
+  setRangeFilter(""); // Clear range filter
+  setRoundFilter(""); // Clear round filter
+  setBeatFilter("");
+  setCoupeFilter("");
+  setDivisions([]);
+  setBeats([]);
+  setCoupes([]);
+  setCurrentPage(1);
+  setIsFiltering(false);
+  fetchPatrolData(1, pageSize);
+};
 
   // Handle page change
-  const handlePageChange = (page, pageSize) => {
-    setCurrentPage(page);
-    setPageSize(pageSize);
-    
-    // Check if any filters are active
-    const hasFilters = searchText || startFilter || endFilter || typeFilter || 
-                      divisionFilter || beatFilter || coupeFilter || forestId;
-    
-    if (hasFilters) {
-      fetchFilteredPatrolData(page, pageSize);
-    } else {
-      fetchPatrolData(page, pageSize);
+const handlePageChange = (page, pageSize) => {
+  setCurrentPage(page);
+  setPageSize(pageSize);
+  
+  // Check if any filters are active
+  const hasFilters = searchText || startFilter || endFilter || typeFilter || 
+                    divisionFilter || rangeFilter || roundFilter || beatFilter || coupeFilter || forestId;
+  
+  if (hasFilters) {
+    fetchFilteredPatrolData(page, pageSize);
+  } else {
+    fetchPatrolData(page, pageSize);
+  }
+};
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    if (searchText || locationSearch || rangeSearch || startFilter || endFilter || typeFilter || 
+        divisionFilter || rangeFilter || roundFilter || beatFilter || coupeFilter || forestId) {
+      handleSearch();
     }
-  };
+  }, 800);
 
-  // Apply filters when any filter changes (debounced version)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchText || startFilter || endFilter || typeFilter || 
-          divisionFilter || beatFilter || coupeFilter || forestId) {
-        handleSearch();
-      }
-    }, 800); // 800ms debounce
-
-    return () => clearTimeout(timer);
-  }, [searchText, startFilter, endFilter, typeFilter, divisionFilter, beatFilter, coupeFilter, forestId]);
+  return () => clearTimeout(timer);
+}, [searchText, locationSearch, rangeSearch, startFilter, endFilter, typeFilter, 
+    divisionFilter, rangeFilter, roundFilter, beatFilter, coupeFilter, forestId]);
 
   const getTypeDisplayName = (type) => {
     if (language === "gu") {
@@ -1262,13 +1325,13 @@ const handleClientSideSearch = () => {
         return (currentPage - 1) * pageSize + index + 1;
       },
     },
-    {
-      title: language === "gu" ? "પેટ્રોલિંગ આઈડી" : "Patrol ID",
-      dataIndex: "patrol_id",
-      key: "patrol_id",
-      align: "center",
-      sorter: (a, b) => a.patrol_id - b.patrol_id,
-    },
+    // {
+    //   title: language === "gu" ? "પેટ્રોલિંગ આઈડી" : "Patrol ID",
+    //   dataIndex: "patrol_id",
+    //   key: "patrol_id",
+    //   align: "center",
+    //   sorter: (a, b) => a.patrol_id - b.patrol_id,
+    // },
     {
       title: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type",
       dataIndex: "type_name",
@@ -1780,7 +1843,13 @@ const handleClientSideSearch = () => {
         }
         pageSizeOptions={['5', '10', '20', '50', '100']}
         disabled={paginationLoading || isLoading}
+        
       />
+      <Button className="btn-Export" onClick={handleExport} disabled={!filteredData.length}>
+        {language === "gu" ? "નિકાસ કરો" : "Export"}
+        <img src={exportIcon} alt="Export Icon" className="btn-icon" />
+      </Button>
+      
       
       {/* <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Select
@@ -1801,6 +1870,7 @@ const handleClientSideSearch = () => {
         {paginationLoading && <Spin size="small" />}
       </div> */}
     </div>
+    
   );
 
   return (
@@ -1808,45 +1878,12 @@ const handleClientSideSearch = () => {
       {isLoading && <Loader />}
       <div className="section">
         <div className="heading-container">
-          <h3 className="main-heading">
+          <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"}}>
             {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Patrolling Logs"}
           </h3>
           <div className="filters">
            
-            {/* Hierarchy Filters */}
-            <Select
-              placeholder={language === "gu" ? "ફોરેસ્ટ પ્રકાર" : "Forest Type"}
-              style={{
-                width: "180px",
-                // border: "1px solid #d9d9d9",
-                borderRadius: "0px",
-                background: "#fff",
-              }}
-              value={forestId}
-              onChange={handleForestChange}
-              allowClear
-              dropdownStyle={{
-                background: "#fff",
-              }}
-              dropdownRender={(menu) => (
-                <div style={{ background: "#fff" }}>
-                  {menu}
-                </div>
-              )}
-            >
-              <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
-              {Array.isArray(divisions1) && divisions1.length > 0 ? (
-                divisions1.map((f) => (
-                  <Option key={f.division || f.id || f.value} value={f.division || f.id || f.value}>
-                    {f.division || f.name || f.value}
-                  </Option>
-                ))
-              ) : (
-                <Option disabled value="no-data">
-                  {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
-                </Option>
-              )}
-            </Select>
+
 
             {/* Existing filters */}
             <Input
@@ -1875,6 +1912,112 @@ const handleClientSideSearch = () => {
                 />
               }
             />
+
+            {/* Combined Search for Division, Range, Beat */}
+
+  <Select
+    placeholder={language === "gu" ? "વિભાગ પસંદ કરો" : "Select Division"}
+    style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
+    value={divisionFilter}
+    onChange={(value) => {
+      setDivisionFilter(value);
+      setCurrentPage(1);
+    }}
+    allowClear
+    showSearch
+    optionFilterProp="children"
+    filterOption={(input, option) => 
+      option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+    }
+    dropdownStyle={{
+      background: "#fff",
+    }}
+  >
+    <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
+    {Array.isArray(divisions1) && divisions1.length > 0 ? (
+      divisions1.map((division) => {
+        const divisionValue = division.division || division.name || division.value || division;
+        const divisionLabel = division.division || division.name || division.value || division;
+        const divisionKey = division.id || division.division_id || divisionValue;
+        
+        return (
+          <Option key={divisionKey} value={divisionValue}>
+            {divisionLabel}
+          </Option>
+        );
+      })
+    ) : (
+      <Option disabled value="no-data">
+        {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
+      </Option>
+    )}
+  </Select>
+ <Select
+  placeholder={language === "gu" ? "રેંજ પસંદ કરો" : "Select Range"}
+  style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
+  value={rangeFilter}
+  onChange={(value) => {
+    setRangeFilter(value);
+    setCurrentPage(1);
+    // fetchFilteredPatrolData will be called automatically by the useEffect
+  }}
+  allowClear
+  showSearch
+  optionFilterProp="children"
+>
+    <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
+    {Array.isArray(ranges1) && ranges1.length > 0 ? (
+      ranges1.map((range) => {
+        const rangeValue = range.range || range.name || range.value || range;
+        const rangeLabel = range.range || range.name || range.value || range;
+        
+        return (
+          <Option key={range.id || range.range_id || rangeValue} value={rangeValue}>
+            {rangeLabel}
+          </Option>
+        );
+      })
+    ) : (
+      <Option disabled value="no-data">
+        {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
+      </Option>
+    )}
+  </Select>
+
+  {/* Beat Filter */}
+  <Select
+    placeholder={language === "gu" ? "બીટ પસંદ કરો" : "Select Beat"}
+    style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
+    value={beatFilter}
+    onChange={(value) => {
+      setBeatFilter(value);
+      setCurrentPage(1);
+      fetchFilteredPatrolData(1, pageSize);
+    }}
+    allowClear
+    showSearch
+    optionFilterProp="children"
+  >
+    <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
+    {Array.isArray(beats1) && beats1.length > 0 ? (
+      beats1.map((beat) => {
+        const beatValue = beat.beat || beat.name || beat.value || beat;
+        const beatLabel = beat.beat || beat.name || beat.value || beat;
+        
+        return (
+          <Option key={beat.id || beat.beat_id || beatValue} value={beatValue}>
+            {beatLabel}
+          </Option>
+        );
+      })
+    ) : (
+      <Option disabled value="no-data">
+        {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
+      </Option>
+    )}
+  </Select>
+
+
             <DatePicker
               placeholder={
                 language === "gu"
@@ -1943,10 +2086,7 @@ const handleClientSideSearch = () => {
               {language === "gu" ? "બીટ પેટ્રોલ કવરેજ" : "Beat Patrol Coverage"}
             </Button>
             
-            <Button className="btn-Export" onClick={handleExport} disabled={!filteredData.length}>
-              {language === "gu" ? "નિકાસ કરો" : "Export"}
-              <img src={exportIcon} alt="Export Icon" className="btn-icon" />
-            </Button>
+            
           </div>
         </div>
         
@@ -2008,6 +2148,7 @@ const handleClientSideSearch = () => {
         
         {/* Custom Pagination Component */}
         {totalItems > 0 && <CustomPagination />}
+        
       </div>
       
       {/* Analysis Dashboard - Shows statistics for current filtered data */}

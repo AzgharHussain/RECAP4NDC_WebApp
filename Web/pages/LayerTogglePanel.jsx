@@ -378,7 +378,7 @@ const GEOSERVER_WMS = "/geoserver/wms";
 const layersData = {
   groups: [
     {
-      title: "Gujarat State Boundaries",
+      title: "Gujarat Boundaries",
       type: "flat",
       children: [
         { Name: "Gujarat_district", Layer: "District" },
