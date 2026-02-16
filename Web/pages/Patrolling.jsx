@@ -1040,7 +1040,7 @@ const handleClientSideSearch = () => {
 
   useEffect(() => {
     axios
-      .get(`${API_BASE_URL}/api/patrolling-district`)
+      .get(`${API_BASE_URL}/api/patrolling-division`)
       .then((res) => {
         const data = res.data;
         if (Array.isArray(data)) {
