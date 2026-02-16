@@ -698,7 +698,7 @@ router.get('/patrolling-types', verifyJwt, async (req, res) => {
   }
 });
 
-router.get('/patrolling-district', async (req, res) => {
+router.get('/patrolling-division', async (req, res) => {
   try {
     const query = `
       SELECT DISTINCT division
@@ -706,12 +706,12 @@ router.get('/patrolling-district', async (req, res) => {
     `;
     const result = await client.query(query);
     res.json({
-      message: 'All patrolling districts fetched successfully',
+      message: 'All patrolling division fetched successfully',
       data: result.rows
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch patrolling districts' });
+    res.status(500).json({ error: 'Failed to fetch patrolling division' });
   }
 });
 

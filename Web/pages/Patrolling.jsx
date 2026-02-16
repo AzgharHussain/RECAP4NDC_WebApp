@@ -489,7 +489,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                   <span style={{ 
                     color: 'rgba(0, 0, 0, 0.95)',
                     fontWeight: 600,
-                    fontSize: '20px'
+                    fontSize: '25px'
                   }}>
                     {getTypeDisplayName(type)}
                   </span>
