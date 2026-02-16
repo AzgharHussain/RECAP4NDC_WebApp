@@ -258,6 +258,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
         marginBottom: 20, 
         color: '#000000ff',
         fontWeight: 600,
+        fontSize: '25px',
         textShadow: '0 2px 4px rgba(0,0,0,0.3)'
       }}>
         {language === "gu" ? "પેટ્રોલિંગ વિશ્લેષણ" : "Patrol Analysis"}
@@ -310,7 +311,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
               padding: 16,
               border: `1px solid ${item.borderColor}`,
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-              height: '100%',
+              height: '80%',
               transition: 'transform 0.2s',
               ':hover': {
                 transform: 'translateY(-4px)'
@@ -338,12 +339,12 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                     background: 'rgba(0, 0, 0, 0.2)',
                     marginRight: 8,
                     border: '1px solid rgba(0, 0, 0, 0.3)',
-                    marginLeft: '120px'
+                    marginLeft: '140px'
                   }}>
                     {React.cloneElement(item.icon, { 
                       style: { 
                         color: 'white',
-                        fontSize: '16px',
+                        fontSize: '20px',
                         
                       } 
                     })}
@@ -377,7 +378,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
           marginBottom: 16,
           marginRight: 10,
           color: 'rgba(0, 0, 0, 0.95)',
-          fontSize: '20px',
+          fontSize: '25px',
           textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"
         }}>
           {language === "gu" ? "પેટ્રોલિંગ વિતરણ" : "Patrol Distribution"}
@@ -418,8 +419,8 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    width: '80%',
-                    height: '80%',
+                    width: '100%',
+                    height: '100%',
                     borderRadius: '50%',
                     background: 'rgba(136, 108, 108, 0.05)',
                     backdropFilter: 'blur(4px)',
@@ -639,7 +640,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 }}>
                   <div style={{ 
                     color: 'rgba(0, 0, 0, 0.7)',
-                    fontSize: '14px',
+                    fontSize: '18px',
                     marginBottom: 8
                   }}>
                     {language === "gu" ? "સૌથી વધુ પેટ્રોલિંગ" : "Most Active Type"}
@@ -692,7 +693,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 }}>
                   <div style={{ 
                     color: 'rgba(0, 0, 0, 0.7)',
-                    fontSize: '14px',
+                    fontSize: '18px',
                     marginBottom: 8
                   }}>
                     {language === "gu" ? "સૌથી વધુ અંતર" : "Longest Distance Type"}

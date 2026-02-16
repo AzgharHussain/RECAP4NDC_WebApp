@@ -323,34 +323,20 @@ app.post("/api/saveuser", validateNoDuplicateParams, async (req, res) => {
   try {
     console.log('✅ /api/saveuser POST route accessed');
     console.log('Request body:', req.body);
-    console.log('Request body type:', typeof req.body);
-    console.log('Content-Type:', req.get('Content-Type'));
+    console.log('Request params:', req.params);
+    console.log('Request query:', req.query);
     
-    // Reject query params
-    if (req.query.username) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Credentials must be sent in request body, not URL' 
-      });
-    }
-
-    // Check if body exists
-    if (!req.body) {
-      console.error('❌ Request body is empty or undefined');
-      return res.status(400).json({ 
-        success: false, 
-        error: "Request body is required" 
-      });
-    }
-
-    const username = req.body?.username;
+    // Get username from body, params, or query (prioritize body > params > query)
+    const username = req.body?.username || req.params?.username || req.query?.username;
+    
     console.log('Extracted username:', username);
     console.log('Username type:', typeof username);
+    console.log('Source:', req.body?.username ? 'body' : (req.params?.username ? 'params' : (req.query?.username ? 'query' : 'none')));
     
     if (username === undefined || username === null) {
       return res.status(400).json({ 
         success: false, 
-        error: "Username field is missing in request body" 
+        error: "Username field is missing. Provide it in request body, URL parameter, or query string." 
       });
     }
     
