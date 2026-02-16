@@ -551,7 +551,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                         }}>
                           <div style={{ 
                             color: 'rgba(0, 0, 0, 0.7)',
-                            fontSize: '18px',
+                            fontSize: '25px',
                             marginBottom: 4
                           }}>
                             {item.label}
@@ -620,7 +620,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
             <span style={{ 
               color: 'rgba(0, 0, 0, 0.95)',
               fontWeight: 600,
-              fontSize: '20px',
+              fontSize: '25px',
               textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"
             }}>
               {language === "gu" ? "વધારાની જાણકારી" : "Additional Insights"}
