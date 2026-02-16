@@ -1,41 +1,46 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ mode }) => {
+  // Load env variables based on current mode
+  const env = loadEnv(mode, process.cwd(), '');
   
-  server: {
-    proxy: {
-      // // For your backend API (localhost:5002)
-      "/api": {
-        target: "http://localhost:5002",
-        // target: "http://68.178.167.216:5002",
-        changeOrigin: true,
-        secure: false,
-      },
-      // For SOAP calls to Gujarat Forest Service - FIXED PATH
-      "/forest-proxy": {
-        target: "https://egujforest.gujarat.gov.in",
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/forest-proxy/, '')
-      },
-      '/geoserver': {
-        target: 'https://www.gisfy.co.in:8445',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/geoserver/, '/geoserver'),
-        configure: (proxy, _options) => {
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            // Add CORS headers
-            proxyReq.setHeader('Origin', 'https://www.gisfy.co.in:8445');
-          });
+  return {
+    plugins: [react()],
+    
+    server: {
+      proxy: {
+        // Backend API proxy
+        "/api": {
+          target: env.VITE_API_URL,
+          changeOrigin: true,
+          secure: false,
+        },
+        // SOAP calls to Gujarat Forest Service
+        "/forest-proxy": {
+          target: env.VITE_FOREST_URL,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/forest-proxy/, '')
+        },
+        // Geoserver proxy
+        '/geoserver': {
+          target: env.VITE_GEOSERVER_URL,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/geoserver/, '/geoserver'),
+          configure: (proxy, _options) => {
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              // Add CORS headers
+              proxyReq.setHeader('Origin', env.VITE_GEOSERVER_URL);
+            });
+          }
         }
-      }
+      },
     },
-  },
-  
-  optimizeDeps: {
-    include: ["react", "react-dom", "react-router-dom", "axios"]
-  }
+    
+    optimizeDeps: {
+      include: ["react", "react-dom", "react-router-dom", "axios"]
+    }
+  };
 });

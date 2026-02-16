@@ -124,19 +124,8 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
 
@@ -154,6 +143,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// In your Express app (index.js), when setting cookies:
+app.use((req, res, next) => {
+    // Ensure all cookies have secure flags
+    const originalCookie = res.cookie;
+    res.cookie = function(name, value, options = {}) {
+        // Force secure settings for all cookies
+        const secureOptions = {
+            secure: true,           // Only send over HTTPS
+            httpOnly: true,         // Prevent JavaScript access
+            sameSite: 'strict',     // CSRF protection
+            ...options
+        };
+        return originalCookie.call(this, name, value, secureOptions);
+    };
+    next();
+});
 
 app.use((req, res, next) => {
   const originalJson = res.json;
