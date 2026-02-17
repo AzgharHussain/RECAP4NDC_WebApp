@@ -800,105 +800,74 @@ router.get('/patrolling-round', async (req, res) => {
   }
 });
 
-// Get distinct ranges based on selected division
-// router.get('/patrolling-range', async (req, res) => {
-//   try {
-//     const { division } = req.query;
-//     let query = `
-//       SELECT DISTINCT range
-//       FROM patrols
-//     `;
-//     const params = [];
+// Get ranges filtered by division
+router.get('/patrolling-range-by-division', verifyJwt, async (req, res) => {
+  try {
+    const { division } = req.query;
     
-//     if (division) {
-//       query += ` WHERE division = $1`;
-//       params.push(division);
-//     }
+    let query = `
+      SELECT DISTINCT range
+      FROM patrols
+    `;
     
-//     const result = await client.query(query, params);
-//     res.json({
-//       message: 'All patrolling ranges fetched successfully',
-//       data: result.rows
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Failed to fetch patrolling ranges' });
-//   }
-// });
+    const values = [];
+    
+    if (division) {
+      query += ` WHERE division = $1`;
+      values.push(division);
+    }
+    
+    query += ` ORDER BY range`;
+    
+    const result = await client.query(query, values);
+    res.json({
+      message: 'Patrolling ranges fetched successfully',
+      data: result.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patrolling ranges' });
+  }
+});
 
-// Get distinct beats based on selected division and range
-// router.get('/patrolling-beat', async (req, res) => {
-//   try {
-//     const { division, range } = req.query;
-//     let query = `
-//       SELECT DISTINCT beat
-//       FROM patrols
-//     `;
-//     const params = [];
+// Get beats filtered by range (and optionally division)
+router.get('/patrolling-beat-by-range', verifyJwt, async (req, res) => {
+  try {
+    const { range, division } = req.query;
     
-//     if (division) {
-//       query += ` AND division = $${paramCount}`;
-//       params.push(division);
-//       paramCount++;
-//     }
+    let query = `
+      SELECT DISTINCT beat
+      FROM patrols
+      WHERE 1=1
+    `;
     
-//     if (range) {
-//       query += ` AND range = $${paramCount}`;
-//       params.push(range);
-//       paramCount++;
-//     }
+    const values = [];
+    let paramIndex = 1;
     
-//     const result = await client.query(query, params);
-//     res.json({
-//       message: 'All patrolling beats fetched successfully',
-//       data: result.rows
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Failed to fetch patrolling beats' });
-//   }
-// });
-
-// Get distinct rounds based on selected division, range, and beat
-// router.get('/patrolling-round', async (req, res) => {
-//   try {
-//     const { division, range, beat } = req.query;
-//     let query = `
-//       SELECT DISTINCT round
-//       FROM patrols
-//       WHERE 1=1
-//     `;
-//     const params = [];
-//     let paramCount = 1;
+    if (range) {
+      query += ` AND range = $${paramIndex}`;
+      values.push(range);
+      paramIndex++;
+    }
     
-//     if (division) {
-//       query += ` AND division = $${paramCount}`;
-//       params.push(division);
-//       paramCount++;
-//     }
+    if (division) {
+      query += ` AND division = $${paramIndex}`;
+      values.push(division);
+      paramIndex++;
+    }
     
-//     if (range) {
-//       query += ` AND range = $${paramCount}`;
-//       params.push(range);
-//       paramCount++;
-//     }
+    query += ` ORDER BY beat`;
     
-//     if (beat) {
-//       query += ` AND beat = $${paramCount}`;
-//       params.push(beat);
-//       paramCount++;
-//     }
-    
-//     const result = await client.query(query, params);
-//     res.json({
-//       message: 'All patrolling rounds fetched successfully',
-//       data: result.rows
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Failed to fetch patrolling rounds' });
-//   }
-// });
+    const result = await client.query(query, values);
+    res.json({
+      message: 'Patrolling beats fetched successfully',
+      data: result.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patrolling beats' });
+  }
+});
 
 // Alternative: Single endpoint to get all hierarchy data at once
 router.get('/patrolling-hierarchy', async (req, res) => {
@@ -959,10 +928,6 @@ router.get('/patrolling-drb', verifyJwt, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch patrolling districts' });
   }
 });
-
-
-
-
 
 
 

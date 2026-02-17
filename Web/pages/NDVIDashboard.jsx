@@ -151,6 +151,12 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
       return;
     }
 
+    // If "all" is selected, don't fetch ranges/rounds/beats
+    if (selectedDivision === 'all') {
+      onHierarchyChange({ division: 'all', range: null, round: null, beat: null, isAllDivisions: true });
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(
@@ -165,7 +171,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
       );
       console.log("api/coupe-ranges", res.data);
       setRanges(res.data);
-      onHierarchyChange({ division: selectedDivision, range: null, round: null, beat: null });
+      onHierarchyChange({ division: selectedDivision, range: null, round: null, beat: null, isAllDivisions: false });
     } catch (error) {
       console.error("Error fetching ranges:", error);
     }
@@ -180,8 +186,8 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
     setRounds([]);
     setBeats([]);
 
-    if (!selectedRange || !division) {
-      onHierarchyChange({ division, range: null, round: null, beat: null });
+    if (!selectedRange || !division || division === 'all') {
+      onHierarchyChange({ division, range: null, round: null, beat: null, isAllDivisions: division === 'all' });
       return;
     }
 
@@ -202,7 +208,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
       );
       console.log("api/coupe-rounds", res.data);
       setRounds(res.data);
-      onHierarchyChange({ division, range: selectedRange, round: null, beat: null });
+      onHierarchyChange({ division, range: selectedRange, round: null, beat: null, isAllDivisions: false });
     } catch (error) {
       console.error("Error fetching rounds:", error);
     }
@@ -215,8 +221,8 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
     setBeat("");
     setBeats([]);
 
-    if (!selectedRound || !range || !division) {
-      onHierarchyChange({ division, range, round: null, beat: null });
+    if (!selectedRound || !range || !division || division === 'all') {
+      onHierarchyChange({ division, range, round: null, beat: null, isAllDivisions: division === 'all' });
       return;
     }
 
@@ -238,7 +244,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
       );
       console.log("api/coupe-beats", res.data);
       setBeats(res.data);
-      onHierarchyChange({ division, range, round: selectedRound, beat: null });
+      onHierarchyChange({ division, range, round: selectedRound, beat: null, isAllDivisions: false });
     } catch (error) {
       console.error("Error fetching beats:", error);
     }
@@ -249,7 +255,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
     const selectedBeat = e.target.value;
     setBeat(selectedBeat);
     
-    if (selectedBeat && division && range && round) {
+    if (selectedBeat && division && range && round && division !== 'all') {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.post(
@@ -274,17 +280,18 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
             range, 
             round,
             beat: selectedBeat,
-            coupe_name: res.data.coupe_name 
+            coupe_name: res.data.coupe_name,
+            isAllDivisions: false
           });
         } else {
-          onHierarchyChange({ division, range, round, beat: selectedBeat });
+          onHierarchyChange({ division, range, round, beat: selectedBeat, isAllDivisions: false });
         }
       } catch (error) {
         console.error("Error fetching coupe for beat:", error);
-        onHierarchyChange({ division, range, round, beat: selectedBeat });
+        onHierarchyChange({ division, range, round, beat: selectedBeat, isAllDivisions: false });
       }
     } else {
-      onHierarchyChange({ division, range, round, beat: selectedBeat });
+      onHierarchyChange({ division, range, round, beat: selectedBeat, isAllDivisions: division === 'all' });
     }
   };
 
@@ -304,6 +311,9 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           label="Division"
         >
           <MenuItem value="">Select Division</MenuItem>
+          <MenuItem value="all" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+            <em>All Divisions</em>
+          </MenuItem>
           {divisions.map((d, index) => (
             <MenuItem key={index} value={d.division}>
               {d.division}
@@ -312,14 +322,14 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
         </Select>
       </FormControl>
 
-      {/* Range Dropdown */}
+      {/* Range Dropdown - Disabled when "All Divisions" is selected */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>Range</InputLabel>
         <Select
           value={range}
           onChange={handleRangeChange}
           label="Range"
-          disabled={!division}
+          disabled={!division || division === 'all'}
         >
           <MenuItem value="">Select Range</MenuItem>
           {ranges.map((r, index) => (
@@ -330,14 +340,14 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
         </Select>
       </FormControl>
 
-      {/* Round Dropdown */}
+      {/* Round Dropdown - Disabled when "All Divisions" is selected */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>Round</InputLabel>
         <Select
           value={round}
           onChange={handleRoundChange}
           label="Round"
-          disabled={!range}
+          disabled={!range || division === 'all'}
         >
           <MenuItem value="">Select Round</MenuItem>
           {rounds.map((r, index) => (
@@ -348,14 +358,14 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
         </Select>
       </FormControl>
 
-      {/* Beat Dropdown */}
+      {/* Beat Dropdown - Disabled when "All Divisions" is selected */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>Beat</InputLabel>
         <Select
           value={beat}
           onChange={handleBeatChange}
           label="Beat"
-          disabled={!round}
+          disabled={!round || division === 'all'}
         >
           <MenuItem value="">Select Beat</MenuItem>
           {beats.map((b, index) => (
@@ -395,6 +405,7 @@ const NDVIChangeDashboard = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'pixle_id', direction: 'asc' });
   const [expandedChart, setExpandedChart] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date(2025, 1, 1));
+  const [showDivisionColumn, setShowDivisionColumn] = useState(false);
   
   // New state for date range
   const [startDate, setStartDate] = useState(null);
@@ -424,7 +435,7 @@ const NDVIChangeDashboard = () => {
 
   // Function to transform division name to coupe name
   const transformDivisionToCoupe = (divisionName) => {
-    if (!divisionName) return null;
+    if (!divisionName || divisionName === 'all') return null;
     
     // Remove " Forest Division" and replace with "_coupe"
     // Also convert to lowercase and replace spaces with underscores
@@ -451,10 +462,13 @@ const NDVIChangeDashboard = () => {
     setHierarchyCoupeName(hierarchy.coupe_name || null);
     
     // If division is selected and we have the division name, transform it to coupe name
-    if (hierarchy.division && !hierarchy.coupe_name) {
+    if (hierarchy.division && !hierarchy.coupe_name && hierarchy.division !== 'all') {
       const transformedCoupe = transformDivisionToCoupe(hierarchy.division);
       setHierarchyCoupeName(transformedCoupe);
       console.log("Set hierarchy coupe name to:", transformedCoupe);
+    } else if (hierarchy.division === 'all') {
+      console.log("All divisions selected");
+      setHierarchyCoupeName('all_divisions');
     }
   };
 
@@ -486,223 +500,72 @@ const NDVIChangeDashboard = () => {
   };
 
   // Handle submit button click
-// Handle submit button click
-const handleSubmit = async () => {
-  // Check if we have hierarchy selection
-  if (!selectedDivision) {
-    setError('Please select at least a division');
-    return;
-  }
-  
-  if (!startDate || !endDate) {
-    setError('Please select both start and end dates');
-    return;
-  }
-  
-  if (startDate > endDate) {
-    setError('Start date must be before end date');
-    return;
-  }
-  
-  // Clear all previous data
-  setMonthlyData({});
-  setCurrentTableData([]);
-  setSummaryStats(null);
-  setTotalArea(0); // Reset total area
-  setError(null);
-  
-  // Generate month list
-  const months = generateTableNames(startDate, endDate);
-  setTableNames(months);
-  
-  if (months.length === 0) {
-    setError('No months selected in the date range');
-    return;
-  }
-  
-  // Fetch data for all months with hierarchy filters
-  await fetchFilteredData(months);
-};
-
-  // New function to fetch total area and return it
-const fetchTotalAreaAndReturn = async (coupeName) => {
-  setLoadingArea(true);
-  try {
-    const token = localStorage.getItem("token");
-    const response = await axios.post(
-      `${API_BASE_URL}/api/get-coupe-area`,
-      { tableName: coupeName },
-      { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
-    );
-
-    if (response.data.success) {
-      const area = response.data.data[0]?.total_area_sq_km || 0;
-      const areaValue = parseFloat(area);
-      const finalArea = areaValue > 0 ? areaValue : 100;
-      setTotalArea(finalArea);
-      return finalArea;
-    } else {
-      setTotalArea(100);
-      return 100;
-    }
-  } catch (err) {
-    console.error('Error fetching area:', err);
-    setTotalArea(100);
-    return 100;
-  } finally {
-    setLoadingArea(false);
-  }
-};
-
-  // Fetch filtered data based on hierarchy and date
-// Fetch filtered data based on hierarchy and date
-const fetchFilteredData = async (months) => {
-  setLoading(true);
-  setError(null);
-  setMonthlyData({});
-  setCurrentTableData([]);
-  setSummaryStats(null);
-  
-  try {
-    const token = localStorage.getItem("token");
-    
-    // First, get the coupe name from division if not already set
-    let coupeToUse = hierarchyCoupeName;
-    if (!coupeToUse && selectedDivision) {
-      coupeToUse = transformDivisionToCoupe(selectedDivision);
-    }
-    
-    if (!coupeToUse) {
-      setError('Could not determine coupe name');
-      setLoading(false);
+  const handleSubmit = async () => {
+    // Check if we have hierarchy selection
+    if (!selectedDivision) {
+      setError('Please select at least a division');
       return;
     }
     
-    // Fetch total area for the coupe and wait for it
-    const totalCoupeArea = await fetchTotalAreaAndReturn(coupeToUse);
-    
-    if (totalCoupeArea <= 0) {
-      console.warn('Total area is zero or negative, using default value');
+    if (!startDate || !endDate) {
+      setError('Please select both start and end dates');
+      return;
     }
     
-    console.log('Total Coupe Area:', totalCoupeArea);
+    if (startDate > endDate) {
+      setError('Start date must be before end date');
+      return;
+    }
     
-    // Create a temporary object to store all month data
-    const tempMonthlyData = {};
+    // Clear all previous data
+    setMonthlyData({});
+    setCurrentTableData([]);
+    setSummaryStats(null);
+    setTotalArea(0); // Reset total area
+    setError(null);
     
-    // For each month, fetch data filtered by hierarchy
-    for (const month of months) {
-      try {
-        // Construct table name for this month
-        const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
-        
-        console.log(`Fetching data for month: ${month}, table: ${tableName}`);
-        
-        // Fetch data with hierarchy filters
-        const dataResponse = await axios.post(
-          `${API_BASE_URL}/api/ndvi-change-get-filtered`,
-          {
-            tableName,
-            division: selectedDivision,
-            range: selectedRange,
-            round: selectedRound,
-            beat: selectedBeat
-          },
-          { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
-        );
-        
-        if (dataResponse.data.success) {
-          const data = dataResponse.data.data;
-          
-          if (data.length > 0) {
-            // Fetch degraded area for this month with filters
-            const degradedAreaValue = await fetchFilteredDegradedArea(tableName);
-            
-            // Calculate afforested area as total area minus degraded area
-            const afforestedAreaValue = Math.max(0, totalCoupeArea - degradedAreaValue);
-            
-            console.log(`Month ${month}:`, {
-              totalArea: totalCoupeArea,
-              degradedArea: degradedAreaValue,
-              afforestedArea: afforestedAreaValue
-            });
-            
-            // Count polygons by status
-            const degradedPolygons = data.filter(item => item.status === true).length;
-            const afforestedPolygons = data.filter(item => item.status === false).length;
-            
-            // Calculate area per polygon (if there are polygons of that type)
-            const degradedAreaPerPolygon = degradedPolygons > 0 ? degradedAreaValue / degradedPolygons : 0;
-            const afforestedAreaPerPolygon = afforestedPolygons > 0 ? afforestedAreaValue / afforestedPolygons : 0;
-            
-            // Enhance data with area calculations
-            const enhancedData = data.map(item => {
-              const isDegraded = item.status === true;
-              // Assign area based on status
-              const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
-              
-              return {
-                ...item,
-                area_sq_km: polygonArea,
-                month: month,
-                status: isDegraded,
-                change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
-                has_note: !!(item.note && item.note.trim() !== ''),
-                has_image: !!(item.image_data),
-                pixle_id: item.pixle_id || 'N/A'
-              };
-            });
-            
-            // Calculate statistics using the actual values
-            const stats = calculateStatistics(
-              enhancedData, 
-              totalCoupeArea, 
-              degradedAreaValue, 
-              afforestedAreaValue
-            );
-            
-            // Store in temporary object
-            tempMonthlyData[month] = {
-              data: enhancedData,
-              stats,
-              month: month,
-              degradedArea: degradedAreaValue,
-              afforestedArea: afforestedAreaValue,
-              totalArea: totalCoupeArea
-            };
-          }
-        }
-      } catch (err) {
-        console.error(`Error fetching data for month ${month}:`, err);
+    // Generate month list
+    const months = generateTableNames(startDate, endDate);
+    setTableNames(months);
+    
+    if (months.length === 0) {
+      setError('No months selected in the date range');
+      return;
+    }
+    
+    // Fetch data for all months with hierarchy filters
+    await fetchFilteredData(months);
+  };
+
+  // New function to fetch total area and return it
+  const fetchTotalAreaAndReturn = async (coupeName) => {
+    setLoadingArea(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_BASE_URL}/api/get-coupe-area`,
+        { tableName: coupeName },
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        const area = response.data.data[0]?.total_area_sq_km || 0;
+        const areaValue = parseFloat(area);
+        const finalArea = areaValue > 0 ? areaValue : 100;
+        setTotalArea(finalArea);
+        return finalArea;
+      } else {
+        setTotalArea(100);
+        return 100;
       }
+    } catch (err) {
+      console.error('Error fetching area:', err);
+      setTotalArea(100);
+      return 100;
+    } finally {
+      setLoadingArea(false);
     }
-    
-    // After all fetches are complete, update the state once with all data
-    if (Object.keys(tempMonthlyData).length > 0) {
-      setMonthlyData(tempMonthlyData);
-      
-      // Sort months chronologically
-      const sortedMonths = Object.keys(tempMonthlyData).sort();
-      const firstMonth = sortedMonths[0];
-      
-      // Set current month data to the first month in range
-      if (tempMonthlyData[firstMonth]) {
-        setCurrentTableData(tempMonthlyData[firstMonth].data);
-        setSummaryStats(tempMonthlyData[firstMonth].stats);
-        setSelectedMonth(firstMonth);
-      }
-    } else {
-      setError('No data found for the selected criteria');
-    }
-    
-  } catch (err) {
-    const errorMsg = err.response?.data?.message || 'Failed to fetch NDVI data';
-    setError(errorMsg);
-    console.error('Error fetching NDVI data:', err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Helper function to fetch filtered degraded area
   const fetchFilteredDegradedArea = async (tableName) => {
@@ -728,6 +591,383 @@ const fetchFilteredData = async (months) => {
     } catch (err) {
       console.error('Error fetching filtered degraded area:', err);
       return 0;
+    }
+  };
+
+  // Helper function to fetch total area for a division
+  const fetchDivisionTotalArea = async (coupeName) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_BASE_URL}/api/get-coupe-area`,
+        { tableName: coupeName },
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        const area = response.data.data[0]?.total_area_sq_km || 0;
+        return parseFloat(area) > 0 ? parseFloat(area) : 0;
+      }
+      return 0;
+    } catch (err) {
+      console.error('Error fetching division area:', err);
+      return 0;
+    }
+  };
+
+  // Simplified function to fetch data for all divisions separately
+  const fetchAllDivisionsData = async (months) => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      // First, get all divisions
+      const divisionsRes = await axios.get(
+        `${API_BASE_URL}/api/coupe-divisions`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      const allDivisions = divisionsRes.data[0] || [];
+      
+      if (allDivisions.length === 0) {
+        setError('No divisions found');
+        return;
+      }
+      
+      console.log(`Fetching data for ${allDivisions.length} divisions`);
+      
+      // Create a temporary object to store data per division per month
+      const tempMonthlyData = {};
+      
+      // For each month, fetch data for each division separately
+      for (const month of months) {
+        let monthAllData = [];
+        
+        for (const division of allDivisions) {
+          try {
+            const divisionName = division.division;
+            const coupeToUse = transformDivisionToCoupe(divisionName);
+            
+            if (!coupeToUse) continue;
+            
+            // Fetch total area for this division's coupe
+            const divisionTotalArea = await fetchDivisionTotalArea(coupeToUse);
+            
+            if (divisionTotalArea <= 0) continue;
+            
+            // Construct table name for this month
+            const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
+            
+            console.log(`Fetching data for division: ${divisionName}, month: ${month}`);
+            
+            // Fetch data with hierarchy filters (range/round/beat may be null)
+            const dataResponse = await axios.post(
+              `${API_BASE_URL}/api/ndvi-change-get-filtered`,
+              {
+                tableName,
+                division: divisionName,
+                range: selectedRange,
+                round: selectedRound,
+                beat: selectedBeat
+              },
+              { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            );
+            
+            if (dataResponse.data.success) {
+              const data = dataResponse.data.data;
+              
+              if (data.length > 0) {
+                // Fetch degraded area for this division
+                const degradedAreaResponse = await axios.post(
+                  `${API_BASE_URL}/api/ndvi-change-degraded-area`,
+                  {
+                    tableName,
+                    division: divisionName,
+                    range: selectedRange,
+                    round: selectedRound,
+                    beat: selectedBeat
+                  },
+                  { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+                );
+                
+                const degradedAreaValue = degradedAreaResponse.data.success 
+                  ? parseFloat(degradedAreaResponse.data.data[0]?.total_area_sq_km || 0)
+                  : 0;
+                
+                const afforestedAreaValue = Math.max(0, divisionTotalArea - degradedAreaValue);
+                
+                // Count polygons by status
+                const degradedPolygons = data.filter(item => item.status === true).length;
+                const afforestedPolygons = data.filter(item => item.status === false).length;
+                
+                // Calculate area per polygon
+                const degradedAreaPerPolygon = degradedPolygons > 0 ? degradedAreaValue / degradedPolygons : 0;
+                const afforestedAreaPerPolygon = afforestedPolygons > 0 ? afforestedAreaValue / afforestedPolygons : 0;
+                
+                // Enhance data with area calculations and division info
+                const enhancedData = data.map(item => {
+                  const isDegraded = item.status === true;
+                  const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
+                  
+                  return {
+                    ...item,
+                    area_sq_km: polygonArea,
+                    month: month,
+                    division: divisionName,
+                    status: isDegraded,
+                    change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
+                    has_note: !!(item.note && item.note.trim() !== ''),
+                    has_image: !!(item.image_data),
+                    pixle_id: `${divisionName}_${item.pixle_id || 'N/A'}`
+                  };
+                });
+                
+                monthAllData = [...monthAllData, ...enhancedData];
+              }
+            }
+          } catch (err) {
+            console.error(`Error fetching data for division ${division.division}, month ${month}:`, err);
+          }
+        }
+        
+        // If we have data for this month, store it with division information preserved
+        if (monthAllData.length > 0) {
+          // Group data by division for statistics
+          const divisionsInMonth = [...new Set(monthAllData.map(item => item.division))];
+          
+          // Calculate statistics for each division separately
+          const divisionStats = {};
+          divisionsInMonth.forEach(div => {
+            const divData = monthAllData.filter(item => item.division === div);
+            const divDegradedArea = divData
+              .filter(item => item.status === true)
+              .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
+            const divAfforestedArea = divData
+              .filter(item => item.status === false)
+              .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
+            
+            divisionStats[div] = {
+              withNotes: divData.filter(item => item.has_note).length,
+              withImages: divData.filter(item => item.has_image).length,
+              degradedArea: divDegradedArea,
+              afforestedArea: divAfforestedArea,
+              totalArea: divDegradedArea + divAfforestedArea,
+              totalPolygons: divData.length,
+              degradedPercentage: (divDegradedArea + divAfforestedArea) > 0 
+                ? (divDegradedArea / (divDegradedArea + divAfforestedArea)) * 100 
+                : 0,
+              afforestedPercentage: (divDegradedArea + divAfforestedArea) > 0 
+                ? (divAfforestedArea / (divDegradedArea + divAfforestedArea)) * 100 
+                : 0
+            };
+          });
+          
+          // Overall statistics (sum of all divisions)
+          const totalDegradedArea = monthAllData
+            .filter(item => item.status === true)
+            .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
+          const totalAfforestedArea = monthAllData
+            .filter(item => item.status === false)
+            .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
+          const totalArea = totalDegradedArea + totalAfforestedArea;
+          
+          tempMonthlyData[month] = {
+            data: monthAllData,
+            divisionStats, // Store stats per division
+            stats: {
+              withNotes: monthAllData.filter(item => item.has_note).length,
+              withImages: monthAllData.filter(item => item.has_image).length,
+              degradedArea: totalDegradedArea,
+              afforestedArea: totalAfforestedArea,
+              totalArea: totalArea,
+              totalPolygons: monthAllData.length,
+              degradedPercentage: totalArea > 0 ? (totalDegradedArea / totalArea) * 100 : 0,
+              afforestedPercentage: totalArea > 0 ? (totalAfforestedArea / totalArea) * 100 : 0
+            },
+            month: month
+          };
+        }
+      }
+      
+      // Update state with all data (preserving division information)
+      if (Object.keys(tempMonthlyData).length > 0) {
+        setMonthlyData(tempMonthlyData);
+        
+        // Set total area as sum of all divisions' areas for the first month
+        const firstMonth = Object.keys(tempMonthlyData).sort()[0];
+        if (tempMonthlyData[firstMonth]) {
+          setTotalArea(tempMonthlyData[firstMonth].stats.totalArea);
+          setCurrentTableData(tempMonthlyData[firstMonth].data);
+          setSummaryStats(tempMonthlyData[firstMonth].stats);
+          setSelectedMonth(firstMonth);
+        }
+      } else {
+        setError('No data found for any division with the selected criteria');
+      }
+      
+    } catch (error) {
+      console.error('Error fetching all divisions data:', error);
+      setError('Failed to fetch data for all divisions');
+    }
+  };
+
+  // Fetch filtered data based on hierarchy and date
+  const fetchFilteredData = async (months) => {
+    setLoading(true);
+    setError(null);
+    setMonthlyData({});
+    setCurrentTableData([]);
+    setSummaryStats(null);
+    
+    try {
+      // Check if "All Divisions" is selected
+      if (selectedDivision === 'all') {
+        await fetchAllDivisionsData(months);
+        setLoading(false);
+        return;
+      }
+      
+      const token = localStorage.getItem("token");
+      
+      // First, get the coupe name from division if not already set
+      let coupeToUse = hierarchyCoupeName;
+      if (!coupeToUse && selectedDivision) {
+        coupeToUse = transformDivisionToCoupe(selectedDivision);
+      }
+      
+      if (!coupeToUse) {
+        setError('Could not determine coupe name');
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch total area for the coupe and wait for it
+      const totalCoupeArea = await fetchTotalAreaAndReturn(coupeToUse);
+      
+      if (totalCoupeArea <= 0) {
+        console.warn('Total area is zero or negative, using default value');
+      }
+      
+      console.log('Total Coupe Area:', totalCoupeArea);
+      
+      // Create a temporary object to store all month data
+      const tempMonthlyData = {};
+      
+      // For each month, fetch data filtered by hierarchy
+      for (const month of months) {
+        try {
+          // Construct table name for this month
+          const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
+          
+          console.log(`Fetching data for month: ${month}, table: ${tableName}`);
+          
+          // Fetch data with hierarchy filters
+          const dataResponse = await axios.post(
+            `${API_BASE_URL}/api/ndvi-change-get-filtered`,
+            {
+              tableName,
+              division: selectedDivision,
+              range: selectedRange,
+              round: selectedRound,
+              beat: selectedBeat
+            },
+            { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+          );
+          
+          if (dataResponse.data.success) {
+            const data = dataResponse.data.data;
+            
+            if (data.length > 0) {
+              // Fetch degraded area for this month with filters
+              const degradedAreaValue = await fetchFilteredDegradedArea(tableName);
+              
+              // Calculate afforested area as total area minus degraded area
+              const afforestedAreaValue = Math.max(0, totalCoupeArea - degradedAreaValue);
+              
+              console.log(`Month ${month}:`, {
+                totalArea: totalCoupeArea,
+                degradedArea: degradedAreaValue,
+                afforestedArea: afforestedAreaValue
+              });
+              
+              // Count polygons by status
+              const degradedPolygons = data.filter(item => item.status === true).length;
+              const afforestedPolygons = data.filter(item => item.status === false).length;
+              
+              // Calculate area per polygon (if there are polygons of that type)
+              const degradedAreaPerPolygon = degradedPolygons > 0 ? degradedAreaValue / degradedPolygons : 0;
+              const afforestedAreaPerPolygon = afforestedPolygons > 0 ? afforestedAreaValue / afforestedPolygons : 0;
+              
+              // Enhance data with area calculations
+              const enhancedData = data.map(item => {
+                const isDegraded = item.status === true;
+                // Assign area based on status
+                const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
+                
+                return {
+                  ...item,
+                  area_sq_km: polygonArea,
+                  month: month,
+                  status: isDegraded,
+                  change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
+                  has_note: !!(item.note && item.note.trim() !== ''),
+                  has_image: !!(item.image_data),
+                  pixle_id: item.pixle_id || 'N/A'
+                };
+              });
+              
+              // Calculate statistics using the actual values
+              const stats = calculateStatistics(
+                enhancedData, 
+                totalCoupeArea, 
+                degradedAreaValue, 
+                afforestedAreaValue
+              );
+              
+              // Store in temporary object
+              tempMonthlyData[month] = {
+                data: enhancedData,
+                stats,
+                month: month,
+                degradedArea: degradedAreaValue,
+                afforestedArea: afforestedAreaValue,
+                totalArea: totalCoupeArea
+              };
+            }
+          }
+        } catch (err) {
+          console.error(`Error fetching data for month ${month}:`, err);
+        }
+      }
+      
+      // After all fetches are complete, update the state once with all data
+      if (Object.keys(tempMonthlyData).length > 0) {
+        setMonthlyData(tempMonthlyData);
+        
+        // Sort months chronologically
+        const sortedMonths = Object.keys(tempMonthlyData).sort();
+        const firstMonth = sortedMonths[0];
+        
+        // Set current month data to the first month in range
+        if (tempMonthlyData[firstMonth]) {
+          setCurrentTableData(tempMonthlyData[firstMonth].data);
+          setSummaryStats(tempMonthlyData[firstMonth].stats);
+          setSelectedMonth(firstMonth);
+        }
+      } else {
+        setError('No data found for the selected criteria');
+      }
+      
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Failed to fetch NDVI data';
+      setError(errorMsg);
+      console.error('Error fetching NDVI data:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -821,47 +1061,46 @@ const fetchFilteredData = async (months) => {
     }
   };
 
-  // Calculate statistics - UPDATED to use only area values
-// Calculate statistics - UPDATED with proper validation
-const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforestedAreaValue) => {
-  if (!data || data.length === 0) return null;
+  // Calculate statistics - UPDATED with proper validation
+  const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforestedAreaValue) => {
+    if (!data || data.length === 0) return null;
 
-  const withNotes = data.filter(item => item.has_note).length;
-  const withImages = data.filter(item => item.has_image).length;
-  
-  // Ensure total area is positive
-  const totalCoupeAreaKm = Math.max(0.1, totalCoupeArea);
-  
-  // Ensure degraded area doesn't exceed total area
-  const degradedAreaKm = Math.min(degradedAreaValue, totalCoupeAreaKm);
-  
-  // Calculate afforested area as total minus degraded
-  const afforestedAreaKm = Math.max(0, totalCoupeAreaKm - degradedAreaKm);
-  
-  // Calculate percentages
-  const degradedPercentage = totalCoupeAreaKm > 0 ? (degradedAreaKm / totalCoupeAreaKm) * 100 : 0;
-  const afforestedPercentage = totalCoupeAreaKm > 0 ? (afforestedAreaKm / totalCoupeAreaKm) * 100 : 0;
-  
-  console.log('Statistics calculation:', {
-    totalCoupeAreaKm,
-    degradedAreaKm,
-    afforestedAreaKm,
-    degradedPercentage,
-    afforestedPercentage,
-    totalPolygons: data.length
-  });
-  
-  return {
-    withNotes,
-    withImages,
-    degradedArea: degradedAreaKm,
-    afforestedArea: afforestedAreaKm,
-    totalArea: totalCoupeAreaKm,
-    totalPolygons: data.length,
-    degradedPercentage,
-    afforestedPercentage
+    const withNotes = data.filter(item => item.has_note).length;
+    const withImages = data.filter(item => item.has_image).length;
+    
+    // Ensure total area is positive
+    const totalCoupeAreaKm = Math.max(0.1, totalCoupeArea);
+    
+    // Ensure degraded area doesn't exceed total area
+    const degradedAreaKm = Math.min(degradedAreaValue, totalCoupeAreaKm);
+    
+    // Calculate afforested area as total minus degraded
+    const afforestedAreaKm = Math.max(0, totalCoupeAreaKm - degradedAreaKm);
+    
+    // Calculate percentages
+    const degradedPercentage = totalCoupeAreaKm > 0 ? (degradedAreaKm / totalCoupeAreaKm) * 100 : 0;
+    const afforestedPercentage = totalCoupeAreaKm > 0 ? (afforestedAreaKm / totalCoupeAreaKm) * 100 : 0;
+    
+    console.log('Statistics calculation:', {
+      totalCoupeAreaKm,
+      degradedAreaKm,
+      afforestedAreaKm,
+      degradedPercentage,
+      afforestedPercentage,
+      totalPolygons: data.length
+    });
+    
+    return {
+      withNotes,
+      withImages,
+      degradedArea: degradedAreaKm,
+      afforestedArea: afforestedAreaKm,
+      totalArea: totalCoupeAreaKm,
+      totalPolygons: data.length,
+      degradedPercentage,
+      afforestedPercentage
+    };
   };
-};
 
   // Sort data
   const sortData = (data, key, direction) => {
@@ -918,7 +1157,8 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
         (item.note?.toLowerCase().includes(searchLower)) ||
         (item.latitude?.toString().includes(searchLower)) ||
         (item.longitude?.toString().includes(searchLower)) ||
-        (item.change_category?.toLowerCase().includes(searchLower));
+        (item.change_category?.toLowerCase().includes(searchLower)) ||
+        (item.division?.toLowerCase().includes(searchLower));
 
       const matchesNotes = !showOnlyWithNotes || item.has_note;
       const matchesImages = !showOnlyWithImages || item.has_image;
@@ -1187,7 +1427,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
       <!DOCTYPE html>
       <html>
         <head>
-          <title>NDVI Report - ${selectedDivision || selectedCoupe} - ${tableNames.length} months</title>
+          <title>NDVI Report - ${selectedDivision === 'all' ? 'All Divisions' : (selectedDivision || selectedCoupe)} - ${tableNames.length} months</title>
           <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #333; line-height: 1.6; }
             .header { text-align: center; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; margin-bottom: 30px; }
@@ -1218,7 +1458,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
           
           <div class="summary-card">
             <h2 style="margin-top: 0; color: white;">Summary Report</h2>
-            <p><strong>Division:</strong> ${selectedDivision || 'N/A'}</p>
+            <p><strong>Division:</strong> ${selectedDivision === 'all' ? 'All Divisions' : (selectedDivision || 'N/A')}</p>
             <p><strong>Range:</strong> ${selectedRange || 'N/A'}</p>
             <p><strong>Round:</strong> ${selectedRound || 'N/A'}</p>
             <p><strong>Beat:</strong> ${selectedBeat || 'N/A'}</p>
@@ -1288,6 +1528,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
           <table>
             <thead>
               <tr>
+                <th>Division</th>
                 <th>Status</th>
                 <th>NDVI Change</th>
                 <th>Area (km²)</th>
@@ -1300,6 +1541,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
             <tbody>
               ${filteredData.slice(0, 20).map(item => `
                 <tr>
+                  <td>${item.division || selectedDivision || 'N/A'}</td>
                   <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? 'Afforested' : 'Degraded'}</span></td>
                   <td>${item.ndvi_change?.toFixed(4) || 'N/A'}</td>
                   <td>${item.area_sq_km?.toFixed(6) || 'N/A'}</td>
@@ -1441,14 +1683,14 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
             </Grid>
             
             <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<Send />}
-                  onClick={handleSubmit}
-                  sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                >
-                  Submit
-                </Button>
+              variant="contained"
+              color="primary"
+              startIcon={<Send />}
+              onClick={handleSubmit}
+              sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+            >
+              Submit
+            </Button>
           </Grid>
         </CardContent>
       </Card>
@@ -1486,29 +1728,29 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
       {totalArea > 0 && (
         <Card sx={{ mb: 4, borderRadius: 3, background: 'transparent', color: 'black', boxShadow: '0 20px 40px rgba(102, 126, 234, 0.3)' }}>
           <CardContent>
-               <Box sx={{ mb: 4 }}>
-                  <FormControl size="small" sx={{ minWidth: 200 }}>
-                    <InputLabel>Select Month</InputLabel>
-                    <Select
-                      value={selectedMonth}
-                      onChange={(e) => {
-                        const month = e.target.value;
-                        setSelectedMonth(month);
-                        if (monthlyData[month]) {
-                          setCurrentTableData(monthlyData[month].data);
-                          setSummaryStats(monthlyData[month].stats);
-                        }
-                      }}
-                      label="Select Month"
-                    >
-                      {Object.keys(monthlyData).sort().reverse().map((month) => (
-                        <MenuItem key={month} value={month}>
-                          {month}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
+            <Box sx={{ mb: 4 }}>
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Select Month</InputLabel>
+                <Select
+                  value={selectedMonth}
+                  onChange={(e) => {
+                    const month = e.target.value;
+                    setSelectedMonth(month);
+                    if (monthlyData[month]) {
+                      setCurrentTableData(monthlyData[month].data);
+                      setSummaryStats(monthlyData[month].stats);
+                    }
+                  }}
+                  label="Select Month"
+                >
+                  {Object.keys(monthlyData).sort().reverse().map((month) => (
+                    <MenuItem key={month} value={month}>
+                      {month}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
             <Grid container spacing={2} alignItems="center">
               <Grid item>
                 <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1518,7 +1760,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
               
               <Grid item xs>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 700 }}>
-                  Area Analysis - {selectedDivision || selectedCoupe || hierarchyCoupeName}
+                  Area Analysis - {selectedDivision === 'all' ? 'All Divisions' : (selectedDivision || selectedCoupe || hierarchyCoupeName)}
                 </Typography>
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={4}>
@@ -1562,7 +1804,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
         </Card>
       )}
 
-      {/* Summary Cards - Show only if data is available - UPDATED to use only area values */}
+      {/* Summary Cards - Show only if data is available */}
       {summaryStats && !loading && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
@@ -1657,6 +1899,55 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
         </Grid>
       )}
 
+      {/* Division-wise Summary - Show only when All Divisions is selected */}
+      {selectedDivision === 'all' && summaryStats && monthlyData[selectedMonth]?.divisionStats && (
+        <Card sx={{ mb: 4, borderRadius: 3, bgcolor: 'transparent' }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Info color="primary" />
+              Division-wise Breakdown - {selectedMonth}
+            </Typography>
+            <Grid container spacing={2}>
+              {Object.entries(monthlyData[selectedMonth].divisionStats).map(([division, stats]) => (
+                <Grid item xs={12} sm={6} md={4} key={division}>
+                  <Card sx={{ borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                    <CardContent>
+                      <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ color: 'primary.main' }}>
+                        {division}
+                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
+                          Degraded: {stats.degradedArea.toFixed(2)} km²
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 }}>
+                          Afforested: {stats.afforestedArea.toFixed(2)} km²
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Deg %: {stats.degradedPercentage.toFixed(1)}%
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Aff %: {stats.afforestedPercentage.toFixed(1)}%
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Notes: {stats.withNotes}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Images: {stats.withImages}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Content Tabs */}
       <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent"}}>
         <CardContent sx={{ p: 0 }}>
@@ -1683,9 +1974,6 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
           <Box sx={{ p: 3 }}>
             {activeTab === 0 && (
               <Box>
-                {/* Month Selection for Detailed View */}
-             
-
                 {/* Chart Type Selection */}
                 <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
                   <Chip
@@ -1694,18 +1982,6 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                     color={chartType === 'bar' ? 'primary' : 'default'}
                     icon={<BarChart />}
                   />
-                  {/* <Chip
-                    label="Area Trend Line"
-                    onClick={() => setChartType('line')}
-                    color={chartType === 'line' ? 'primary' : 'default'}
-                    icon={<ShowChart />}
-                  />
-                  <Chip
-                    label="Area Distribution"
-                    onClick={() => setChartType('pie')}
-                    color={chartType === 'pie' ? 'primary' : 'default'}
-                    icon={<PieChart />}
-                  /> */}
                 </Box>
 
                 {/* Chart Display */}
@@ -1713,7 +1989,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                   {renderChart()}
                 </Box>
 
-                {/* Analysis Notes - UPDATED to use only area values */}
+                {/* Analysis Notes */}
                 {summaryStats && (
                   <Card sx={{ mt: 4, borderRadius: 2, bgcolor:'transparent'}}>
                     <CardContent>
@@ -1791,7 +2067,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                       <Grid item xs={12} md={6}>
                         <TextField
                           fullWidth
-                          placeholder="Search by ID, status, coordinates, notes..."
+                          placeholder="Search by ID, status, coordinates, notes, division..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           variant="outlined"
@@ -1804,6 +2080,18 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                       </Grid>
                       <Grid item xs={12} md={6}>
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={showDivisionColumn}
+                                onChange={(e) => setShowDivisionColumn(e.target.checked)}
+                                color="primary"
+                                size="small"
+                              />
+                            }
+                            label="Show Division Column"
+                            disabled={selectedDivision !== 'all'}
+                          />
                           <FormControlLabel
                             control={
                               <Switch
@@ -1851,12 +2139,14 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                     <Table stickyHeader size="small" sx={{ minWidth: 1200 }}>
                       <TableHead>
                         <TableRow>
-                          {/* <TableCell onClick={() => handleSort('pixle_id')} sx={{ cursor: 'pointer' }}>
-                            <Box display="flex" alignItems="center">
-                              <strong>Pixel ID</strong>
-                              <Sort sx={{ fontSize: 16, ml: 0.5 }} />
-                            </Box>
-                          </TableCell> */}
+                          {showDivisionColumn && (
+                            <TableCell onClick={() => handleSort('division')} sx={{ cursor: 'pointer' }}>
+                              <Box display="flex" alignItems="center">
+                                <strong>Division</strong>
+                                <Sort sx={{ fontSize: 16, ml: 0.5 }} />
+                              </Box>
+                            </TableCell>
+                          )}
                           <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
                             <Box display="flex" alignItems="center">
                               <strong>Status</strong>
@@ -1885,7 +2175,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                       <TableBody>
                         {paginatedData.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                            <TableCell colSpan={showDivisionColumn ? 10 : 9} align="center" sx={{ py: 6 }}>
                               <Box sx={{ textAlign: 'center' }}>
                                 <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                 <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -1902,11 +2192,13 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                         ) : (
                           paginatedData.map((row) => (
                             <TableRow key={row.pixle_id} hover>
-                              {/* <TableCell>
-                                <Typography variant="body2" fontWeight={600} color="primary">
-                                  #{row.pixle_id}
-                                </Typography>
-                              </TableCell> */}
+                              {showDivisionColumn && (
+                                <TableCell>
+                                  <Typography variant="body2" fontWeight={600} color="primary">
+                                    {row.division || 'N/A'}
+                                  </Typography>
+                                </TableCell>
+                              )}
                               <TableCell>
                                 <Chip
                                   label={row.status ? 'Afforested' : 'Degraded'}
@@ -2032,7 +2324,7 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
               <Box>
                 <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <CalendarMonth color="primary" />
-                  Monthly Comparison Overview
+                  Monthly Comparison Overview {selectedDivision === 'all' && '(All Divisions)'}
                 </Typography>
                 <Grid container spacing={3}>
                   {Object.entries(monthlyData).sort().reverse().map(([month, data]) => (
@@ -2085,6 +2377,11 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                                 <Typography variant="caption" color="text.secondary">
                                   Records: {data.data.length}
                                 </Typography>
+                                {selectedDivision === 'all' && data.divisionStats && (
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    Divisions: {Object.keys(data.divisionStats).length}
+                                  </Typography>
+                                )}
                               </Box>
                             </>
                           )}

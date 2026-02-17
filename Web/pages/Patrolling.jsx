@@ -429,7 +429,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
                 </div>
                 <Text style={{ 
                   color: 'rgba(0, 0, 0, 0.9)',
-                  fontSize: '18px',
+                  fontSize: '25px',
                   display: 'block',
                   marginTop: 8
                 }}>
@@ -767,26 +767,32 @@ const PatrolIncidentLogs = () => {
   const [isFiltering, setIsFiltering] = useState(false);
   
   // Hierarchy filter states
-  const [forestTypes, setForestTypes] = useState([]);
-  const [divisions1, setDivisions1] = useState([]);
-  const [divisions, setDivisions] = useState([]);
-  const [beats1, setBeats1] = useState([]);
-  const [rounds1, setRounds1] = useState([]);
-const [ranges1, setRanges1] = useState([]);
-  const [coupes, setCoupes] = useState([]);
-  const [hierarchyData, setHierarchyData] = useState([]);
-  
-  const [forestId, setForestId] = useState("");
-  const [divisionFilter, setDivisionFilter] = useState("");
-  const [beatFilter, setBeatFilter] = useState("");
-  const [coupeFilter, setCoupeFilter] = useState("");
-  const [rangeFilter, setRangeFilter] = useState("");
+  // Hierarchy filter states
+const [forestTypes, setForestTypes] = useState([]);
+const [divisions1, setDivisions1] = useState([]); // All divisions
+const [divisions, setDivisions] = useState([]); // Filtered divisions by forest
+const [beats1, setBeats1] = useState([]); // All beats
+const [rounds1, setRounds1] = useState([]);
+const [ranges1, setRanges1] = useState([]); // All ranges
+const [filteredRanges, setFilteredRanges] = useState([]); // Ranges filtered by division
+const [filteredBeats, setFilteredBeats] = useState([]); // Beats filtered by range
+const [coupes, setCoupes] = useState([]);
+const [hierarchyData, setHierarchyData] = useState([]);
+
+const [forestId, setForestId] = useState("");
+const [divisionFilter, setDivisionFilter] = useState("");
+const [beatFilter, setBeatFilter] = useState("");
+const [coupeFilter, setCoupeFilter] = useState("");
+const [rangeFilter, setRangeFilter] = useState("");
 const [roundFilter, setRoundFilter] = useState("");
 
-  const [divisionSearch, setDivisionSearch] = useState("");
+const [divisionSearch, setDivisionSearch] = useState("");
 const [rangeSearch, setRangeSearch] = useState("");
 const [beatSearch, setBeatSearch] = useState("");
 const [locationSearch, setLocationSearch] = useState("");
+
+const [allFilteredData, setAllFilteredData] = useState([]); // Store ALL filtered records for dashboard
+const [isLoadingCoverage, setIsLoadingCoverage] = useState(false);
 
   // Fetch patrol data with pagination
 // Fetch patrol data with pagination
@@ -903,6 +909,26 @@ const fetchPatrolData2 = async () => {
 };
 
 const fetchFilteredPatrolData = async (page = 1, limit = 5) => {
+  console.log('fetchFilteredPatrolData called with filters:', {
+    divisionFilter,
+    rangeFilter,
+    beatFilter,
+    searchText,
+    startFilter,
+    endFilter,
+    typeFilter
+  });
+
+  // Check if there are any active filters
+  const hasActiveFilters = searchText?.trim() || startFilter || endFilter || typeFilter || 
+                          divisionFilter || rangeFilter || roundFilter || beatFilter || forestId;
+  
+  if (!hasActiveFilters) {
+    // No filters active, just fetch regular paginated data
+    fetchPatrolData(page, limit);
+    return;
+  }
+  
   setIsFiltering(true);
   setPaginationLoading(true);
   try {
@@ -968,12 +994,65 @@ const fetchFilteredPatrolData = async (page = 1, limit = 5) => {
       setTotalItems(data.pagination.totalItems);
       setTotalPages(data.pagination.totalPages);
     }
+
+    // ALSO FETCH ALL FILTERED DATA FOR DASHBOARD (without pagination)
+    await fetchAllFilteredDataForDashboard(filters);
     
   } catch (error) {
     console.error("Error fetching filtered patrol data:", error);
   }
   setIsFiltering(false);
   setPaginationLoading(false);
+};
+
+// New function to fetch ALL filtered data for the dashboard
+const fetchAllFilteredDataForDashboard = async (filters) => {
+  try {
+    const token = localStorage.getItem("token");
+    
+    // Use a large limit to get all records (or implement a separate endpoint)
+    // Option 1: Use a large limit (assuming max records is reasonable)
+    const queryParams = new URLSearchParams({
+      page: '1',
+      limit: '1000', // Large enough to get all records
+      ...filters
+    });
+
+    const url = `${API_BASE_URL}/api/patrol-info-page?${queryParams}`;
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    
+    let formattedData = Array.isArray(data.data) ? data.data : [];
+    
+    // Clean HTML tags
+    formattedData = formattedData.map((item, index) => ({
+      key: item.patrol_id || `patrol-all-filtered-${index}`,
+      ...item,
+      patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+      division: stripHtmlTags(item.division),
+      range: stripHtmlTags(item.range),
+      round: stripHtmlTags(item.round),
+      beat: stripHtmlTags(item.beat),
+      start_location: stripHtmlTags(item.start_location),
+      end_location: stripHtmlTags(item.end_location)
+    }));
+    
+    setAllFilteredData(formattedData);
+    
+  } catch (error) {
+    console.error("Error fetching all filtered data for dashboard:", error);
+    // Fallback to using paginated data if full fetch fails
+    setAllFilteredData(filteredData);
+  }
 };
 
 const handleClientSideSearch = () => {
@@ -1029,104 +1108,179 @@ const handleClientSideSearch = () => {
 };
 
   useEffect(() => {
-    fetchPatrolData(currentPage, pageSize);
-     fetchPatrolData2();
-    console.log("api/forest-types");
-    // Load forest types
-    axios
-      .get(`${API_BASE_URL}/api/forest-types`)
-      .then((res) => setForestTypes(res.data))
-      .catch((err) => console.error(err));
-  }, []);
-
-  useEffect(() => {
-    axios
-      .get(`${API_BASE_URL}/api/patrolling-division`)
-      .then((res) => {
-        const data = res.data;
-        if (Array.isArray(data)) {
-          setDivisions1(data);
-        } else if (data && data.data && Array.isArray(data.data)) {
-          setDivisions1(data.data);
-        } else if (data && Array.isArray(Object.values(data))) {
-          setDivisions1(Object.values(data));
-        } else {
-          setDivisions1([]);
-          console.warn("Unexpected data format for divisions:", data);
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching divisions:", err);
-        setDivisions1([]);
-      });
-  }, []);
-
+  fetchPatrolData(currentPage, pageSize);
+  fetchPatrolData2();
   
-  useEffect(() => {
-    axios
-      .get(`${API_BASE_URL}/api/patrolling-beat`)
-      .then((res) => {
-        const data = res.data;
-        if (Array.isArray(data)) {
-          setBeats1(data);
-        } else if (data && data.data && Array.isArray(data.data)) {
-          setBeats1(data.data);
-        } else if (data && Array.isArray(Object.values(data))) {
-          setBeats1(Object.values(data));
-        } else {
-          setBeats1([]);
-          console.warn("Unexpected data format for beats:", data);
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching beats:", err);
-        setBeats1([]);
-      });
-  }, []);
-
-  useEffect(() => {
-    axios
-      .get(`${API_BASE_URL}/api/patrolling-round`)
-      .then((res) => {
-        const data = res.data;
-        if (Array.isArray(data)) {
-          setRounds1(data);
-        } else if (data && data.data && Array.isArray(data.data)) {
-          setRounds1(data.data);
-        } else if (data && Array.isArray(Object.values(data))) {
-          setRounds1(Object.values(data));
-        } else {
-          setRounds1([]);
-          console.warn("Unexpected data format for rounds:", data);
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching rounds:", err);
-        setRounds1([]);
-      });
-  }, []);
-
-  useEffect(() => {
-    axios
-      .get(`${API_BASE_URL}/api/patrolling-range`)
-      .then((res) => {
-        const data = res.data;
-        if (Array.isArray(data)) {
-          setRanges1(data);
-        } else if (data && data.data && Array.isArray(data.data)) {
-          setRanges1(data.data);
-        } else if (data && Array.isArray(Object.values(data))) {
-          setRanges1(Object.values(data));
-        } else {
-          setRanges1([]);
-          console.warn("Unexpected data format for ranges:", data);
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching ranges:", err);
+  // Load forest types
+  axios
+    .get(`${API_BASE_URL}/api/forest-types`)
+    .then((res) => setForestTypes(res.data))
+    .catch((err) => console.error(err));
+    
+  // Load all divisions
+  axios
+  .get(`${API_BASE_URL}/api/patrolling-division`)
+  .then((res) => {
+    console.log('Fetched divisions:', res.data);
+    const data = res.data;
+    if (Array.isArray(data)) {
+      setDivisions1(data);
+    } else if (data && data.data && Array.isArray(data.data)) {
+      setDivisions1(data.data);
+    } else {
+      setDivisions1([]);
+    }
+  })
+    .catch((err) => {
+      console.error("Error fetching divisions:", err);
+      setDivisions1([]);
+    });
+    
+  // Load all ranges
+  axios
+    .get(`${API_BASE_URL}/api/patrolling-range`)
+    .then((res) => {
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setRanges1(data);
+      } else if (data && data.data && Array.isArray(data.data)) {
+        setRanges1(data.data);
+      } else {
         setRanges1([]);
-      });
-  }, []);
+      }
+    })
+    .catch((err) => {
+      console.error("Error fetching ranges:", err);
+      setRanges1([]);
+    });
+    
+  // Load all beats
+  axios
+    .get(`${API_BASE_URL}/api/patrolling-beat`)
+    .then((res) => {
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setBeats1(data);
+      } else if (data && data.data && Array.isArray(data.data)) {
+        setBeats1(data.data);
+      } else {
+        setBeats1([]);
+      }
+    })
+    .catch((err) => {
+      console.error("Error fetching beats:", err);
+      setBeats1([]);
+    });
+    
+  // Load rounds
+  axios
+    .get(`${API_BASE_URL}/api/patrolling-round`)
+    .then((res) => {
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setRounds1(data);
+      } else if (data && data.data && Array.isArray(data.data)) {
+        setRounds1(data.data);
+      } else {
+        setRounds1([]);
+      }
+    })
+    .catch((err) => {
+      console.error("Error fetching rounds:", err);
+      setRounds1([]);
+    });
+}, []);
+
+// Add this temporary debug code in your handleDivisionFilterChange
+const handleDivisionFilterChange = (value) => {
+  console.log('Division filter changed to:', value, 'type:', typeof value);
+  setDivisionFilter(value);
+  setRangeFilter("");
+  setBeatFilter("");
+  
+  if (value) {
+    console.log('Filtering ranges for division:', value);
+    const filtered = ranges1.filter(range => {
+      if (typeof range === 'string') return true;
+      return range.division === value || range.division_name === value;
+    });
+    
+    if (filtered.length > 0) {
+      console.log('Found filtered ranges:', filtered);
+      setFilteredRanges(filtered);
+    } else {
+      console.log('Fetching ranges from API for division:', value);
+      fetchRangesByDivision(value);
+    }
+  } else {
+    console.log('All Divisions selected - clearing ranges');
+    setFilteredRanges([]);
+  }
+  
+  setCurrentPage(1);
+};
+
+// Fetch ranges by division from API
+const fetchRangesByDivision = async (division) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(
+      `${API_BASE_URL}/api/patrolling-range-by-division?division=${encodeURIComponent(division)}`,
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+    
+    if (response.data && response.data.data) {
+      setFilteredRanges(response.data.data);
+    }
+  } catch (error) {
+    console.error("Error fetching ranges by division:", error);
+    setFilteredRanges([]);
+  }
+};
+
+// Handle range change - filter beats based on selected range
+const handleRangeFilterChange = (value) => {
+  setRangeFilter(value); // value will be empty string for "All"
+  setBeatFilter(""); // Clear beat when range changes
+  
+  if (value && divisionFilter) {
+    fetchBeatsByRange(value, divisionFilter);
+  } else {
+    setFilteredBeats([]); // Clear beats when "All" is selected
+  }
+  
+  setCurrentPage(1);
+  // The dropdown will close automatically
+};
+
+// Fetch beats by range from API
+const fetchBeatsByRange = async (range, division) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(
+      `${API_BASE_URL}/api/patrolling-beat-by-range?range=${encodeURIComponent(range)}&division=${encodeURIComponent(division)}`,
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+    
+    if (response.data && response.data.data) {
+      setFilteredBeats(response.data.data);
+    }
+  } catch (error) {
+    console.error("Error fetching beats by range:", error);
+    setFilteredBeats([]);
+  }
+};
+
+// Handle beat change
+const handleBeatFilterChange = (value) => {
+  setBeatFilter(value); // value will be empty string for "All"
+  setCurrentPage(1);
+  // The dropdown will close automatically
+};
 
   // Handle forest type change
   const handleForestChange = async (value) => {
@@ -1223,6 +1377,31 @@ const handleClientSideSearch = () => {
     setCoupeFilter(value);
   };
 
+  // Function to fetch beat coverage for a specific patrol
+const fetchBeatCoverage = async (beatName) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${API_BASE_URL}/api/beat-patrol-coverage`,
+      { beat: beatName },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.data.success) {
+      return response.data.data;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching beat coverage:", error);
+    return null;
+  }
+};
+
   const formatDateTime = (datetime) => {
     const date = new Date(datetime);
     const day = String(date.getDate()).padStart(2, "0");
@@ -1248,18 +1427,19 @@ const clearAllFilters = () => {
   setTypeFilter("");
   setForestId("");
   setDivisionFilter("");
-  setRangeFilter(""); // Clear range filter
-  setRoundFilter(""); // Clear round filter
+  setRangeFilter("");
+  setRoundFilter("");
   setBeatFilter("");
   setCoupeFilter("");
   setDivisions([]);
-  setBeats([]);
+  setFilteredRanges([]);
+  setFilteredBeats([]);
   setCoupes([]);
+  setAllFilteredData([]); // Clear all filtered data
   setCurrentPage(1);
   setIsFiltering(false);
   fetchPatrolData(1, pageSize);
 };
-
   // Handle page change
 const handlePageChange = (page, pageSize) => {
   setCurrentPage(page);
@@ -1278,15 +1458,14 @@ const handlePageChange = (page, pageSize) => {
 
 useEffect(() => {
   const timer = setTimeout(() => {
-    if (searchText || locationSearch || rangeSearch || startFilter || endFilter || typeFilter || 
-        divisionFilter || rangeFilter || roundFilter || beatFilter || coupeFilter || forestId) {
-      handleSearch();
-    }
+    // Check if any filters are active
+    handleSearch();
   }, 800);
 
   return () => clearTimeout(timer);
-}, [searchText, locationSearch, rangeSearch, startFilter, endFilter, typeFilter, 
-    divisionFilter, rangeFilter, roundFilter, beatFilter, coupeFilter, forestId]);
+}, [searchText, locationSearch, rangeSearch, startFilter, endFilter, 
+    typeFilter, divisionFilter, rangeFilter, roundFilter, 
+    beatFilter, coupeFilter, forestId]);
 
   const getTypeDisplayName = (type) => {
     if (language === "gu") {
@@ -1432,10 +1611,22 @@ useEffect(() => {
             color: "#000",
           }}
           icon={<EyeOutlined />}
-          onClick={() => {
-            setSelectedPatrol(record);
-            setIsModalVisible(true);
-          }}
+          onClick={async () => {
+  setSelectedPatrol(record);
+  setIsLoadingCoverage(true);
+  
+  // Fetch beat coverage data if beat exists
+  if (record.beat) {
+    const beatCoverage = await fetchBeatCoverage(record.beat);
+    setSelectedPatrol(prev => ({
+      ...prev,
+      beatCoverage: beatCoverage
+    }));
+  }
+  
+  setIsLoadingCoverage(false);
+  setIsModalVisible(true);
+}}
         >
           {language === "gu" ? "દેખાવ" : "View"}
         </Button>
@@ -1878,11 +2069,11 @@ useEffect(() => {
     <div className="container">
       {isLoading && <Loader />}
       <div className="section">
-        <div className="heading-container">
-          <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"}}>
+        <div className="heading-container" style={{height:"50px"}}>
+          {/* <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"}}>
             {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Patrolling Logs"}
-          </h3>
-          <div className="filters">
+          </h3> */}
+
            
 
 
@@ -1915,108 +2106,127 @@ useEffect(() => {
             />
 
             {/* Combined Search for Division, Range, Beat */}
-
-  <Select
-    placeholder={language === "gu" ? "વિભાગ પસંદ કરો" : "Select Division"}
-    style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
-    value={divisionFilter}
-    onChange={(value) => {
-      setDivisionFilter(value);
-      setCurrentPage(1);
-    }}
-    allowClear
-    showSearch
-    optionFilterProp="children"
-    filterOption={(input, option) => 
-      option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-    }
-    dropdownStyle={{
-      background: "#fff",
-    }}
-  >
-    <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
-    {Array.isArray(divisions1) && divisions1.length > 0 ? (
-      divisions1.map((division) => {
-        const divisionValue = division.division || division.name || division.value || division;
-        const divisionLabel = division.division || division.name || division.value || division;
-        const divisionKey = division.id || division.division_id || divisionValue;
-        
-        return (
-          <Option key={divisionKey} value={divisionValue}>
-            {divisionLabel}
-          </Option>
-        );
-      })
-    ) : (
-      <Option disabled value="no-data">
-        {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
-      </Option>
-    )}
-  </Select>
- <Select
-  placeholder={language === "gu" ? "રેંજ પસંદ કરો" : "Select Range"}
+{/* Division Filter */}
+<Select
+  placeholder={language === "gu" ? "વિભાગ પસંદ કરો" : "Select Division"}
   style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
-  value={rangeFilter}
-  onChange={(value) => {
-    setRangeFilter(value);
-    setCurrentPage(1);
-    // fetchFilteredPatrolData will be called automatically by the useEffect
-  }}
+  value={divisionFilter}
+  onChange={handleDivisionFilterChange}
   allowClear
   showSearch
   optionFilterProp="children"
 >
-    <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
-    {Array.isArray(ranges1) && ranges1.length > 0 ? (
-      ranges1.map((range) => {
-        const rangeValue = range.range || range.name || range.value || range;
-        const rangeLabel = range.range || range.name || range.value || range;
-        
-        return (
-          <Option key={range.id || range.range_id || rangeValue} value={rangeValue}>
-            {rangeLabel}
-          </Option>
-        );
-      })
-    ) : (
-      <Option disabled value="no-data">
-        {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
-      </Option>
-    )}
-  </Select>
+  <Option value="">{language === "gu" ? "બધા વિભાગો" : "All Divisions"}</Option>
+  {Array.isArray(divisions1) && divisions1.length > 0 ? (
+    divisions1.map((division, index) => {
+      let divisionValue = '';
+      let divisionLabel = '';
+      let divisionKey = '';
+      
+      if (typeof division === 'string') {
+        divisionValue = division;
+        divisionLabel = division;
+        divisionKey = division;
+      } else if (typeof division === 'object' && division !== null) {
+        divisionValue = division.division || division.name || division.value || '';
+        divisionLabel = division.division || division.name || division.value || division.label || divisionValue;
+        divisionKey = division.id || division.division_id || divisionValue;
+      }
+      
+      divisionValue = String(divisionValue || '');
+      divisionLabel = String(divisionLabel || '');
+      divisionKey = String(divisionKey || `div-${index}`);
+      
+      return divisionValue ? (
+        <Option key={divisionKey} value={divisionValue}>
+          {divisionLabel}
+        </Option>
+      ) : null;
+    })
+  ) : (
+    <Option disabled value="no-data">
+      {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
+    </Option>
+  )}
+</Select>
 
-  {/* Beat Filter */}
-  <Select
-    placeholder={language === "gu" ? "બીટ પસંદ કરો" : "Select Beat"}
-    style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
-    value={beatFilter}
-    onChange={(value) => {
-      setBeatFilter(value);
-      setCurrentPage(1);
-      fetchFilteredPatrolData(1, pageSize);
-    }}
-    allowClear
-    showSearch
-    optionFilterProp="children"
-  >
-    <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
-    {Array.isArray(beats1) && beats1.length > 0 ? (
-      beats1.map((beat) => {
-        const beatValue = beat.beat || beat.name || beat.value || beat;
-        const beatLabel = beat.beat || beat.name || beat.value || beat;
-        
-        return (
-          <Option key={beat.id || beat.beat_id || beatValue} value={beatValue}>
-            {beatLabel}
-          </Option>
-        );
-      })
-    ) : (
-      <Option disabled value="no-data">
-        {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
+{/* Range Filter */}
+<Select
+  placeholder={language === "gu" ? "રેંજ પસંદ કરો" : "Select Range"}
+  style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
+  value={rangeFilter}
+  onChange={handleRangeFilterChange}
+  allowClear
+  showSearch
+  optionFilterProp="children"
+  disabled={!divisionFilter}
+>
+  <Option value="">{language === "gu" ? "બધી રેંજ" : "All Ranges"}</Option>
+  {(filteredRanges.length > 0 ? filteredRanges : ranges1).map((range, index) => {
+    let rangeValue = '';
+    let rangeLabel = '';
+    let rangeKey = '';
+    
+    if (typeof range === 'string') {
+      rangeValue = range;
+      rangeLabel = range;
+      rangeKey = range;
+    } else if (typeof range === 'object' && range !== null) {
+      rangeValue = range.range || range.name || range.value || '';
+      rangeLabel = range.range || range.name || range.value || range.label || rangeValue;
+      rangeKey = range.id || range.range_id || rangeValue;
+    }
+    
+    rangeValue = String(rangeValue || '');
+    rangeLabel = String(rangeLabel || '');
+    rangeKey = String(rangeKey || `range-${index}`);
+    
+    return rangeValue ? (
+      <Option key={rangeKey} value={rangeValue}>
+        {rangeLabel}
       </Option>
-    )}
-  </Select>
+    ) : null;
+  })}
+</Select>
+
+{/* Beat Filter */}
+<Select
+  placeholder={language === "gu" ? "બીટ પસંદ કરો" : "Select Beat"}
+  style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
+  value={beatFilter}
+  onChange={handleBeatFilterChange}
+  allowClear
+  showSearch
+  optionFilterProp="children"
+  disabled={!rangeFilter}
+>
+  <Option value="">{language === "gu" ? "બધી બીટ" : "All Beats"}</Option>
+  {(filteredBeats.length > 0 ? filteredBeats : beats1).map((beat, index) => {
+    let beatValue = '';
+    let beatLabel = '';
+    let beatKey = '';
+    
+    if (typeof beat === 'string') {
+      beatValue = beat;
+      beatLabel = beat;
+      beatKey = beat;
+    } else if (typeof beat === 'object' && beat !== null) {
+      beatValue = beat.beat || beat.name || beat.value || '';
+      beatLabel = beat.beat || beat.name || beat.value || beat.label || beatValue;
+      beatKey = beat.id || beat.beat_id || beatValue;
+    }
+    
+    beatValue = String(beatValue || '');
+    beatLabel = String(beatLabel || '');
+    beatKey = String(beatKey || `beat-${index}`);
+    
+    return beatValue ? (
+      <Option key={beatKey} value={beatValue}>
+        {beatLabel}
+      </Option>
+    ) : null;
+  })}
+</Select>
 
 
             <DatePicker
@@ -2033,6 +2243,23 @@ useEffect(() => {
               }}
               value={startFilter}
               onChange={(date) => setStartFilter(date)}
+              allowClear
+            />
+
+            <DatePicker
+              placeholder={
+                language === "gu"
+                  ? "શરૂઆતની તારીખથી શોધો"
+                  : "Search by End Date"
+              }
+              style={{
+                width: "200px",
+                border: "1px solid #d9d9d9",
+                borderRadius: "4px",
+                background: "#fff",
+              }}
+              value={endFilter}
+              onChange={(date) => setEndFilter(date)}
               allowClear
             />
             <Select
@@ -2073,7 +2300,7 @@ useEffect(() => {
             >
               {language === "gu" ? "ફિલ્ટર સાફ કરો" : "Clear Filters"}
             </Button>
-            <Button 
+            {/* <Button 
               onClick={() => {
                 setShowMapRoute(!showmaproute);
               }}
@@ -2085,10 +2312,10 @@ useEffect(() => {
               }}
             >
               {language === "gu" ? "બીટ પેટ્રોલ કવરેજ" : "Beat Patrol Coverage"}
-            </Button>
+            </Button> */}
             
             
-          </div>
+
         </div>
         
         {/* Show pagination info */}
@@ -2152,149 +2379,204 @@ useEffect(() => {
         
       </div>
       
-      {/* Analysis Dashboard - Shows statistics for current filtered data */}
-      <PatrolAnalysisDashboard patrolData={patrolData2} language={language} />
+      {/* Analysis Dashboard - Shows statistics for all filtered data */}
+<PatrolAnalysisDashboard patrolData={allFilteredData.length > 0 ? allFilteredData : patrolData2} language={language} />
       
-      <Modal
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        width={800}
-        title={
-          selectedPatrol
-            ? `${language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"} - ${
-                selectedPatrol.patrol_officer_name
-              } (${language === "gu" ? "અંતર" : "Distance"}: ${
-                selectedPatrol.distance_kms
-              } km)`
-            : language === "gu"
-            ? "પેટ્રોલ માર્ગ"
-            : "Patrol Route"
-        }
-      >
-        {selectedPatrol && (
-          <>
-            {/* Display all images in a grid */}
-            <div style={{ marginBottom: 16 }}>
-              {selectedPatrol.images && selectedPatrol.images.length > 0 ? (
-                <>
-                  <h4 style={{ marginBottom: 12 }}>
-                    {language === "gu" ? "પેટ્રોલ છબીઓ" : "Patrol Images"} ({selectedPatrol.images.length})
-                  </h4>
-                  <Row gutter={[8, 8]}>
-                    {selectedPatrol.images.map((image, index) => {
-                      // Get display name for image based on category
-                      const getImageLabel = () => {
-                        if (language === "gu") {
-                          switch(image.image_category) {
-                            case 'start_image': return 'શરૂઆતની છબી';
-                            case 'end_image': return 'અંતિમ છબી';
-                            default:
-                              if (image.image_category.startsWith('image_')) {
-                                const num = image.image_category.replace('image_', '');
-                                return `છબી ${num}`;
-                              }
-                              return `છબી ${index + 1}`;
-                          }
-                        } else {
-                          switch(image.image_category) {
-                            case 'start_image': return 'Start Image';
-                            case 'end_image': return 'End Image';
-                            default:
-                              if (image.image_category.startsWith('image_')) {
-                                const num = image.image_category.replace('image_', '');
-                                return `Image ${num}`;
-                              }
-                              return `Image ${index + 1}`;
-                          }
-                        }
-                      };
+     <Modal
+  open={isModalVisible}
+  onCancel={() => setIsModalVisible(false)}
+  footer={null}
+  width={800}
+  title={
+    selectedPatrol
+      ? `${language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"} - ${
+          selectedPatrol.patrol_officer_name
+        } (${language === "gu" ? "અંતર" : "Distance"}: ${
+          selectedPatrol.distance_kms
+        } km)`
+      : language === "gu"
+      ? "પેટ્રોલ માર્ગ"
+      : "Patrol Route"
+  }
+>
+  {selectedPatrol && (
+    <>
+      {/* Beat Coverage Statistics */}
+      {isLoadingCoverage && (
+  <div style={{ textAlign: 'center', padding: '20px' }}>
+    <Spin tip={language === "gu" ? "કવરેગ ડેટા લોડ થઈ રહ્યો છે..." : "Loading coverage data..."} />
+  </div>
+)}
+      {!isLoadingCoverage && selectedPatrol.beatCoverage && (
+        <Card 
+          title={language === "gu" ? "બીટ કવરેજ આંકડા" : "Beat Coverage Statistics"}
+          style={{ 
+            marginBottom: 16,
+            background: 'rgba(0, 123, 255, 0.05)',
+            border: '1px solid rgba(0, 123, 255, 0.2)',
+            borderRadius: '8px'
+          }}
+        >
+          <Row gutter={[16, 16]}>
+            <Col span={8}>
+              <Statistic
+                title={language === "gu" ? "બીટ વિસ્તાર (ચો.મી.)" : "Beat Area (sq m)"}
+                value={parseFloat(selectedPatrol.beatCoverage.beat_area_sq_m).toLocaleString()}
+                valueStyle={{ color: '#3f8600', fontSize: '18px' }}
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title={language === "gu" ? "પેટ્રોલ કવરેજ (ચો.મી.)" : "Patrol Coverage (sq m)"}
+                value={parseFloat(selectedPatrol.beatCoverage.patrol_beat_area_sq_m).toLocaleString()}
+                valueStyle={{ color: '#1677ff', fontSize: '18px' }}
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title={language === "gu" ? "કવરેજ ટકાવારી" : "Coverage %"}
+                value={selectedPatrol.beatCoverage.coverage_percentage}
+                precision={2}
+                suffix="%"
+                valueStyle={{ 
+                  color: parseFloat(selectedPatrol.beatCoverage.coverage_percentage) > 10 ? '#3f8600' : '#cf1322',
+                  fontSize: '18px'
+                }}
+              />
+            </Col>
+          </Row>
+          {/* <div style={{ marginTop: 16 }}>
+            <Progress 
+              percent={parseFloat(selectedPatrol.beatCoverage.coverage_percentage)} 
+              size="small"
+              status={parseFloat(selectedPatrol.beatCoverage.coverage_percentage) > 10 ? "success" : "exception"}
+              format={(percent) => `${percent}%`}
+            />
+          </div> */}
+        </Card>
+      )}
 
-                      return (
-                        <Col 
-                          xs={12} 
-                          sm={8} 
-                          md={6} 
-                          key={`image_${index}`}
-                        >
-                          <div style={{ 
-                            border: '1px solid #d9d9d9', 
-                            borderRadius: 4,
-                            padding: 4,
-                            height: '100%'
-                          }}>
-                            <Image
-                              src={`data:${image.image_type};base64,${image.image_data}`}
-                              alt={getImageLabel()}
-                              style={{ 
-                                width: '100%',
-                                height: 150,
-                                objectFit: 'cover',
-                                borderRadius: 2
-                              }}
-                              preview={{
-                                mask: (
-                                  <div style={{ 
-                                    color: '#fff',
-                                    fontSize: 12,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%'
-                                  }}>
-                                    {language === "gu" ? "જૂઓ" : "View"}
-                                  </div>
-                                )
-                              }}
-                            />
+      {/* Display all images in a grid */}
+      <div style={{ marginBottom: 16 }}>
+        {selectedPatrol.images && selectedPatrol.images.length > 0 ? (
+          <>
+            <h4 style={{ marginBottom: 12 }}>
+              {language === "gu" ? "પેટ્રોલ છબીઓ" : "Patrol Images"} ({selectedPatrol.images.length})
+            </h4>
+            <Row gutter={[8, 8]}>
+              {selectedPatrol.images.map((image, index) => {
+                // Get display name for image based on category
+                const getImageLabel = () => {
+                  if (language === "gu") {
+                    switch(image.image_category) {
+                      case 'start_image': return 'શરૂઆતની છબી';
+                      case 'end_image': return 'અંતિમ છબી';
+                      default:
+                        if (image.image_category.startsWith('image_')) {
+                          const num = image.image_category.replace('image_', '');
+                          return `છબી ${num}`;
+                        }
+                        return `છબી ${index + 1}`;
+                    }
+                  } else {
+                    switch(image.image_category) {
+                      case 'start_image': return 'Start Image';
+                      case 'end_image': return 'End Image';
+                      default:
+                        if (image.image_category.startsWith('image_')) {
+                          const num = image.image_category.replace('image_', '');
+                          return `Image ${num}`;
+                        }
+                        return `Image ${index + 1}`;
+                    }
+                  }
+                };
+
+                return (
+                  <Col 
+                    xs={12} 
+                    sm={8} 
+                    md={6} 
+                    key={`image_${index}`}
+                  >
+                    <div style={{ 
+                      border: '1px solid #d9d9d9', 
+                      borderRadius: 4,
+                      padding: 4,
+                      height: '100%'
+                    }}>
+                      <Image
+                        src={`data:${image.image_type};base64,${image.image_data}`}
+                        alt={getImageLabel()}
+                        style={{ 
+                          width: '100%',
+                          height: 150,
+                          objectFit: 'cover',
+                          borderRadius: 2
+                        }}
+                        preview={{
+                          mask: (
                             <div style={{ 
-                              fontSize: 10,
-                              color: '#666',
-                              marginTop: 4,
-                              padding: '0 2px',
-                              textAlign: 'center'
+                              color: '#fff',
+                              fontSize: 12,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              height: '100%'
                             }}>
-                              {getImageLabel()}
-                              {image.note && (
-                                <div style={{
-                                  fontSize: 9,
-                                  color: '#999',
-                                  marginTop: 2,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  {image.note}
-                                </div>
-                              )}
+                              {language === "gu" ? "જૂઓ" : "View"}
                             </div>
+                          )
+                        }}
+                      />
+                      <div style={{ 
+                        fontSize: 10,
+                        color: '#666',
+                        marginTop: 4,
+                        padding: '0 2px',
+                        textAlign: 'center'
+                      }}>
+                        {getImageLabel()}
+                        {image.note && (
+                          <div style={{
+                            fontSize: 9,
+                            color: '#999',
+                            marginTop: 2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {image.note}
                           </div>
-                        </Col>
-                      );
-                    })}
-                  </Row>
-                </>
-              ) : (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: 20,
-                  color: '#999'
-                }}>
-                  {language === "gu" ? "કોઈ છબીઓ ઉપલબ્ધ નથી" : "No images available"}
-                </div>
-              )}
-            </div>
-            
-            {/* Map section */}
-            <div style={{ marginTop: 24 }}>
-              <h4 style={{ marginBottom: 8 }}>
-                {language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"}
-              </h4>
-              <PatrolMap patrol={selectedPatrol} />
-            </div>
+                        )}
+                      </div>
+                    </div>
+                  </Col>
+                );
+              })}
+            </Row>
           </>
+        ) : (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: 20,
+            color: '#999'
+          }}>
+            {language === "gu" ? "કોઈ છબીઓ ઉપલબ્ધ નથી" : "No images available"}
+          </div>
         )}
-      </Modal>
+      </div>
+      
+      {/* Map section */}
+      <div style={{ marginTop: 24 }}>
+        <h4 style={{ marginBottom: 8 }}>
+          {language === "gu" ? "પેટ્રોલ માર્ગ" : "Patrol Route"}
+        </h4>
+        <PatrolMap patrol={selectedPatrol} />
+      </div>
+    </>
+  )}
+</Modal>
       
       {
         showmaproute &&  <Suspense
