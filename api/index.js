@@ -13,6 +13,8 @@ const { sequelize, testConnection } = require('./config/database');
 
 const setNoCacheHeaders = require('./middlewares/cacheControl');
 
+const errorHandler = require("./middlewares/errorHandler");
+
 const helmet = require("helmet");
 const crypto = require('crypto');
 
@@ -40,42 +42,44 @@ app.use((req, res, next) => {
 });
 
 app.use(setNoCacheHeaders);
-
-// ✅ MUST be at the VERY TOP - before any routes
-app.use(helmet()); // This enables all default Helmet protections
+app.use(errorHandler);
 
 // ✅ Explicitly set all required headers
 // In app.js, enhance your Helmet configuration
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`,
-        'https://fonts.googleapis.com',
-        'https://fonts.gstatic.com'],
-      styleSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`, "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://forestrecap.gisfy.co.in", "http://localhost:5002", "http://68.178.167.216:5002"],
-      
+// ================= SECURITY HEADERS ================= //
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
     },
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  },
-  referrerPolicy: {
-    policy: 'strict-origin-when-cross-origin'
-  },
-  xssFilter: true, // Enable XSS filter
-  noSniff: true, // Set X-Content-Type-Options
-  frameguard: {
-    action: 'deny' // Set X-Frame-Options
-  },
-  hidePoweredBy: true // Remove X-Powered-By header
-}));
+    noSniff: true,
+    frameguard: { action: "deny" },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: {
+      policy: "strict-origin-when-cross-origin",
+    },
+    permissionsPolicy: {
+      features: {
+        geolocation: [],
+        camera: [],
+        microphone: [],
+      },
+    },
+  })
+);
+
 
 // ✅ Your routes AFTER middleware
 app.get("/", (req, res) => {
@@ -301,6 +305,7 @@ app.post('/api/admin', validateNoDuplicateParams, async (req, res) => {
         username: admin.username,
       }, 
       SECRET_KEY,
+      { expiresIn: "24h" }
     );
 
     res.json({ 
@@ -332,11 +337,11 @@ app.post("/api/saveuser", validateNoDuplicateParams, async (req, res) => {
     console.log('Request query:', req.query);
     
     // Get username from body, params, or query (prioritize body > params > query)
-    const username = req.body?.username || req.params?.username || req.query?.username;
+    const username = req.body?.username;
     
     console.log('Extracted username:', username);
     console.log('Username type:', typeof username);
-    console.log('Source:', req.body?.username ? 'body' : (req.params?.username ? 'params' : (req.query?.username ? 'query' : 'none')));
+    // console.log('Source:', req.body?.username ? 'body' : (req.params?.username ? 'params' : (req.query?.username ? 'query' : 'none')));
     
     if (username === undefined || username === null) {
       return res.status(400).json({ 
@@ -386,7 +391,8 @@ app.post("/api/saveuser", validateNoDuplicateParams, async (req, res) => {
     // Generate JWT
     const token = jwt.sign(
       { userId: user.user_id, username: user.username }, 
-      SECRET_KEY
+      SECRET_KEY,
+      { expiresIn: "24h" }
     );
 
     console.log('JWT generated successfully');
@@ -410,9 +416,17 @@ app.post("/api/saveuser", validateNoDuplicateParams, async (req, res) => {
 
 
 // Replace the existing /api/villages endpoint
-app.get("/api/villages", async (req, res) => {
+app.get("/api/villages", verifyJwt, async (req, res) => {
   try {
-    const { name } = req.query;
+    const { name } = req.body;
+
+    if (req.query.name) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Credentials must be sent in request body, not URL' 
+            });
+        }
+    
 
     if (!name) {
       return res.status(400).json({ 

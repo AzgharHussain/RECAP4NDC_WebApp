@@ -204,52 +204,52 @@ router.post('/beats', async (req, res) => {
   }
 });
 
-// Get villages based on beat code and forest type
-router.post('/villages', async (req, res) => {
-  try {
-    const { forest_id, beat } = req.body;
+// // Get villages based on beat code and forest type
+// router.post('/villages', async (req, res) => {
+//   try {
+//     const { forest_id, beat } = req.body;
     
-    if (!forest_id || !beat) {
-      return res.status(400).json({ error: 'forest_id and beat are required' });
-    }
+//     if (!forest_id || !beat) {
+//       return res.status(400).json({ error: 'forest_id and beat are required' });
+//     }
 
-    let  myquery;
-    switch (parseInt(forest_id)) {
-      case 1: // Wildlife Forest
-         myquery = `
-          SELECT DISTINCT "Village", "Village_Id"
-          FROM public."Wildlife_Circle_Village_Boundary"
-          WHERE "BEAT" = :beat
-          ORDER BY "Village"
-        `;
-        break;
-      case 2: // Territorial Forest
-         myquery = `
-          SELECT DISTINCT "Village", "Village_Id"
-          FROM public."Teritorial_Circle_Village_Boundary"
-          WHERE "BEAT" = :beat
-          ORDER BY "Village"
-        `;
-        break;
-      case 3: // Social Forestry
-         myquery = `
-          SELECT DISTINCT "Village", "Village_Id"
-          FROM public."Social_Forestry_Village_Boundary"
-          WHERE "BEAT" = :beat
-          ORDER BY "Village"
-        `;
-        break;
-      default:
-        return res.status(400).json({ error: 'Invalid forest_id' });
-    }
+//     let  myquery;
+//     switch (parseInt(forest_id)) {
+//       case 1: // Wildlife Forest
+//          myquery = `
+//           SELECT DISTINCT "Village", "Village_Id"
+//           FROM public."Wildlife_Circle_Village_Boundary"
+//           WHERE "BEAT" = :beat
+//           ORDER BY "Village"
+//         `;
+//         break;
+//       case 2: // Territorial Forest
+//          myquery = `
+//           SELECT DISTINCT "Village", "Village_Id"
+//           FROM public."Teritorial_Circle_Village_Boundary"
+//           WHERE "BEAT" = :beat
+//           ORDER BY "Village"
+//         `;
+//         break;
+//       case 3: // Social Forestry
+//          myquery = `
+//           SELECT DISTINCT "Village", "Village_Id"
+//           FROM public."Social_Forestry_Village_Boundary"
+//           WHERE "BEAT" = :beat
+//           ORDER BY "Village"
+//         `;
+//         break;
+//       default:
+//         return res.status(400).json({ error: 'Invalid forest_id' });
+//     }
 
-    const result = await executeQuery( myquery, { beat });
-    res.json(result);
-  } catch (error) {
-    console.error('Error fetching villages:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+//     const result = await executeQuery( myquery, { beat });
+//     res.json(result);
+//   } catch (error) {
+//     console.error('Error fetching villages:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
 
 // Get coupes based on village ID
 router.post('/coupes', async (req, res) => {
@@ -548,10 +548,6 @@ router.post("/get-centroid", verifyJwt, async (req, res) => {
  
   } catch (error) {
     console.error("Centroid error:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
   }
 });
 

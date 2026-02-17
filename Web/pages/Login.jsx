@@ -271,18 +271,18 @@ const saveUser = async (username) => {
     console.log("📝 Attempting to save user:", username);
     
     // Validate input
-    if (!username || username.trim() === "") {
+    if (!username) {
       console.error("❌ Username is empty or invalid");
       return null;
     }
 
     // Log the request details
     console.log("Sending request to:", `${API_BASE_URL}/api/saveuser`);
-    console.log("Request payload:", { username: username.trim() });
+    console.log("Request payload:", { username: username });
 
     const response = await axios.post(
       `${API_BASE_URL}/api/saveuser`,
-      { username: username.trim() },  // Send as object with trimmed username
+      { username: username },  // Send as object with trimmed username
       {
         headers: {
           'Content-Type': 'application/json',
@@ -341,7 +341,7 @@ const saveUser = async (username) => {
 
   const handleLogin = async () => {
     // Validation
-    if (!userId.trim() || !password.trim()) {
+    if (!userId || !password) {
       setError(text[language].errorRequired);
       return;
     }
@@ -354,13 +354,13 @@ const saveUser = async (username) => {
       
       try {
         const adminResponse = await axios.post(`${API_BASE_URL}/api/admin`, {
-          username: userId.trim(),
-          password: password.trim()
+          username: userId,
+          password: password
         });
         
         if (adminResponse.data.success) {
           const adminUserData = {
-            username: userId.trim(),
+            username: userId,
             name: adminResponse.data.user.name || "Administrator",
             isAdmin: true,
             permissions: adminResponse.data.user.permissions || ['all'],
@@ -394,7 +394,7 @@ const saveUser = async (username) => {
       }
 
       console.log("🌲 Proceeding with Forest authentication...");
-      const jsonMap = await forestLogin(userId.trim(), password.trim());
+      const jsonMap = await forestLogin(userId, password);
       
       if (!jsonMap || Object.keys(jsonMap).length === 0) {
         throw new Error("INVALID_CREDENTIALS");
@@ -414,10 +414,10 @@ const saveUser = async (username) => {
         beat: jsonMap.BeatName || "-",
         mobile: jsonMap.MobileNo || "-",
         email: jsonMap.EmailID || "-",
-        userId: jsonMap.USER_ID || userId.trim(),
+        userId: jsonMap.USER_ID || userId,
         userType: jsonMap.USER_TYPE || "-",
         forestId: jsonMap.F_ID || "-",
-        username: userId.trim(),
+        username: userId,
         isAdmin: false,
         source: 'forest_service_frontend'
       };
@@ -434,7 +434,7 @@ const saveUser = async (username) => {
       localStorage.setItem("authToken", "forest_authenticated");
 
       // Save user to backend
-      await saveUser(userId.trim());
+      await saveUser(userId);
 
       console.log("✅ User session created successfully");
       

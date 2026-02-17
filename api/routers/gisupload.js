@@ -593,7 +593,7 @@ router.get('/admincoupes',  verifyJwt, async (req, res) => {
       
     });
   } catch (err) {
-    console.error('Error /api/villages:', err);
+    console.error('Error /api/admincoupes:', err);
     res.status(500).json({ 
       success: false, 
       error: 'Internal Server Error', 

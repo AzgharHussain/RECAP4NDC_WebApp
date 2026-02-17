@@ -1288,7 +1288,6 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
           <table>
             <thead>
               <tr>
-                <th>Pixel ID</th>
                 <th>Status</th>
                 <th>NDVI Change</th>
                 <th>Area (km²)</th>
@@ -1301,7 +1300,6 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
             <tbody>
               ${filteredData.slice(0, 20).map(item => `
                 <tr>
-                  <td>${item.pixle_id || 'N/A'}</td>
                   <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? 'Afforested' : 'Degraded'}</span></td>
                   <td>${item.ndvi_change?.toFixed(4) || 'N/A'}</td>
                   <td>${item.area_sq_km?.toFixed(6) || 'N/A'}</td>
@@ -1853,12 +1851,12 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                     <Table stickyHeader size="small" sx={{ minWidth: 1200 }}>
                       <TableHead>
                         <TableRow>
-                          <TableCell onClick={() => handleSort('pixle_id')} sx={{ cursor: 'pointer' }}>
+                          {/* <TableCell onClick={() => handleSort('pixle_id')} sx={{ cursor: 'pointer' }}>
                             <Box display="flex" alignItems="center">
                               <strong>Pixel ID</strong>
                               <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                             </Box>
-                          </TableCell>
+                          </TableCell> */}
                           <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
                             <Box display="flex" alignItems="center">
                               <strong>Status</strong>
@@ -1904,11 +1902,11 @@ const calculateStatistics = (data, totalCoupeArea, degradedAreaValue, afforested
                         ) : (
                           paginatedData.map((row) => (
                             <TableRow key={row.pixle_id} hover>
-                              <TableCell>
+                              {/* <TableCell>
                                 <Typography variant="body2" fontWeight={600} color="primary">
                                   #{row.pixle_id}
                                 </Typography>
-                              </TableCell>
+                              </TableCell> */}
                               <TableCell>
                                 <Chip
                                   label={row.status ? 'Afforested' : 'Degraded'}

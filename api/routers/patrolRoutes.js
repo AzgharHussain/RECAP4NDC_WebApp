@@ -3,6 +3,8 @@ const { Client } = require('pg');
 const multer = require('multer');
 const jwt = require("jsonwebtoken");
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
+const { clean } = require("../middlewares/sanitize");
+
 
 const router = express.Router();
 
@@ -20,12 +22,24 @@ client.connect()
 
 // Multer memory storage
 const storage = multer.memoryStorage();
+const allowedMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/jpg",
+  "image/webp"
+];
+
 const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return cb(new Error("Invalid file type"), false);
+    }
+    cb(null, true);
   }
 });
+
 
 function toUTC(dateValue) {
   return new Date(dateValue).toISOString();
@@ -38,6 +52,13 @@ function parseToUTC(dateValue) {
 // POST route for patrol with multiple images (no notes)
 router.post('/patrol-post', verifyJwt, upload.any(), async (req, res) => {
   const pat_data = req.body;
+
+  pat_data.patrol_officer_name = clean(pat_data.patrol_officer_name);
+pat_data.start_location = clean(pat_data.start_location);
+pat_data.end_location = clean(pat_data.end_location);
+pat_data.beat = clean(pat_data.beat);
+pat_data.range = clean(pat_data.range);
+pat_data.division = clean(pat_data.division);
 
   const requiredFields = [
     'patrol_officer_name', 
@@ -212,14 +233,27 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
     const result = await client.query(query);
 
     const formattedData = result.rows.map(patrol => ({
-      ...patrol,
-      start_time: toUTC(patrol.start_time),
-      end_time: toUTC(patrol.end_time),
-      images: patrol.images.map(img => ({
-        ...img,
-        image_data: img.image_data || null
-      }))
-    }));
+
+  ...patrol,
+
+  // 🔹 Sanitize output fields
+  patrol_officer_name: clean(patrol.patrol_officer_name),
+  start_location: clean(patrol.start_location),
+  end_location: clean(patrol.end_location),
+  beat: clean(patrol.beat),
+  range: clean(patrol.range),
+  division: clean(patrol.division),
+
+  start_time: toUTC(patrol.start_time),
+  end_time: toUTC(patrol.end_time),
+
+  images: patrol.images.map(img => ({
+    ...img,
+    image_data: img.image_data || null
+  }))
+
+}));
+
 
     res.json({ message: 'All patrols fetched successfully', data: formattedData });
 
