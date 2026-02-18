@@ -101,9 +101,9 @@ function Login() {
     localStorage.setItem('userData', JSON.stringify(sessionData.user));
     
     if (isAdmin) {
-      console.log("✅ Admin session created:", sessionData.sessionId);
+      console.log("✅ Admin session created:");
     } else {
-      console.log("✅ User session created:", sessionData.sessionId);
+      console.log("✅ User session created:");
     }
     
     return sessionData;

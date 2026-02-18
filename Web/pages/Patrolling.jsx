@@ -2419,19 +2419,25 @@ useEffect(() => {
         >
           <Row gutter={[16, 16]}>
             <Col span={8}>
-              <Statistic
-                title={language === "gu" ? "બીટ વિસ્તાર (ચો.મી.)" : "Beat Area (sq m)"}
-                value={parseFloat(selectedPatrol.beatCoverage.beat_area_sq_m).toLocaleString()}
-                valueStyle={{ color: '#3f8600', fontSize: '18px' }}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title={language === "gu" ? "પેટ્રોલ કવરેજ (ચો.મી.)" : "Patrol Coverage (sq m)"}
-                value={parseFloat(selectedPatrol.beatCoverage.patrol_beat_area_sq_m).toLocaleString()}
-                valueStyle={{ color: '#1677ff', fontSize: '18px' }}
-              />
-            </Col>
+  <Statistic
+    title={language === "gu" ? "બીટ વિસ્તાર (ચો.કિ.મી.)" : "Beat Area (sq km)"}
+    value={(
+      parseFloat(selectedPatrol.beatCoverage.beat_area_sq_m) / 1000000
+    ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+    valueStyle={{ color: '#3f8600', fontSize: '18px' }}
+  />
+</Col>
+
+<Col span={8}>
+  <Statistic
+    title={language === "gu" ? "પેટ્રોલ કવરેજ (ચો.કિ.મી.)" : "Patrol Coverage (sq km)"}
+    value={(
+      parseFloat(selectedPatrol.beatCoverage.patrol_beat_area_sq_m) / 1000000
+    ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+    valueStyle={{ color: '#1677ff', fontSize: '18px' }}
+  />
+</Col>
+
             <Col span={8}>
               <Statistic
                 title={language === "gu" ? "કવરેજ ટકાવારી" : "Coverage %"}

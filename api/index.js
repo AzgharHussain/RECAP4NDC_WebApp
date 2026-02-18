@@ -6,7 +6,6 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-// REMOVE THIS: const bodyParser = require('body-parser'); // ❌ Remove this line
 
 const { verifyJwt } = require("./middlewares/verifyJwt");
 const { sequelize, testConnection } = require('./config/database');
@@ -17,17 +16,6 @@ const errorHandler = require("./middlewares/errorHandler");
 
 const helmet = require("helmet");
 const crypto = require('crypto');
-
-// Routers
-const patrolRoutes = require('./routers/patrolRoutes');
-const dropdownapis = require('./routers/dropdownapis');
-const NdviRouter = require('./routers/ndviRouter');
-const notifications = require('./routers/notifications');
-const userlocations = require('./routers/userlocations');
-const changendvi = require('./routers/changendvi');
-const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
-const gisupload = require('./routers/gisupload');
-const forestLoginRoutes = require('./routers/forestLogin');
 
 const app = express();
 
@@ -56,8 +44,14 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "https://fonts.googleapis.com"],
         objectSrc: ["'none'"],
         frameAncestors: ["'none'"],
+        imgSrc: ["'self'", "data:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'","https://fonts.gstatic.com"],
+        connectSrc: ["'self'", "https://forestrecap.gisfy.co.in", "http://localhost:5002", "http://68.178.167.216:5002"],
+
       },
     },
     noSniff: true,
@@ -85,6 +79,12 @@ app.use(
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/build/index.html");
 });
+
+
+
+
+
+
 
 // ==================== MIDDLEWARE ==================== //
 
@@ -231,6 +231,17 @@ if (!SECRET_KEY || SECRET_KEY.length < 32) {
     throw new Error('JWT_SECRET must be set and at least 32 characters');
 }
 
+
+// Routers
+const patrolRoutes = require('./routers/patrolRoutes');
+const dropdownapis = require('./routers/dropdownapis');
+const NdviRouter = require('./routers/ndviRouter');
+const notifications = require('./routers/notifications');
+const userlocations = require('./routers/userlocations');
+const changendvi = require('./routers/changendvi');
+const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
+const gisupload = require('./routers/gisupload');
+const forestLoginRoutes = require('./routers/forestLogin');
 
 
 
