@@ -24,7 +24,7 @@ import "./DashboardLayout.css";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
 import giz from "../assets/giz.png";
-import recap4NDC from "../assets/RE.png";
+import recap4NDC from "../assets/re.png";
 
 export default function DashboardLayoutAdmin() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar open/close state
