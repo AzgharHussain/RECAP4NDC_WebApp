@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "./context/LanguageContext";
 import ProtectedRoute from "./pages/components/ProtectedRoute";
+import './fonts.css';
 
 // === Components ===
 import LoadingSpinner from "./components/LoadingSpinner";
