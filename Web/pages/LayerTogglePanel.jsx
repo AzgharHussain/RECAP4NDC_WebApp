@@ -370,7 +370,7 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
   );
 });
 
-const GEOSERVER_WMS = "/geoserver/wms";
+const GEOSERVER_WMS = "https://www.gisfy.co.in:8445/geoserver/wms";
 
 
 

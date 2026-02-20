@@ -35,7 +35,7 @@ const pool = new Pool({
 // ============================
 // 🌍 GeoServer Configuration
 // ============================
-const GEOSERVER_URL = "https://gisfy.co.in:8443/geoserver/rest";
+const GEOSERVER_URL = "https://gisfy.co.in:8445/geoserver/rest";
 const WORKSPACE = "cite";
 const DATASTORE = "Recap4NDC_DB"; // Must exactly match your GeoServer datastore name
 const GEOSERVER_USER = "admin";

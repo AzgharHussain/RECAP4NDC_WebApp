@@ -18,7 +18,7 @@ const pgClient = new Client({
  
 // ========== GEOSERVER CONFIG ==========
 const geoserver = {
-  url: "https://gisfy.co.in:8443/geoserver/rest",
+  url: "https://gisfy.co.in:8445/geoserver/rest",
   workspace: "cite",
   datastore: "Recap4NDC_DB",
   auth: {
@@ -151,7 +151,7 @@ async function testGeoServerConnection() {
     } else if (err.request) {
       console.error("🔸 No response received. Check:");
       console.error("   - GeoServer is running");
-      console.error("   - URL is correct: https://gisfy.co.in:8443");
+      console.error("   - URL is correct: https://gisfy.co.in:8445");
       console.error("   - Port 8443 is accessible");
       console.error("🔸 Error:", err.message);
     } else {

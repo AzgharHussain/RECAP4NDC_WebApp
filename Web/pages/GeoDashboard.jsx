@@ -124,14 +124,14 @@ const changeLayers = [
   "cite:2025_09_01_AGAR_view_ndvi_change"
  
 ];
-  // const fetchCoupeLayers = async () => {
-  //   try {
-  //     const response = await axios.get("http://68.178.167.39:5000/api/coupe_metadata/location");
-  //     setCoupeLayers(response.data || []);
-  //   } catch (error) {
-  //     console.error("Error fetching coupe layers:", error);
-  //   }
-  // };
+  const fetchCoupeLayers = async () => {
+    try {
+      const response = await axios.get("http://68.178.167.39:5000/api/coupe_metadata/location");
+      setCoupeLayers(response.data || []);
+    } catch (error) {
+      console.error("Error fetching coupe layers:", error);
+    }
+  };
 
   useEffect(() => {
     fetchCoupeLayers();
@@ -147,16 +147,16 @@ const changeLayers = [
 
 
   
-  // useEffect(() => {
-  //   if (showIncidentLayer) {
-  //     fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
-  //       .then((res) => res.json())
-  //       .then((data) => setIncidentsData(data))
-  //       .catch((err) => console.error("Error fetching incidents", err));
-  //   } else {
-  //     setIncidentsData([]);
-  //   }
-  // }, [showIncidentLayer]);
+  useEffect(() => {
+    if (showIncidentLayer) {
+      fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
+        .then((res) => res.json())
+        .then((data) => setIncidentsData(data))
+        .catch((err) => console.error("Error fetching incidents", err));
+    } else {
+      setIncidentsData([]);
+    }
+  }, [showIncidentLayer]);
   // Toggle legend visibility
   const toggleLegend = () => {
     setShowLegend((s) => !s);
@@ -622,11 +622,11 @@ const handleLayerToggle = (layerType, isChecked) => {
       return;
     }
 
-    // const response = await axios.get(`http://68.178.167.39:5000/api/tnc-users/${id}`, {
-    //   headers: {
-    //     Authorization: `Bearer ${token}`
-    //   }
-    // });
+    const response = await axios.get(`http://68.178.167.39:5000/api/tnc-users/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     
     setuserdata(response.data);
   } catch (error) {

@@ -16,7 +16,7 @@ const pgConfig = {
 };
 
 const geoserver = {
-  url: "https://gisfy.co.in:8443/geoserver/rest",
+  url: "https://gisfy.co.in:8445/geoserver/rest",
   workspace: "cite",
   datastore: "Recap4NDC_DB",
   auth: {
