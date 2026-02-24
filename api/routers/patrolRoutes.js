@@ -884,7 +884,7 @@ router.get('/patrolling-hierarchy', async (req, res) => {
   try {
     const { division, range, beat } = req.query;
     let query = `
-      SELECT DISTINCT division, range, beat
+      SELECT DISTINCT division, range, beat, round
       FROM patrols
       WHERE 1=1
     `;
@@ -909,7 +909,7 @@ router.get('/patrolling-hierarchy', async (req, res) => {
       paramCount++;
     }
     
-    query += ` ORDER BY division, range, beat`;
+    query += ` ORDER BY division, range, beat, round`;
     
     const result = await client.query(query, params);
     res.json({

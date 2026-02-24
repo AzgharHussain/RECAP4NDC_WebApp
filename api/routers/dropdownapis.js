@@ -244,6 +244,7 @@ router.post('/hierarchy-villages', async (req, res) => {
   }
 });
 
+
 // Get ranges based on division code and forest type
 router.post('/ranges', async (req, res) => {
   try {

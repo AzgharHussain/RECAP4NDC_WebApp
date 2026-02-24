@@ -120,11 +120,11 @@ const validateNoDuplicateParams = (req, res, next) => {
   next();
 };
 
-const allowedOrigins = [
+const allowedOrigins = ['https://gisfy.co.in:8445/geoserver/wms',
   'https://forestrecap.gisfy.co.in',
   'http://localhost:5002',
   'http://68.178.167.216:5002',
-'http://localhost:5173'
+'http://localhost:5173', 'http://localhost:5175'
 ];
 
 app.use(cors({
@@ -243,26 +243,7 @@ const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 const gisupload = require('./routers/gisupload');
 const forestLoginRoutes = require('./routers/forestLogin');
 
-const TEMP_SAVEUSER_TOKEN = "RECAP4NDC_TEMP_TOKEN";
-const verifyTempToken = (req, res, next) => {
-  const token = req.headers["x-temp-token"];
 
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      error: "Temporary security token missing"
-    });
-  }
-
-  if (token !== TEMP_SAVEUSER_TOKEN) {
-    return res.status(403).json({
-      success: false,
-      error: "Invalid temporary security token"
-    });
-  }
-
-  next();
-};
 
 // ==================== ROUTES ==================== //
 
@@ -359,7 +340,7 @@ app.post('/api/admin', validateNoDuplicateParams, async (req, res) => {
 });
 
 // Save user endpoint
-app.post("/api/saveuser",  verifyTempToken, validateNoDuplicateParams, async (req, res) => {
+app.post("/api/saveuser", validateNoDuplicateParams, async (req, res) => {
   try {
     console.log('✅ /api/saveuser POST route accessed');
     console.log('Request body:', req.body);

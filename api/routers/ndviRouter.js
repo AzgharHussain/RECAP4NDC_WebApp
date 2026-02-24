@@ -4,8 +4,6 @@ const multer = require('multer');
 const { sequelize } = require('../config/r_quire');
 const fs = require('fs'); 
 const path = require('path');
-const { clean } = require("../middlewares/sanitize");
-const { body, param, validationResult } = require('express-validator');
 
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
 
@@ -277,29 +275,19 @@ FROM
 
 
 router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
-    const { NdvicoupeName } = req.body;
+    const { tableName } = req.body;
 
-    if (!NdvicoupeName) {
+    if (!tableName) {
         return res.status(400).json({
             success: false,
-            message: 'NdvicoupeName is required'
-        });
-    }
-
-    // Whitelist validation for table name pattern: YYYY-MM-DD_location_coupe_NDVI_Change
-    const tableNamePattern = /^\d{4}-\d{2}-\d{2}_[a-z]+_coupe_NDVI_Change$/;
-    
-    if (!tableNamePattern.test(NdvicoupeName)) {
-        return res.status(400).json({
-            success: false,
-            message: 'Invalid table name format.'
+            message: 'tableName is required'
         });
     }
 
     try {
-        // 1️⃣ Create columns if NOT EXISTS
+         // 1️⃣ Create columns if NOT EXISTS
         const alterTableQuery = `
-            ALTER TABLE public."${NdvicoupeName}"
+            ALTER TABLE public."${tableName}"
             ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
             ADD COLUMN IF NOT EXISTS note TEXT,
             ADD COLUMN IF NOT EXISTS image_data TEXT,
@@ -310,10 +298,11 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
 
         await sequelize.query(alterTableQuery);
 
+
         // 2️⃣ Fetch all data
         const selectQuery = `
            SELECT *
-            FROM public."${NdvicoupeName}";
+            FROM public."${tableName}";
         `;
 
         const [results] = await sequelize.query(selectQuery);
@@ -337,14 +326,14 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
 
 
 // GET: Get single NDVI record by ID
-router.get('/ndvi-change', verifyJwt, async (req, res) => {
-    const { NdvicoupeName } = req.body;
-    const { id } = req.body;
+router.get('/ndvi-change/:id',verifyJwt, async (req, res) => {
+    const { tableName } = req.query;
+    const { id } = req.params;
 
-    if (!NdvicoupeName) {
+    if (!tableName) {
         return res.status(400).json({
             success: false,
-            message: 'NdvicoupeName body parameter is required'
+            message: 'tableName query parameter is required'
         });
     }
 
@@ -355,20 +344,10 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
         });
     }
 
-    // Whitelist validation for table name pattern: YYYY-MM-DD_location_coupe_NDVI_Change
-    const tableNamePattern = /^\d{4}-\d{2}-\d{2}_[a-z]+_coupe_NDVI_Change$/;
-    
-    if (!tableNamePattern.test(NdvicoupeName)) {
-        return res.status(400).json({
-            success: false,
-            message: 'Invalid table name format.'
-        });
-    }
-
     try {
         const selectQuery = `
            SELECT *
-            FROM public."${NdvicoupeName}"
+            FROM public."${tableName}"
             WHERE pixle_id = ${id};
         `;
 
@@ -446,43 +425,73 @@ const imageToBase64 = (imagePath) => {
 
 const sanitizeHtml = require('sanitize-html');
 
-router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, res) => {
+// PUT: Update NDVI record by ID with image handling - FIXED VERSION
+router.put('/ndvi-change/:id',verifyJwt, upload.single('image_data'), async (req, res) => {
   const { tableName, note, status } = req.body;
-  const { id } = req.body;
+  const { id } = req.params;
+
+    if (note) {
+    req.body.note = sanitizeHtml(note, {
+      allowedTags: [], // No HTML tags allowed
+      allowedAttributes: {} // No attributes allowed
+    });
+  }
+
   const imageFile = req.file;
 
-  // Manual validation
-  if (!id || isNaN(id) || id <= 0) {
-    return res.status(400).json({ success: false, message: 'Valid ID required' });
+
+
+  if (!tableName) {
+    return res.status(400).json({
+      success: false,
+      message: 'tableName is required in request body'
+    });
+  }
+
+  if (!id || isNaN(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Valid ID is required'
+    });
   }
 
   try {
-    // Sanitize note
-    const sanitizedNote = note ? clean(note) : undefined;
-
-    // Build query safely
+    // Build dynamic update query based on provided fields
     const updates = [];
     const replacements = { id: parseInt(id) };
 
-    if (sanitizedNote !== undefined) {
+    if (note !== undefined) {
       updates.push('note = :note');
-      replacements.note = sanitizedNote;
+      replacements.note = note;
     }
     
-    // Handle image
+    // Handle image data
+    let imageDataBase64 = null;
+    
+    // Check if image is uploaded via file
     if (imageFile) {
-      if (!imageFile.mimetype.startsWith('image/')) {
-        return res.status(400).json({ success: false, message: 'Invalid file type' });
+      try {
+        // Convert uploaded file to base64
+        imageDataBase64 = imageToBase64(imageFile.path);
+        updates.push('image_data = :image_data');
+        replacements.image_data = imageDataBase64;
+        
+        // Clean up temporary file
+        fs.unlinkSync(imageFile.path);
+      } catch (error) {
+        console.error('Error processing uploaded file:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to process uploaded image file',
+          error: error.message
+        });
       }
-      
-      const fs = require('fs');
-      const imageBuffer = fs.readFileSync(imageFile.path);
-      const base64Image = `data:${imageFile.mimetype};base64,${imageBuffer.toString('base64')}`;
-      
+    } 
+    // Alternatively, check if image_data is provided as base64 in body
+    else if (req.body.image_data) {
+      imageDataBase64 = req.body.image_data;
       updates.push('image_data = :image_data');
-      replacements.image_data = base64Image;
-      
-      fs.unlinkSync(imageFile.path);
+      replacements.image_data = imageDataBase64;
     }
     
     if (status !== undefined) {
@@ -491,14 +500,17 @@ router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, r
     }
 
     if (updates.length === 0) {
-      return res.status(400).json({ success: false, message: 'No fields to update' });
+      return res.status(400).json({
+        success: false,
+        message: 'No fields to update'
+      });
     }
 
     const updateQuery = `
       UPDATE public."${tableName}"
       SET ${updates.join(', ')}, updated_at = NOW()
       WHERE pixle_id = :id
-      RETURNING pixle_id, longitude, latitude, note, status;
+      RETURNING pixle_id, longitude, latitude, note, image_data, status;
     `;
 
     const [results] = await sequelize.query(updateQuery, {
@@ -507,20 +519,25 @@ router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, r
     });
 
     if (!results || results.length === 0) {
-      return res.status(404).json({ success: false, message: 'Record not found' });
+      return res.status(404).json({
+        success: false,
+        message: `Record with ID ${id} not found`
+      });
     }
 
     res.json({
       success: true,
-      data: {
-        ...results[0],
-        note: results[0].note ? clean(results[0].note) : null
-      }
+      message: 'Record updated successfully',
+      data: results[0]
     });
 
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ success: false, message: 'Update failed' });
+    console.error('Error updating NDVI record:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update NDVI record',
+      error: error.message
+    });
   }
 });
 
