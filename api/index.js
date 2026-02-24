@@ -243,6 +243,28 @@ const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 const gisupload = require('./routers/gisupload');
 const forestLoginRoutes = require('./routers/forestLogin');
 
+const TEMP_SAVEUSER_TOKEN = "RECAP4NDC_TEMP_TOKEN";
+const verifyTempToken = (req, res, next) => {
+  const token = req.headers["x-temp-token"];
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      error: "Temporary security token missing"
+    });
+  }
+
+  if (token !== TEMP_SAVEUSER_TOKEN) {
+    return res.status(403).json({
+      success: false,
+      error: "Invalid temporary security token"
+    });
+  }
+
+  next();
+};
+
+
 
 
 // ==================== ROUTES ==================== //
@@ -424,6 +446,92 @@ app.post("/api/saveuser", validateNoDuplicateParams, async (req, res) => {
     });
   }
 });
+
+app.post("/api/saveuser-new",  verifyTempToken, validateNoDuplicateParams, async (req, res) => {
+  try {
+    console.log('✅ /api/saveuser POST route accessed');
+    console.log('Request body:', req.body);
+    console.log('Request params:', req.params);
+    console.log('Request query:', req.query);
+    
+    // Get username from body, params, or query (prioritize body > params > query)
+    const username = req.body?.username;
+    
+    console.log('Extracted username:', username);
+    console.log('Username type:', typeof username);
+    // console.log('Source:', req.body?.username ? 'body' : (req.params?.username ? 'params' : (req.query?.username ? 'query' : 'none')));
+    
+    if (username === undefined || username === null) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Username field is missing. Provide it in request body, URL parameter, or query string." 
+      });
+    }
+    
+    if (typeof username !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Username must be a string" 
+      });
+    }
+    
+    if (username.trim() === "") {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Username cannot be empty" 
+      });
+    }
+
+    const trimmedUsername = username.trim();
+    console.log('Processing username:', trimmedUsername);
+
+    // Check if user exists
+    const [users] = await sequelize.query(
+      `SELECT user_id, username FROM public.government_department_users WHERE username = $1`,
+      { bind: [trimmedUsername] }
+    );
+
+    console.log('User query result:', users);
+
+    let user;
+    if (users.length > 0) {
+      user = users[0];
+      console.log('User already exists:', user);
+    } else {
+      const [result] = await sequelize.query(
+        `INSERT INTO public.government_department_users (username) VALUES ($1) RETURNING user_id, username`,
+        { bind: [trimmedUsername] }
+      );
+      user = result[0];
+      console.log('New user created:', user);
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { userId: user.user_id, username: user.username }, 
+      SECRET_KEY,
+      { expiresIn: "24h" }
+    );
+
+    console.log('JWT generated successfully');
+
+    res.json({
+      success: true,
+      message: users.length > 0 ? "User already exists" : "User created",
+      user,
+      token,
+    });
+    
+  } catch (err) {
+    console.error("❌ Error in /api/saveuser:", err);
+    res.status(500).json({ 
+      success: false, 
+      error: "Server error", 
+      message: err.message 
+    });
+  }
+});
+
 
 
 // Replace the existing /api/villages endpoint

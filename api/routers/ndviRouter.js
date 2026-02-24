@@ -6,6 +6,8 @@ const fs = require('fs');
 const path = require('path');
 
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
+const { clean } = require("../middlewares/sanitize");
+const { body, param, validationResult } = require('express-validator');
 
 // POST: Create new NDVI record (with auto-generated ID)
 router.post('/ndvi-change',verifyJwt, async (req, res) => {
@@ -323,6 +325,126 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
     }
 });
 
+router.post('/ndvi-change-get-new', verifyJwt, async (req, res) => {
+    const { NdvicoupeName } = req.body;
+
+    if (!NdvicoupeName) {
+        return res.status(400).json({
+            success: false,
+            message: 'NdvicoupeName is required'
+        });
+    }
+
+    // Whitelist validation for table name pattern: YYYY-MM-DD_location_coupe_NDVI_Change
+    const tableNamePattern = /^\d{4}-\d{2}-\d{2}_[a-z]+_coupe_NDVI_Change$/;
+    
+    if (!tableNamePattern.test(NdvicoupeName)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid table name format.'
+        });
+    }
+
+    try {
+        // 1️⃣ Create columns if NOT EXISTS
+        const alterTableQuery = `
+            ALTER TABLE public."${NdvicoupeName}"
+            ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
+            ADD COLUMN IF NOT EXISTS note TEXT,
+            ADD COLUMN IF NOT EXISTS image_data TEXT,
+            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        `;
+
+        await sequelize.query(alterTableQuery);
+
+        // 2️⃣ Fetch all data
+        const selectQuery = `
+           SELECT *
+            FROM public."${NdvicoupeName}";
+        `;
+
+        const [results] = await sequelize.query(selectQuery);
+
+        res.json({
+            success: true,
+            message: 'Columns verified and data fetched successfully',
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Error in NDVI change API:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process NDVI change data',
+            error: error.message
+        });
+    }
+});
+
+
+// GET: Get single NDVI record by ID
+router.get('/ndvi-change-new', verifyJwt, async (req, res) => {
+    const { NdvicoupeName } = req.body;
+    const { id } = req.body;
+
+    if (!NdvicoupeName) {
+        return res.status(400).json({
+            success: false,
+            message: 'NdvicoupeName body parameter is required'
+        });
+    }
+
+    if (!id || isNaN(id)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Valid ID is required'
+        });
+    }
+
+    // Whitelist validation for table name pattern: YYYY-MM-DD_location_coupe_NDVI_Change
+    const tableNamePattern = /^\d{4}-\d{2}-\d{2}_[a-z]+_coupe_NDVI_Change$/;
+    
+    if (!tableNamePattern.test(NdvicoupeName)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid table name format.'
+        });
+    }
+
+    try {
+        const selectQuery = `
+           SELECT *
+            FROM public."${NdvicoupeName}"
+            WHERE pixle_id = ${id};
+        `;
+
+        const [results] = await sequelize.query(selectQuery);
+
+        if (!results || results.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `Record with ID ${id} not found`
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Record fetched successfully',
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Error fetching NDVI record by ID:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch NDVI record',
+            error: error.message
+        });
+    }
+});
+
 
 
 // GET: Get single NDVI record by ID
@@ -538,6 +660,84 @@ router.put('/ndvi-change/:id',verifyJwt, upload.single('image_data'), async (req
       message: 'Failed to update NDVI record',
       error: error.message
     });
+  }
+});
+
+router.put('/ndvi-change-new', verifyJwt, upload.single('image_data'), async (req, res) => {
+  const { tableName, note, status } = req.body;
+  const { id } = req.body;
+  const imageFile = req.file;
+
+  // Manual validation
+  if (!id || isNaN(id) || id <= 0) {
+    return res.status(400).json({ success: false, message: 'Valid ID required' });
+  }
+
+  try {
+    // Sanitize note
+    const sanitizedNote = note ? clean(note) : undefined;
+
+    // Build query safely
+    const updates = [];
+    const replacements = { id: parseInt(id) };
+
+    if (sanitizedNote !== undefined) {
+      updates.push('note = :note');
+      replacements.note = sanitizedNote;
+    }
+    
+    // Handle image
+    if (imageFile) {
+      if (!imageFile.mimetype.startsWith('image/')) {
+        return res.status(400).json({ success: false, message: 'Invalid file type' });
+      }
+      
+      const fs = require('fs');
+      const imageBuffer = fs.readFileSync(imageFile.path);
+      const base64Image = `data:${imageFile.mimetype};base64,${imageBuffer.toString('base64')}`;
+      
+      updates.push('image_data = :image_data');
+      replacements.image_data = base64Image;
+      
+      fs.unlinkSync(imageFile.path);
+    }
+    
+    if (status !== undefined) {
+      updates.push('status = :status');
+      replacements.status = status;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    const updateQuery = `
+      UPDATE public."${tableName}"
+      SET ${updates.join(', ')}, updated_at = NOW()
+      WHERE pixle_id = :id
+      RETURNING pixle_id, longitude, latitude, note, status;
+    `;
+
+    const [results] = await sequelize.query(updateQuery, {
+      replacements: replacements,
+      type: sequelize.QueryTypes.UPDATE
+    });
+
+    if (!results || results.length === 0) {
+      return res.status(404).json({ success: false, message: 'Record not found' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...results[0],
+        note: results[0].note ? clean(results[0].note) : null
+      }
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ success: false, message: 'Update failed' });
   }
 });
 
