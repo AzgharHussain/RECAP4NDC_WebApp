@@ -82,7 +82,7 @@ router.get('/hierarchy_coupes', async (req, res) => {
 });
 
 // Get all divisions
-router.get('/hierarchy-divisions', async (req, res) => {
+router.get('/hierarchy-divisions', verifyJwt, async (req, res) => {
   try {
     const query = `
       SELECT DISTINCT division
@@ -107,7 +107,7 @@ router.get('/hierarchy-divisions', async (req, res) => {
 });
 
 // Get ranges by division (your working endpoint)
-router.post('/hierarchy-ranges', async (req, res) => {
+router.post('/hierarchy-ranges',  verifyJwt,async (req, res) => {
   try {
     const { division } = req.body;
     
@@ -140,7 +140,7 @@ router.post('/hierarchy-ranges', async (req, res) => {
 });
 
 // Get rounds by division and range
-router.post('/hierarchy-rounds', async (req, res) => {
+router.post('/hierarchy-rounds',  verifyJwt,async (req, res) => {
   try {
     const { division, range } = req.body;
     
@@ -174,7 +174,7 @@ router.post('/hierarchy-rounds', async (req, res) => {
 });
 
 // Get beats by division, range, and round
-router.post('/hierarchy-beats', async (req, res) => {
+router.post('/hierarchy-beats',  verifyJwt, async (req, res) => {
   try {
     const { division, range, round } = req.body;
     
@@ -209,7 +209,7 @@ router.post('/hierarchy-beats', async (req, res) => {
 });
 
 // Get villages by division, range, round, and beat
-router.post('/hierarchy-villages', async (req, res) => {
+router.post('/hierarchy-villages',  verifyJwt,async (req, res) => {
   try {
     const { division, range, round, beat } = req.body;
     
