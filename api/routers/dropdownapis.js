@@ -81,6 +81,169 @@ router.get('/hierarchy_coupes', async (req, res) => {
   }
 });
 
+// Get all divisions
+router.get('/hierarchy-divisions', async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT division
+      FROM public.coupe_dropdown_master
+      WHERE division IS NOT NULL AND division != ''
+      ORDER BY division
+    `;
+    
+    const result = await sequelize.query(query, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json({
+      message: 'Divisions fetched successfully',
+      data: result.map(row => row.division),
+      count: result.length
+    });
+  } catch (error) {
+    console.error('Error fetching divisions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get ranges by division (your working endpoint)
+router.post('/hierarchy-ranges', async (req, res) => {
+  try {
+    const { division } = req.body;
+    
+    if (!division) {
+      return res.status(400).json({ error: 'division is required' });
+    }
+
+    const query = `
+      SELECT DISTINCT range
+      FROM public.coupe_dropdown_master
+      WHERE division = ?
+      ORDER BY range
+    `;
+    
+    const result = await sequelize.query(query, {
+      replacements: [division],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json({
+      message: `Ranges for division ${division} fetched successfully`,
+      division: division,
+      data: result.map(row => row.range),
+      count: result.length
+    });
+  } catch (error) {
+    console.error('Error fetching ranges:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get rounds by division and range
+router.post('/hierarchy-rounds', async (req, res) => {
+  try {
+    const { division, range } = req.body;
+    
+    if (!division || !range) {
+      return res.status(400).json({ error: 'division and range are required' });
+    }
+
+    const query = `
+      SELECT DISTINCT round
+      FROM public.coupe_dropdown_master
+      WHERE division = ? AND range = ?
+      ORDER BY round
+    `;
+    
+    const result = await sequelize.query(query, {
+      replacements: [division, range],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json({
+      message: `Rounds for division ${division} and range ${range} fetched successfully`,
+      division: division,
+      range: range,
+      data: result.map(row => row.round),
+      count: result.length
+    });
+  } catch (error) {
+    console.error('Error fetching rounds:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get beats by division, range, and round
+router.post('/hierarchy-beats', async (req, res) => {
+  try {
+    const { division, range, round } = req.body;
+    
+    if (!division || !range || !round) {
+      return res.status(400).json({ error: 'division, range, and round are required' });
+    }
+
+    const query = `
+      SELECT DISTINCT beat
+      FROM public.coupe_dropdown_master
+      WHERE division = ? AND range = ? AND round = ?
+      ORDER BY beat
+    `;
+    
+    const result = await sequelize.query(query, {
+      replacements: [division, range, round],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json({
+      message: `Beats for division ${division}, range ${range}, round ${round} fetched successfully`,
+      division: division,
+      range: range,
+      round: round,
+      data: result.map(row => row.beat),
+      count: result.length
+    });
+  } catch (error) {
+    console.error('Error fetching beats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get villages by division, range, round, and beat
+router.post('/hierarchy-villages', async (req, res) => {
+  try {
+    const { division, range, round, beat } = req.body;
+    
+    if (!division || !range || !round || !beat) {
+      return res.status(400).json({ error: 'division, range, round, and beat are required' });
+    }
+
+    const query = `
+      SELECT DISTINCT village
+      FROM public.coupe_dropdown_master
+      WHERE division = ? AND range = ? AND round = ? AND beat = ?
+      ORDER BY village
+    `;
+    
+    const result = await sequelize.query(query, {
+      replacements: [division, range, round, beat],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json({
+      message: `Villages fetched successfully`,
+      division: division,
+      range: range,
+      round: round,
+      beat: beat,
+      data: result.map(row => row.village),
+      count: result.length
+    });
+  } catch (error) {
+    console.error('Error fetching villages:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get ranges based on division code and forest type
 router.post('/ranges', async (req, res) => {
   try {
