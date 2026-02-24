@@ -63,6 +63,24 @@ router.post('/divisions', async (req, res) => {
   }
 });
 
+router.get('/hierarchy_coupes', async (req, res) => {
+  try {
+    const query = `
+      SELECT * FROM coupe_all;
+    `;
+    const result = await executeQuery(query);
+    
+    res.json({
+      message: 'All records from coupe_all fetched successfully',
+      data: result,
+      count: result.length
+    });
+  } catch (err) {
+    console.error('Error fetching from coupe_all:', err);
+    res.status(500).json({ error: 'Failed to fetch records from coupe_all' });
+  }
+});
+
 // Get ranges based on division code and forest type
 router.post('/ranges', async (req, res) => {
   try {

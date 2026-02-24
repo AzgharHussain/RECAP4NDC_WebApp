@@ -22,22 +22,10 @@ client.connect()
 
 // Multer memory storage
 const storage = multer.memoryStorage();
-const allowedMimeTypes = [
-  "image/jpeg",
-  "image/png",
-  "image/jpg",
-  "image/webp"
-];
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      return cb(new Error("Invalid file type"), false);
-    }
-    cb(null, true);
-  }
+  limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
 
@@ -441,65 +429,70 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       division,
       range,
       beat,
-      round, 
+      round,
       location,
       coupe,
       forest_id
     } = req.query;
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const pageInt = parseInt(page) || 1;
+    const limitInt = parseInt(limit) || 5;
+    const offsetInt = (pageInt - 1) * limitInt;
+
     const whereConditions = [];
     const queryParams = [];
     let paramIndex = 1;
 
-    // Type filter
+    // -----------------------------
+    // FILTER CONDITIONS
+    // -----------------------------
+
     if (type_name) {
       whereConditions.push(`pt.type_name = $${paramIndex}`);
       queryParams.push(type_name);
       paramIndex++;
     }
 
-    // Officer name search
     if (officer_name) {
       whereConditions.push(`p.patrol_officer_name ILIKE $${paramIndex}`);
       queryParams.push(`%${officer_name}%`);
       paramIndex++;
     }
 
-    // COMBINED LOCATION SEARCH - searches across division, range, and beat
+    // Combined location search
     if (location) {
       whereConditions.push(`(
-        p.division ILIKE $${paramIndex} OR 
-        p.range ILIKE $${paramIndex} OR 
-        p.beat ILIKE $${paramIndex}
+        p.division ILIKE $${paramIndex}
+        OR p.range ILIKE $${paramIndex}
+        OR p.beat ILIKE $${paramIndex}
+        OR p.round ILIKE $${paramIndex}
       )`);
       queryParams.push(`%${location}%`);
       paramIndex++;
-    }
+    } else {
+      if (division) {
+        whereConditions.push(`p.division = $${paramIndex}`);
+        queryParams.push(division);
+        paramIndex++;
+      }
 
-    // Individual filters (from dropdown selections)
-    if (division && !location) {
-      whereConditions.push(`p.division = $${paramIndex}`);
-      queryParams.push(division);
-      paramIndex++;
-    }
+      if (range) {
+        whereConditions.push(`p.range = $${paramIndex}`);
+        queryParams.push(range);
+        paramIndex++;
+      }
 
-    if (range && !location) {
-      whereConditions.push(`p.range = $${paramIndex}`);
-      queryParams.push(range);
-      paramIndex++;
-    }
+      if (beat) {
+        whereConditions.push(`p.beat = $${paramIndex}`);
+        queryParams.push(beat);
+        paramIndex++;
+      }
 
-    if (beat && !location) {
-      whereConditions.push(`p.beat = $${paramIndex}`);
-      queryParams.push(beat);
-      paramIndex++;
-    }
-    
-    if (round && !location) {
-      whereConditions.push(`p.round = $${paramIndex}`);
-      queryParams.push(round);
-      paramIndex++;
+      if (round) {
+        whereConditions.push(`p.round = $${paramIndex}`);
+        queryParams.push(round);
+        paramIndex++;
+      }
     }
 
     if (coupe) {
@@ -508,7 +501,6 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       paramIndex++;
     }
 
-    // Date filters
     if (start_date) {
       whereConditions.push(`DATE(p.start_time) >= $${paramIndex}`);
       queryParams.push(start_date);
@@ -521,25 +513,37 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       paramIndex++;
     }
 
-    // Forest ID filter
     if (forest_id) {
       whereConditions.push(`p.forest_id = $${paramIndex}`);
       queryParams.push(forest_id);
       paramIndex++;
     }
 
-    // IMPORTANT: Parse limit and offset to integers before adding to queryParams
-    const limitInt = parseInt(limit);
-    const offsetInt = parseInt(offset);
-    
-    // Add pagination parameters as numbers
-    queryParams.push(limitInt, offsetInt);
+    // -----------------------------
+    // WHERE CLAUSE
+    // -----------------------------
 
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE ${whereConditions.join(' AND ')}`
-      : '';
+    const whereClause =
+      whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(' AND ')}`
+        : '';
 
-    // Main query
+    // -----------------------------
+    // ADD PAGINATION SAFELY
+    // -----------------------------
+
+    const limitIndex = paramIndex;
+    queryParams.push(limitInt);
+    paramIndex++;
+
+    const offsetIndex = paramIndex;
+    queryParams.push(offsetInt);
+    paramIndex++;
+
+    // -----------------------------
+    // MAIN QUERY
+    // -----------------------------
+
     const query = `
       SELECT
         p.*,
@@ -552,7 +556,8 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
               'image_type', pi.image_type,
               'image_category', pi.image_category,
               'note', pi.note
-            ) ORDER BY pi.image_id
+            )
+            ORDER BY pi.image_id
           ) FILTER (WHERE pi.image_id IS NOT NULL),
           '[]'::json
         ) AS images
@@ -562,35 +567,40 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       ${whereClause}
       GROUP BY p.patrol_id, pt.type_name
       ORDER BY p.start_time DESC
-      LIMIT $${paramIndex - 2} OFFSET $${paramIndex - 1};
+      LIMIT $${limitIndex} OFFSET $${offsetIndex};
     `;
 
-    // For count query, remove the pagination parameters
-    const countParams = queryParams.slice(0, -2);
-    
+    // -----------------------------
+    // COUNT QUERY
+    // -----------------------------
+
     const countQuery = `
-      SELECT COUNT(DISTINCT p.patrol_id) as total_count
+      SELECT COUNT(DISTINCT p.patrol_id) AS total_count
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
-      ${whereClause}
+      ${whereClause};
     `;
 
-    console.log('Executing query with params:', queryParams);
-    console.log('Count query params:', countParams);
-    
+    const countParams = queryParams.slice(0, -2);
+
+    // -----------------------------
+    // EXECUTE QUERIES
+    // -----------------------------
+
     const [result, countResult] = await Promise.all([
       client.query(query, queryParams),
       client.query(countQuery, countParams)
     ]);
 
-    const totalCount = parseInt(countResult.rows[0].total_count);
+    const totalCount = parseInt(countResult.rows[0].total_count) || 0;
     const totalPages = Math.ceil(totalCount / limitInt);
 
-    // Format the response
+    // -----------------------------
+    // RESPONSE FORMAT
+    // -----------------------------
+
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_time: patrol.start_time,
-      end_time: patrol.end_time,
       images: Array.isArray(patrol.images) ? patrol.images : []
     }));
 
@@ -598,20 +608,20 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       message: 'Filtered patrols fetched successfully',
       data: formattedData,
       pagination: {
-        currentPage: parseInt(page),
+        currentPage: pageInt,
         pageSize: limitInt,
         totalItems: totalCount,
-        totalPages: totalPages,
-        hasNextPage: parseInt(page) < totalPages,
-        hasPreviousPage: parseInt(page) > 1
+        totalPages,
+        hasNextPage: pageInt < totalPages,
+        hasPreviousPage: pageInt > 1
       }
     });
 
   } catch (err) {
     console.error('Error in filtered patrol search:', err);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch filtered patrols',
-      details: err.message 
+      details: err.message
     });
   }
 });
@@ -874,7 +884,7 @@ router.get('/patrolling-hierarchy', async (req, res) => {
   try {
     const { division, range, beat } = req.query;
     let query = `
-      SELECT DISTINCT division, range, beat, round
+      SELECT DISTINCT division, range, beat
       FROM patrols
       WHERE 1=1
     `;
@@ -899,7 +909,7 @@ router.get('/patrolling-hierarchy', async (req, res) => {
       paramCount++;
     }
     
-    query += ` ORDER BY division, range, beat, round`;
+    query += ` ORDER BY division, range, beat`;
     
     const result = await client.query(query, params);
     res.json({
