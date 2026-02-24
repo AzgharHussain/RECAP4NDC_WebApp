@@ -1,9 +1,9 @@
 .leftpanel {
   font-family: "Arial", sans-serif;
-  width: 300px;
+  width: 350px;
   height: 72vh;
   overflow-x: auto;
- 
+ overflow-y: auto;
   padding: 10px;
 
  
@@ -125,17 +125,29 @@
 
 
 .leftpanel::-webkit-scrollbar {
-  display: none; /* For Chrome, Safari, and Opera */
+  width: 7px;
 }
 
-
-.leftpanel::-webkit-scrollbar {
-  display: none;
+.leftpanel::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
 }
 
-/* Layer Groups Styling */
+.leftpanel::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.leftpanel::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
 .layer-groups-container {
   margin-top: 15px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 5px; /* Space for scrollbar */
 }
 
 .layer-group {
@@ -184,8 +196,10 @@
   max-height: 5000px; /* Adjust based on your content */
 }
 
-.nested-group-content.expanded {
-  max-height: 5000px; /* Add this */
+.nested-group-content {
+  padding-left: 15px; /* Add indentation for nested content */
+  border-left: 2px solid #e0e0e0;
+  margin-left: 5px;
 }
 
 .layer-item {
@@ -930,9 +944,8 @@ input[type="checkbox"]:focus {
 
 .nested-layer-group {
   margin-bottom: 10px;
-  /* border: 1px solid #e0e0e0; */
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible; /* Changed from hidden to visible */
   background: white;
-  /* REMOVE THIS LINE: max-height: 50000px; */
+  width: 100%;
 }

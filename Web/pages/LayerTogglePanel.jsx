@@ -134,7 +134,7 @@ const LayerItem = React.memo(({
   const layerId = `${layer.Name}-${groupId}`;
 
   return (
-    <div className={`layer-item nested-layer-item ${isChecked ? "active" : ""}`} style={{ marginLeft: `${nestingLevel * 10}px` }}>
+    <div className={`layer-item nested-layer-item ${isChecked ? "active" : ""}`}>
       <label className="layer-label-container">
         <input
           type="checkbox"
@@ -601,7 +601,7 @@ const layersData = {
       ]
     },
     {
-      title: "Social Forestry",
+      title: "Social Forest",
       type: "nested",
       children: [
             { Name: "Social_Forestry_Circle_Boundary", Layer: "Social Forestry Circle" },
@@ -1583,22 +1583,22 @@ const layersData = {
   title: "Coupe Boundaries",
   type: "flat",
   children: [
-    { Name: "baria_coupe", Layer: "Baria_Coupe" },
-    { Name: "bharuch_coupe", Layer: "Bharuch_Coupe" },
-    { Name: "godhara_coupe", Layer: "Godhara_Coupe" },
-    { Name: "junagadh_coupe", Layer: "Junagadh_Coupe" },
-    { Name: "surat_coupe", Layer: "Surat_Coupe" },
-    { Name: "vyara_coupe", Layer: "Vyara_Coupe" },
-    { Name: "banaskantha_coupe", Layer: "Banaskantha_Coupe" },
-    { Name: "bhavnagar_coupe", Layer: "Bhavnagar_Coupe" },
-    { Name: "chhotaudepur_coupe_main", Layer: "chhotaudepur_coupe" },
-    { Name: "gandhinagar_coupe", Layer: "Gandhinagar_Coupe" },
-    { Name: "jamnagar_coupe", Layer: "Jamnagar_Coupe" },
-    { Name: "morbi_coupe", Layer: "Morbi_Coupe" },
-    { Name: "narmada_coupe", Layer: "Narmada_Coupe" },
-    { Name: "sabarkantha_coupe_", Layer: "Sabarkantha_Coupe" },
-    { Name: "sabarkantha_south_coupe", Layer: "Sabarkantha_South_Coupe" },
-    { Name: "surendranagar_coupe_main", Layer: "Surendranagar_Coupe" },
+    { Name: "baria_coupe", Layer: "Baria" },
+    { Name: "bharuch_coupe", Layer: "Bharuch" },
+    { Name: "godhara_coupe", Layer: "Godhara" },
+    { Name: "junagadh_coupe", Layer: "Junagadh" },
+    { Name: "surat_coupe", Layer: "Surat" },
+    { Name: "vyara_coupe", Layer: "Vyara" },
+    { Name: "banaskantha_coupe", Layer: "Banaskantha" },
+    { Name: "bhavnagar_coupe", Layer: "Bhavnagar" },
+    { Name: "chhotaudepur_coupe_main", Layer: "Chhotaudepur" },
+    { Name: "gandhinagar_coupe", Layer: "Gandhinagar" },
+    { Name: "jamnagar_coupe", Layer: "Jamnagar" },
+    { Name: "morbi_coupe", Layer: "Morbi" },
+    { Name: "narmada_coupe", Layer: "Narmada" },
+    { Name: "sabarkantha_coupe_", Layer: "Sabarkantha" },
+    { Name: "sabarkantha_south_coupe", Layer: "Sabarkantha_South" },
+    { Name: "surendranagar_coupe_main", Layer: "Surendranagar" },
   ]
 }
   ]

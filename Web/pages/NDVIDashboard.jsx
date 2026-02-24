@@ -38,8 +38,6 @@ import {
   Paper,
   Chip,
   Button,
-  Tabs,
-  Tab,
   Avatar,
   List,
   ListItem,
@@ -52,13 +50,17 @@ import {
   TextField,
   IconButton,
   Tooltip as MuiTooltip,
-  Switch,
   FormControlLabel,
   Container,
   Stack,
   CardHeader,
-  LinearProgress as MuiLinearProgress
+  LinearProgress as MuiLinearProgress,
+  Divider
 } from '@mui/material';
+import { Switch } from '@mui/material';
+
+import Checkbox from '@mui/material/Checkbox';
+import FormGroup from '@mui/material/FormGroup';
 import {
   Visibility,
   Image as ImageIcon,
@@ -81,7 +83,9 @@ import {
   Search,
   OpenInFull,
   CloseFullscreen,
-  Send
+  Send,
+  KeyboardArrowDown,
+  KeyboardArrowUp
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 
@@ -397,7 +401,6 @@ const NDVIChangeDashboard = () => {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [totalArea, setTotalArea] = useState(0);
   const [summaryStats, setSummaryStats] = useState(null);
-  const [activeTab, setActiveTab] = useState(0);
   const [chartType, setChartType] = useState('bar');
   const [searchTerm, setSearchTerm] = useState('');
   const [showOnlyWithNotes, setShowOnlyWithNotes] = useState(false);
@@ -432,6 +435,21 @@ const NDVIChangeDashboard = () => {
     { value: 'Bhavnagar_coupes', label: 'Bhavnagar Coupes' },
     { value: 'Sabarkantha_North_Aravalli', label: 'Sabarkantha North Aravalli' }
   ]);
+
+  // Add state for section expansion
+  const [expandedSections, setExpandedSections] = useState({
+    charts: true,
+    dataTable: true,
+    monthlyOverview: true
+  });
+
+  // Toggle section expansion
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   // Function to transform division name to coupe name
   const transformDivisionToCoupe = (divisionName) => {
@@ -1142,11 +1160,6 @@ const NDVIChangeDashboard = () => {
     fetchTotalArea(newCoupe);
   };
 
-  // Handle tab change
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
-
   // Filter and sort data
   const filteredData = React.useMemo(() => {
     let filtered = currentTableData.filter(item => {
@@ -1421,156 +1434,653 @@ const NDVIChangeDashboard = () => {
   };
 
   // Export to PDF
-  const handleExportToPDF = () => {
+// Enhanced Export to PDF function
+const handleExportToPDF = () => {
+  try {
+    // Check if there's data to export
+    if (Object.keys(monthlyData).length === 0) {
+      alert('No data available to export');
+      return;
+    }
+
+    // Get current date for filename and report
+    const now = new Date();
+    const dateStr = now.toLocaleString('en-IN', { 
+      timeZone: 'Asia/Kolkata',
+      dateStyle: 'full',
+      timeStyle: 'medium'
+    });
+    
+    const filename = `NDVI_Report_${selectedDivision === 'all' ? 'All_Divisions' : (selectedDivision || 'NDVI')}_${now.toISOString().slice(0,10)}`;
+    
+    // Determine the scope of the report
+    const reportScope = selectedDivision === 'all' ? 'All Forest Divisions' : 
+                       (selectedDivision ? `${selectedDivision} Division` : 
+                       (selectedCoupe ? selectedCoupe : 'Selected Area'));
+    
+    // Create the HTML content for PDF
     const printWindow = window.open('', '_blank');
+    
+    // Write the HTML document
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>NDVI Report - ${selectedDivision === 'all' ? 'All Divisions' : (selectedDivision || selectedCoupe)} - ${tableNames.length} months</title>
+          <title>NDVI Change Report - ${reportScope}</title>
           <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #333; line-height: 1.6; }
-            .header { text-align: center; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; margin-bottom: 30px; }
-            h1 { color: #2c3e50; margin-bottom: 10px; font-size: 28px; }
-            .subtitle { color: #7f8c8d; font-size: 14px; }
-            .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 12px; margin: 25px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-            .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 25px 0; }
-            .stat-card { background: white; border: 1px solid #e1e8ed; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-            .stat-card.degraded { border-left: 5px solid #ef4444; }
-            .stat-card.afforested { border-left: 5px solid #22c55e; }
-            .stat-value { font-size: 32px; font-weight: bold; margin: 10px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 13px; }
-            th { background-color: #2c3e50; color: white; padding: 12px 15px; text-align: left; font-weight: 600; }
-            td { padding: 10px 15px; border-bottom: 1px solid #e1e8ed; }
-            tr:nth-child(even) { background-color: #f8f9fa; }
-            .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-            .badge-degraded { background-color: #fee2e2; color: #dc2626; }
-            .badge-afforested { background-color: #dcfce7; color: #16a34a; }
-            .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e1e8ed; font-size: 12px; color: #7f8c8d; text-align: center; }
-            @media print { body { padding: 15px; } .summary-card { break-inside: avoid; } table { break-inside: avoid; } }
+            body { 
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+              padding: 40px; 
+              color: #1e293b; 
+              line-height: 1.6;
+              background: #f8fafc;
+            }
+            
+            .report-container {
+              max-width: 1400px;
+              margin: 0 auto;
+              background: white;
+              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+              border-radius: 16px;
+              padding: 40px;
+            }
+            
+            .header { 
+              text-align: center; 
+              border-bottom: 3px solid #2563eb; 
+              padding-bottom: 25px; 
+              margin-bottom: 30px; 
+              background: linear-gradient(to right, #1e3c72, #2a5298);
+              margin: -40px -40px 30px -40px;
+              padding: 40px 40px 25px 40px;
+              border-radius: 16px 16px 0 0;
+              color: white;
+            }
+            
+            h1 { 
+              color: white; 
+              margin-bottom: 10px; 
+              font-size: 32px;
+              font-weight: 700;
+              letter-spacing: 1px;
+            }
+            
+            .header .subtitle { 
+              color: rgba(255,255,255,0.9); 
+              font-size: 16px;
+            }
+            
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+              gap: 20px;
+              margin: 30px 0;
+              background: #f1f5f9;
+              padding: 25px;
+              border-radius: 12px;
+            }
+            
+            .info-item {
+              padding: 10px;
+              border-left: 4px solid #2563eb;
+              background: white;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+            
+            .info-label {
+              font-size: 12px;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            
+            .info-value {
+              font-size: 18px;
+              font-weight: 600;
+              color: #1e293b;
+            }
+            
+            .summary-card { 
+              background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+              color: white; 
+              padding: 30px; 
+              border-radius: 16px; 
+              margin: 30px 0; 
+              box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3); 
+            }
+            
+            .stats-grid { 
+              display: grid; 
+              grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+              gap: 25px; 
+              margin: 25px 0; 
+            }
+            
+            .stat-card { 
+              background: white; 
+              border: 1px solid #e2e8f0; 
+              border-radius: 12px; 
+              padding: 20px; 
+              box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+              transition: transform 0.2s;
+            }
+            
+            .stat-card:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 8px 12px rgba(0,0,0,0.1);
+            }
+            
+            .stat-card.degraded { 
+              border-left: 6px solid #ef4444; 
+            }
+            
+            .stat-card.afforested { 
+              border-left: 6px solid #22c55e; 
+            }
+            
+            .stat-card.total { 
+              border-left: 6px solid #3b82f6; 
+            }
+            
+            .stat-label {
+              font-size: 14px;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 10px;
+            }
+            
+            .stat-value { 
+              font-size: 32px; 
+              font-weight: 700; 
+              margin: 10px 0;
+              line-height: 1.2;
+            }
+            
+            .stat-unit {
+              font-size: 14px;
+              color: #94a3b8;
+              margin-left: 5px;
+            }
+            
+            .stat-percentage {
+              font-size: 14px;
+              color: #64748b;
+              background: #f1f5f9;
+              display: inline-block;
+              padding: 4px 12px;
+              border-radius: 20px;
+            }
+            
+            h2 {
+              color: #1e293b;
+              font-size: 24px;
+              font-weight: 600;
+              margin: 30px 0 20px 0;
+              padding-bottom: 10px;
+              border-bottom: 2px solid #e2e8f0;
+            }
+            
+            h3 {
+              color: #334155;
+              font-size: 18px;
+              font-weight: 600;
+              margin: 20px 0 15px 0;
+            }
+            
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin: 20px 0; 
+              font-size: 13px; 
+              background: white;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            }
+            
+            th { 
+              background-color: #1e293b; 
+              color: white; 
+              padding: 12px 15px; 
+              text-align: left; 
+              font-weight: 600;
+              font-size: 12px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            
+            td { 
+              padding: 12px 15px; 
+              border-bottom: 1px solid #e2e8f0; 
+              color: #334155;
+            }
+            
+            tr:last-child td {
+              border-bottom: none;
+            }
+            
+            tr:nth-child(even) { 
+              background-color: #f8fafc; 
+            }
+            
+            tr:hover {
+              background-color: #f1f5f9;
+            }
+            
+            .badge { 
+              padding: 4px 12px; 
+              border-radius: 20px; 
+              font-size: 11px; 
+              font-weight: 600; 
+              display: inline-block;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            
+            .badge-degraded { 
+              background-color: #fee2e2; 
+              color: #dc2626; 
+            }
+            
+            .badge-afforested { 
+              background-color: #dcfce7; 
+              color: #16a34a; 
+            }
+            
+            .badge-note {
+              background-color: #dbeafe;
+              color: #2563eb;
+            }
+            
+            .badge-image {
+              background-color: #fef3c7;
+              color: #d97706;
+            }
+            
+            .monthly-summary {
+              display: grid;
+              grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+              gap: 15px;
+              margin: 20px 0;
+            }
+            
+            .month-card {
+              background: white;
+              border: 1px solid #e2e8f0;
+              border-radius: 10px;
+              padding: 15px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+            
+            .month-title {
+              font-size: 14px;
+              font-weight: 600;
+              color: #2563eb;
+              margin-bottom: 10px;
+              padding-bottom: 5px;
+              border-bottom: 1px dashed #e2e8f0;
+            }
+            
+            .month-stat {
+              display: flex;
+              justify-content: space-between;
+              margin: 5px 0;
+              font-size: 12px;
+            }
+            
+            .progress-bar {
+              width: 100%;
+              height: 8px;
+              background: #e2e8f0;
+              border-radius: 4px;
+              margin: 10px 0;
+              overflow: hidden;
+            }
+            
+            .progress-fill {
+              height: 100%;
+              background: linear-gradient(90deg, #22c55e, #16a34a);
+              border-radius: 4px;
+            }
+            
+            .progress-fill.degraded {
+              background: linear-gradient(90deg, #ef4444, #dc2626);
+            }
+            
+            .footer { 
+              margin-top: 40px; 
+              padding-top: 25px; 
+              border-top: 2px solid #e2e8f0; 
+              font-size: 12px; 
+              color: #64748b; 
+              text-align: center;
+              background: #f8fafc;
+              border-radius: 12px;
+              padding: 25px;
+            }
+            
+            .watermark {
+              position: fixed;
+              bottom: 20px;
+              right: 20px;
+              opacity: 0.1;
+              font-size: 60px;
+              font-weight: bold;
+              color: #2563eb;
+              pointer-events: none;
+              z-index: 1000;
+            }
+            
+            @media print { 
+              body { 
+                background: white; 
+                padding: 0; 
+              }
+              .report-container {
+                box-shadow: none;
+                padding: 20px;
+              }
+              .header {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              th {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .summary-card {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>Forest Cover Change Monitoring System</h1>
-            <div class="subtitle">NDVI Change Analysis Report - Multiple Months</div>
-          </div>
           
-          <div class="summary-card">
-            <h2 style="margin-top: 0; color: white;">Summary Report</h2>
-            <p><strong>Division:</strong> ${selectedDivision === 'all' ? 'All Divisions' : (selectedDivision || 'N/A')}</p>
-            <p><strong>Range:</strong> ${selectedRange || 'N/A'}</p>
-            <p><strong>Round:</strong> ${selectedRound || 'N/A'}</p>
-            <p><strong>Beat:</strong> ${selectedBeat || 'N/A'}</p>
-            <p><strong>Date Range:</strong> ${startDate ? startDate.toLocaleDateString() : ''} to ${endDate ? endDate.toLocaleDateString() : ''}</p>
-            <p><strong>Number of Months:</strong> ${tableNames.length}</p>
-            <p><strong>Generated:</strong> ${new Date().toLocaleString('en-IN', { 
-              timeZone: 'Asia/Kolkata',
-              dateStyle: 'full',
-              timeStyle: 'medium'
-            })}</p>
-          </div>
           
-          ${summaryStats ? `
-            <div class="stats-grid">
-              <div class="stat-card degraded">
-                <h3>Degraded Area (Latest Month)</h3>
-                <div class="stat-value">${summaryStats.degradedArea.toFixed(2)} km²</div>
-                <p>${summaryStats.degradedPercentage.toFixed(1)}% of total area</p>
+          <div class="report-container">
+            <!-- Header -->
+            <div class="header">
+              <h1>🌲 Forest Cover Change Monitoring System</h1>
+              <div class="subtitle">NDVI Change Analysis Report - Multi-Month Analysis</div>
+            </div>
+            
+            <!-- Report Information -->
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Division</div>
+                <div class="info-value">${selectedDivision === 'all' ? 'All Divisions' : (selectedDivision || 'N/A')}</div>
               </div>
-              <div class="stat-card afforested">
-                <h3>Afforested Area (Latest Month)</h3>
-                <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)} km²</div>
-                <p>${summaryStats.afforestedPercentage.toFixed(1)}% of total area</p>
+              <div class="info-item">
+                <div class="info-label">Range / Round / Beat</div>
+                <div class="info-value">${selectedRange || 'All'} / ${selectedRound || 'All'} / ${selectedBeat || 'All'}</div>
               </div>
-              <div class="stat-card">
-                <h3>Total Area</h3>
-                <div class="stat-value">${totalArea.toFixed(2)} km²</div>
-                <p>Complete coupe coverage</p>
+              <div class="info-item">
+                <div class="info-label">Date Range</div>
+                <div class="info-value">${startDate ? startDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : ''} - ${endDate ? endDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : ''}</div>
               </div>
-              <div class="stat-card">
-                <h3>Net Change (Latest)</h3>
-                <div class="stat-value" style="color: ${summaryStats.afforestedArea > summaryStats.degradedArea ? '#16a34a' : '#dc2626'}">
-                  ${(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)} km²
-                </div>
-                <p>${summaryStats.afforestedArea > summaryStats.degradedArea ? 'Positive' : 'Negative'} change</p>
+              <div class="info-item">
+                <div class="info-label">Months Analyzed</div>
+                <div class="info-value">${tableNames.length}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Generated On</div>
+                <div class="info-value">${dateStr}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Report ID</div>
+                <div class="info-value">FPMS-${Date.now().toString().slice(-8)}</div>
               </div>
             </div>
-          ` : ''}
-          
-          <h2>Monthly Summary</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Degraded Area (km²)</th>
-                <th>Afforested Area (km²)</th>
-                <th>Degraded %</th>
-                <th>Afforested %</th>
-                <th>Records</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${Object.entries(monthlyData).sort().map(([month, data]) => `
-                <tr>
-                  <td>${month}</td>
-                  <td>${data.stats.degradedArea.toFixed(2)}</td>
-                  <td>${data.stats.afforestedArea.toFixed(2)}</td>
-                  <td>${data.stats.degradedPercentage.toFixed(1)}%</td>
-                  <td>${data.stats.afforestedPercentage.toFixed(1)}%</td>
-                  <td>${data.stats.totalPolygons}</td>
-                </tr>
+            
+            <!-- Executive Summary -->
+            <div class="summary-card">
+              <h2 style="color: white; margin-top: 0; border-bottom-color: rgba(255,255,255,0.2);">📊 Executive Summary</h2>
+              <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">
+                This report provides a comprehensive analysis of forest cover changes based on NDVI (Normalized Difference Vegetation Index) 
+                satellite data for the period ${startDate ? startDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : ''} 
+                to ${endDate ? endDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : ''}.
+              </p>
+              
+              ${summaryStats ? `
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+                  <div style="text-align: center;">
+                    <div style="font-size: 14px; opacity: 0.9;">Total Area Monitored</div>
+                    <div style="font-size: 36px; font-weight: 700;">${totalArea.toFixed(2)}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">km²</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 14px; opacity: 0.9;">Net Change (Latest)</div>
+                    <div style="font-size: 36px; font-weight: 700; color: ${summaryStats.afforestedArea > summaryStats.degradedArea ? '#86efac' : '#fca5a5'};">
+                      ${(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)}
+                    </div>
+                    <div style="font-size: 14px; opacity: 0.9;">km²</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="font-size: 14px; opacity: 0.9;">Total Records</div>
+                    <div style="font-size: 36px; font-weight: 700;">${summaryStats.totalPolygons}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">polygons</div>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+            
+            <!-- Key Statistics for Latest Month -->
+            ${summaryStats ? `
+              <h2>📈 Key Statistics - ${selectedMonth} (Latest Month)</h2>
+              <div class="stats-grid">
+                <div class="stat-card degraded">
+                  <div class="stat-label">Degraded Area</div>
+                  <div class="stat-value">${summaryStats.degradedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
+                  <div class="stat-percentage">${summaryStats.degradedPercentage.toFixed(1)}% of total area</div>
+                </div>
+                
+                <div class="stat-card afforested">
+                  <div class="stat-label">Afforested Area</div>
+                  <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
+                  <div class="stat-percentage">${summaryStats.afforestedPercentage.toFixed(1)}% of total area</div>
+                </div>
+                
+                <div class="stat-card total">
+                  <div class="stat-label">Total Area</div>
+                  <div class="stat-value">${totalArea.toFixed(2)}<span class="stat-unit">km²</span></div>
+                  <div class="stat-percentage">Complete coverage</div>
+                </div>
+                
+                <div class="stat-card total">
+                  <div class="stat-label">Data Quality</div>
+                  <div class="stat-value">${summaryStats.withNotes}<span class="stat-unit">notes</span></div>
+                  <div class="stat-value" style="font-size: 20px;">${summaryStats.withImages}<span class="stat-unit">images</span></div>
+                </div>
+              </div>
+            ` : ''}
+            
+            <!-- Division-wise Breakdown (if All Divisions) -->
+            ${selectedDivision === 'all' && monthlyData[selectedMonth]?.divisionStats ? `
+              <h2>🏢 Division-wise Breakdown - ${selectedMonth}</h2>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin: 20px 0;">
+                ${Object.entries(monthlyData[selectedMonth].divisionStats).map(([division, stats]) => `
+                  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px;">
+                    <h3 style="margin: 0 0 15px 0; color: #2563eb; font-size: 16px; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">
+                      ${division}
+                    </h3>
+                    <div style="margin-bottom: 15px;">
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: #ef4444; font-size: 13px;">Degraded</span>
+                        <span style="font-weight: 600;">${stats.degradedArea.toFixed(2)} km²</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill degraded" style="width: ${stats.degradedPercentage}%;"></div>
+                      </div>
+                      
+                      <div style="display: flex; justify-content: space-between; margin: 10px 0 5px;">
+                        <span style="color: #22c55e; font-size: 13px;">Afforested</span>
+                        <span style="font-weight: 600;">${stats.afforestedArea.toFixed(2)} km²</span>
+                      </div>
+                      <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${stats.afforestedPercentage}%;"></div>
+                      </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #64748b;">
+                      <span>📝 Notes: ${stats.withNotes}</span>
+                      <span>🖼️ Images: ${stats.withImages}</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+            
+            <!-- Monthly Comparison -->
+            <h2>📅 Monthly Comparison Overview</h2>
+            <div class="monthly-summary">
+              ${Object.entries(monthlyData).sort().reverse().map(([month, data]) => `
+                <div class="month-card">
+                  <div class="month-title">${month}</div>
+                  <div class="month-stat">
+                    <span>Degraded:</span>
+                    <span style="color: #ef4444; font-weight: 600;">${data.stats.degradedArea.toFixed(2)} km²</span>
+                  </div>
+                  <div class="month-stat">
+                    <span>Afforested:</span>
+                    <span style="color: #22c55e; font-weight: 600;">${data.stats.afforestedArea.toFixed(2)} km²</span>
+                  </div>
+                  <div class="month-stat">
+                    <span>Net Change:</span>
+                    <span style="color: ${data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444'}; font-weight: 600;">
+                      ${(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
+                    </span>
+                  </div>
+                  <div class="month-stat">
+                    <span>Records:</span>
+                    <span>${data.data.length}</span>
+                  </div>
+                </div>
               `).join('')}
-            </tbody>
-          </table>
-          
-          <h2>Data Sample (First 20 Records - Latest Month)</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Division</th>
-                <th>Status</th>
-                <th>NDVI Change</th>
-                <th>Area (km²)</th>
-                <th>Latitude</th>
-                <th>Longitude</th>
-                <th>Has Note</th>
-                <th>Has Image</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredData.slice(0, 20).map(item => `
+            </div>
+            
+            <!-- Detailed Data Table -->
+            <h2>🔍 Detailed Data Sample (Latest Month - First 20 Records)</h2>
+            <table>
+              <thead>
                 <tr>
-                  <td>${item.division || selectedDivision || 'N/A'}</td>
-                  <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? 'Afforested' : 'Degraded'}</span></td>
-                  <td>${item.ndvi_change?.toFixed(4) || 'N/A'}</td>
-                  <td>${item.area_sq_km?.toFixed(6) || 'N/A'}</td>
-                  <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
-                  <td>${item.longitude?.toFixed(6) || 'N/A'}</td>
-                  <td>${item.has_note ? 'Yes' : 'No'}</td>
-                  <td>${item.has_image ? 'Yes' : 'No'}</td>
+                  ${showDivisionColumn ? '<th>Division</th>' : ''}
+                  <th>Status</th>
+                  <th>NDVI Change</th>
+                  <th>Category</th>
+                  <th>Latitude</th>
+                  <th>Longitude</th>
+                  <th>Area (km²)</th>
+                  <th>Note</th>
+                  <th>Image</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <div class="footer">
-            <p>Forest Cover Change Monitoring System © ${new Date().getFullYear()}</p>
-            <p>Data Source: Sentinel-2 NDVI Satellite Analysis | Report ID: ${Date.now()}</p>
-            <p><em>Note: All area measurements are in square kilometers (km²). Afforested area is calculated as (Total Coupe Area - Degraded Area).</em></p>
+              </thead>
+              <tbody>
+                ${filteredData.slice(0, 20).map(item => `
+                  <tr>
+                    ${showDivisionColumn ? `<td>${item.division || selectedDivision || 'N/A'}</td>` : ''}
+                    <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? 'Afforested' : 'Degraded'}</span></td>
+                    <td>${item.ndvi_change?.toFixed(4) || 'N/A'}</td>
+                    <td>${item.change_category || (item.status ? 'Afforestation' : 'Degradation')}</td>
+                    <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
+                    <td>${item.longitude?.toFixed(6) || 'N/A'}</td>
+                    <td>${item.area_sq_km?.toFixed(6) || '0.000000'}</td>
+                    <td>${item.has_note ? 
+                      '<span class="badge badge-note">✓ Note</span>' : 
+                      '<span style="color: #94a3b8;">—</span>'
+                    }</td>
+                    <td>${item.has_image ? 
+                      '<span class="badge badge-image">📸 Image</span>' : 
+                      '<span style="color: #94a3b8;">—</span>'
+                    }</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            
+            
+            
+            <!-- Monthly Trend Data -->
+            <h2>📈 Monthly Trend Analysis</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Degraded Area (km²)</th>
+                  <th>Afforested Area (km²)</th>
+                  <th>Degraded %</th>
+                  <th>Afforested %</th>
+                  <th>Net Change (km²)</th>
+                  <th>Records</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${Object.entries(monthlyData).sort().reverse().map(([month, data]) => {
+                  const netChange = data.stats.afforestedArea - data.stats.degradedArea;
+                  return `
+                    <tr>
+                      <td><strong>${month}</strong></td>
+                      <td style="color: #ef4444;">${data.stats.degradedArea.toFixed(2)}</td>
+                      <td style="color: #22c55e;">${data.stats.afforestedArea.toFixed(2)}</td>
+                      <td>${data.stats.degradedPercentage.toFixed(1)}%</td>
+                      <td>${data.stats.afforestedPercentage.toFixed(1)}%</td>
+                      <td style="color: ${netChange >= 0 ? '#22c55e' : '#ef4444'}; font-weight: 600;">
+                        ${netChange.toFixed(2)}
+                      </td>
+                      <td>${data.stats.totalPolygons}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+              <tfoot>
+                <tr style="background: #1e293b; color: white; font-weight: 600;">
+                  <td colspan="7" style="text-align: center;">
+                    Total Months Analyzed: ${Object.keys(monthlyData).length} | 
+                    Date Range: ${startDate ? startDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : ''} - 
+                    ${endDate ? endDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : ''}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+            
+            
+            
+            <!-- Footer -->
+            <div class="footer">
+              <p style="margin: 5px 0; font-size: 14px; font-weight: 600;">FOREST PATROLLING & MONITORING SYSTEM</p>
+              <p style="margin: 5px 0;">© ${new Date().getFullYear()} Gujarat Forest Department | All Rights Reserved</p>
+              <p style="margin: 5px 0;">Data Source: Sentinel-2 NDVI Satellite Analysis | Report Generated Automatically</p>
+              <p style="margin: 10px 0 0 0; font-size: 11px; color: #94a3b8;">
+                <em>Note: Afforested area is calculated as (Total Coupe Area - Degraded Area). Values are rounded to 2-6 decimal places. 
+                This report is for official monitoring purposes only.</em>
+              </p>
+            </div>
           </div>
           
           <script>
             window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 1000);
+              // Auto-print and close after printing
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() { 
+                  window.close(); 
+                }, 1000);
+              }, 500);
             }
           </script>
         </body>
       </html>
     `);
+    
     printWindow.document.close();
-  };
+    
+  } catch (error) {
+    console.error('Error generating PDF report:', error);
+    alert('Failed to generate PDF report. Please try again.');
+  }
+};
 
   // Refresh data
   const handleRefresh = () => {
@@ -1608,7 +2118,7 @@ const NDVIChangeDashboard = () => {
                   disabled={Object.keys(monthlyData).length === 0}
                   sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 >
-                  PDF
+                  Export PDF
                 </Button>
                 
               </Stack>
@@ -1638,7 +2148,7 @@ const NDVIChangeDashboard = () => {
               </Typography>
             </Grid>
             
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={5}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
                   views={['year', 'month']}
@@ -1660,7 +2170,7 @@ const NDVIChangeDashboard = () => {
               </LocalizationProvider>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={5}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
                   views={['year', 'month']}
@@ -1682,15 +2192,18 @@ const NDVIChangeDashboard = () => {
               </LocalizationProvider>
             </Grid>
             
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<Send />}
-              onClick={handleSubmit}
-              sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-            >
-              Submit
-            </Button>
+            <Grid item xs={12} md={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                startIcon={<Send />}
+                onClick={handleSubmit}
+                sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
+              >
+                Submit
+              </Button>
+            </Grid>
           </Grid>
         </CardContent>
       </Card>
@@ -1751,6 +2264,8 @@ const NDVIChangeDashboard = () => {
                 </Select>
               </FormControl>
             </Box>
+
+            
             <Grid container spacing={2} alignItems="center">
               <Grid item>
                 <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1803,6 +2318,7 @@ const NDVIChangeDashboard = () => {
           </CardContent>
         </Card>
       )}
+      
 
       {/* Summary Cards - Show only if data is available */}
       {summaryStats && !loading && (
@@ -1899,7 +2415,7 @@ const NDVIChangeDashboard = () => {
         </Grid>
       )}
 
-      {/* Division-wise Summary - Show only when All Divisions is selected */}
+            {/* Division-wise Summary - Show only when All Divisions is selected */}
       {selectedDivision === 'all' && summaryStats && monthlyData[selectedMonth]?.divisionStats && (
         <Card sx={{ mb: 4, borderRadius: 3, bgcolor: 'transparent' }}>
           <CardContent>
@@ -1919,7 +2435,7 @@ const NDVIChangeDashboard = () => {
                         <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
                           Degraded: {stats.degradedArea.toFixed(2)} km²
                         </Typography>
-                        <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 }}>
+                        <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 , paddingLeft: '20px' }}>
                           Afforested: {stats.afforestedArea.toFixed(2)} km²
                         </Typography>
                       </Box>
@@ -1948,453 +2464,502 @@ const NDVIChangeDashboard = () => {
         </Card>
       )}
 
-      {/* Main Content Tabs */}
-      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent"}}>
-        <CardContent sx={{ p: 0 }}>
-          <Tabs 
-            value={activeTab} 
-            onChange={handleTabChange} 
-            sx={{ 
-              px: 3, 
-              pt: 2,
-              borderBottom: 1, 
-              borderColor: 'divider',
-              '& .MuiTab-root': {
-                fontWeight: 600,
-                textTransform: 'none',
-                fontSize: '0.95rem'
-              }
-            }}
-          >
-            <Tab label="Charts & Analysis" icon={<BarChart />} disabled={Object.keys(monthlyData).length === 0} />
-            <Tab label="Data Table" icon={<Visibility />} disabled={Object.keys(monthlyData).length === 0} />
-            <Tab label="Monthly Overview" icon={<CalendarMonth />} disabled={Object.keys(monthlyData).length === 0} />
-          </Tabs>
-
-          <Box sx={{ p: 3 }}>
-            {activeTab === 0 && (
-              <Box>
-                {/* Chart Type Selection */}
-                <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-                  <Chip
-                    label="Area Bar Chart"
-                    onClick={() => setChartType('bar')}
-                    color={chartType === 'bar' ? 'primary' : 'default'}
-                    icon={<BarChart />}
-                  />
-                </Box>
-
-                {/* Chart Display */}
-                <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden' }}>
-                  {renderChart()}
-                </Box>
-
-                {/* Analysis Notes */}
-                {summaryStats && (
-                  <Card sx={{ mt: 4, borderRadius: 2, bgcolor:'transparent'}}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Info color="primary" />
-                        Analysis Summary - {selectedMonth}
-                      </Typography>
-                      <Grid container spacing={3}>
-                        <Grid item xs={12} md={6}>
-                          <Box sx={{ p: 2, bgcolor: 'transparent', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
-                              Key Findings
-                            </Typography>
-                            <Stack spacing={1.5}>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Box sx={{ width: 8, height: 8, bgcolor: '#ef4444', borderRadius: '50%', mr: 1.5 }} />
-                                <Typography variant="body2">
-                                  <strong>Degraded Area:</strong> {summaryStats.degradedArea.toFixed(2)} km² ({summaryStats.degradedPercentage.toFixed(1)}% of total)
-                                </Typography>
-                              </Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Box sx={{ width: 8, height: 8, bgcolor: '#22c55e', borderRadius: '50%', mr: 1.5 }} />
-                                <Typography variant="body2">
-                                  <strong>Afforested Area:</strong> {summaryStats.afforestedArea.toFixed(2)} km² ({summaryStats.afforestedPercentage.toFixed(1)}% of total)
-                                </Typography>
-                              </Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Box sx={{ width: 8, height: 8, bgcolor: '#3b82f6', borderRadius: '50%', mr: 1.5 }} />
-                                <Typography variant="body2">
-                                  <strong>Net Change:</strong> 
-                                  <span style={{ 
-                                    color: summaryStats.afforestedArea > summaryStats.degradedArea ? '#22c55e' : '#ef4444',
-                                    fontWeight: 600,
-                                    marginLeft: 4
-                                  }}>
-                                    {(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)} km²
-                                  </span>
-                                  ({summaryStats.afforestedArea > summaryStats.degradedArea ? 'Positive' : 'Negative'} change)
-                                </Typography>
-                              </Box>
-                            </Stack>
-                          </Box>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <Box sx={{ p: 2, bgcolor: 'transparent', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
-                              Data Quality
-                            </Typography>
-                            <Stack spacing={1.5}>
-                              <Typography variant="body2">
-                                <strong>Records with notes:</strong> {summaryStats.withNotes} ({((summaryStats.withNotes / summaryStats.totalPolygons) * 100).toFixed(1)}%)
-                              </Typography>
-                              <Typography variant="body2">
-                                <strong>Records with images:</strong> {summaryStats.withImages} ({((summaryStats.withImages / summaryStats.totalPolygons) * 100).toFixed(1)}%)
-                              </Typography>
-                              <Typography variant="body2">
-                                <strong>Total polygons analyzed:</strong> {summaryStats.totalPolygons.toLocaleString()}
-                              </Typography>
-                            </Stack>
-                          </Box>
-                        </Grid>
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                )}
+      {/* ===== SECTION 1: CHARTS & ANALYSIS ===== */}
+      {Object.keys(monthlyData).length > 0 && (
+        <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
+          <CardHeader
+            title="1. Charts & Analysis"
+            titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
+            avatar={<BarChart color="primary" />}
+            action={
+              <IconButton onClick={() => toggleSection('charts')}>
+                {expandedSections.charts ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+              </IconButton>
+            }
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          />
+          
+          {expandedSections.charts && (
+            <CardContent>
+              {/* Chart Type Selection */}
+              <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                <Chip
+                  label="Bar Chart"
+                  onClick={() => setChartType('bar')}
+                  color={chartType === 'bar' ? 'primary' : 'default'}
+                  icon={<BarChart />}
+                  clickable
+                />
+                {/* <Chip
+                  label="Line Chart"
+                  onClick={() => setChartType('line')}
+                  color={chartType === 'line' ? 'primary' : 'default'}
+                  icon={<ShowChart />}
+                  clickable
+                />
+                <Chip
+                  label="Pie Chart"
+                  onClick={() => setChartType('pie')}
+                  color={chartType === 'pie' ? 'primary' : 'default'}
+                  icon={<PieChart />}
+                  clickable
+                /> */}
               </Box>
-            )}
 
-            {activeTab === 1 && (
-              <Box>
-                {/* Search and Filter Controls */}
-                <Card sx={{ mb: 3, borderRadius: 2, bgcolor: 'transparent' }}>
+              {/* Chart Display */}
+              <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden' }}>
+                {renderChart()}
+              </Box>
+
+              {/* Analysis Notes */}
+              {summaryStats && (
+                <Card sx={{ mt: 4, borderRadius: 2, bgcolor:'transparent'}}>
                   <CardContent>
-                    <Grid container spacing={2} alignItems="center">
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Info color="primary" />
+                      Analysis Summary - {selectedMonth}
+                    </Typography>
+                    <Grid container spacing={3}>
                       <Grid item xs={12} md={6}>
-                        <TextField
-                          fullWidth
-                          placeholder="Search by ID, status, coordinates, notes, division..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          variant="outlined"
-                          size="small"
-                          InputProps={{
-                            startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
-                            sx: { borderRadius: 2 }
-                          }}
-                        />
+                        <Box sx={{ p: 2, bgcolor: 'transparent', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
+                            Key Findings
+                          </Typography>
+                          <Stack spacing={1.5}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Box sx={{ width: 8, height: 8, bgcolor: '#ef4444', borderRadius: '50%', mr: 1.5 }} />
+                              <Typography variant="body2">
+                                <strong>Degraded Area:</strong> {summaryStats.degradedArea.toFixed(2)} km² ({summaryStats.degradedPercentage.toFixed(1)}% of total)
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Box sx={{ width: 8, height: 8, bgcolor: '#22c55e', borderRadius: '50%', mr: 1.5 }} />
+                              <Typography variant="body2">
+                                <strong>Afforested Area:</strong> {summaryStats.afforestedArea.toFixed(2)} km² ({summaryStats.afforestedPercentage.toFixed(1)}% of total)
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Box sx={{ width: 8, height: 8, bgcolor: '#3b82f6', borderRadius: '50%', mr: 1.5 }} />
+                              <Typography variant="body2">
+                                <strong>Net Change:</strong> 
+                                <span style={{ 
+                                  color: summaryStats.afforestedArea > summaryStats.degradedArea ? '#22c55e' : '#ef4444',
+                                  fontWeight: 600,
+                                  marginLeft: 4
+                                }}>
+                                  {(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)} km²
+                                </span>
+                                ({summaryStats.afforestedArea > summaryStats.degradedArea ? 'Positive' : 'Negative'} change)
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Box>
                       </Grid>
                       <Grid item xs={12} md={6}>
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={showDivisionColumn}
-                                onChange={(e) => setShowDivisionColumn(e.target.checked)}
-                                color="primary"
-                                size="small"
-                              />
-                            }
-                            label="Show Division Column"
-                            disabled={selectedDivision !== 'all'}
-                          />
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={showOnlyWithNotes}
-                                onChange={(e) => setShowOnlyWithNotes(e.target.checked)}
-                                color="primary"
-                                size="small"
-                              />
-                            }
-                            label="Only with Notes"
-                          />
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={showOnlyWithImages}
-                                onChange={(e) => setShowOnlyWithImages(e.target.checked)}
-                                color="primary"
-                                size="small"
-                              />
-                            }
-                            label="Only with Images"
-                          />
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<FilterList />}
-                            onClick={() => {
-                              setSearchTerm('');
-                              setShowOnlyWithNotes(false);
-                              setShowOnlyWithImages(false);
-                            }}
-                            sx={{ borderRadius: 2 }}
-                          >
-                            Clear Filters
-                          </Button>
+                        <Box sx={{ p: 2, bgcolor: 'transparent', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
+                            Data Quality
+                          </Typography>
+                          <Stack spacing={1.5}>
+                            <Typography variant="body2">
+                              <strong>Records with notes:</strong> {summaryStats.withNotes} ({((summaryStats.withNotes / summaryStats.totalPolygons) * 100).toFixed(1)}%)
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Records with images:</strong> {summaryStats.withImages} ({((summaryStats.withImages / summaryStats.totalPolygons) * 100).toFixed(1)}%)
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Total polygons analyzed:</strong> {summaryStats.totalPolygons.toLocaleString()}
+                            </Typography>
+                          </Stack>
                         </Box>
                       </Grid>
                     </Grid>
                   </CardContent>
                 </Card>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      )}
 
-                {/* Data Table */}
-                <Paper sx={{ borderRadius: 2, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', bgcolor:'transparent' }}>
-                  <TableContainer sx={{ maxHeight: 500, position: 'relative' }}>
-                    <Table stickyHeader size="small" sx={{ minWidth: 1200 }}>
-                      <TableHead>
+      {/* ===== SECTION 2: DATA TABLE ===== */}
+      {Object.keys(monthlyData).length > 0 && (
+        <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
+          <CardHeader
+            title="2. Detailed Data Table"
+            titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
+            avatar={<Visibility color="primary" />}
+            action={
+              <IconButton onClick={() => toggleSection('dataTable')}>
+                {expandedSections.dataTable ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+              </IconButton>
+            }
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          />
+          
+          {expandedSections.dataTable && (
+            <CardContent>
+              {/* Search and Filter Controls */}
+              <Card sx={{ mb: 3, borderRadius: 2, bgcolor: 'transparent' }}>
+                <CardContent>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        placeholder="Search by ID, status, coordinates, notes, division..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        variant="outlined"
+                        size="small"
+                        InputProps={{
+                          startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
+                          sx: { borderRadius: 2 }
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+<Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+  <FormGroup row>
+    {selectedDivision === 'all' && (
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={showDivisionColumn}
+            onChange={(e) => setShowDivisionColumn(e.target.checked)}
+            color="primary"
+            size="small"
+          />
+        }
+        label="Show Division Column"
+      />
+    )}
+    
+    <FormControlLabel
+      control={
+        <Checkbox
+          checked={showOnlyWithNotes}
+          onChange={(e) => setShowOnlyWithNotes(e.target.checked)}
+          color="primary"
+          size="small"
+        />
+      }
+      label="Only with Notes"
+    />
+    
+    <FormControlLabel
+      control={
+        <Checkbox
+          checked={showOnlyWithImages}
+          onChange={(e) => setShowOnlyWithImages(e.target.checked)}
+          color="primary"
+          size="small"
+        />
+      }
+      label="Only with Images"
+    />
+  </FormGroup>
+  
+  <Button
+    variant="outlined"
+    size="small"
+    startIcon={<FilterList />}
+    onClick={() => {
+      setSearchTerm('');
+      setShowOnlyWithNotes(false);
+      setShowOnlyWithImages(false);
+      setShowDivisionColumn(false);
+    }}
+    sx={{ borderRadius: 2 }}
+  >
+    CLEAR FILTERS
+  </Button>
+</Box>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Data Table */}
+              <Paper sx={{ borderRadius: 2, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', bgcolor:'transparent' }}>
+                <TableContainer sx={{ maxHeight: 500, position: 'relative' }}>
+                  <Table stickyHeader size="small" sx={{ minWidth: 1200 }}>
+                    <TableHead>
+                      <TableRow>
+                        {showDivisionColumn && (
+                          <TableCell onClick={() => handleSort('division')} sx={{ cursor: 'pointer' }}>
+                            <Box display="flex" alignItems="center">
+                              <strong>Division</strong>
+                              <Sort sx={{ fontSize: 16, ml: 0.5 }} />
+                            </Box>
+                          </TableCell>
+                        )}
+                        <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
+                          <Box display="flex" alignItems="center">
+                            <strong>Status</strong>
+                            <Sort sx={{ fontSize: 16, ml: 0.5 }} />
+                          </Box>
+                        </TableCell>
+                        <TableCell><strong>NDVI Change</strong></TableCell>
+                        <TableCell><strong>Category</strong></TableCell>
+                        <TableCell><strong>Location</strong></TableCell>
+                        <TableCell><strong>Area (km²)</strong></TableCell>
+                        <TableCell onClick={() => handleSort('has_note')} sx={{ cursor: 'pointer' }}>
+                          <Box display="flex" alignItems="center">
+                            <strong>Has Note</strong>
+                            <Sort sx={{ fontSize: 16, ml: 0.5 }} />
+                          </Box>
+                        </TableCell>
+                        <TableCell onClick={() => handleSort('has_image')} sx={{ cursor: 'pointer' }}>
+                          <Box display="flex" alignItems="center">
+                            <strong>Has Image</strong>
+                            <Sort sx={{ fontSize: 16, ml: 0.5 }} />
+                          </Box>
+                        </TableCell>
+                        <TableCell><strong>Actions</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedData.length === 0 ? (
                         <TableRow>
-                          {showDivisionColumn && (
-                            <TableCell onClick={() => handleSort('division')} sx={{ cursor: 'pointer' }}>
-                              <Box display="flex" alignItems="center">
-                                <strong>Division</strong>
-                                <Sort sx={{ fontSize: 16, ml: 0.5 }} />
-                              </Box>
-                            </TableCell>
-                          )}
-                          <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
-                            <Box display="flex" alignItems="center">
-                              <strong>Status</strong>
-                              <Sort sx={{ fontSize: 16, ml: 0.5 }} />
+                          <TableCell colSpan={showDivisionColumn ? 10 : 9} align="center" sx={{ py: 6 }}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                              <Typography variant="h6" color="text.secondary" gutterBottom>
+                                No records found
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {searchTerm || showOnlyWithNotes || showOnlyWithImages 
+                                  ? 'Try adjusting your filters' 
+                                  : 'No data available for the selected criteria'}
+                              </Typography>
                             </Box>
                           </TableCell>
-                          <TableCell><strong>NDVI Change</strong></TableCell>
-                          <TableCell><strong>Category</strong></TableCell>
-                          <TableCell><strong>Location</strong></TableCell>
-                          <TableCell><strong>Area (km²)</strong></TableCell>
-                          <TableCell onClick={() => handleSort('has_note')} sx={{ cursor: 'pointer' }}>
-                            <Box display="flex" alignItems="center">
-                              <strong>Has Note</strong>
-                              <Sort sx={{ fontSize: 16, ml: 0.5 }} />
-                            </Box>
-                          </TableCell>
-                          <TableCell onClick={() => handleSort('has_image')} sx={{ cursor: 'pointer' }}>
-                            <Box display="flex" alignItems="center">
-                              <strong>Has Image</strong>
-                              <Sort sx={{ fontSize: 16, ml: 0.5 }} />
-                            </Box>
-                          </TableCell>
-                          <TableCell><strong>Actions</strong></TableCell>
                         </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {paginatedData.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={showDivisionColumn ? 10 : 9} align="center" sx={{ py: 6 }}>
-                              <Box sx={{ textAlign: 'center' }}>
-                                <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                                <Typography variant="h6" color="text.secondary" gutterBottom>
-                                  No records found
+                      ) : (
+                        paginatedData.map((row) => (
+                          <TableRow key={row.pixle_id} hover>
+                            {showDivisionColumn && (
+                              <TableCell>
+                                <Typography variant="body2" fontWeight={600} color="primary">
+                                  {row.division || 'N/A'}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {searchTerm || showOnlyWithNotes || showOnlyWithImages 
-                                    ? 'Try adjusting your filters' 
-                                    : 'No data available for the selected criteria'}
+                              </TableCell>
+                            )}
+                            <TableCell>
+                              <Chip
+                                label={row.status ? 'Degraded' : 'Afforested'}
+                                color={row.status ? 'error' : 'success'} 
+                                size="small"
+                                sx={{ fontWeight: 600 }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={row.ndvi_change ? row.ndvi_change.toFixed(4) : 'N/A'}
+                                color={row.ndvi_change < 0 ? 'error' : 'success'}
+                                size="small"
+                                variant="outlined"
+                                sx={{ fontWeight: 600 }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ 
+                                color: row.change_category === 'Degradation' ? '#ef4444' : '#22c55e',
+                                fontWeight: 600
+                              }}>
+                                {row.change_category || (row.status ? 'Degradation' : 'Afforestation')}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Box>
+                                <Typography variant="caption" display="block" color="text.secondary">
+                                  Lat: {row.latitude?.toFixed(6) || 'N/A'}
+                                </Typography>
+                                <Typography variant="caption" display="block" color="text.secondary">
+                                  Lon: {row.longitude?.toFixed(6) || 'N/A'}
                                 </Typography>
                               </Box>
                             </TableCell>
-                          </TableRow>
-                        ) : (
-                          paginatedData.map((row) => (
-                            <TableRow key={row.pixle_id} hover>
-                              {showDivisionColumn && (
-                                <TableCell>
-                                  <Typography variant="body2" fontWeight={600} color="primary">
-                                    {row.division || 'N/A'}
-                                  </Typography>
-                                </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600}>
+                                {row.area_sq_km?.toFixed(6) || '0.000000'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              {row.has_note ? (
+                                <MuiTooltip title={row.note || 'Note available'}>
+                                  <Chip label="Yes" color="primary" size="small" icon={<Note />} />
+                                </MuiTooltip>
+                              ) : (
+                                <Chip label="No" color="default" size="small" variant="outlined" />
                               )}
-                              <TableCell>
+                            </TableCell>
+                            <TableCell>
+                              {row.has_image ? (
                                 <Chip
-                                  label={row.status ? 'Afforested' : 'Degraded'}
-                                  color={row.status ? 'success' : 'error'} 
+                                  label="Yes"
+                                  color="warning"
                                   size="small"
-                                  sx={{ fontWeight: 600 }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Chip
-                                  label={row.ndvi_change ? row.ndvi_change.toFixed(4) : 'N/A'}
-                                  color={row.ndvi_change < 0 ? 'error' : 'success'}
-                                  size="small"
-                                  variant="outlined"
-                                  sx={{ fontWeight: 600 }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" sx={{ 
-                                  color: row.change_category === 'Degradation' ? '#ef4444' : '#22c55e',
-                                  fontWeight: 600
-                                }}>
-                                  {row.change_category || (row.status ? 'Degradation' : 'Afforestation')}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <Box>
-                                  <Typography variant="caption" display="block" color="text.secondary">
-                                    Lat: {row.latitude?.toFixed(6) || 'N/A'}
-                                  </Typography>
-                                  <Typography variant="caption" display="block" color="text.secondary">
-                                    Lon: {row.longitude?.toFixed(6) || 'N/A'}
-                                  </Typography>
-                                </Box>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {row.area_sq_km?.toFixed(6) || '0.000000'}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                {row.has_note ? (
-                                  <MuiTooltip title={row.note || 'Note available'}>
-                                    <Chip label="Yes" color="primary" size="small" icon={<Note />} />
-                                  </MuiTooltip>
-                                ) : (
-                                  <Chip label="No" color="default" size="small" variant="outlined" />
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {row.has_image ? (
-                                  <Chip
-                                    label="Yes"
-                                    color="warning"
-                                    size="small"
-                                    icon={<ImageIcon />}
-                                    onClick={() => {
-                                      setSelectedRecord(row);
-                                      setImageModalOpen(true);
-                                    }}
-                                    clickable
-                                  />
-                                ) : (
-                                  <Chip label="No" color="default" size="small" variant="outlined" />
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<Visibility />}
+                                  icon={<ImageIcon />}
                                   onClick={() => {
                                     setSelectedRecord(row);
-                                    setModalOpen(true);
+                                    setImageModalOpen(true);
                                   }}
-                                >
-                                  Details
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                  
-                  {/* Pagination */}
-                  {filteredData.length > 0 && (
-                    <Box sx={{ p: 2, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filteredData.length)} of {filteredData.length.toLocaleString()} records
-                      </Typography>
-                      <Box display="flex" alignItems="center" gap={2}>
-                        <Select
-                          value={rowsPerPage}
-                          onChange={handleChangeRowsPerPage}
-                          size="small"
-                          sx={{ minWidth: 80 }}
-                        >
-                          {rowsPerPageOptions.map(option => (
-                            <MenuItem key={option} value={option}>{option}</MenuItem>
-                          ))}
-                        </Select>
-                        <Box display="flex" gap={1}>
-                          <Button size="small" onClick={() => setPage(page - 1)} disabled={page === 0}>
-                            Previous
-                          </Button>
-                          <Typography variant="body2" sx={{ alignSelf: 'center' }}>
-                            Page {page + 1} of {Math.ceil(filteredData.length / rowsPerPage)}
-                          </Typography>
-                          <Button size="small" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(filteredData.length / rowsPerPage) - 1}>
-                            Next
-                          </Button>
-                        </Box>
+                                  clickable
+                                />
+                              ) : (
+                                <Chip label="No" color="default" size="small" variant="outlined" />
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<Visibility />}
+                                onClick={() => {
+                                  setSelectedRecord(row);
+                                  setModalOpen(true);
+                                }}
+                              >
+                                Details
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                
+                {/* Pagination */}
+                {filteredData.length > 0 && (
+                  <Box sx={{ p: 2, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filteredData.length)} of {filteredData.length.toLocaleString()} records
+                    </Typography>
+                    <Box display="flex" alignItems="center" gap={2}>
+                      <Select
+                        value={rowsPerPage}
+                        onChange={handleChangeRowsPerPage}
+                        size="small"
+                        sx={{ minWidth: 80 }}
+                      >
+                        {rowsPerPageOptions.map(option => (
+                          <MenuItem key={option} value={option}>{option}</MenuItem>
+                        ))}
+                      </Select>
+                      <Box display="flex" gap={1}>
+                        <Button size="small" onClick={() => setPage(page - 1)} disabled={page === 0}>
+                          Previous
+                        </Button>
+                        <Typography variant="body2" sx={{ alignSelf: 'center' }}>
+                          Page {page + 1} of {Math.ceil(filteredData.length / rowsPerPage)}
+                        </Typography>
+                        <Button size="small" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(filteredData.length / rowsPerPage) - 1}>
+                          Next
+                        </Button>
                       </Box>
                     </Box>
-                  )}
-                </Paper>
-              </Box>
-            )}
+                  </Box>
+                )}
+              </Paper>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
-            {activeTab === 2 && (
-              <Box>
-                <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CalendarMonth color="primary" />
-                  Monthly Comparison Overview {selectedDivision === 'all' && '(All Divisions)'}
-                </Typography>
-                <Grid container spacing={3}>
-                  {Object.entries(monthlyData).sort().reverse().map(([month, data]) => (
-                    <Grid item xs={12} sm={6} md={4} lg={3} key={month}>
-                      <Card 
-                        sx={{ 
-                          cursor: 'pointer',
-                          borderRadius: 3,
-                          border: selectedMonth === month ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                          transition: 'all 0.2s ease-in-out',
-                          '&:hover': {
-                            transform: 'translateY(-4px)',
-                            boxShadow: '0 12px 24px rgba(0,0,0,0.1)'
-                          },
-                          bgcolor: 'transparent',
-                        }}
-                        onClick={() => {
-                          setSelectedMonth(month);
-                          setCurrentTableData(data.data);
-                          setSummaryStats(data.stats);
-                          setActiveTab(0);
-                        }}
-                      >
-                        <CardContent sx={{ p: 2.5 }}>
-                          <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ color: 'black' }}>
-                            {month}
-                          </Typography>
-                          {data.stats && (
-                            <>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-                                <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
-                                  Degraded: {data.stats.degradedArea?.toFixed(2)} km²
+      {/* ===== SECTION 3: MONTHLY OVERVIEW ===== */}
+      {Object.keys(monthlyData).length > 0 && (
+        <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
+          <CardHeader
+            title="3. Monthly Overview"
+            titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
+            avatar={<CalendarMonth color="primary" />}
+            action={
+              <IconButton onClick={() => toggleSection('monthlyOverview')}>
+                {expandedSections.monthlyOverview ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+              </IconButton>
+            }
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          />
+          
+          {expandedSections.monthlyOverview && (
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CalendarMonth color="primary" />
+                Monthly Comparison Overview {selectedDivision === 'all' && '(All Divisions)'}
+              </Typography>
+              <Grid container spacing={3}>
+                {Object.entries(monthlyData).sort().reverse().map(([month, data]) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={month}>
+                    <Card 
+                      sx={{ 
+                        cursor: 'pointer',
+                        borderRadius: 3,
+                        border: selectedMonth === month ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 12px 24px rgba(0,0,0,0.1)'
+                        },
+                        bgcolor: 'transparent',
+                      }}
+                      onClick={() => {
+                        setSelectedMonth(month);
+                        setCurrentTableData(data.data);
+                        setSummaryStats(data.stats);
+                        // Scroll to charts section
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      <CardContent sx={{ p: 2.5 }}>
+                        <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ color: 'black' }}>
+                          {month}
+                        </Typography>
+                        {data.stats && (
+                          <>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                              <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
+                                Degraded: {data.stats.degradedArea?.toFixed(2)} km²
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600, paddingLeft: '20px' }}>
+                                Afforested: {data.stats.afforestedArea?.toFixed(2)} km²
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
+                                Δ: {(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
+                              </Typography>
+                              <Typography variant="caption" sx={{ 
+                                color: data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444',
+                                fontWeight: 600
+                              }}>
+                                {data.stats.afforestedArea > data.stats.degradedArea ? '↑ Positive' : '↓ Negative'}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Records: {data.data.length}
+                              </Typography>
+                              {selectedDivision === 'all' && data.divisionStats && (
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  Divisions: {Object.keys(data.divisionStats).length}
                                 </Typography>
-                                <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 }}>
-                                  Afforested: {data.stats.afforestedArea?.toFixed(2)} km²
-                                </Typography>
-                              </Box>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
-                                  Δ: {(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
-                                </Typography>
-                                <Typography variant="caption" sx={{ 
-                                  color: data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444',
-                                  fontWeight: 600
-                                }}>
-                                  {data.stats.afforestedArea > data.stats.degradedArea ? '↑ Positive' : '↓ Negative'}
-                                </Typography>
-                              </Box>
-                              <Box sx={{ mt: 1 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                  Records: {data.data.length}
-                                </Typography>
-                                {selectedDivision === 'all' && data.divisionStats && (
-                                  <Typography variant="caption" color="text.secondary" display="block">
-                                    Divisions: {Object.keys(data.divisionStats).length}
-                                  </Typography>
-                                )}
-                              </Box>
-                            </>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            )}
-          </Box>
-        </CardContent>
-      </Card>
+                              )}
+                            </Box>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
+
 
       {/* Record Detail Modal */}
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="md" fullWidth>
@@ -2404,6 +2969,9 @@ const NDVIChangeDashboard = () => {
               <Visibility sx={{ mr: 1, verticalAlign: 'middle' }} />
               Pixel Details - ID: {selectedRecord?.pixle_id}
             </Typography>
+            <IconButton onClick={() => setModalOpen(false)} sx={{ color: 'white' }}>
+              <Close />
+            </IconButton>
           </Box>
         </DialogTitle>
         <DialogContent dividers>
@@ -2558,7 +3126,7 @@ const NDVIChangeDashboard = () => {
       {/* Footer */}
       <Box sx={{ mt: 6, pt: 4, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          <strong>Forest Cover Change Monitoring System</strong> © {new Date().getFullYear()} | 
+          <strong>FOREST PATROLLING & MONITORING SYSTEM</strong> © {new Date().getFullYear()} | 
           Data Source: Sentinel-2 Satellite NDVI Analysis
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block">

@@ -1107,6 +1107,39 @@ const handleClientSideSearch = () => {
   setCurrentPage(1);
 };
 
+// Add this after your existing useEffect
+useEffect(() => {
+  // Get user data from localStorage
+  const userDataStr = localStorage.getItem("session");
+  if (userDataStr) {
+    try {
+      const userData = JSON.parse(userDataStr);
+      const userDivision = userData?.user?.division;
+      
+      if (userDivision) {
+        console.log("Setting default division from user data:", userDivision);
+        setDivisionFilter(userDivision);
+        
+        // Also set the filtered ranges based on this division
+        setTimeout(() => {
+          const filtered = ranges1.filter(range => {
+            if (typeof range === 'string') return range === userDivision;
+            return range.division === userDivision || range.division_name === userDivision;
+          });
+          
+          if (filtered.length > 0) {
+            setFilteredRanges(filtered);
+          } else {
+            fetchRangesByDivision(userDivision);
+          }
+        }, 1000); // Small delay to ensure ranges1 is loaded
+      }
+    } catch (error) {
+      console.error("Error parsing user data from localStorage:", error);
+    }
+  }
+}, [ranges1]); // Add ranges1 as dependency
+
   useEffect(() => {
   fetchPatrolData(currentPage, pageSize);
   fetchPatrolData2();
@@ -2116,7 +2149,7 @@ useEffect(() => {
   showSearch
   optionFilterProp="children"
 >
-  <Option value="">{language === "gu" ? "બધા વિભાગો" : "All Divisions"}</Option>
+  {/* <Option value="">{language === "gu" ? "બધા વિભાગો" : "All Divisions"}</Option>
   {Array.isArray(divisions1) && divisions1.length > 0 ? (
     divisions1.map((division, index) => {
       let divisionValue = '';
@@ -2147,7 +2180,7 @@ useEffect(() => {
     <Option disabled value="no-data">
       {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
     </Option>
-  )}
+  )} */}
 </Select>
 
 {/* Range Filter */}
@@ -2265,7 +2298,7 @@ useEffect(() => {
             <Select
               placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકારથી શોધો" : "Search by Patrolling Type"}
               style={{
-                width: "100px",
+                width: "150px",
                 // border: "1px solid #d9d9d9",
                 borderRadius: "0px",
                 background: "#fff",
@@ -2282,7 +2315,7 @@ useEffect(() => {
               </div>
             )}
             >
-              <Option value="">{language === "gu" ? "બધા" : "All"}</Option>
+              <Option value="">{language === "gu" ? "પ્રકારથી શોધો" : "Patrolling Type"}</Option>
               <Option value="Day patrolling">{language === "gu" ? "દિવસ પેટ્રોલિંગ" : "Day Patrolling"}</Option>
               <Option value="Night patrolling">{language === "gu" ? "રાત પેટ્રોલિંગ" : "Night Patrolling"}</Option>
               <Option value="Beat checking">{language === "gu" ? "બીટ ચેકિંગ" : "Beat Checking"}</Option>
