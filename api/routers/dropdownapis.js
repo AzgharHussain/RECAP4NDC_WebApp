@@ -86,7 +86,7 @@ router.get('/hierarchy-divisions', async (req, res) => {
   try {
     const query = `
       SELECT DISTINCT division
-      FROM public.coupe_dropdown_master
+      FROM public.coupe_all
       WHERE division IS NOT NULL AND division != ''
       ORDER BY division
     `;
@@ -117,7 +117,7 @@ router.post('/hierarchy-ranges', async (req, res) => {
 
     const query = `
       SELECT DISTINCT range
-      FROM public.coupe_dropdown_master
+      FROM public.coupe_all
       WHERE division = ?
       ORDER BY range
     `;
@@ -150,7 +150,7 @@ router.post('/hierarchy-rounds', async (req, res) => {
 
     const query = `
       SELECT DISTINCT round
-      FROM public.coupe_dropdown_master
+      FROM public.coupe_all
       WHERE division = ? AND range = ?
       ORDER BY round
     `;
@@ -184,7 +184,7 @@ router.post('/hierarchy-beats', async (req, res) => {
 
     const query = `
       SELECT DISTINCT beat
-      FROM public.coupe_dropdown_master
+      FROM public.coupe_all
       WHERE division = ? AND range = ? AND round = ?
       ORDER BY beat
     `;
@@ -219,7 +219,7 @@ router.post('/hierarchy-villages', async (req, res) => {
 
     const query = `
       SELECT DISTINCT village
-      FROM public.coupe_dropdown_master
+      FROM public.coupe_all
       WHERE division = ? AND range = ? AND round = ? AND beat = ?
       ORDER BY village
     `;
