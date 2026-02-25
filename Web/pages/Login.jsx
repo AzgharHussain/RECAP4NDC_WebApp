@@ -286,7 +286,8 @@ const saveUser = async (username) => {
       {
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'x-temp-token': 'RECAP4NDC_TEMP_TOKEN' // Custom header for temporary token verification
         },
         timeout: 10000 // 10 second timeout
       }

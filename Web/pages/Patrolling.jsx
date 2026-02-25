@@ -1108,37 +1108,37 @@ const handleClientSideSearch = () => {
 };
 
 // Add this after your existing useEffect
-useEffect(() => {
-  // Get user data from localStorage
-  const userDataStr = localStorage.getItem("session");
-  if (userDataStr) {
-    try {
-      const userData = JSON.parse(userDataStr);
-      const userDivision = userData?.user?.division;
+// useEffect(() => {
+//   // Get user data from localStorage
+//   const userDataStr = localStorage.getItem("session");
+//   if (userDataStr) {
+//     try {
+//       const userData = JSON.parse(userDataStr);
+//       const userDivision = userData?.user?.division;
       
-      if (userDivision) {
-        console.log("Setting default division from user data:", userDivision);
-        setDivisionFilter(userDivision);
+//       if (userDivision) {
+//         console.log("Setting default division from user data:", userDivision);
+//         setDivisionFilter(userDivision);
         
-        // Also set the filtered ranges based on this division
-        setTimeout(() => {
-          const filtered = ranges1.filter(range => {
-            if (typeof range === 'string') return range === userDivision;
-            return range.division === userDivision || range.division_name === userDivision;
-          });
+//         // Also set the filtered ranges based on this division
+//         setTimeout(() => {
+//           const filtered = ranges1.filter(range => {
+//             if (typeof range === 'string') return range === userDivision;
+//             return range.division === userDivision || range.division_name === userDivision;
+//           });
           
-          if (filtered.length > 0) {
-            setFilteredRanges(filtered);
-          } else {
-            fetchRangesByDivision(userDivision);
-          }
-        }, 1000); // Small delay to ensure ranges1 is loaded
-      }
-    } catch (error) {
-      console.error("Error parsing user data from localStorage:", error);
-    }
-  }
-}, [ranges1]); // Add ranges1 as dependency
+//           if (filtered.length > 0) {
+//             setFilteredRanges(filtered);
+//           } else {
+//             fetchRangesByDivision(userDivision);
+//           }
+//         }, 1000); // Small delay to ensure ranges1 is loaded
+//       }
+//     } catch (error) {
+//       console.error("Error parsing user data from localStorage:", error);
+//     }
+//   }
+// }, [ranges1]); // Add ranges1 as dependency
 
   useEffect(() => {
   fetchPatrolData(currentPage, pageSize);
@@ -2149,7 +2149,7 @@ useEffect(() => {
   showSearch
   optionFilterProp="children"
 >
-  {/* <Option value="">{language === "gu" ? "બધા વિભાગો" : "All Divisions"}</Option>
+  <Option value="">{language === "gu" ? "બધા વિભાગો" : "All Divisions"}</Option>
   {Array.isArray(divisions1) && divisions1.length > 0 ? (
     divisions1.map((division, index) => {
       let divisionValue = '';
@@ -2180,7 +2180,7 @@ useEffect(() => {
     <Option disabled value="no-data">
       {language === "gu" ? "કોઈ ડેટા નથી" : "No data available"}
     </Option>
-  )} */}
+  )}
 </Select>
 
 {/* Range Filter */}

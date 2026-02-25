@@ -120,11 +120,10 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in filtered NDVI API:', error);
+        console.error('Error in filtered NDVI API');
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch filtered NDVI data',
-            error: error.message
+            message: 'Failed to fetch filtered NDVI data'
         });
     }
 });

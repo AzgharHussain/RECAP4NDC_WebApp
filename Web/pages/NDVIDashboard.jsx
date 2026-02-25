@@ -748,7 +748,7 @@ const NDVIChangeDashboard = () => {
               }
             }
           } catch (err) {
-            console.error(`Error fetching data for division ${division.division}, month ${month}:`, err);
+            console.error(`Error fetching data for division`);
           }
         }
         
@@ -958,7 +958,7 @@ const NDVIChangeDashboard = () => {
             }
           }
         } catch (err) {
-          console.error(`Error fetching data for month ${month}:`, err);
+          console.error(`Error fetching data for month`);
         }
       }
       
@@ -2439,14 +2439,14 @@ const handleExportToPDF = () => {
                           Afforested: {stats.afforestedArea.toFixed(2)} km²
                         </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="caption" color="text.secondary">
                           Deg %: {stats.degradedPercentage.toFixed(1)}%
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           Aff %: {stats.afforestedPercentage.toFixed(1)}%
                         </Typography>
-                      </Box>
+                      </Box> */}
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="caption" color="text.secondary">
                           Notes: {stats.withNotes}
