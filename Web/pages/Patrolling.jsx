@@ -908,6 +908,13 @@ const fetchPatrolData2 = async () => {
   }
 };
 
+const handleSearchInputChange = (e) => {
+  // Only allow alphanumeric, spaces, and common punctuation
+  const sanitizedValue = e.target.value.replace(/[^a-zA-Z0-9\s\-_,.]/g, '');
+  setSearchText(sanitizedValue);
+};
+
+
 const fetchFilteredPatrolData = async (page = 1, limit = 5) => {
   console.log('fetchFilteredPatrolData called with filters:', {
     divisionFilter,
@@ -2124,7 +2131,7 @@ useEffect(() => {
                 borderRadius: "4px",
               }}
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={handleSearchInputChange}
               onPressEnter={handleSearch}
               suffix={
                 <SearchOutlined
