@@ -822,7 +822,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
               <WMSTileLayer
                 key="gujarat-difference"
-                url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                url="/geoserver/cite/wms"
                 layers="cite:Gujarat_difference"
                 format="image/png"
                 transparent={true}
@@ -832,7 +832,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
               <WMSTileLayer
                 key="state_shp"
-                url="https://gisfy.co.in:8445/geoserver/Recap4NDC/wms"
+                url="/geoserver/Recap4NDC/wms"
                 layers="Recap4NDC:state_shp"
                 format="image/png"
                 transparent={true}
@@ -843,7 +843,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
               <WMSTileLayer
                 key="tblIndia"
-                url="https://gisfy.co.in:8445/geoserver/Recap4NDC/wms"
+                url="/geoserver/Recap4NDC/wms"
                 layers="Recap4NDC:tblIndia"
                 format="image/png"
                 transparent={true}
@@ -854,7 +854,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
               {showDistrictLayer && (
                 <WMSTileLayer
-                  url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                  url="/geoserver/cite/wms"
                   layers="cite:Gujarat_district"
                   format="image/png"
                   transparent
@@ -865,7 +865,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                 coupeLayers.map((layer) => (
                   <WMSTileLayer
                     key={layer.input_table_name || layer}
-                    url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                    url="/geoserver/cite/wms"
                     layers={layer.input_table_name || layer}
                     format="image/png"
                     transparent={true}
@@ -879,7 +879,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   ? filteredNdviLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                        url="/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -890,7 +890,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   : ndviLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                        url="/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -904,7 +904,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   ? filteredNdwiLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                        url="/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -915,7 +915,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   : ndwiLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                        url="/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -929,7 +929,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   ? filteredChangeLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                        url="/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -940,7 +940,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   : changeLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                        url="/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -952,7 +952,7 @@ const handleLayerToggle = (layerType, isChecked) => {
               {showPatrollingLayer && (
                 <WMSTileLayer
                   key="patrols"
-                  url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                  url="/geoserver/cite/wms"
                   layers="cite:patrols"
                   format="image/png"
                   transparent={true}
@@ -964,7 +964,7 @@ const handleLayerToggle = (layerType, isChecked) => {
               {showIncidentLayer && (
                 <WMSTileLayer
                   key="incidents"
-                  url="https://gisfy.co.in:8445/geoserver/cite/wms"
+                  url="/geoserver/cite/wms"
                   layers="cite:incidents"
                   format="image/png"
                   transparent={true}
