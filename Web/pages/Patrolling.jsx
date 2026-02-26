@@ -910,8 +910,8 @@ const fetchPatrolData2 = async () => {
 
 const handleSearchInputChange = (e) => {
   // Only allow alphanumeric, spaces, and common punctuation
-  const sanitizedValue = e.target.value.replace(/[^a-zA-Z0-9\s\-_,.]/g, '');
-  setSearchText(sanitizedValue);
+  // const sanitizedValue = e.target.value.replace(/[^a-zA-Z0-9\s\-_,.]/g, '');
+  setSearchText(e.target.value);
 };
 
 
