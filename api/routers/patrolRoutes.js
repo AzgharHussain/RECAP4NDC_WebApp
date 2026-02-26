@@ -286,7 +286,16 @@ router.get('/patrol-info-page', verifyJwt, async (req, res) => {
         paramIndex++;
       }
     };
+// Validate officer_name
+if (officer_name) {
+  const namePattern = /^[a-zA-Z\s.-]{1,100}$/;
 
+  if (!namePattern.test(officer_name)) {
+    return res.status(400).json({
+      error: "Invalid officer_name. Only letters, spaces, dot and hyphen allowed."
+    });
+  }
+}
     // Add filters with appropriate operators
     if (officer_name) {
       conditions.push(`p.patrol_officer_name ILIKE $${paramIndex}`);
