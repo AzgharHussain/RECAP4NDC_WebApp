@@ -39,38 +39,7 @@ app.use(errorHandler);
 
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      useDefaults: false,
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "https://fonts.googleapis.com"],
-        objectSrc: ["'none'"],
-        frameAncestors: ["'none'"],
-        imgSrc: ["'self'", "data:"],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'","https://fonts.gstatic.com"],
-        connectSrc: ["'self'", "https://forestrecap.gisfy.co.in", "http://localhost:5002", "http://68.178.167.216:5002"],
-
-      },
-    },
-    noSniff: true,
-    frameguard: { action: "deny" },
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
-    referrerPolicy: {
-      policy: "strict-origin-when-cross-origin",
-    },
-    permissionsPolicy: {
-      features: {
-        geolocation: [],
-        camera: [],
-        microphone: [],
-      },
-    },
+    contentSecurityPolicy: false
   })
 );
 
@@ -124,7 +93,7 @@ const allowedOrigins = ['https://gisfy.co.in:8445/geoserver/wms',
   'https://forestrecap.gisfy.co.in',
   'http://localhost:5002',
   'http://68.178.167.216:5002',
-'http://localhost:5173', 'http://localhost:5175'
+'http://localhost:5173', 'http://localhost:5175','http://13.235.78.63:5002'
 ];
 
 app.use(cors({
@@ -614,7 +583,7 @@ app.use((req, res, next) => {
 // ==================== START SERVER ==================== //
 const PORT = process.env.PORT || 5002;
 
-app.listen(PORT, '0.0.0.0' , async () => {
+app.listen(PORT, "127.0.0.1" , async () => {
   try {
     await sequelize.authenticate();
     console.log('🟢 Database connected successfully');

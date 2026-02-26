@@ -65,7 +65,7 @@ const basemaps = {
 
 // Utility function to fetch legend for a WMS layer
 const getLegendUrl = (layerName) =>
-  `https://www.gisfy.co.in:8445/geoserver/cite/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=${encodeURIComponent(
+  `/geoserver/cite/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&LAYER=${encodeURIComponent(
     layerName
   )}`;
 export default function MapView() {
