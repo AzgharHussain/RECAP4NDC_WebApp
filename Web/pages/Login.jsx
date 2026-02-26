@@ -30,6 +30,26 @@ function Login() {
   const [error, setError] = useState("");
   const userIdRef = useRef(null);
 
+  const setSecureCookie = () => {
+  const cookieValue = "session_active=true";
+  
+  // Set cookies for each path your app uses
+  const paths = ['/petrolling-incident', '/geo', '/ndvi-dashboard', '/admin'];
+  
+  paths.forEach(path => {
+    const cookieAttributes = [
+      `path=${path}`,        // Path-specific cookie ✓
+      "secure",              // Secure flag ✓
+      "samesite=strict",     // SameSite attribute ✓
+      "max-age=86400"        // 24 hours
+    ];
+    document.cookie = `${cookieValue}; ${cookieAttributes.join('; ')}`;
+  });
+  
+  // Also set a general API cookie if needed
+  document.cookie = `session_active=true; path=/api; secure; samesite=strict; max-age=86400`;
+};
+
   // Focus on user ID input on mount
   useEffect(() => {
     if (userIdRef.current) {
@@ -94,6 +114,8 @@ function Login() {
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
       isActive: true
     };
+
+    setSecureCookie();
 
     // Store session in localStorage
     localStorage.setItem('session', JSON.stringify(sessionData));
