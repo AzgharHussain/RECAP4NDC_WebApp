@@ -1,2 +1,2 @@
-export const API_BASE_URL = "";
-export const geoserverUrl = "/geoserver/wms";
+export const API_BASE_URL = "http://localhost:5002";
+export const geoserverUrl = "h/geoserver/wms";

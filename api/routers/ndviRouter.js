@@ -128,6 +128,54 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
     }
 });
 
+router.post('/ndvi-change-get-filtered-union', verifyJwt, async (req, res) => {
+  const { tableNames, range, round, beat } = req.body;
+
+  if (!Array.isArray(tableNames) || tableNames.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "tableNames array is required"
+    });
+  }
+
+  try {
+ 
+    const queryParams = [];
+    
+
+   
+   
+  
+
+    // Query the view with filters
+    const finalQuery = `
+      SELECT division, pixle_id, note, image_data, status, range, round, beat, source_table, data_date, original_division
+      FROM public.v_all_coupe_ndvi_change
+     
+      ORDER BY source_table, data_date, pixle_id;
+    `;
+
+    const [results] = await sequelize.query(finalQuery, {
+      bind: queryParams
+    });
+
+    res.json({
+      success: true,
+      message: "Data fetched successfully from view",
+      data: results,
+      count: results.length
+    });
+
+  } catch (error) {
+    console.error("View query error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch NDVI data from view",
+      error: error.message
+    });
+  }
+});
+
 // Add filtered degraded area endpoint
 
 

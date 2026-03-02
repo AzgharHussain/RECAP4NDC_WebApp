@@ -634,204 +634,151 @@ const NDVIChangeDashboard = () => {
   };
 
   // Simplified function to fetch data for all divisions separately
-  const fetchAllDivisionsData = async (months) => {
-    try {
-      const token = localStorage.getItem("token");
-      
-      // First, get all divisions
-      const divisionsRes = await axios.get(
-        `${API_BASE_URL}/api/coupe-divisions`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
-      const allDivisions = divisionsRes.data[0] || [];
-      
-      if (allDivisions.length === 0) {
-        setError('No divisions found');
-        return;
+const fetchAllDivisionsData = async (months) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    // 1. Fetch divisions
+    const divisionsRes = await axios.get(
+      `${API_BASE_URL}/api/coupe-divisions`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       }
-      
-      console.log(`Fetching data for ${allDivisions.length} divisions`);
-      
-      // Create a temporary object to store data per division per month
-      const tempMonthlyData = {};
-      
-      // For each month, fetch data for each division separately
-      for (const month of months) {
-        let monthAllData = [];
-        
-        for (const division of allDivisions) {
-          try {
-            const divisionName = division.division;
-            const coupeToUse = transformDivisionToCoupe(divisionName);
-            
-            if (!coupeToUse) continue;
-            
-            // Fetch total area for this division's coupe
-            const divisionTotalArea = await fetchDivisionTotalArea(coupeToUse);
-            
-            if (divisionTotalArea <= 0) continue;
-            
-            // Construct table name for this month
-            const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
-            
-            console.log(`Fetching data for division: ${divisionName}, month: ${month}`);
-            
-            // Fetch data with hierarchy filters (range/round/beat may be null)
-            const dataResponse = await axios.post(
-              `${API_BASE_URL}/api/ndvi-change-get-filtered`,
-              {
-                tableName,
-                division: divisionName,
-                range: selectedRange,
-                round: selectedRound,
-                beat: selectedBeat
-              },
-              { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
-            );
-            
-            if (dataResponse.data.success) {
-              const data = dataResponse.data.data;
-              
-              if (data.length > 0) {
-                // Fetch degraded area for this division
-                const degradedAreaResponse = await axios.post(
-                  `${API_BASE_URL}/api/ndvi-change-degraded-area`,
-                  {
-                    tableName,
-                    division: divisionName,
-                    range: selectedRange,
-                    round: selectedRound,
-                    beat: selectedBeat
-                  },
-                  { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
-                );
-                
-                const degradedAreaValue = degradedAreaResponse.data.success 
-                  ? parseFloat(degradedAreaResponse.data.data[0]?.total_area_sq_km || 0)
-                  : 0;
-                
-                const afforestedAreaValue = Math.max(0, divisionTotalArea - degradedAreaValue);
-                
-                // Count polygons by status
-                const degradedPolygons = data.filter(item => item.status === true).length;
-                const afforestedPolygons = data.filter(item => item.status === false).length;
-                
-                // Calculate area per polygon
-                const degradedAreaPerPolygon = degradedPolygons > 0 ? degradedAreaValue / degradedPolygons : 0;
-                const afforestedAreaPerPolygon = afforestedPolygons > 0 ? afforestedAreaValue / afforestedPolygons : 0;
-                
-                // Enhance data with area calculations and division info
-                const enhancedData = data.map(item => {
-                  const isDegraded = item.status === true;
-                  const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
-                  
-                  return {
-                    ...item,
-                    area_sq_km: polygonArea,
-                    month: month,
-                    division: divisionName,
-                    status: isDegraded,
-                    change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
-                    has_note: !!(item.note && item.note.trim() !== ''),
-                    has_image: !!(item.image_data),
-                    pixle_id: `${divisionName}_${item.pixle_id || 'N/A'}`
-                  };
-                });
-                
-                monthAllData = [...monthAllData, ...enhancedData];
-              }
-            }
-          } catch (err) {
-            console.error(`Error fetching data for division`);
-          }
-        }
-        
-        // If we have data for this month, store it with division information preserved
-        if (monthAllData.length > 0) {
-          // Group data by division for statistics
-          const divisionsInMonth = [...new Set(monthAllData.map(item => item.division))];
-          
-          // Calculate statistics for each division separately
-          const divisionStats = {};
-          divisionsInMonth.forEach(div => {
-            const divData = monthAllData.filter(item => item.division === div);
-            const divDegradedArea = divData
-              .filter(item => item.status === true)
-              .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
-            const divAfforestedArea = divData
-              .filter(item => item.status === false)
-              .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
-            
-            divisionStats[div] = {
-              withNotes: divData.filter(item => item.has_note).length,
-              withImages: divData.filter(item => item.has_image).length,
-              degradedArea: divDegradedArea,
-              afforestedArea: divAfforestedArea,
-              totalArea: divDegradedArea + divAfforestedArea,
-              totalPolygons: divData.length,
-              degradedPercentage: (divDegradedArea + divAfforestedArea) > 0 
-                ? (divDegradedArea / (divDegradedArea + divAfforestedArea)) * 100 
-                : 0,
-              afforestedPercentage: (divDegradedArea + divAfforestedArea) > 0 
-                ? (divAfforestedArea / (divDegradedArea + divAfforestedArea)) * 100 
-                : 0
-            };
-          });
-          
-          // Overall statistics (sum of all divisions)
-          const totalDegradedArea = monthAllData
-            .filter(item => item.status === true)
-            .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
-          const totalAfforestedArea = monthAllData
-            .filter(item => item.status === false)
-            .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
-          const totalArea = totalDegradedArea + totalAfforestedArea;
-          
-          tempMonthlyData[month] = {
-            data: monthAllData,
-            divisionStats, // Store stats per division
-            stats: {
-              withNotes: monthAllData.filter(item => item.has_note).length,
-              withImages: monthAllData.filter(item => item.has_image).length,
-              degradedArea: totalDegradedArea,
-              afforestedArea: totalAfforestedArea,
-              totalArea: totalArea,
-              totalPolygons: monthAllData.length,
-              degradedPercentage: totalArea > 0 ? (totalDegradedArea / totalArea) * 100 : 0,
-              afforestedPercentage: totalArea > 0 ? (totalAfforestedArea / totalArea) * 100 : 0
-            },
-            month: month
-          };
-        }
-      }
-      
-      // Update state with all data (preserving division information)
-      if (Object.keys(tempMonthlyData).length > 0) {
-        setMonthlyData(tempMonthlyData);
-        
-        // Set total area as sum of all divisions' areas for the first month
-        const firstMonth = Object.keys(tempMonthlyData).sort()[0];
-        if (tempMonthlyData[firstMonth]) {
-          setTotalArea(tempMonthlyData[firstMonth].stats.totalArea);
-          setCurrentTableData(tempMonthlyData[firstMonth].data);
-          setSummaryStats(tempMonthlyData[firstMonth].stats);
-          setSelectedMonth(firstMonth);
-        }
-      } else {
-        setError('No data found for any division with the selected criteria');
-      }
-      
-    } catch (error) {
-      console.error('Error fetching all divisions data:', error);
-      setError('Failed to fetch data for all divisions');
+    );
+
+    const allDivisions = divisionsRes.data[0] || [];
+    if (!allDivisions.length) {
+      setError("No divisions found");
+      return;
     }
-  };
+
+    // 2. Build ALL tableNames for ALL months + divisions
+    const tableNames = months.flatMap(month =>
+      allDivisions.map(div => {
+        const coupe = transformDivisionToCoupe(div.division);
+        return `${month}-01_${coupe}_NDVI_Change`;
+      })
+    );
+
+    // 3. Single API call
+    const dataResponse = await axios.post(
+      `${API_BASE_URL}/api/ndvi-change-get-filtered-union`,
+      {
+        tableNames,
+        range: selectedRange,
+        round: selectedRound,
+        beat: selectedBeat
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!dataResponse.data.success) {
+      setError("Failed to fetch NDVI data");
+      return;
+    }
+
+    const rawData = dataResponse.data.data;
+
+    // 4. Fetch total area per division (once)
+    const divisionAreas = {};
+    for (const div of allDivisions) {
+      const coupe = transformDivisionToCoupe(div.division);
+      divisionAreas[div.division] = await fetchDivisionTotalArea(coupe);
+    }
+
+    const tempMonthlyData = {};
+
+    // 5. Process data
+    rawData.forEach(item => {
+      const table = item.source_table; 
+      const month = table.split("_")[0]; 
+      const division = item.division;
+
+      if (!tempMonthlyData[month]) {
+        tempMonthlyData[month] = { data: [], divisionStats: {}, stats: {} };
+      }
+
+      tempMonthlyData[month].data.push({
+        ...item,
+        month,
+        division,
+        has_note: !!(item.note && item.note.trim() !== ""),
+        has_image: !!item.image_data,
+        pixle_id: `${division}_${item.pixle_id || "N/A"}`,
+        change_category: item.status ? "Degradation" : "Afforestation"
+      });
+    });
+
+    // 6. Calculate stats per month & division
+    Object.keys(tempMonthlyData).forEach(month => {
+      const monthData = tempMonthlyData[month].data;
+
+      const divisions = [...new Set(monthData.map(d => d.division))];
+
+      let totalDegradedArea = 0;
+      let totalAfforestedArea = 0;
+
+      divisions.forEach(div => {
+        const divData = monthData.filter(d => d.division === div);
+        const totalArea = divisionAreas[div] || 0;
+
+        const degradedPolygons = divData.filter(d => d.status === true).length;
+        const afforestedPolygons = divData.filter(d => d.status === false).length;
+
+        const degradedArea = totalArea * (degradedPolygons / (divData.length || 1));
+        const afforestedArea = totalArea - degradedArea;
+
+        totalDegradedArea += degradedArea;
+        totalAfforestedArea += afforestedArea;
+
+        tempMonthlyData[month].divisionStats[div] = {
+          withNotes: divData.filter(d => d.has_note).length,
+          withImages: divData.filter(d => d.has_image).length,
+          degradedArea,
+          afforestedArea,
+          totalArea,
+          totalPolygons: divData.length,
+          degradedPercentage: totalArea ? (degradedArea / totalArea) * 100 : 0,
+          afforestedPercentage: totalArea ? (afforestedArea / totalArea) * 100 : 0
+        };
+      });
+
+      const totalArea = totalDegradedArea + totalAfforestedArea;
+
+      tempMonthlyData[month].stats = {
+        withNotes: monthData.filter(d => d.has_note).length,
+        withImages: monthData.filter(d => d.has_image).length,
+        degradedArea: totalDegradedArea,
+        afforestedArea: totalAfforestedArea,
+        totalArea,
+        totalPolygons: monthData.length,
+        degradedPercentage: totalArea ? (totalDegradedArea / totalArea) * 100 : 0,
+        afforestedPercentage: totalArea ? (totalAfforestedArea / totalArea) * 100 : 0
+      };
+    });
+
+    // 7. Update state
+    if (Object.keys(tempMonthlyData).length > 0) {
+      setMonthlyData(tempMonthlyData);
+
+      const firstMonth = Object.keys(tempMonthlyData).sort()[0];
+
+      setTotalArea(tempMonthlyData[firstMonth].stats.totalArea);
+      setCurrentTableData(tempMonthlyData[firstMonth].data);
+      setSummaryStats(tempMonthlyData[firstMonth].stats);
+      setSelectedMonth(firstMonth);
+    } else {
+      setError("No data found for selected criteria");
+    }
+
+  } catch (error) {
+    console.error("Error fetching all divisions data:", error);
+    setError("Failed to fetch data for all divisions");
+  }
+};
 
   // Fetch filtered data based on hierarchy and date
   const fetchFilteredData = async (months) => {
