@@ -69,6 +69,37 @@ pat_data.division = clean(pat_data.division);
       return res.status(400).json({ error: `Missing field: ${field}` });
   }
 
+  if (pat_data.distance_kms < 0 || isNaN(pat_data.distance_kms) || !isFinite(pat_data.distance_kms)) {
+    return res.status(400).json({ 
+      error: 'Invalid distance value', 
+      message: 'Distance must be a valid non-negative number' 
+    });
+  }
+
+    // SIMPLE FILE VALIDATION - Block SVG files
+  if (req.files && req.files.length > 0) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/heic', 'image/heif'];
+    
+    for (let file of req.files) {
+      // Check if file type is allowed
+      if (!allowedTypes.includes(file.mimetype)) {
+        return res.status(400).json({ 
+          error: 'Invalid file type', 
+          message: 'Only JPG, PNG, GIF, HEIC, and HEIF images are allowed. SVG files are not permitted.' 
+        });
+      }
+      
+      // Check file extension
+      const fileName = file.originalname.toLowerCase();
+      if (fileName.endsWith('.svg') || fileName.endsWith('.svgz')) {
+        return res.status(400).json({ 
+          error: 'Invalid file type', 
+          message: 'SVG files are not allowed due to security reasons.' 
+        });
+      }
+    }
+  }
+
   try {
     // First check if user exists in government_department_users
     const userCheckQuery = `

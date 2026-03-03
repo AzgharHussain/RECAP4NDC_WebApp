@@ -21,6 +21,9 @@ import incidentIcon from "../assets/Incident.png";
 import { useLanguage } from "../context/LanguageContext";
 import "./DashboardLayout.css";
 
+import { API_BASE_URL } from '../config';
+import axios from "axios";
+
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
 import giz from "../assets/giz.png";
@@ -106,7 +109,25 @@ export default function DashboardLayout() {
     setIsSidebarOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+
+      try {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      await axios.post(
+        `${API_BASE_URL}/api/logout`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+    }
+  } catch (err) {
+    console.error("Logout API error:", err);
+  }
     // Clear all session data
     const itemsToRemove = [
       'session',

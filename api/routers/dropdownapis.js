@@ -810,31 +810,46 @@ router.post('/get-coupe-area', verifyJwt, async (req, res) => {
     }
 
     try {
-       
+        // Extract division from tableName
+        // tableName format is like 'aravalli_coupe' or 'bhavnagar_coupe'
+        const division = tableName.replace('_coupe', '');
+        
+        // Map the division to correct coupe name if needed
+        const DIVISION_TO_COUPE_MAP = {
+            'aravalli': 'sabarkantha_south',
+            'bharuch_sub_division': 'bharuch',
+        };
 
-       
+        let actualTableName = tableName;
+        
+        // Check if this division needs mapping
+        if (DIVISION_TO_COUPE_MAP[division]) {
+            const mappedCoupe = DIVISION_TO_COUPE_MAP[division];
+            actualTableName = `${mappedCoupe}_coupe`;
+            console.log(`[get-coupe-area] Original: ${tableName}, Mapped to: ${actualTableName}`);
+        }
 
-        // 2️⃣ Fetch all data
+        // Fetch all data
         const selectQuery = `
             SELECT
-    SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
-FROM
-    public."${tableName}";
+                SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
+            FROM
+                public."${actualTableName}";
         `;
 
         const [results] = await sequelize.query(selectQuery);
 
         res.json({
             success: true,
-            message: 'Columns verified and data fetched successfully',
+            message: 'Area fetched successfully',
             data: results
         });
 
     } catch (error) {
-        console.error('Error in NDVI change API:', error);
+        console.error('Error in get-coupe-area API:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to process NDVI change data',
+            message: 'Failed to fetch coupe area',
             error: error.message
         });
     }

@@ -408,7 +408,7 @@ const NDVIChangeDashboard = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'pixle_id', direction: 'asc' });
   const [expandedChart, setExpandedChart] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date(2025, 1, 1));
-  const [showDivisionColumn, setShowDivisionColumn] = useState(false);
+  const [showDivisionColumn, setShowDivisionColumn] = useState(true);
   
   // New state for date range
   const [startDate, setStartDate] = useState(null);
@@ -1874,7 +1874,7 @@ const handleExportToPDF = () => {
                 <div class="stat-card degraded">
                   <div class="stat-label">Degraded Area</div>
                   <div class="stat-value">${summaryStats.degradedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
-                  <div class="stat-percentage">${summaryStats.degradedPercentage.toFixed(1)}% of total area</div>
+                  <div class="stat-percentage">${summaryStats.degradedPercentage.toFixed(2)}% of total area</div>
                 </div>
                 
                 <div class="stat-card afforested">
@@ -2140,72 +2140,99 @@ const handleExportToPDF = () => {
       {/* Main Filters */}
       <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor: "transparent" }}>
         <CardContent>
-          <Grid container spacing={3}>
-            {/* Date Range Selection */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                Select Date Range
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12} md={5}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  views={['year', 'month']}
-                  label="Start Date"
-                  value={startDate}
-                  onChange={handleStartDateChange}
-                  minDate={new Date(2020, 0, 1)}
-                  maxDate={new Date(2030, 11, 31)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      size: "small",
-                      InputProps: {
-                        startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
-                      }
-                    }
-                  }}
-                />
-              </LocalizationProvider>
-            </Grid>
+  <Grid container spacing={3}>
+    {/* Date Range Selection */}
+    <Grid item xs={12}>
+      <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+        Select Date Range (Maximum 6 months)
+      </Typography>
+    </Grid>
+    
+    <Grid item xs={12} md={5}>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          views={['year', 'month']}
+          label="Start Date"
+          value={startDate}
+          onChange={handleStartDateChange}
+          minDate={new Date(2020, 0, 1)}
+          maxDate={endDate ? new Date(Math.min(
+            new Date(2030, 11, 31).getTime(),
+            new Date(endDate.getFullYear(), endDate.getMonth() - 5, 1).getTime()
+          )) : new Date(2030, 11, 31)}
+          slotProps={{
+            textField: {
+              fullWidth: true,
+              size: "small",
+              InputProps: {
+                startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+              }
+            }
+          }}
+        />
+      </LocalizationProvider>
+    </Grid>
 
-            <Grid item xs={12} md={5}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  views={['year', 'month']}
-                  label="End Date"
-                  value={endDate}
-                  onChange={handleEndDateChange}
-                  minDate={startDate || new Date(2020, 0, 1)}
-                  maxDate={new Date(2030, 11, 31)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      size: "small",
-                      InputProps: {
-                        startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
-                      }
-                    }
-                  }}
-                />
-              </LocalizationProvider>
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                startIcon={<Send />}
-                onClick={handleSubmit}
-                sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
-              >
-                Submit
-              </Button>
-            </Grid>
+    <Grid item xs={12} md={5}>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          views={['year', 'month']}
+          label="End Date"
+          value={endDate}
+          onChange={handleEndDateChange}
+          minDate={startDate || new Date(2020, 0, 1)}
+          maxDate={startDate ? new Date(Math.min(
+            new Date(2030, 11, 31).getTime(),
+            new Date(startDate.getFullYear(), startDate.getMonth() + 5, 1).getTime()
+          )) : new Date(2030, 11, 31)}
+          slotProps={{
+            textField: {
+              fullWidth: true,
+              size: "small",
+              InputProps: {
+                startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+              }
+            }
+          }}
+        />
+      </LocalizationProvider>
+    </Grid>
+    
+    <Grid item xs={12} md={2}>
+      <Button
+        variant="contained"
+        color="primary"
+        fullWidth
+        startIcon={<Send />}
+        onClick={handleSubmit}
+        disabled={startDate && endDate && (() => {
+          const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                            (endDate.getMonth() - startDate.getMonth());
+          return monthsDiff > 5;
+        })()}
+        sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
+      >
+        Submit
+      </Button>
+    </Grid>
+    
+    {/* Error message for range exceeding 6 months */}
+    {startDate && endDate && (() => {
+      const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                        (endDate.getMonth() - startDate.getMonth());
+      if (monthsDiff > 5) {
+        return (
+          <Grid item xs={12}>
+            <Alert severity="error" sx={{ mt: 1 }}>
+              Date range cannot exceed 6 months. Please select a shorter range.
+            </Alert>
           </Grid>
-        </CardContent>
+        );
+      }
+      return null;
+    })()}
+  </Grid>
+</CardContent>
       </Card>
 
       {/* Error Alert */}
@@ -2338,7 +2365,7 @@ const handleExportToPDF = () => {
                       </Typography>
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {summaryStats.degradedPercentage.toFixed(1)}% of total area
+                      {summaryStats.degradedPercentage.toFixed(2)}% of total area
                     </Typography>
                   </Box>
                   <Warning sx={{ fontSize: 40, color: '#ef4444', opacity: 0.8 }} />
@@ -2362,7 +2389,7 @@ const handleExportToPDF = () => {
                       </Typography>
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {summaryStats.afforestedPercentage.toFixed(1)}% of total area
+                      {summaryStats.afforestedPercentage.toFixed(2)}% of total area
                     </Typography>
                   </Box>
                   <CheckCircle sx={{ fontSize: 40, color: '#22c55e', opacity: 0.8 }} />
@@ -2468,7 +2495,7 @@ const handleExportToPDF = () => {
       {Object.keys(monthlyData).length > 0 && (
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
           <CardHeader
-            title="1. Charts & Analysis"
+            title="1. NDVI Change Analysis"
             titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
             avatar={<BarChart color="primary" />}
             action={
@@ -2483,13 +2510,13 @@ const handleExportToPDF = () => {
             <CardContent>
               {/* Chart Type Selection */}
               <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-                <Chip
+                {/* <Chip
                   label="Bar Chart"
                   onClick={() => setChartType('bar')}
                   color={chartType === 'bar' ? 'primary' : 'default'}
                   icon={<BarChart />}
                   clickable
-                />
+                /> */}
                 {/* <Chip
                   label="Line Chart"
                   onClick={() => setChartType('line')}
@@ -2512,7 +2539,7 @@ const handleExportToPDF = () => {
               </Box>
 
               {/* Analysis Notes */}
-              {summaryStats && (
+              {/* {summaryStats && (
                 <Card sx={{ mt: 4, borderRadius: 2, bgcolor:'transparent'}}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -2576,7 +2603,7 @@ const handleExportToPDF = () => {
                     </Grid>
                   </CardContent>
                 </Card>
-              )}
+              )} */}
             </CardContent>
           )}
         </Card>
@@ -2886,8 +2913,8 @@ const handleExportToPDF = () => {
           {expandedSections.monthlyOverview && (
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CalendarMonth color="primary" />
-                Monthly Comparison Overview {selectedDivision === 'all' && '(All Divisions)'}
+                {/* <CalendarMonth color="primary" /> */}
+                 {selectedDivision === 'all' && '(All Divisions)'}
               </Typography>
               <Grid container spacing={3}>
                 {Object.entries(monthlyData).sort().reverse().map(([month, data]) => (
@@ -2988,8 +3015,8 @@ const handleExportToPDF = () => {
                       <Grid item xs={6}>
                         <Typography variant="body2">
                           <strong>Status:</strong> 
-                          <Chip label={selectedRecord.status ? 'Afforested' : 'Degraded'} 
-                                color={selectedRecord.status ? 'success' : 'error'} size="small" sx={{ ml: 1 }} />
+                          <Chip label={selectedRecord.status ? 'Degraded' : 'Afforested'} 
+                                color={selectedRecord.status ? 'error' : 'success'} size="small" sx={{ ml: 1 }} />
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>

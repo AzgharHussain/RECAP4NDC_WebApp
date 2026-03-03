@@ -1591,14 +1591,14 @@ const layersData = {
     { Name: "vyara_coupe", Layer: "Vyara" },
     { Name: "banaskantha_coupe", Layer: "Banaskantha" },
     { Name: "bhavnagar_coupe", Layer: "Bhavnagar" },
-    { Name: "chhotaudepur_coupe_main", Layer: "Chhotaudepur" },
+    { Name: "chhotaudepur_coupe", Layer: "Chhotaudepur" },
     { Name: "gandhinagar_coupe", Layer: "Gandhinagar" },
     { Name: "jamnagar_coupe", Layer: "Jamnagar" },
     { Name: "morbi_coupe", Layer: "Morbi" },
     { Name: "narmada_coupe", Layer: "Narmada" },
-    { Name: "sabarkantha_coupe_", Layer: "Sabarkantha" },
+    { Name: "sabarkantha_coupe", Layer: "Sabarkantha" },
     { Name: "sabarkantha_south_coupe", Layer: "Sabarkantha_South" },
-    { Name: "surendranagar_coupe_main", Layer: "Surendranagar" },
+    { Name: "surendranagar_coupe", Layer: "Surendranagar" },
   ]
 }
   ]

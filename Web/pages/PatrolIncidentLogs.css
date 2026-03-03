@@ -942,7 +942,7 @@ body {
   
   .stat-value {
     background: linear-gradient(135deg, #f8fafc, #cbd5e1);
-    -webkit-background-clip: text;
+
     -webkit-text-fill-color: transparent;
   }
   
