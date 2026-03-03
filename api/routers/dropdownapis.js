@@ -88,22 +88,12 @@ router.get('/hierarchy_coupes', async (req, res) => {
    Converts all string body values to:
    - lowercase
    - removes all spaces
------------------------------------------*/
-const normalizeBody = (req, res, next) => {
-  if (req.body) {
-    Object.keys(req.body).forEach(key => {
-      if (typeof req.body[key] === 'string') {
-        req.body[key] = req.body[key]
-          .toLowerCase()
-          .replace(/\s+/g, '');
-      }
-    });
-  }
-  next();
+/* ============================================================
+   NORMALIZE DIVISION HELPER (ONLY DIVISION)
+============================================================ */
+const normalizeDivision = (value) => {
+  return value?.toLowerCase().replace(/\s+/g, '');
 };
-
-// Apply normalization to all routes below
-router.use(normalizeBody);
 
 
 /* ============================================================
@@ -140,11 +130,13 @@ router.get('/hierarchy-divisions', verifyJwt, async (req, res) => {
 ============================================================ */
 router.post('/hierarchy-ranges', verifyJwt, async (req, res) => {
   try {
-    const { division } = req.body;
+    let { division } = req.body;
 
     if (!division) {
       return res.status(400).json({ error: 'division is required' });
     }
+
+    division = normalizeDivision(division);
 
     let query = `
       SELECT DISTINCT range
@@ -194,17 +186,19 @@ router.post('/hierarchy-ranges', verifyJwt, async (req, res) => {
 ============================================================ */
 router.post('/hierarchy-rounds', verifyJwt, async (req, res) => {
   try {
-    const { division, range } = req.body;
+    let { division, range } = req.body;
 
     if (!division || !range) {
       return res.status(400).json({ error: 'division and range are required' });
     }
 
+    division = normalizeDivision(division);
+
     let query = `
       SELECT DISTINCT round
       FROM public.coupe_all
       WHERE LOWER(REPLACE(division, ' ', '')) = ?
-      AND LOWER(REPLACE(range, ' ', '')) = ?
+      AND range = ?
       ORDER BY round
     `;
 
@@ -252,7 +246,7 @@ router.post('/hierarchy-rounds', verifyJwt, async (req, res) => {
 ============================================================ */
 router.post('/hierarchy-beats', verifyJwt, async (req, res) => {
   try {
-    const { division, range, round } = req.body;
+    let { division, range, round } = req.body;
 
     if (!division || !range || !round) {
       return res.status(400).json({
@@ -260,12 +254,14 @@ router.post('/hierarchy-beats', verifyJwt, async (req, res) => {
       });
     }
 
+    division = normalizeDivision(division);
+
     let query = `
       SELECT DISTINCT beat
       FROM public.coupe_all
       WHERE LOWER(REPLACE(division, ' ', '')) = ?
-      AND LOWER(REPLACE(range, ' ', '')) = ?
-      AND LOWER(REPLACE(round, ' ', '')) = ?
+      AND range = ?
+      AND round = ?
       ORDER BY beat
     `;
 
@@ -281,7 +277,7 @@ router.post('/hierarchy-beats', verifyJwt, async (req, res) => {
         SELECT DISTINCT beat
         FROM public.coupe_all
         WHERE LOWER(REPLACE(division, ' ', '')) = ?
-        AND LOWER(REPLACE(range, ' ', '')) = ?
+        AND range = ?
         ORDER BY beat
       `;
 
@@ -331,7 +327,7 @@ router.post('/hierarchy-beats', verifyJwt, async (req, res) => {
 ============================================================ */
 router.post('/hierarchy-villages', verifyJwt, async (req, res) => {
   try {
-    const { division, range, round, beat } = req.body;
+    let { division, range, round, beat } = req.body;
 
     if (!division || !range || !round || !beat) {
       return res.status(400).json({
@@ -339,13 +335,15 @@ router.post('/hierarchy-villages', verifyJwt, async (req, res) => {
       });
     }
 
+    division = normalizeDivision(division);
+
     let query = `
       SELECT DISTINCT village
       FROM public.coupe_all
       WHERE LOWER(REPLACE(division, ' ', '')) = ?
-      AND LOWER(REPLACE(range, ' ', '')) = ?
-      AND LOWER(REPLACE(round, ' ', '')) = ?
-      AND LOWER(REPLACE(beat, ' ', '')) = ?
+      AND range = ?
+      AND round = ?
+      AND beat = ?
       ORDER BY village
     `;
 
@@ -361,8 +359,8 @@ router.post('/hierarchy-villages', verifyJwt, async (req, res) => {
         SELECT DISTINCT village
         FROM public.coupe_all
         WHERE LOWER(REPLACE(division, ' ', '')) = ?
-        AND LOWER(REPLACE(range, ' ', '')) = ?
-        AND LOWER(REPLACE(round, ' ', '')) = ?
+        AND range = ?
+        AND round = ?
         ORDER BY village
       `;
 
@@ -379,7 +377,7 @@ router.post('/hierarchy-villages', verifyJwt, async (req, res) => {
         SELECT DISTINCT village
         FROM public.coupe_all
         WHERE LOWER(REPLACE(division, ' ', '')) = ?
-        AND LOWER(REPLACE(range, ' ', '')) = ?
+        AND range = ?
         ORDER BY village
       `;
 
@@ -423,7 +421,6 @@ router.post('/hierarchy-villages', verifyJwt, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 // Get ranges based on division code and forest type
 router.post('/ranges', async (req, res) => {

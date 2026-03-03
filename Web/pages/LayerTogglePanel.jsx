@@ -1851,6 +1851,11 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
   const [attributeData, setAttributeData] = useState(null);
   const [showAttributeTable, setShowAttributeTable] = useState(false);
   const [isCoupesDataOpen, setIsCoupesDataOpen] = useState(false);
+
+// New state for single month selector
+const [selectedMonth, setSelectedMonth] = useState(1);
+const [showMonthSelector, setShowMonthSelector] = useState(false);
+const [selectedSpecialLayer, setSelectedSpecialLayer] = useState(null);
   
   const layerCounterRef = useRef(0);
   const clickHandlerRef = useRef(null);
@@ -1889,7 +1894,15 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
 
 
 
+const handleMonthChange = useCallback((value) => {
+  setSelectedMonth(parseInt(value));
+}, []);
 
+const generateDynamicLayerName = useCallback((baseLayerName, month) => {
+  // Format: 2025-{month:02d}-01_{baseLayerName}_NDVI_Change
+  const formattedMonth = month.toString().padStart(2, '0');
+  return `2025-${formattedMonth}-01_${baseLayerName}_NDVI_Change`;
+}, []);
 
 // Replace your entire getFeatureInfo function with this:
 
@@ -2252,10 +2265,51 @@ const getLayerBoundsFromAPI = async (layerName) => {
     return null;
   }
 };
+
+const addLayerToMap = useCallback(async (layerConfig, uniqueKey, groupId) => {
+  const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer);
+  if (!layer) throw new Error(`Failed to add layer: ${layerConfig.Name}`);
+
+  const layerOpacity = 0.7;
+  setAddedLayers((prev) => ({ ...prev, [uniqueKey]: layer }));
+  setOpacity((prev) => ({ ...prev, [uniqueKey]: layerOpacity }));
+  layer.setOpacity(layerOpacity);
+
+  // Zoom to layer bounds
+  setTimeout(async () => {
+    try {
+      const bounds = await getLayerBoundsFromAPI(layerConfig.Name);
+      if (bounds && mapRef.current) {
+        const sw = L.latLng(bounds.minY, bounds.minX);
+        const ne = L.latLng(bounds.maxY, bounds.maxX);
+        const layerBounds = L.latLngBounds(sw, ne);
+        
+        mapRef.current.fitBounds(layerBounds, {
+          padding: [50, 50],
+          maxZoom: 14,
+          animate: true,
+          duration: 1
+        });
+      }
+    } catch (error) {
+      console.error(`Error zooming to layer ${layerConfig.Name}:`, error);
+    }
+  }, 1000);
+}, [layerManager, mapRef, getLayerBoundsFromAPI]);
 // Update your toggleLayer function
 const toggleLayer = useCallback(
   async (layerConfig, groupId) => {
     const uniqueKey = `${layerConfig.Name}-${groupId}`;
+
+    // Check if this is the special sabarkantha_south_coupe layer
+    const isSpecialLayer = layerConfig.Name === "sabarkantha_south_coupe";
+    
+    if (isSpecialLayer && !addedLayers[uniqueKey]) {
+      // Show the month selector first
+      setSelectedSpecialLayer({ layerConfig, groupId });
+      setShowMonthSelector(true);
+      return;
+    }
 
     try {
       if (addedLayers[uniqueKey]) {
@@ -2269,83 +2323,15 @@ const toggleLayer = useCallback(
           const { [uniqueKey]: removedOpacity, ...rest } = prev;
           return rest;
         });
+        
+        // If this was the special layer, clear selection
+        if (layerConfig.Name === "sabarkantha_south_coupe") {
+          setSelectedSpecialLayer(null);
+          setShowMonthSelector(false);
+        }
       } else {
-        // Add the new layer
-        const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer);
-        if (!layer) throw new Error(`Failed to add layer: ${layerConfig.Name}`);
-
-        const layerOpacity = 0.7;
-        setAddedLayers((prev) => ({ ...prev, [uniqueKey]: layer }));
-        setOpacity((prev) => ({ ...prev, [uniqueKey]: layerOpacity }));
-        layer.setOpacity(layerOpacity);
-
-        // Get bounds from API and zoom
-        setTimeout(async () => {
-          try {
-            const bounds = await getLayerBoundsFromAPI(layerConfig.Name);
-            
-            if (bounds && mapRef.current) {
-              // Create bounds from the API response
-              const sw = L.latLng(bounds.minY, bounds.minX);
-              const ne = L.latLng(bounds.maxY, bounds.maxX);
-              const layerBounds = L.latLngBounds(sw, ne);
-              
-              console.log(`🎯 Zooming to ${layerConfig.Name}:`, {
-                sw: [bounds.minY, bounds.minX],
-                ne: [bounds.maxY, bounds.maxX]
-              });
-              
-              // Zoom to bounds with animation
-              mapRef.current.fitBounds(layerBounds, {
-                padding: [50, 50],
-                maxZoom: 14,
-                animate: true,
-                duration: 1
-              });
-              
-              // Optional: Add a marker at the centroid
-              // if (bounds.centroid) {
-              //   L.marker([bounds.centroid.y, bounds.centroid.x], {
-              //     title: layerConfig.Layer,
-              //     icon: L.divIcon({
-              //       className: 'centroid-marker',
-              //       html: '📍',
-              //       iconSize: [20, 20]
-              //     })
-              //   }).addTo(mapRef.current)
-              //     .bindPopup(`
-              //       <div style="font-family: Arial, sans-serif; padding: 5px;">
-              //         <h4 style="margin: 0 0 5px 0; color: #2c3e50;">${layerConfig.Layer}</h4>
-              //         <hr style="margin: 5px 0;">
-              //         <table style="border-collapse: collapse; width: 100%;">
-              //           <tr><td><strong>Division:</strong></td><td>${bounds.metadata?.division || 'N/A'}</td></tr>
-              //           <tr><td><strong>Range:</strong></td><td>${bounds.metadata?.range || 'N/A'}</td></tr>
-              //           <tr><td><strong>Circle:</strong></td><td>${bounds.metadata?.circle || 'N/A'}</td></tr>
-              //           <tr><td><strong>Features:</strong></td><td>${bounds.featureCount || 'N/A'}</td></tr>
-              //           <tr><td><strong>Centroid:</strong></td><td>${bounds.centroid.y.toFixed(6)}, ${bounds.centroid.x.toFixed(6)}</td></tr>
-              //         </table>
-              //       </div>
-              //     `);
-              // }
-              
-              console.log(`✅ Successfully zoomed to ${layerConfig.Name}`);
-            } else {
-              console.warn(`⚠️ No bounds found for ${layerConfig.Name}, using fallback`);
-              // Fallback to WMS GetCapabilities
-              const wmsBounds = await getLayerBoundsSimple(layerConfig.Name);
-              if (wmsBounds && mapRef.current) {
-                const sw = L.latLng(wmsBounds.minY, wmsBounds.minX);
-                const ne = L.latLng(wmsBounds.maxY, wmsBounds.maxX);
-                mapRef.current.fitBounds(L.latLngBounds(sw, ne), {
-                  padding: [50, 50],
-                  maxZoom: 12
-                });
-              }
-            }
-          } catch (error) {
-            console.error(`❌ Error zooming to layer ${layerConfig.Name}:`, error);
-          }
-        }, 1000); // Wait 1 second for layer to load
+        // For non-special layers, add normally
+        await addLayerToMap(layerConfig, uniqueKey, groupId);
       }
     } catch (err) {
       console.error(`❌ Layer toggle failed for ${layerConfig.Name}:`, err);
@@ -2354,6 +2340,64 @@ const toggleLayer = useCallback(
   },
   [addedLayers, layerManager, mapRef]
 );
+
+const addSpecialLayer = useCallback(async () => {
+  if (!selectedSpecialLayer) return;
+  
+  const { layerConfig, groupId } = selectedSpecialLayer;
+  const baseLayerName = layerConfig.Name;
+  const month = selectedMonth;
+  
+  setIsLayerLoading(true);
+  
+  try {
+    const dynamicLayerName = generateDynamicLayerName(baseLayerName, month);
+    const monthUniqueKey = `${dynamicLayerName}-${groupId}-month-${month}`;
+    
+    // Create layer with the dynamic name
+    const layer = await layerManager.addLayer(
+      dynamicLayerName, 
+      `${layerConfig.Layer} (Month ${month})`
+    );
+    
+    if (!layer) throw new Error(`Failed to add layer: ${dynamicLayerName}`);
+    
+    const layerOpacity = 0.7;
+    setAddedLayers((prev) => ({ ...prev, [monthUniqueKey]: layer }));
+    setOpacity((prev) => ({ ...prev, [monthUniqueKey]: layerOpacity }));
+    layer.setOpacity(layerOpacity);
+    
+    // Zoom to layer bounds
+    setTimeout(async () => {
+      try {
+        const bounds = await getLayerBoundsFromAPI(dynamicLayerName);
+        if (bounds && mapRef.current) {
+          const sw = L.latLng(bounds.minY, bounds.minX);
+          const ne = L.latLng(bounds.maxY, bounds.maxX);
+          const layerBounds = L.latLngBounds(sw, ne);
+          
+          mapRef.current.fitBounds(layerBounds, {
+            padding: [50, 50],
+            maxZoom: 14,
+            animate: true,
+            duration: 1
+          });
+        }
+      } catch (error) {
+        console.error(`Error zooming to layer ${dynamicLayerName}:`, error);
+      }
+    }, 1000);
+    
+    // Close the month selector
+    setShowMonthSelector(false);
+    setSelectedSpecialLayer(null);
+    setSelectedMonth(1); // Reset to default
+    
+  } catch (err) {
+    console.error(`❌ Failed to add special layer:`, err);
+    setIsLayerLoading(false);
+  }
+}, [selectedSpecialLayer, selectedMonth, generateDynamicLayerName, layerManager, mapRef, getLayerBoundsFromAPI]);
 
 // Add this function to get layer bounds via WFS
 // Add this function to get layer bounds via WFS
@@ -2795,67 +2839,161 @@ const getLayerBoundsSimple = async (layerName) => {
     );
   };
 
-  return (
-    <>
-      <LegendPanel />
+return (
+  <>
+    <LegendPanel />
+    
+    {/* Month Range Selector Modal */}
+   {showMonthSelector && selectedSpecialLayer && (
+  <div className="month-range-modal" style={{
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+    zIndex: 10001,
+    minWidth: '300px'
+  }}>
+    <h3 style={{ margin: '0 0 15px 0', color: '#2c3e50' }}>
+      Select Month for {selectedSpecialLayer.layerConfig.Layer}
+    </h3>
+    
+    <div style={{ marginBottom: '20px' }}>
+      <label style={{ display: 'block', marginBottom: '10px', fontWeight: '500' }}>
+        Month: {selectedMonth}
+        <input
+          type="range"
+          min="1"
+          max="12"
+          value={selectedMonth}
+          onChange={(e) => handleMonthChange(e.target.value)}
+          style={{ width: '100%', marginTop: '10px' }}
+        />
+      </label>
       
-      <aside className="leftpanel">
-        <h3 className="sidebar-title">
-          <FaLayerGroup style={{ marginRight: "8px" }} />
-          {text[language].exploreData}
-          <button 
-          style={{
-            alignItems: 'end',
-            marginLeft: 'auto',
-            backgroundColor: '#e74c3c',
-            color: '#fff',
-            border: 'none', 
-            padding: '5px 10px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-            onClick={clearAllLayers}
-            className="clear-all-btn"
-            title="Clear all layers"
-            disabled={Object.keys(addedLayers).length === 0}
-          >
-            Clear All
-          </button>
-        </h3>
-        
-        <div className="layer-groups-container">
-          {layersData.groups.map((group, idx) => renderGroup(group, idx, "layers"))}
-        </div>
-        
-        {/* <div className="coupeboundary" onClick={() => setIsCoupesDataOpen(!isCoupesDataOpen)}>
-          <h3 style={{ cursor: 'pointer', fontSize: "14px", marginLeft: "10px" }}>
-            <MdForest style={{ marginLeft: "8px", fontSize: "17px" }} />
-            <span style={{ marginLeft: "8px" }}>{text[language].coupesData}</span>
-          </h3>
-          <span style={{ cursor: 'pointer', marginRight: "15px" }}>
-            {isCoupesDataOpen ? '▼' : '▶'}
-          </span>
-        </div> */}
-      
-        {isCoupesDataOpen && (
-          <div className="layer-groups-container">
-            {coupesData.groups.map((group, idx) => renderGroup(group, idx, "coupes"))}
-          </div>
-        )}
-        
-        {isLayerLoading && <Loader />}
-      </aside>
-      
-      <AttributePopup
-        position={clickPosition}
-        data={attributeData}
-        onClose={() => {
-          setAttributeData(null);
-          setClickPosition(null);
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between',
+        marginTop: '-5px',
+        color: '#666',
+        fontSize: '12px'
+      }}>
+        <span>January</span>
+        <span>December</span>
+      </div>
+    </div>
+    
+    <div style={{ 
+      backgroundColor: '#f0f7ff', 
+      padding: '15px', 
+      borderRadius: '4px',
+      marginBottom: '20px',
+      border: '1px solid #b8daff'
+    }}>
+      <div style={{ fontSize: '14px', marginBottom: '5px', color: '#004085' }}>
+        <strong>Layer to be added:</strong>
+      </div>
+      <div style={{ 
+        fontFamily: 'monospace', 
+        fontSize: '13px',
+        backgroundColor: '#fff',
+        padding: '8px',
+        borderRadius: '4px',
+        border: '1px solid #ced4da',
+        wordBreak: 'break-all'
+      }}>
+        {generateDynamicLayerName(selectedSpecialLayer.layerConfig.Name, selectedMonth)}
+      </div>
+    </div>
+    
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+      <button
+        onClick={() => {
+          setShowMonthSelector(false);
+          setSelectedSpecialLayer(null);
+          setSelectedMonth(1);
         }}
-      />
-    </>
-  );
+        style={{
+          padding: '8px 15px',
+          backgroundColor: '#6c757d',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }}
+      >
+        Cancel
+      </button>
+      <button
+        onClick={addSpecialLayer}
+        style={{
+          padding: '8px 15px',
+          backgroundColor: '#28a745',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: '500'
+        }}
+      >
+        Add Layer
+      </button>
+    </div>
+  </div>
+)}
+    
+    <aside className="leftpanel">
+      <h3 className="sidebar-title">
+        <FaLayerGroup style={{ marginRight: "8px" }} />
+        {text[language].exploreData}
+        <button 
+        style={{
+          alignItems: 'end',
+          marginLeft: 'auto',
+          backgroundColor: '#e74c3c',
+          color: '#fff',
+          border: 'none', 
+          padding: '5px 10px',
+          borderRadius: '4px',
+          cursor: 'pointer',
+        }}
+          onClick={clearAllLayers}
+          className="clear-all-btn"
+          title="Clear all layers"
+          disabled={Object.keys(addedLayers).length === 0}
+        >
+          Clear All
+        </button>
+      </h3>
+      
+      <div className="layer-groups-container">
+        {layersData.groups.map((group, idx) => renderGroup(group, idx, "layers"))}
+      </div>
+    
+      {isCoupesDataOpen && (
+        <div className="layer-groups-container">
+          {coupesData.groups.map((group, idx) => renderGroup(group, idx, "coupes"))}
+        </div>
+      )}
+      
+      {isLayerLoading && <Loader />}
+    </aside>
+    
+    <AttributePopup
+      position={clickPosition}
+      data={attributeData}
+      onClose={() => {
+        setAttributeData(null);
+        setClickPosition(null);
+      }}
+    />
+  </>
+);
 };
 
 export default LayerTogglePanel;
