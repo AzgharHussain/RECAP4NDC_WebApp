@@ -107,7 +107,7 @@ router.get('/hierarchy-divisions', verifyJwt, async (req, res) => {
 });
 
 // Get ranges by division (your working endpoint)
-router.post('/hierarchy-ranges',  verifyJwt,async (req, res) => {
+router.post('/hierarchy-ranges', verifyJwt, async (req, res) => {
   try {
     const { division } = req.body;
     
@@ -115,21 +115,42 @@ router.post('/hierarchy-ranges',  verifyJwt,async (req, res) => {
       return res.status(400).json({ error: 'division is required' });
     }
 
-    const query = `
+    // Try to get ranges with division
+    let query = `
       SELECT DISTINCT range
       FROM public.coupe_all
       WHERE division = ?
       ORDER BY range
     `;
     
-    const result = await sequelize.query(query, {
+    let result = await sequelize.query(query, {
       replacements: [division],
       type: sequelize.QueryTypes.SELECT
     });
     
+    let level = 'division';
+    
+    // If no ranges found with division, try without any filter (all ranges)
+    if (result.length === 0) {
+      query = `
+        SELECT DISTINCT range
+        FROM public.coupe_all
+        ORDER BY range
+      `;
+      
+      result = await sequelize.query(query, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      level = 'all';
+    }
+    
     res.json({
-      message: `Ranges for division ${division} fetched successfully`,
+      message: result.length > 0 
+        ? `Ranges fetched successfully at ${level} level`
+        : 'No ranges found in the database',
       division: division,
+      queriedLevel: level,
       data: result.map(row => row.range),
       count: result.length
     });
@@ -140,7 +161,7 @@ router.post('/hierarchy-ranges',  verifyJwt,async (req, res) => {
 });
 
 // Get rounds by division and range
-router.post('/hierarchy-rounds',  verifyJwt,async (req, res) => {
+router.post('/hierarchy-rounds', verifyJwt, async (req, res) => {
   try {
     const { division, range } = req.body;
     
@@ -148,22 +169,43 @@ router.post('/hierarchy-rounds',  verifyJwt,async (req, res) => {
       return res.status(400).json({ error: 'division and range are required' });
     }
 
-    const query = `
+    // First try: Get rounds with all criteria (division, range)
+    let query = `
       SELECT DISTINCT round
       FROM public.coupe_all
       WHERE division = ? AND range = ?
       ORDER BY round
     `;
     
-    const result = await sequelize.query(query, {
+    let result = await sequelize.query(query, {
       replacements: [division, range],
       type: sequelize.QueryTypes.SELECT
     });
     
+    let level = 'range';
+    
+    // If no rounds found with range, try with division only
+    if (result.length === 0) {
+      query = `
+        SELECT DISTINCT round
+        FROM public.coupe_all
+        WHERE division = ?
+        ORDER BY round
+      `;
+      
+      result = await sequelize.query(query, {
+        replacements: [division],
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      level = 'division';
+    }
+    
     res.json({
-      message: `Rounds for division ${division} and range ${range} fetched successfully`,
+      message: `Rounds fetched successfully at ${level} level`,
       division: division,
       range: range,
+      queriedLevel: level,
       data: result.map(row => row.round),
       count: result.length
     });
@@ -174,7 +216,7 @@ router.post('/hierarchy-rounds',  verifyJwt,async (req, res) => {
 });
 
 // Get beats by division, range, and round
-router.post('/hierarchy-beats',  verifyJwt, async (req, res) => {
+router.post('/hierarchy-beats', verifyJwt, async (req, res) => {
   try {
     const { division, range, round } = req.body;
     
@@ -182,23 +224,61 @@ router.post('/hierarchy-beats',  verifyJwt, async (req, res) => {
       return res.status(400).json({ error: 'division, range, and round are required' });
     }
 
-    const query = `
+    // First try: Get beats with all criteria (division, range, round)
+    let query = `
       SELECT DISTINCT beat
       FROM public.coupe_all
       WHERE division = ? AND range = ? AND round = ?
       ORDER BY beat
     `;
     
-    const result = await sequelize.query(query, {
+    let result = await sequelize.query(query, {
       replacements: [division, range, round],
       type: sequelize.QueryTypes.SELECT
     });
     
+    let level = 'round';
+    
+    // If no beats found with round, try with range only
+    if (result.length === 0) {
+      query = `
+        SELECT DISTINCT beat
+        FROM public.coupe_all
+        WHERE division = ? AND range = ?
+        ORDER BY beat
+      `;
+      
+      result = await sequelize.query(query, {
+        replacements: [division, range],
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      level = 'range';
+    }
+    
+    // If no beats found with range, try with division only
+    if (result.length === 0) {
+      query = `
+        SELECT DISTINCT beat
+        FROM public.coupe_all
+        WHERE division = ?
+        ORDER BY beat
+      `;
+      
+      result = await sequelize.query(query, {
+        replacements: [division],
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      level = 'division';
+    }
+    
     res.json({
-      message: `Beats for division ${division}, range ${range}, round ${round} fetched successfully`,
+      message: `Beats fetched successfully at ${level} level`,
       division: division,
       range: range,
       round: round,
+      queriedLevel: level,
       data: result.map(row => row.beat),
       count: result.length
     });
@@ -209,7 +289,7 @@ router.post('/hierarchy-beats',  verifyJwt, async (req, res) => {
 });
 
 // Get villages by division, range, round, and beat
-router.post('/hierarchy-villages',  verifyJwt,async (req, res) => {
+router.post('/hierarchy-villages', verifyJwt, async (req, res) => {
   try {
     const { division, range, round, beat } = req.body;
     
@@ -217,24 +297,79 @@ router.post('/hierarchy-villages',  verifyJwt,async (req, res) => {
       return res.status(400).json({ error: 'division, range, round, and beat are required' });
     }
 
-    const query = `
+    // First try: Get villages with all criteria (division, range, round, beat)
+    let query = `
       SELECT DISTINCT village
       FROM public.coupe_all
       WHERE division = ? AND range = ? AND round = ? AND beat = ?
       ORDER BY village
     `;
     
-    const result = await sequelize.query(query, {
+    let result = await sequelize.query(query, {
       replacements: [division, range, round, beat],
       type: sequelize.QueryTypes.SELECT
     });
     
+    let level = 'beat';
+    
+    // If no villages found with beat, try with round only (exclude beat)
+    if (result.length === 0) {
+      query = `
+        SELECT DISTINCT village
+        FROM public.coupe_all
+        WHERE division = ? AND range = ? AND round = ?
+        ORDER BY village
+      `;
+      
+      result = await sequelize.query(query, {
+        replacements: [division, range, round],
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      level = 'round';
+    }
+    
+    // If no villages found with round, try with range only
+    if (result.length === 0) {
+      query = `
+        SELECT DISTINCT village
+        FROM public.coupe_all
+        WHERE division = ? AND range = ?
+        ORDER BY village
+      `;
+      
+      result = await sequelize.query(query, {
+        replacements: [division, range],
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      level = 'range';
+    }
+    
+    // If no villages found with range, try with division only
+    if (result.length === 0) {
+      query = `
+        SELECT DISTINCT village
+        FROM public.coupe_all
+        WHERE division = ?
+        ORDER BY village
+      `;
+      
+      result = await sequelize.query(query, {
+        replacements: [division],
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      level = 'division';
+    }
+    
     res.json({
-      message: `Villages fetched successfully`,
+      message: `Villages fetched successfully at ${level} level`,
       division: division,
       range: range,
       round: round,
       beat: beat,
+      queriedLevel: level,
       data: result.map(row => row.village),
       count: result.length
     });
