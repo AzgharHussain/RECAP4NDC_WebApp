@@ -2141,96 +2141,106 @@ const handleExportToPDF = () => {
       <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor: "transparent" }}>
         <CardContent>
   <Grid container spacing={3}>
-    {/* Date Range Selection */}
-    <Grid item xs={12}>
-      <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-        Select Date Range (Maximum 6 months)
-      </Typography>
-    </Grid>
-    
-    <Grid item xs={12} md={5}>
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          views={['year', 'month']}
-          label="Start Date"
-          value={startDate}
-          onChange={handleStartDateChange}
-          minDate={new Date(2020, 0, 1)}
-          maxDate={endDate ? new Date(Math.min(
-            new Date(2030, 11, 31).getTime(),
-            new Date(endDate.getFullYear(), endDate.getMonth() - 5, 1).getTime()
-          )) : new Date(2030, 11, 31)}
-          slotProps={{
-            textField: {
-              fullWidth: true,
-              size: "small",
-              InputProps: {
-                startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
-              }
-            }
-          }}
-        />
-      </LocalizationProvider>
-    </Grid>
+{/* Date Range Selection */}
+<Grid item xs={12}>
+  <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+    Select Date Range
+    {selectedDivision === 'all' 
+      ? ' (Maximum 6 months for All Divisions)' 
+      : ' (Maximum 12 months)'}
+  </Typography>
+</Grid>
 
-    <Grid item xs={12} md={5}>
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          views={['year', 'month']}
-          label="End Date"
-          value={endDate}
-          onChange={handleEndDateChange}
-          minDate={startDate || new Date(2020, 0, 1)}
-          maxDate={startDate ? new Date(Math.min(
-            new Date(2030, 11, 31).getTime(),
-            new Date(startDate.getFullYear(), startDate.getMonth() + 5, 1).getTime()
-          )) : new Date(2030, 11, 31)}
-          slotProps={{
-            textField: {
-              fullWidth: true,
-              size: "small",
-              InputProps: {
-                startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
-              }
-            }
-          }}
-        />
-      </LocalizationProvider>
-    </Grid>
-    
-    <Grid item xs={12} md={2}>
-      <Button
-        variant="contained"
-        color="primary"
-        fullWidth
-        startIcon={<Send />}
-        onClick={handleSubmit}
-        disabled={startDate && endDate && (() => {
-          const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                            (endDate.getMonth() - startDate.getMonth());
-          return monthsDiff > 5;
-        })()}
-        sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
-      >
-        Submit
-      </Button>
-    </Grid>
-    
-    {/* Error message for range exceeding 6 months */}
-    {startDate && endDate && (() => {
+<Grid item xs={12} md={5}>
+  <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <DatePicker
+      views={['year', 'month']}
+      label="Start Date"
+      value={startDate}
+      onChange={handleStartDateChange}
+      minDate={new Date(2020, 0, 1)}
+      maxDate={endDate ? new Date(Math.min(
+        new Date(2030, 11, 31).getTime(),
+        new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 5 : 11), 1).getTime()
+      )) : new Date(2030, 11, 31)}
+      slotProps={{
+        textField: {
+          fullWidth: true,
+          size: "small",
+          InputProps: {
+            startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+          }
+        }
+      }}
+    />
+  </LocalizationProvider>
+</Grid>
+
+<Grid item xs={12} md={5}>
+  <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <DatePicker
+      views={['year', 'month']}
+      label="End Date"
+      value={endDate}
+      onChange={handleEndDateChange}
+      minDate={startDate || new Date(2020, 0, 1)}
+      maxDate={startDate ? new Date(Math.min(
+        new Date(2030, 11, 31).getTime(),
+        new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 5 : 11), 1).getTime()
+      )) : new Date(2030, 11, 31)}
+      slotProps={{
+        textField: {
+          fullWidth: true,
+          size: "small",
+          InputProps: {
+            startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+          }
+        }
+      }}
+    />
+  </LocalizationProvider>
+</Grid>
+
+<Grid item xs={12} md={2}>
+  <Button
+    variant="contained"
+    color="primary"
+    fullWidth
+    startIcon={<Send />}
+    onClick={handleSubmit}
+    disabled={!startDate || !endDate || (() => {
+      if (!startDate || !endDate) return true;
       const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
                         (endDate.getMonth() - startDate.getMonth());
-      if (monthsDiff > 5) {
-        return (
-          <Grid item xs={12}>
-            <Alert severity="error" sx={{ mt: 1 }}>
-              Date range cannot exceed 6 months. Please select a shorter range.
-            </Alert>
-          </Grid>
-        );
-      }
-      return null;
+      const maxAllowed = selectedDivision === 'all' ? 6 : 12;
+      return monthsDiff > maxAllowed;
     })()}
+    sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
+  >
+    Submit
+  </Button>
+</Grid>
+
+{/* Error message for range exceeding limits */}
+{startDate && endDate && (() => {
+  const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                    (endDate.getMonth() - startDate.getMonth());
+  
+  const maxAllowed = selectedDivision === 'all' ? 6 : 12;
+  
+  if (monthsDiff > maxAllowed) {
+    return (
+      <Grid item xs={12}>
+        <Alert severity="error" sx={{ mt: 1 }}>
+          {selectedDivision === 'all' 
+            ? 'For "All Divisions", date range cannot exceed 6 months. Please select a shorter range.'
+            : 'Date range cannot exceed 12 months. Please select a shorter range.'}
+        </Alert>
+      </Grid>
+    );
+  }
+  return null;
+})()}
   </Grid>
 </CardContent>
       </Card>
@@ -2720,12 +2730,12 @@ const handleExportToPDF = () => {
                             </Box>
                           </TableCell>
                         )}
-                        <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
+                        {/* <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
                           <Box display="flex" alignItems="center">
                             <strong>Status</strong>
                             <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                           </Box>
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell><strong>NDVI Change</strong></TableCell>
                         <TableCell><strong>Category</strong></TableCell>
                         <TableCell><strong>Location</strong></TableCell>
@@ -2772,14 +2782,14 @@ const handleExportToPDF = () => {
                                 </Typography>
                               </TableCell>
                             )}
-                            <TableCell>
+                            {/* <TableCell>
                               <Chip
-                                label={row.status ? 'Degraded' : 'Afforested'}
-                                color={row.status ? 'error' : 'success'} 
+                                label={row.status ? 'Afforested' : 'Degraded'}
+                                color={row.status ? 'success' : 'error'} 
                                 size="small"
                                 sx={{ fontWeight: 600 }}
                               />
-                            </TableCell>
+                            </TableCell> */}
                             <TableCell>
                               <Chip
                                 label={row.ndvi_change ? row.ndvi_change.toFixed(4) : 'N/A'}
@@ -3012,13 +3022,13 @@ const handleExportToPDF = () => {
                       NDVI Change Information
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                      {/* <Grid item xs={6}>
                         <Typography variant="body2">
                           <strong>Status:</strong> 
-                          <Chip label={selectedRecord.status ? 'Degraded' : 'Afforested'} 
-                                color={selectedRecord.status ? 'error' : 'success'} size="small" sx={{ ml: 1 }} />
+                          <Chip label={selectedRecord.status ? 'Afforested' : 'Degraded'} 
+                                color={selectedRecord.status ? 'success' : 'error'} size="small" sx={{ ml: 1 }} />
                         </Typography>
-                      </Grid>
+                      </Grid> */}
                       <Grid item xs={6}>
                         <Typography variant="body2">
                           <strong>Category:</strong> {selectedRecord.change_category || 'N/A'}

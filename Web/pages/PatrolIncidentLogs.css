@@ -189,6 +189,12 @@ body {
               12.064px 12.064px 6.786px -13.572px #fff inset;
 }
 
+:where(.css-dev-only-do-not-override-xepvsj).ant-table-wrapper .ant-table-cell, :where(.css-dev-only-do-not-override-xepvsj).ant-table-wrapper .ant-table-thead>tr>th,:where(.css-dev-only-do-not-override-xepvsj).ant-table-wrapper .ant-table-tbody>tr>td {
+      padding: 11px 16px;
+}
+
+
+
 /* Ensure filter placeholders and selected text are also black */
 .ant-input, .ant-picker-input > input, .ant-select-selector {
   color: #000 !important;  /* Ensure input, select, and date picker text is black */
