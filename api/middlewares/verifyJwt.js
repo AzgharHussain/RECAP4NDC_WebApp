@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const SECRET_KEY = process.env.JWT_SECRET; // fallback secret
+const blacklistedTokens = require("./tokenBlacklist");
 
 const verifyJwt = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -14,6 +15,14 @@ const verifyJwt = (req, res, next) => {
     return res.status(401).json({ success: false, message: "JWT token missing" });
   }
 
+  // 🔥 CHECK BLACKLIST FIRST
+if (blacklistedTokens.has(token)) {
+  console.log("🔥 BLOCKED TOKEN:", token);
+  return res.status(401).json({
+    success: false,
+    message: "Token has been revoked"
+  });
+}
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
     req.user = decoded;

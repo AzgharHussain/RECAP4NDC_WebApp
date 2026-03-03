@@ -14,8 +14,11 @@ const setNoCacheHeaders = require('./middlewares/cacheControl');
 
 const errorHandler = require("./middlewares/errorHandler");
 
+// At top of server.js
+const blacklistedTokens = require("./middlewares/tokenBlacklist");
 const helmet = require("helmet");
 const crypto = require('crypto');
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 
@@ -255,6 +258,21 @@ app.post('/api/test-post', (req, res) => {
   });
 });
 
+app.post('/api/logout', (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(400).json({ message: "Token required" });
+  }
+
+  const token = authHeader.split(' ')[1];
+console.log("Adding to blacklist:", token);
+  // Add token to blacklist
+  blacklistedTokens.add(token);
+
+  return res.json({ message: "Logged out successfully" });
+});
+
 app.post('/api/admin', validateNoDuplicateParams, async (req, res) => {
   try {
     console.log('✅ /api/admin POST route accessed');
@@ -416,7 +434,18 @@ app.post('/api/admin', validateNoDuplicateParams, async (req, res) => {
 //   }
 // });
 
-app.post("/api/saveuser",  verifyTempToken, validateNoDuplicateParams, async (req, res) => {
+const saveUserLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Allow only 10 requests per IP per 15 mins
+  message: {
+    success: false,
+    error: "Too many requests. Please try again after 15 minutes."
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.post("/api/saveuser",  verifyTempToken, validateNoDuplicateParams, saveUserLimiter, async (req, res) => {
   try {
     console.log('✅ /api/saveuser POST route accessed');
     console.log('Request body:', req.body);

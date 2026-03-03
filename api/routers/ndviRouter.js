@@ -13,12 +13,20 @@ const { body, param, validationResult } = require('express-validator');
 router.post('/ndvi-change',verifyJwt, async (req, res) => {
     const { tableName,village_name } = req.body;
  
-    if (!tableName) {
+    if (!tableName || !village_name) {
         return res.status(400).json({
             success: false,
-            message: 'tableName is required'
+            message: 'tableName and village_name are required'
         });
     }
+
+    const isValidVillageName = /^[a-zA-Z0-9\s\-_]+$/.test(village_name);
+    if (!isValidVillageName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid village name format'
+            });
+        }
  
     try {
         // 1️⃣ Create columns if NOT EXISTS
@@ -60,9 +68,68 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
     }
 });
 
-// Add this endpoint to your backend
+// Update the transformTableName function to handle all cases
+const transformTableName = (tableName, division) => {
+  if (!division || !tableName) return tableName;
+  
+  const lowerDivision = division.toLowerCase();
+  
+  // Mapping for special cases
+  const DIVISION_TO_COUPE_MAP = {
+    'aravalli': 'sabarkantha_south',
+    'bharuch sub division': 'bharuch',
+    'bharuch_sub_division': 'bharuch',
+  };
+
+  // Check if this division needs mapping (handle both with and without underscores)
+  let mappedCoupe = null;
+  
+  // Try exact match first
+  if (DIVISION_TO_COUPE_MAP[lowerDivision]) {
+    mappedCoupe = DIVISION_TO_COUPE_MAP[lowerDivision];
+  } else {
+    // Try without underscores
+    const divisionWithoutUnderscores = lowerDivision.replace(/_/g, ' ');
+    if (DIVISION_TO_COUPE_MAP[divisionWithoutUnderscores]) {
+      mappedCoupe = DIVISION_TO_COUPE_MAP[divisionWithoutUnderscores];
+    }
+  }
+
+  if (mappedCoupe) {
+    console.log(`[transformTableName] Mapping ${lowerDivision} to ${mappedCoupe}`);
+    
+    // Handle NDVI Change table format: YYYY-MM-DD_division_coupe_NDVI_Change
+    if (tableName.includes('_NDVI_Change')) {
+      const tableParts = tableName.split('_');
+      
+      if (tableParts.length >= 4) {
+        const datePart = tableParts[0];
+        // Find where the division part ends (it could be multiple words)
+        // The format is: date_division_coupe_NDVI_Change
+        // So after date, everything until "_NDVI_Change" is the division
+        let divisionParts = [];
+        let i = 1;
+        while (i < tableParts.length - 2) { // -2 for "NDVI" and "Change"
+          divisionParts.push(tableParts[i]);
+          i++;
+        }
+        
+        const suffix = tableParts.slice(-2).join('_'); // "NDVI_Change"
+        
+        // Construct new table name with mapped coupe
+        const newTableName = `${datePart}_${mappedCoupe}_coupe_${suffix}`;
+        console.log(`[transformTableName] Transformed: ${tableName} -> ${newTableName}`);
+        return newTableName;
+      }
+    }
+  }
+  
+  return tableName;
+};
+
+// Update the first endpoint
 router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
-    const { tableName, range, round, beat } = req.body;
+    let { tableName, range, round, beat, division } = req.body;
 
     if (!tableName) {
         return res.status(400).json({
@@ -72,10 +139,14 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
     }
 
     try {
+        // Transform table name if needed based on division
+        const actualTableName = transformTableName(tableName, division);
+        
+        console.log(`[ndvi-change-get-filtered] Original: ${tableName}, Division: ${division}, Transformed to: ${actualTableName}`);
+
         // Build WHERE clause based on hierarchy filters
         let whereClause = '';
         const conditions = [];
-        
         
         if (range) {
             conditions.push(`range = '${range}'`);
@@ -93,7 +164,7 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
 
         // First ensure columns exist
         const alterTableQuery = `
-            ALTER TABLE public."${tableName}"
+            ALTER TABLE public."${actualTableName}"
             ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
             ADD COLUMN IF NOT EXISTS note TEXT,
             ADD COLUMN IF NOT EXISTS image_data TEXT,
@@ -107,7 +178,7 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
         // Fetch filtered data
         const selectQuery = `
            SELECT *
-            FROM public."${tableName}"
+            FROM public."${actualTableName}"
             ${whereClause};
         `;
 
@@ -120,7 +191,7 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in filtered NDVI API');
+        console.error('Error in filtered NDVI API:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch filtered NDVI data'
@@ -128,13 +199,10 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
     }
 });
 
-// Add filtered degraded area endpoint
-
-
-
-
+// Update the second endpoint
+// Update the degraded area endpoint
 router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
-    const { tableName, range, round, beat } = req.body;
+    let { tableName, range, round, beat, division } = req.body;
 
     if (!tableName) {
         return res.status(400).json({
@@ -144,10 +212,14 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
     }
 
     try {
+        // Transform table name if needed based on division
+        const actualTableName = transformTableName(tableName, division);
+        
+        console.log(`[ndvi-change-degraded-area] Original: ${tableName}, Division: ${division}, Transformed to: ${actualTableName}`);
+
         // Build WHERE clause based on hierarchy filters
         let whereClause = '';
         const conditions = [];
-        
         
         if (range) {
             conditions.push(`range = '${range}'`);
@@ -163,12 +235,12 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
             whereClause = 'WHERE ' + conditions.join(' AND ');
         }
 
-        // Fetch filtered area
+        // Try different approaches for area calculation
         const selectQuery = `
             SELECT
                 SUM(ST_Area(geom::geography) / 1000000) AS total_area_sq_km
             FROM
-                public."${tableName}"
+                public."${actualTableName}"
             ${whereClause};
         `;
 
@@ -182,11 +254,48 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
 
     } catch (error) {
         console.error('Error in filtered degraded area API:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch filtered degraded area',
-            error: error.message
-        });
+        
+        // If the first approach fails, try with ST_Transform
+        try {
+            console.log('Trying with ST_Transform...');
+            const { tableName, range, round, beat, division } = req.body;
+            const actualTableName = transformTableName(tableName, division);
+            
+            let whereClause = '';
+            const conditions = [];
+            
+            if (range) conditions.push(`range = '${range}'`);
+            if (round) conditions.push(`round = '${round}'`);
+            if (beat) conditions.push(`beat = '${beat}'`);
+            
+            if (conditions.length > 0) {
+                whereClause = 'WHERE ' + conditions.join(' AND ');
+            }
+            
+            // Try with ST_Transform to convert to WGS84 (4326) which is lat/lon
+            const selectQuery = `
+                SELECT
+                    SUM(ST_Area(ST_Transform(geom, 4326)::geography) / 1000000) AS total_area_sq_km
+                FROM
+                    public."${actualTableName}"
+                ${whereClause};
+            `;
+
+            const [results] = await sequelize.query(selectQuery);
+            
+            res.json({
+                success: true,
+                message: 'Filtered area fetched successfully (with transform)',
+                data: results
+            });
+        } catch (transformError) {
+            console.error('Both area calculation methods failed:', transformError);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to fetch filtered degraded area',
+                error: error.message
+            });
+        }
     }
 });
 
@@ -439,7 +548,6 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch NDVI record',
-            error: error.message
         });
     }
 });
@@ -666,6 +774,13 @@ router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, r
   const { tableName, note, status } = req.body;
   const { id } = req.body;
   const imageFile = req.file;
+
+  if (!tableName) {
+        return res.status(400).json({
+            success: false,
+            message: 'tableName is required'
+        });
+    }
 
   // Manual validation
   if (!id || isNaN(id) || id <= 0) {

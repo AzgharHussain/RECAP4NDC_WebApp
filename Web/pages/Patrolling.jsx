@@ -2109,10 +2109,11 @@ useEffect(() => {
     <div className="container">
       {isLoading && <Loader />}
       <div className="section">
+        <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px", marginLeft: "20px"}}>
+            {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Detail Level Patrolling Logs"}
+          </h3>
         <div className="heading-container" style={{height:"50px"}}>
-          {/* <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"}}>
-            {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Patrolling Logs"}
-          </h3> */}
+          
 
            
 

@@ -198,7 +198,7 @@
 
 .nested-group-content {
   padding-left: 15px; /* Add indentation for nested content */
-  border-left: 2px solid #e0e0e0;
+  /* border-left: 2px solid #e0e0e0; */
   margin-left: 5px;
 }
 
