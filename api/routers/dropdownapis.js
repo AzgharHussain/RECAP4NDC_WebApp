@@ -124,6 +124,48 @@ router.get('/hierarchy-divisions', verifyJwt, async (req, res) => {
   }
 });
 
+router.post('/coupe-numbers', verifyJwt, async (req, res) => {
+  try {
+    const { village, coupe_name } = req.body;
+
+    // Validate input
+    if (!village || !coupe_name) {
+      return res.status(400).json({ 
+        error: 'Village name and coupe_name (table name) are required' 
+      });
+    }
+
+    // Simple query using the provided table name and village
+    const query = `
+      SELECT DISTINCT "coupe_no"
+      FROM public.${coupe_name}
+      WHERE village = '${village}'
+    `;
+
+    const result = await sequelize.query(query, {
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    if (result.length === 0) {
+      return res.status(404).json({
+        message: `No coupe numbers found for village '${village}' in table '${coupe_name}'`,
+        data: result,
+        count: 0
+      });
+    }
+
+    res.json({
+      message: 'Coupe numbers fetched successfully',
+      data: result.map(row => row.coupe_no),
+      count: result.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching coupe numbers:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 /* ============================================================
    GET RANGES
