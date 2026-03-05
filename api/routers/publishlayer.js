@@ -21,7 +21,7 @@ const geoserver = {
   datastore: "Recap4NDC_DB",
   auth: {
     username: "admin",
-    password: "geoserver",
+    password: "Geo@$ecure#%26",
   },
   sld: "Arvalli_Coupe",
 };
