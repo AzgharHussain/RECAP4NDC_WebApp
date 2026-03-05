@@ -66,14 +66,15 @@ const { Option } = Select;
 
 const startIcon = new L.Icon({
   iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+    // "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+    "../assets/marker-icon.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
 });
 
 const endIcon = new L.Icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+  iconUrl: "../assets/marker-icon-end.png",
   iconSize: [25, 25],
   iconAnchor: [12, 12],
   popupAnchor: [0, -12],
