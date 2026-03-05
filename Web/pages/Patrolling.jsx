@@ -293,18 +293,18 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
             icon: <TeamOutlined />,
             color: 'rgba(64, 0, 255, 0.3)',
             borderColor: 'rgba(64, 0, 255, 1)'
-          },
-          {
-            key: 'utilization',
-            value: utilizationPercentage,
-            title: language === "gu" ? "ઉપયોગિતા" : "Utilization",
-            suffix: "%",
-            icon: <ClockCircleOutlined />,
-            color: 'rgba(255, 165, 0, 0.3)',
-            borderColor: 'rgba(255, 165, 0, 1)'
           }
+          // {
+          //   key: 'utilization',
+          //   value: utilizationPercentage,
+          //   title: language === "gu" ? "ઉપયોગિતા" : "Utilization",
+          //   suffix: "%",
+          //   icon: <ClockCircleOutlined />,
+          //   color: 'rgba(255, 165, 0, 0.3)',
+          //   borderColor: 'rgba(255, 165, 0, 1)'
+          // }
         ].map((item, index) => (
-          <Col xs={24} sm={12} md={6} key={item.key}>
+          <Col xs={24} sm={12} md={6} lg={8}key={item.key}>
             <div style={{
               background: item.color,
               backdropFilter: 'blur(12px)',

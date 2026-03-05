@@ -1982,7 +1982,7 @@ const handleExportToPDF = () => {
                   <tr>
                     ${showDivisionColumn ? `<td>${item.division || selectedDivision || 'N/A'}</td>` : ''}
                     <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? 'Afforested' : 'Degraded'}</span></td>
-                    <td>${item.ndvi_change?.toFixed(4) || 'N/A'}</td>
+                    <td>${item.NDVI_change?.toFixed(4) || 'N/A'}</td>
                     <td>${item.change_category || (item.status ? 'Afforestation' : 'Degradation')}</td>
                     <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
                     <td>${item.longitude?.toFixed(6) || 'N/A'}</td>
@@ -2052,10 +2052,6 @@ const handleExportToPDF = () => {
               <p style="margin: 5px 0; font-size: 14px; font-weight: 600;">FOREST PATROLLING & MONITORING SYSTEM</p>
               <p style="margin: 5px 0;">© ${new Date().getFullYear()} Gujarat Forest Department | All Rights Reserved</p>
               <p style="margin: 5px 0;">Data Source: Sentinel-2 NDVI Satellite Analysis | Report Generated Automatically</p>
-              <p style="margin: 10px 0 0 0; font-size: 11px; color: #94a3b8;">
-                <em>Note: Afforested area is calculated as (Total Coupe Area - Degraded Area). Values are rounded to 2-6 decimal places. 
-                This report is for official monitoring purposes only.</em>
-              </p>
             </div>
           </div>
           
@@ -2792,8 +2788,8 @@ const handleExportToPDF = () => {
                             </TableCell> */}
                             <TableCell>
                               <Chip
-                                label={row.ndvi_change ? row.ndvi_change.toFixed(4) : 'N/A'}
-                                color={row.ndvi_change < 0 ? 'error' : 'success'}
+                                label={row.NDVI_change ? row.NDVI_change.toFixed(4) : 'N/A'}
+                                color={row.NDVI_change < 0 ? 'error' : 'success'}
                                 size="small"
                                 variant="outlined"
                                 sx={{ fontWeight: 600 }}
@@ -3036,7 +3032,7 @@ const handleExportToPDF = () => {
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>NDVI Change:</strong> {selectedRecord.ndvi_change?.toFixed(4) || 'N/A'}
+                          <strong>NDVI Change:</strong> {selectedRecord.NDVI_change?.toFixed(4) || 'N/A'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
