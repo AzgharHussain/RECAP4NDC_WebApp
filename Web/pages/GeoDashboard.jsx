@@ -140,7 +140,7 @@ const changeLayers = [
   useEffect(() => {
   const timer = setTimeout(() => {
     setIsLoading(false);
-  }, 10000); // 10 seconds
+  }, 1000); // 10 seconds
 
   return () => clearTimeout(timer);
 }, []);
