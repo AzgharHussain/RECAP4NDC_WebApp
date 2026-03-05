@@ -76,9 +76,9 @@ const transformTableName = (tableName, division) => {
   
   // Mapping for special cases
   const DIVISION_TO_COUPE_MAP = {
-    'aravalli': 'sabarkantha_south',
-    'bharuch sub division': 'bharuch',
-    'bharuch_sub_division': 'bharuch',
+    'aravalli': 'aravalli',
+    'bharuch sub division': 'bharuchsubdivision',
+    'bharuch_sub_division': 'bharuchsubdivision',
   };
 
   // Check if this division needs mapping (handle both with and without underscores)
