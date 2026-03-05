@@ -993,8 +993,8 @@ router.post('/get-coupe-area', verifyJwt, async (req, res) => {
         
         // Map the division to correct coupe name if needed
         const DIVISION_TO_COUPE_MAP = {
-            'aravalli': 'sabarkantha_south',
-            'bharuch_sub_division': 'bharuch',
+            'aravalli': 'aravalli',
+            'bharuch_sub_division': 'bharuchsubdivision',
         };
 
         let actualTableName = tableName;
