@@ -21,6 +21,9 @@ import axios from "axios";
 
 import DOMPurify from 'dompurify';
 
+import startIconImg from "../assets/marker-icon.png";
+import endIconImg from "../assets/marker-icon-end.png";
+
 const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
 
 import {
@@ -65,16 +68,14 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const startIcon = new L.Icon({
-  iconUrl:
-    // "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-    "../assets/marker-icon.png",
+  iconUrl: startIconImg,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
 });
-
+ 
 const endIcon = new L.Icon({
-  iconUrl: "../assets/marker-icon-end.png",
+  iconUrl: endIconImg,
   iconSize: [25, 25],
   iconAnchor: [12, 12],
   popupAnchor: [0, -12],
