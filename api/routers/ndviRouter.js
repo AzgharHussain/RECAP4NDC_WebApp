@@ -552,6 +552,48 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
     }
 });
 
+// GET endpoint to fetch all NDVI Change table names
+router.get('/ndvi-change-tables', async (req, res) => {
+    try {
+        // Query to get all tables ending with _coupe_NDVI_Change
+        const getTablesQuery = `
+            SELECT tablename
+            FROM pg_tables
+            WHERE schemaname = 'public'
+              AND tablename LIKE '%\\_coupe\\_NDVI\\_Change' ESCAPE '\\'
+            ORDER BY tablename DESC;
+        `;
+
+        const [results] = await sequelize.query(getTablesQuery);
+
+        if (!results || results.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No NDVI Change tables found',
+                data: []
+            });
+        }
+
+        // Extract just the table names from the results
+        const tableNames = results.map(row => row.tablename);
+
+        res.json({
+            success: true,
+            message: 'NDVI Change tables fetched successfully',
+            count: tableNames.length,
+            data: tableNames
+        });
+
+    } catch (error) {
+        console.error('Error fetching NDVI Change tables:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch NDVI Change tables',
+            error: error.message
+        });
+    }
+});
+
 
 
 // GET: Get single NDVI record by ID

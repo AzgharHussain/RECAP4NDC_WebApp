@@ -2498,128 +2498,13 @@ const handleExportToPDF = () => {
       )}
 
       {/* ===== SECTION 1: CHARTS & ANALYSIS ===== */}
-      {Object.keys(monthlyData).length > 0 && (
-        <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
-          <CardHeader
-            title="1. NDVI Change Analysis"
-            titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
-            avatar={<BarChart color="primary" />}
-            action={
-              <IconButton onClick={() => toggleSection('charts')}>
-                {expandedSections.charts ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-              </IconButton>
-            }
-            sx={{ borderBottom: 1, borderColor: 'divider' }}
-          />
-          
-          {expandedSections.charts && (
-            <CardContent>
-              {/* Chart Type Selection */}
-              <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-                {/* <Chip
-                  label="Bar Chart"
-                  onClick={() => setChartType('bar')}
-                  color={chartType === 'bar' ? 'primary' : 'default'}
-                  icon={<BarChart />}
-                  clickable
-                /> */}
-                {/* <Chip
-                  label="Line Chart"
-                  onClick={() => setChartType('line')}
-                  color={chartType === 'line' ? 'primary' : 'default'}
-                  icon={<ShowChart />}
-                  clickable
-                />
-                <Chip
-                  label="Pie Chart"
-                  onClick={() => setChartType('pie')}
-                  color={chartType === 'pie' ? 'primary' : 'default'}
-                  icon={<PieChart />}
-                  clickable
-                /> */}
-              </Box>
-
-              {/* Chart Display */}
-              <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden' }}>
-                {renderChart()}
-              </Box>
-
-              {/* Analysis Notes */}
-              {/* {summaryStats && (
-                <Card sx={{ mt: 4, borderRadius: 2, bgcolor:'transparent'}}>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Info color="primary" />
-                      Analysis Summary - {selectedMonth}
-                    </Typography>
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ p: 2, bgcolor: 'transparent', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
-                            Key Findings
-                          </Typography>
-                          <Stack spacing={1.5}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Box sx={{ width: 8, height: 8, bgcolor: '#ef4444', borderRadius: '50%', mr: 1.5 }} />
-                              <Typography variant="body2">
-                                <strong>Degraded Area:</strong> {summaryStats.degradedArea.toFixed(2)} km² ({summaryStats.degradedPercentage.toFixed(1)}% of total)
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Box sx={{ width: 8, height: 8, bgcolor: '#22c55e', borderRadius: '50%', mr: 1.5 }} />
-                              <Typography variant="body2">
-                                <strong>Afforested Area:</strong> {summaryStats.afforestedArea.toFixed(2)} km² ({summaryStats.afforestedPercentage.toFixed(1)}% of total)
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Box sx={{ width: 8, height: 8, bgcolor: '#3b82f6', borderRadius: '50%', mr: 1.5 }} />
-                              <Typography variant="body2">
-                                <strong>Net Change:</strong> 
-                                <span style={{ 
-                                  color: summaryStats.afforestedArea > summaryStats.degradedArea ? '#22c55e' : '#ef4444',
-                                  fontWeight: 600,
-                                  marginLeft: 4
-                                }}>
-                                  {(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)} km²
-                                </span>
-                                ({summaryStats.afforestedArea > summaryStats.degradedArea ? 'Positive' : 'Negative'} change)
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ p: 2, bgcolor: 'transparent', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
-                            Data Quality
-                          </Typography>
-                          <Stack spacing={1.5}>
-                            <Typography variant="body2">
-                              <strong>Records with notes:</strong> {summaryStats.withNotes} ({((summaryStats.withNotes / summaryStats.totalPolygons) * 100).toFixed(1)}%)
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Records with images:</strong> {summaryStats.withImages} ({((summaryStats.withImages / summaryStats.totalPolygons) * 100).toFixed(1)}%)
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Total polygons analyzed:</strong> {summaryStats.totalPolygons.toLocaleString()}
-                            </Typography>
-                          </Stack>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              )} */}
-            </CardContent>
-          )}
-        </Card>
-      )}
+      
 
       {/* ===== SECTION 2: DATA TABLE ===== */}
       {Object.keys(monthlyData).length > 0 && (
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
           <CardHeader
-            title="2. Detailed Data Table"
+            title="1. Detailed Data Table"
             titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
             avatar={<Visibility color="primary" />}
             action={
@@ -2905,7 +2790,7 @@ const handleExportToPDF = () => {
       {Object.keys(monthlyData).length > 0 && (
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
           <CardHeader
-            title="3. Monthly Overview"
+            title="2. Monthly Overview"
             titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
             avatar={<CalendarMonth color="primary" />}
             action={
@@ -3111,14 +2996,6 @@ const handleExportToPDF = () => {
             </Grid>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModalOpen(false)}>Close</Button>
-          {selectedRecord?.image_data && (
-            <Button variant="contained" startIcon={<ZoomIn />} onClick={() => setImageModalOpen(true)}>
-              View Image
-            </Button>
-          )}
-        </DialogActions>
       </Dialog>
 
       {/* Image Preview Modal */}

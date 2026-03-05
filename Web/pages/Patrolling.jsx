@@ -25,6 +25,9 @@ import endIconImg from "../assets/marker-icon-end.png";
 
 import DOMPurify from 'dompurify';
 
+import startIconImg from "../assets/marker-icon.png";
+import endIconImg from "../assets/marker-icon-end.png";
+
 const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
 
 import {
@@ -74,7 +77,7 @@ const startIcon = new L.Icon({
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
 });
-
+ 
 const endIcon = new L.Icon({
   iconUrl: endIconImg,
   iconSize: [25, 25],
