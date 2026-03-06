@@ -25,9 +25,6 @@ import endIconImg from "../assets/marker-icon-end.png";
 
 import DOMPurify from 'dompurify';
 
-import startIconImg from "../assets/marker-icon.png";
-import endIconImg from "../assets/marker-icon-end.png";
-
 const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
 
 import {
