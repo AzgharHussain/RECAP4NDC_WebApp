@@ -1438,8 +1438,13 @@ const NDVIChangeDashboard = () => {
 const handleExportToPDF = () => {
   try {
     // Check if there's data to export
-    if (Object.keys(monthlyData).length === 0) {
-      alert('No data available to export');
+    if (!monthlyData || Object.keys(monthlyData).length === 0) {
+      alert('No data available to export. Please load some data first.');
+      return;
+    }
+
+    if (!selectedMonth || !monthlyData[selectedMonth]) {
+      alert('Please select a valid month for the report.');
       return;
     }
 
@@ -1451,8 +1456,10 @@ const handleExportToPDF = () => {
       timeStyle: 'medium'
     });
     
-    const filename = `NDVI_Report_${selectedDivision === 'all' ? 'All_Divisions' : (selectedDivision || 'NDVI')}_${now.toISOString().slice(0,10)}`;
-    
+    // Sanitize filename
+    const sanitizedDivision = (selectedDivision === 'all' ? 'All_Divisions' : (selectedDivision || 'NDVI'))
+      .replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `NDVI_Report_${sanitizedDivision}_${now.toISOString().slice(0,10)}`;
     // Determine the scope of the report
     const reportScope = selectedDivision === 'all' ? 'All Forest Divisions' : 
                        (selectedDivision ? `${selectedDivision} Division` : 
@@ -1838,11 +1845,7 @@ const handleExportToPDF = () => {
             <!-- Executive Summary -->
             <div class="summary-card">
               <h2 style="color: white; margin-top: 0; border-bottom-color: rgba(255,255,255,0.2);">📊 Executive Summary</h2>
-              <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">
-                This report provides a comprehensive analysis of forest cover changes based on NDVI (Normalized Difference Vegetation Index) 
-                satellite data for the period ${startDate ? startDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : ''} 
-                to ${endDate ? endDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : ''}.
-              </p>
+              
               
               ${summaryStats ? `
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
@@ -1874,25 +1877,24 @@ const handleExportToPDF = () => {
                 <div class="stat-card degraded">
                   <div class="stat-label">Degraded Area</div>
                   <div class="stat-value">${summaryStats.degradedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
-                  <div class="stat-percentage">${summaryStats.degradedPercentage.toFixed(2)}% of total area</div>
                 </div>
                 
                 <div class="stat-card afforested">
                   <div class="stat-label">Afforested Area</div>
                   <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
-                  <div class="stat-percentage">${summaryStats.afforestedPercentage.toFixed(1)}% of total area</div>
                 </div>
                 
-                <div class="stat-card total">
+                
+              </div>
+              <div class="stats-grid">
+<div class="stat-card total">
                   <div class="stat-label">Total Area</div>
                   <div class="stat-value">${totalArea.toFixed(2)}<span class="stat-unit">km²</span></div>
-                  <div class="stat-percentage">Complete coverage</div>
                 </div>
                 
                 <div class="stat-card total">
                   <div class="stat-label">Data Quality</div>
                   <div class="stat-value">${summaryStats.withNotes}<span class="stat-unit">notes</span></div>
-                  <div class="stat-value" style="font-size: 20px;">${summaryStats.withImages}<span class="stat-unit">images</span></div>
                 </div>
               </div>
             ` : ''}
@@ -2370,9 +2372,7 @@ const handleExportToPDF = () => {
                         km²
                       </Typography>
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {summaryStats.degradedPercentage.toFixed(2)}% of total area
-                    </Typography>
+                    
                   </Box>
                   <Warning sx={{ fontSize: 40, color: '#ef4444', opacity: 0.8 }} />
                 </Box>
@@ -2394,9 +2394,7 @@ const handleExportToPDF = () => {
                         km²
                       </Typography>
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {summaryStats.afforestedPercentage.toFixed(2)}% of total area
-                    </Typography>
+                    
                   </Box>
                   <CheckCircle sx={{ fontSize: 40, color: '#22c55e', opacity: 0.8 }} />
                 </Box>
@@ -2415,9 +2413,7 @@ const handleExportToPDF = () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#3b82f6' }}>
                       {summaryStats.withNotes}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {((summaryStats.withNotes / summaryStats.totalPolygons) * 100).toFixed(1)}% of total
-                    </Typography>
+                    
                   </Box>
                   <Note sx={{ fontSize: 40, color: '#3b82f6', opacity: 0.8 }} />
                 </Box>
@@ -2436,9 +2432,7 @@ const handleExportToPDF = () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#f59e0b' }}>
                       {summaryStats.withImages}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {((summaryStats.withImages / summaryStats.totalPolygons) * 100).toFixed(1)}% of total
-                    </Typography>
+                    
                   </Box>
                   <ImageIcon sx={{ fontSize: 40, color: '#f59e0b', opacity: 0.8 }} />
                 </Box>
