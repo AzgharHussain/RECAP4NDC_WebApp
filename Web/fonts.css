@@ -6,6 +6,16 @@
   src: url('../Web/assets/fonts/material-icons-outlined-v110-latin-regular-1.woff2') format('woff2');
 }
 
+@font-face {
+  font-family: 'GravurCondensed';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/gravure-4.woff2') format('woff2');
+}
+
+
+
 body {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }

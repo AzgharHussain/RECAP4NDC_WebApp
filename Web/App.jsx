@@ -20,6 +20,7 @@ const ViewCoupe = lazy(() => import("./pages/ViewCoupe"));
 const CoupeObservation = lazy(() => import("./pages/CoupeObservation"));
 const NDVIChangeDashboard = lazy(() => import("./pages/NDVIDashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const Homepage = lazy(() => import("./pages/Homepage"));
 
 const LoadingFallback = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
@@ -34,7 +35,8 @@ export default function App() {
         <Routes>
 
           {/* Public */}
-          <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Homepage />} />
 
           {/* Protected User Routes */}
           <Route
@@ -52,6 +54,7 @@ export default function App() {
             <Route path="/working-plan/view" element={<ViewCoupe />} />
             <Route path="/working-plan/log" element={<CoupeObservation />} />
             <Route path="/ndvi-dashboard" element={<NDVIChangeDashboard />} />
+            
           </Route>
 
           <Route
@@ -65,7 +68,7 @@ export default function App() {
           </Route>
 
           {/* Fallback */}
-          <Route path="*" element={<Login />} />
+          <Route path="*" element={<Homepage />} />
 
         </Routes>
       </Suspense>

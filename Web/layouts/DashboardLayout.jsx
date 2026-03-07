@@ -154,7 +154,7 @@ export default function DashboardLayout() {
     setIsAdminMenuOpen(false);
     
     // Navigate to login page
-    navigate("/login");
+    navigate("/");
     
     // Force reload to ensure clean state
     window.location.reload();
