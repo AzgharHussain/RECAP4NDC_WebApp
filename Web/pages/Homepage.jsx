@@ -31,7 +31,7 @@ import forestmonitoring from "../assets/forest-m.png";
 import pm from "../assets/p-m.png";
 import fm from "../assets/f-m.png";
 import nv from "../assets/n-v.png";
-import gisfylogo from "../assets/GISFY Main LOGO.png";
+import gisfylogo from "../assets/gisfylogo.png";
 import cb from "../assets/cb.png";
 import curve from "../assets/curve.png";
 
@@ -231,7 +231,11 @@ The WebGIS dashboard integrates spatial data services and field intelligence for
 {/* FOOTER */}
 <footer className="footer">
     <p> © 2026 Gujarat Forest Department | RECAP4NDC Initiative    </p>
-    <img src={gisfylogo} alt="logo picture" style={{width:'200px'}}></img>
+    <div style={{display:'flex', alignItems:'center'}}>
+          <p>Powered by  </p>
+          <img src={gisfylogo} alt="logo picture" style={{width:'100px', height:'40px'}}></img>
+    </div>
+
 </footer>
 
     </>

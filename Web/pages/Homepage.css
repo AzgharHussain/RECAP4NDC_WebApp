@@ -209,6 +209,11 @@ padding:15px;
 margin-top:40px;
 display: flex;
 justify-content: space-around;
+align-items: center;
+}
+
+.footer p{
+  margin:0px;
 }
 
 .module-card:hover .module-title{
