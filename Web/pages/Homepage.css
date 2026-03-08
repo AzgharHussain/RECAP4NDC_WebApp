@@ -1,12 +1,18 @@
 /* HERO SECTION */
-:root{
-overflow-x:hidden;
-overflow-y: auto;
-  scrollbar-width: none;
+html, body{
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin:0;
+  height:100%;
 }
 
-:root::-webkit-scrollbar {
-  display: none;
+/* Hide scrollbar but keep scrolling */
+body::-webkit-scrollbar{
+  display:none;
+}
+
+body{
+  scrollbar-width:none;
 }
 
 /* Add to your CSS */
