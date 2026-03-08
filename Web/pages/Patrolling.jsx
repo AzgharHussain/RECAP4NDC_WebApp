@@ -2280,7 +2280,7 @@ useEffect(() => {
                   : "Search by Start Date"
               }
               style={{
-                width: "200px",
+                width: "150px",
                 border: "1px solid #d9d9d9",
                 borderRadius: "4px",
                 background: "#fff",
@@ -2297,7 +2297,7 @@ useEffect(() => {
                   : "Search by End Date"
               }
               style={{
-                width: "200px",
+                width: "150px",
                 border: "1px solid #d9d9d9",
                 borderRadius: "4px",
                 background: "#fff",
@@ -2344,7 +2344,7 @@ useEffect(() => {
             >
               {language === "gu" ? "ફિલ્ટર સાફ કરો" : "Clear Filters"}
             </Button>
-            {/* <Button 
+            <Button 
               onClick={() => {
                 setShowMapRoute(!showmaproute);
               }}
@@ -2356,7 +2356,7 @@ useEffect(() => {
               }}
             >
               {language === "gu" ? "બીટ પેટ્રોલ કવરેજ" : "Beat Patrol Coverage"}
-            </Button> */}
+            </Button>
             
             
 

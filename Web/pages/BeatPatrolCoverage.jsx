@@ -754,7 +754,7 @@ const handleReset = () => {
             style={{
               position: "absolute",
               top: "20px",
-              right: "510px",
+              right: "370px",
               background: "rgba(255,255,255,0.9)",
               border: "none",
               borderRadius: "50%",
@@ -1062,7 +1062,7 @@ const handleReset = () => {
               <button
                 style={{
                   position: "absolute",
-                  left: "400px",
+                  left: "370px",
                   top: "50%",
                   transform: "translateY(-50%)",
                   background: "rgba(255,255,255,0.9)",
@@ -1106,7 +1106,7 @@ const handleReset = () => {
               <button
                 style={{
                   position: "absolute",
-                  right: "400px",
+                  right: "370px",
                   top: "50%",
                   transform: "translateY(-50%)",
                   background: "rgba(255,255,255,0.9)",
