@@ -875,7 +875,7 @@ if (fileName.endsWith('.svg') || fileName.endsWith('.svgz')) {
       
       const fs = require('fs');
       const imageBuffer = fs.readFileSync(imageFile.path);
-      const base64Image = `data:${imageFile.mimetype};base64,${imageBuffer.toString('base64')}`;
+      const base64Image = `${imageBuffer.toString('base64')}`;
       
       updates.push('image_data = :image_data');
       replacements.image_data = base64Image;

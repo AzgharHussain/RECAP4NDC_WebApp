@@ -2144,3 +2144,120 @@ const handleReset = () => {
 };
 
 export default BeatPatrolCoverage;
+
+
+
+here only use  const divisionsRes = await axios.get(
+      `${API_BASE_URL}/api/coupe-divisions`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );  and show only one coupe name in dropdown and on click of that coupe name show all the patrols which are under that coupe and on click of each patrol show the details of that patrol with images in a modal.
+    use this api  
+    router.post("/coupe-patrol-coverage", verifyJwt, async (req, res) => {
+
+  const { coupe_table } = req.body;
+
+  if (!coupe_table) {
+    return res.status(400).json({
+      success: false,
+      message: "Coupe table name is required"
+    });
+  }
+
+  try {
+
+    
+
+    const query = `
+WITH coupe AS (
+    SELECT
+        geom AS coupe_geom,
+        ST_Area(geom::geography) AS coupe_area_sq_m
+    FROM public.${coupe_table}
+),
+
+patrol_lines AS (
+    SELECT
+        p.patrol_id,
+        p.geom AS patrol_geom_text,
+        ST_MakeLine(
+            ST_SetSRID(
+                ST_MakePoint(
+                    CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 1), ' ', 2) AS FLOAT),
+                    CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 1), ' ', 1) AS FLOAT)
+                ), 4326
+            ),
+            ST_SetSRID(
+                ST_MakePoint(
+                    CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 2), ' ', 2) AS FLOAT),
+                    CAST(SPLIT_PART(SPLIT_PART(p.geom, ',', 2), ' ', 1) AS FLOAT)
+                ), 4326
+            )
+        ) AS line_geom
+    FROM public.patrols p
+    WHERE p.geom IS NOT NULL
+      AND p.geom LIKE '%,%'
+),
+
+patrol_buffers AS (
+    SELECT
+        patrol_id,
+        patrol_geom_text,
+        ST_Buffer(line_geom::geography, 100)::geometry AS buffer_geom
+    FROM patrol_lines
+),
+
+clipped_buffers AS (
+    SELECT
+        pb.patrol_id,
+        pb.patrol_geom_text,
+        ST_Intersection(pb.buffer_geom, c.coupe_geom) AS clipped_geom
+    FROM patrol_buffers pb
+    JOIN coupe c
+      ON ST_Intersects(pb.buffer_geom, c.coupe_geom)
+),
+
+unioned AS (
+    SELECT ST_Union(clipped_geom) AS union_geom
+    FROM clipped_buffers
+)
+
+SELECT
+    '${coupe_table}' AS coupe_table,
+    ROUND(c.coupe_area_sq_m::numeric,2) AS coupe_area_sq_m,
+    ROUND(ST_Area(u.union_geom::geography)::numeric,2) AS patrol_area_sq_m,
+    ROUND(
+        (ST_Area(u.union_geom::geography) / c.coupe_area_sq_m) * 100,
+        2
+    ) AS coverage_percentage
+FROM coupe c
+CROSS JOIN unioned u
+GROUP BY c.coupe_area_sq_m, u.union_geom;
+`;
+
+    const [result] = await sequelize.query(query, {
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+
+    console.error("Coupe patrol coverage error:", error);
+
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+
+  }
+
+});
+
