@@ -78,7 +78,7 @@ pat_data.division = clean(pat_data.division);
 
     // SIMPLE FILE VALIDATION - Block SVG files
   if (req.files && req.files.length > 0) {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/heic', 'image/heif'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/heic', 'image/heif', 'application/octet-stream', 'image/heic-sequence'];
     
     for (let file of req.files) {
       // Check if file type is allowed
