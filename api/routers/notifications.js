@@ -6,6 +6,7 @@ const { DATE } = require('sequelize');
 
 const router = express.Router();
 const upload = multer();
+const { verifyJwt } = require("../middlewares/verifyJwt"); 
 
 
 // ----------------------------------------------------
@@ -32,9 +33,9 @@ try {
 const client = new Client({
   host: '68.178.167.216',
   user: 'postgres',
-  password: 'P$DB@25%$#!26',
-  port: 5432,
-  database: 'Recap4NDC_new'
+  password: 'pass@123',
+  port: 5435,
+  database: 'Recap4NDC_Query'
 });
 
 client.connect()
@@ -46,9 +47,9 @@ client.connect()
 // ----------------------------------------------------
 // 3. NDVI Table Name
 // ----------------------------------------------------
-const degraded_forest_Layer = `"2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI_Change"`;
+const degraded_forest_Layer = `"2026-01-01_aravalli_coupe_NDVI_Change"`;
 
-const degraded_forest_Layer_N=`2025-02-01_Con_Cum_Imp_WC_OVLP_NDVI_Change`;
+const degraded_forest_Layer_N=`2026-01-01_aravalli_coupe_NDVI_Change`;
 const parts = degraded_forest_Layer.replace(/"/g, '').split('_');
 const coupe_name = parts.slice(1, -2).join('_');
 
@@ -148,75 +149,138 @@ async function setNotificationSent(id) {
 // ----------------------------------------------------
 // 6. API: Send NDVI Notifications
 // ----------------------------------------------------
-router.post("/send-notifications", upload.none(), async (req, res) => {
+router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) => {
+
   try {
+
     const firebase_token = (req.body.firebase_token || "").trim();
     const user_id = (req.body.user_id || "").trim();
+    const village_name = (req.body.village_name || "").trim();
+    const coupe_name = (req.body.coupe_name || "").trim();
 
-    if (!firebase_token || !user_id) {
+    if (!firebase_token || !user_id || !village_name || !coupe_name) {
       return res.status(400).json({
         success: false,
-        error: "firebase_token and user_id required"
+        message: "firebase_token, user_id, village_name, coupe_name required"
       });
     }
 
-    // Fetch pending NDVI records
-    const q = `
-     SELECT "jan_NDVI", "feb_NDVI", "NDVI_change", change_category, geom, centroid, longitude, latitude, notification_sent, id
+    // ------------------------------------------------
+    // Generate NDVI Table Name
+    // ------------------------------------------------
+    const degraded_forest_Layer = `"2026-01-01_${coupe_name}_NDVI_Change"`;
 
+    // month extraction
+    const date = "2026-01-01";
+    const dateObj = new Date(date);
+    const monthFull = dateObj.toLocaleString('default', { month: 'long' }).toUpperCase();
+
+    // ------------------------------------------------
+    // Query NDVI record
+    // ------------------------------------------------
+    const q = `
+      SELECT
+        pixle_id as id,
+        "Dec_NDVI" as jan_ndvi,
+        "Jan_NDVI" as feb_ndvi,
+        "NDVI_change" as ndvi_change,
+        change_category,
+        longitude,
+        latitude
       FROM public.${degraded_forest_Layer}
-      WHERE notification_sent = FALSE
+      WHERE village = $1
+      AND notification_sent = FALSE
       ORDER BY "NDVI_change" DESC
       LIMIT 1
     `;
 
-    const result = await client.query(q);
-    const records = result.rows;
+    const result = await client.query(q, [village_name]);
 
-    if (records.length === 0) {
-      return res.status(200).json({
+    if (result.rows.length === 0) {
+      return res.json({
         success: true,
-        message: "No pending NDVI notifications"
+        message: "No NDVI alerts for this village"
       });
     }
 
-    const successList = [];
-    const failedList = [];
+    const record = result.rows[0];
 
-    for (const record of records) {
-      const sendRes = await sendNotification(firebase_token, record);
+    // ------------------------------------------------
+    // Notification Title
+    // ------------------------------------------------
+    let title = `NDVI Alert For ${monthFull}`;
+    let body = `Coupe: ${coupe_name}`;
 
-      if (sendRes.success) {
-        await setNotificationSent(record.id);
-        successList.push({
-          id: record.id,
-          change_category: record.change_category
-        });
-      } else {
-        failedList.push({
-          id: record.id,
-          error: sendRes.error
-        });
-      }
+    switch (record.change_category) {
+
+      case "significant_decrease":
+        title = "🚨 Significant Vegetation Decrease";
+        body = `NDVI dropped from ${record.jan_ndvi} to ${record.feb_ndvi}`;
+        break;
+
+      case "moderate_decrease":
+        title = "⚠️ Moderate Vegetation Decrease";
+        body = `NDVI decreased from ${record.jan_ndvi} to ${record.feb_ndvi}`;
+        break;
+
+      case "significant_increase":
+        title = "🌱 Significant Vegetation Improvement";
+        body = `NDVI increased from ${record.jan_ndvi} to ${record.feb_ndvi}`;
+        break;
+
+      case "moderate_increase":
+        title = "📈 Moderate Vegetation Improvement";
+        body = `NDVI improved from ${record.jan_ndvi} to ${record.feb_ndvi}`;
+        break;
     }
 
-    res.json({
-      success: true,
-      summary: {
-        total: records.length,
-        sent: successList.length,
-        failed: failedList.length
+    // ------------------------------------------------
+    // Send Firebase Notification
+    // ------------------------------------------------
+    const message = {
+      token: firebase_token,
+      notification: {
+        title,
+        body
       },
-      successful: successList,
-      failed: failedList
-    });
+      data: {
+        id: String(record.id),
+        latitude: String(record.latitude || ""),
+        longitude: String(record.longitude || ""),
+        village_name,
+        coupe_name
+      }
+    };
+
+    const response = await admin.messaging().send(message);
+
+    // ------------------------------------------------
+    // Update notification flag
+    // ------------------------------------------------
+    await client.query(
+      `UPDATE public.${degraded_forest_Layer}
+       SET notification_sent = TRUE
+       WHERE pixle_id = $1`,
+      [record.id]
+    );
+
+  res.json({
+  success: true,
+  messageId: response,
+  data: record
+});
 
   } catch (err) {
+
+    console.error("Notification Error:", err);
+
     res.status(500).json({
       success: false,
       error: err.message
     });
+
   }
+
 });
 
 
@@ -258,5 +322,4 @@ router.post("/test-fcm", upload.none(), async (req, res) => {
 
 
 module.exports = router;
-
 
