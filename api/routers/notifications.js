@@ -237,6 +237,7 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
     // ------------------------------------------------
     // Send Firebase Notification
     // ------------------------------------------------
+    const monthtext = "JANUARY";
     const message = {
       token: firebase_token,
       notification: {
@@ -248,10 +249,11 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
         latitude: String(record.latitude || ""),
         longitude: String(record.longitude || ""),
         village_name,
-        coupe_name
+        coupe_name,
+        month: monthtext,
       }
     };
-
+console.log("📩 Sending notification with payload:", message);
     const response = await admin.messaging().send(message);
 
     // ------------------------------------------------
@@ -267,7 +269,8 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
   res.json({
   success: true,
   messageId: response,
-  data: record
+  data: record,
+  month: monthtext,
 });
 
   } catch (err) {

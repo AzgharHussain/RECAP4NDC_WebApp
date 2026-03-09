@@ -34,14 +34,14 @@ function Login() {
   const cookieValue = "session_active=true";
   
   // Set cookies for each path your app uses
-  const paths = ['/petrolling-incident', '/geo', '/ndvi-dashboard', '/admin'];
+  const paths = ['/petrolling-incident', '/geo', '/ndvi-dashboard', '/admin', '/petrolling-incident/patrolling'];
   
   paths.forEach(path => {
     const cookieAttributes = [
       `path=${path}`,        // Path-specific cookie ✓
-      "secure",              // Secure flag ✓
-      "samesite=strict",     // SameSite attribute ✓
-      "max-age=86400"        // 24 hours
+      "Secure",
+"SameSite=Strict",
+"Max-Age=86400"
     ];
     document.cookie = `${cookieValue}; ${cookieAttributes.join('; ')}`;
   });

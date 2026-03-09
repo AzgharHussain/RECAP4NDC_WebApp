@@ -813,27 +813,37 @@ const sanitizeHtml = require('sanitize-html');
 // });
 
 router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, res) => {
-  const { tableName, note, status } = req.body;
-  const { id } = req.body;
+  let { tableName, note, status, id } = req.body;
   const imageFile = req.file;
 
   if (!tableName) {
-        return res.status(400).json({
-            success: false,
-            message: 'tableName is required'
-        });
-    }
+    return res.status(400).json({
+      success: false,
+      message: 'tableName is required'
+    });
+  }
+
+  // Allow only tables ending with _coupe_NDVI_Change
+  const tableRegex = /^[a-zA-Z0-9_]+_coupe_NDVI_Change$/;
+
+  if (!tableRegex.test(tableName)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid table name. Only tables ending with _coupe_NDVI_Change are allowed.'
+    });
+  }
 
   // Manual validation
   if (!id || isNaN(id) || id <= 0) {
-    return res.status(400).json({ success: false, message: 'Valid ID required' });
+    return res.status(400).json({
+      success: false,
+      message: 'Valid ID required'
+    });
   }
 
   try {
-    // Sanitize note
     const sanitizedNote = note ? clean(note) : undefined;
 
-    // Build query safely
     const updates = [];
     const replacements = { id: parseInt(id) };
 
@@ -841,55 +851,58 @@ router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, r
       updates.push('note = :note');
       replacements.note = sanitizedNote;
     }
-    
+
     // Handle image
     if (imageFile) {
-     const allowedTypes = [
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/gif',
-  'image/heic',
-  'image/heif',
-  'application/octet-stream',
-  'image/heic-sequence'
-];
 
-if (!allowedTypes.includes(imageFile.mimetype)) {
-  return res.status(400).json({
-    success: false,
-    error: 'Invalid file type',
-    message: 'Only JPG, PNG, GIF, HEIC, and HEIF images are allowed. SVG files are not permitted.'
-  });
-}
+      const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/heic',
+        'image/heif',
+        'application/octet-stream',
+        'image/heic-sequence'
+      ];
 
-// Check file extension
-const fileName = imageFile.originalname.toLowerCase();
-if (fileName.endsWith('.svg') || fileName.endsWith('.svgz')) {
-  return res.status(400).json({
-    success: false,
-    error: 'Invalid file type',
-    message: 'SVG files are not allowed due to security reasons.'
-  });
-}
-      
+      if (!allowedTypes.includes(imageFile.mimetype)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid file type',
+          message: 'Only JPG, PNG, GIF, HEIC, and HEIF images are allowed. SVG files are not permitted.'
+        });
+      }
+
+      const fileName = imageFile.originalname.toLowerCase();
+      if (fileName.endsWith('.svg') || fileName.endsWith('.svgz')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid file type',
+          message: 'SVG files are not allowed due to security reasons.'
+        });
+      }
+
       const fs = require('fs');
       const imageBuffer = fs.readFileSync(imageFile.path);
-      const base64Image = `${imageBuffer.toString('base64')}`;
-      
+      const base64Image = imageBuffer.toString('base64');
+
       updates.push('image_data = :image_data');
       replacements.image_data = base64Image;
-      
+
       fs.unlinkSync(imageFile.path);
     }
-    
+
     if (status !== undefined) {
       updates.push('status = :status');
       replacements.status = status;
     }
 
     if (updates.length === 0) {
-      return res.status(400).json({ success: false, message: 'No fields to update' });
+      return res.status(400).json({
+        success: false,
+        message: 'No fields to update'
+      });
     }
 
     const updateQuery = `
@@ -900,12 +913,15 @@ if (fileName.endsWith('.svg') || fileName.endsWith('.svgz')) {
     `;
 
     const [results] = await sequelize.query(updateQuery, {
-      replacements: replacements,
+      replacements,
       type: sequelize.QueryTypes.UPDATE
     });
 
     if (!results || results.length === 0) {
-      return res.status(404).json({ success: false, message: 'Record not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Record not found'
+      });
     }
 
     res.json({
@@ -918,10 +934,12 @@ if (fileName.endsWith('.svg') || fileName.endsWith('.svgz')) {
 
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ success: false, message: 'Update failed' });
+    res.status(500).json({
+      success: false,
+      message: 'Update failed'
+    });
   }
 });
-
 
 
 

@@ -13,7 +13,7 @@ const { sequelize, testConnection } = require('./config/database');
 const setNoCacheHeaders = require('./middlewares/cacheControl');
 
 const errorHandler = require("./middlewares/errorHandler");
-
+const Joi = require("joi");
 // At top of server.js
 const blacklistedTokens = require("./middlewares/tokenBlacklist");
 const helmet = require("helmet");
@@ -273,79 +273,143 @@ console.log("Adding to blacklist:", token);
   return res.json({ message: "Logged out successfully" });
 });
 
-app.post('/api/admin', validateNoDuplicateParams, async (req, res) => {
+
+const allowedParams = ["username", "password"];
+
+function validateNoDuplicateParams22(req, res, next) {
+
   try {
-    console.log('✅ /api/admin POST route accessed');
-    console.log('Request body:', req.body);
-    
-    const { username, password } = req.body;
 
+    // Reject credentials in query parameters
     if (req.query.username || req.query.password) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Credentials must be sent in request body, not URL' 
-            });
-        }
-    
-    if (!username || username.trim() === '') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Username is required' 
-      });
-    }
-    
-    if (!password || password.trim() === '') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Password is required' 
+      return res.status(400).json({
+        success: false,
+        error: "Credentials must be sent in request body only"
       });
     }
 
-    console.log(`Admin POST login attempt: ${username}`);
+    // Reject unexpected parameters
+    const bodyKeys = Object.keys(req.body);
 
-    const [result] = await sequelize.query(
-      `SELECT * FROM admin WHERE username = $1 AND password = $2`,
-      { bind: [username.trim(), password.trim()] }
+    const unexpectedParams = bodyKeys.filter(
+      key => !allowedParams.includes(key)
     );
 
-    console.log(`Admin query result count: ${result.length}`);
+    if (unexpectedParams.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Unexpected parameters: ${unexpectedParams.join(", ")}`
+      });
+    }
+
+    next();
+
+  } catch (error) {
+
+    return res.status(400).json({
+      success: false,
+      error: "Malformed request"
+    });
+
+  }
+}
+
+
+// --------------------------------------------------
+// 2. Schema-based Validation (Joi)
+// --------------------------------------------------
+const loginSchema = Joi.object({
+  username: Joi.string()
+    .trim()
+    .min(3)
+    .max(50)
+    .required(),
+
+  password: Joi.string()
+    .trim()
+    .min(3)
+    .max(100)
+    .required()
+
+}).unknown(false); // Reject unknown fields
+
+app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
+
+  try {
+
+    console.log("Admin login request received");
+
+    // Schema validation
+    const { error, value } = loginSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.details[0].message
+      });
+    }
+
+    const username = value.username.trim();
+    const password = value.password.trim();
+
+    console.log(`Admin login attempt: ${username}`);
+
+    // Query database
+    const [result] = await sequelize.query(
+      `SELECT username, password FROM admin WHERE username = $1`,
+      { bind: [username] }
+    );
 
     if (result.length === 0) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid admin credentials' 
+      return res.status(401).json({
+        success: false,
+        error: "Invalid admin credentials"
       });
     }
 
     const admin = result[0];
-    
+
+    // Compare hashed password
+    const passwordMatch = await bcrypt.compare(password, admin.password);
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid admin credentials"
+      });
+    }
+
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        username: admin.username,
-      }, 
+      {
+        username: admin.username
+      },
       SECRET_KEY,
-      { expiresIn: "24h" }
+      {
+        expiresIn: "24h"
+      }
     );
 
-    res.json({ 
-      success: true, 
-      message: 'Admin login successful',
+    return res.json({
+      success: true,
+      message: "Admin login successful",
       user: {
-        username: admin.username,
+        username: admin.username
       },
-      token,
-      count: result.length 
+      token
     });
-    
+
   } catch (err) {
-    console.error('Error in /api/admin POST:', err);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal Server Error', 
-      message: err.message 
+
+    console.error("Admin login error:", err);
+
+    return res.status(500).json({
+      success: false,
+      error: "Internal Server Error"
     });
+
   }
+
 });
 
 // Save user endpoint
