@@ -19,6 +19,10 @@ import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
 import axios from "axios";
 
+
+import startIconImg from "../assets/marker-icon.png";
+import endIconImg from "../assets/marker-icon-end.png";
+
 import DOMPurify from 'dompurify';
 
 const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
@@ -65,15 +69,14 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const startIcon = new L.Icon({
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  iconUrl: startIconImg,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
 });
-
+ 
 const endIcon = new L.Icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+  iconUrl: endIconImg,
   iconSize: [25, 25],
   iconAnchor: [12, 12],
   popupAnchor: [0, -12],
@@ -292,18 +295,18 @@ const PatrolAnalysisDashboard = ({ patrolData, language }) => {
             icon: <TeamOutlined />,
             color: 'rgba(64, 0, 255, 0.3)',
             borderColor: 'rgba(64, 0, 255, 1)'
-          },
-          {
-            key: 'utilization',
-            value: utilizationPercentage,
-            title: language === "gu" ? "ઉપયોગિતા" : "Utilization",
-            suffix: "%",
-            icon: <ClockCircleOutlined />,
-            color: 'rgba(255, 165, 0, 0.3)',
-            borderColor: 'rgba(255, 165, 0, 1)'
           }
+          // {
+          //   key: 'utilization',
+          //   value: utilizationPercentage,
+          //   title: language === "gu" ? "ઉપયોગિતા" : "Utilization",
+          //   suffix: "%",
+          //   icon: <ClockCircleOutlined />,
+          //   color: 'rgba(255, 165, 0, 0.3)',
+          //   borderColor: 'rgba(255, 165, 0, 1)'
+          // }
         ].map((item, index) => (
-          <Col xs={24} sm={12} md={6} key={item.key}>
+          <Col xs={24} sm={12} md={6} lg={8}key={item.key}>
             <div style={{
               background: item.color,
               backdropFilter: 'blur(12px)',
@@ -2109,10 +2112,11 @@ useEffect(() => {
     <div className="container">
       {isLoading && <Loader />}
       <div className="section">
+        <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px", marginLeft: "20px"}}>
+            {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Detail Level Patrolling Logs"}
+          </h3>
         <div className="heading-container" style={{height:"50px"}}>
-          {/* <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"}}>
-            {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Patrolling Logs"}
-          </h3> */}
+          
 
            
 
@@ -2276,7 +2280,7 @@ useEffect(() => {
                   : "Search by Start Date"
               }
               style={{
-                width: "200px",
+                width: "150px",
                 border: "1px solid #d9d9d9",
                 borderRadius: "4px",
                 background: "#fff",
@@ -2293,7 +2297,7 @@ useEffect(() => {
                   : "Search by End Date"
               }
               style={{
-                width: "200px",
+                width: "150px",
                 border: "1px solid #d9d9d9",
                 borderRadius: "4px",
                 background: "#fff",
@@ -2340,7 +2344,7 @@ useEffect(() => {
             >
               {language === "gu" ? "ફિલ્ટર સાફ કરો" : "Clear Filters"}
             </Button>
-            {/* <Button 
+            <Button 
               onClick={() => {
                 setShowMapRoute(!showmaproute);
               }}
@@ -2352,7 +2356,7 @@ useEffect(() => {
               }}
             >
               {language === "gu" ? "બીટ પેટ્રોલ કવરેજ" : "Beat Patrol Coverage"}
-            </Button> */}
+            </Button>
             
             
 

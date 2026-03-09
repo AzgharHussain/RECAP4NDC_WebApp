@@ -408,7 +408,7 @@ const NDVIChangeDashboard = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'pixle_id', direction: 'asc' });
   const [expandedChart, setExpandedChart] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date(2025, 1, 1));
-  const [showDivisionColumn, setShowDivisionColumn] = useState(false);
+  const [showDivisionColumn, setShowDivisionColumn] = useState(true);
   
   // New state for date range
   const [startDate, setStartDate] = useState(null);
@@ -1385,8 +1385,13 @@ const fetchAllDivisionsData = async (months) => {
 const handleExportToPDF = () => {
   try {
     // Check if there's data to export
-    if (Object.keys(monthlyData).length === 0) {
-      alert('No data available to export');
+    if (!monthlyData || Object.keys(monthlyData).length === 0) {
+      alert('No data available to export. Please load some data first.');
+      return;
+    }
+
+    if (!selectedMonth || !monthlyData[selectedMonth]) {
+      alert('Please select a valid month for the report.');
       return;
     }
 
@@ -1398,8 +1403,10 @@ const handleExportToPDF = () => {
       timeStyle: 'medium'
     });
     
-    const filename = `NDVI_Report_${selectedDivision === 'all' ? 'All_Divisions' : (selectedDivision || 'NDVI')}_${now.toISOString().slice(0,10)}`;
-    
+    // Sanitize filename
+    const sanitizedDivision = (selectedDivision === 'all' ? 'All_Divisions' : (selectedDivision || 'NDVI'))
+      .replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `NDVI_Report_${sanitizedDivision}_${now.toISOString().slice(0,10)}`;
     // Determine the scope of the report
     const reportScope = selectedDivision === 'all' ? 'All Forest Divisions' : 
                        (selectedDivision ? `${selectedDivision} Division` : 
@@ -1785,11 +1792,7 @@ const handleExportToPDF = () => {
             <!-- Executive Summary -->
             <div class="summary-card">
               <h2 style="color: white; margin-top: 0; border-bottom-color: rgba(255,255,255,0.2);">📊 Executive Summary</h2>
-              <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">
-                This report provides a comprehensive analysis of forest cover changes based on NDVI (Normalized Difference Vegetation Index) 
-                satellite data for the period ${startDate ? startDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : ''} 
-                to ${endDate ? endDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : ''}.
-              </p>
+              
               
               ${summaryStats ? `
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
@@ -1821,25 +1824,24 @@ const handleExportToPDF = () => {
                 <div class="stat-card degraded">
                   <div class="stat-label">Degraded Area</div>
                   <div class="stat-value">${summaryStats.degradedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
-                  <div class="stat-percentage">${summaryStats.degradedPercentage.toFixed(1)}% of total area</div>
                 </div>
                 
                 <div class="stat-card afforested">
                   <div class="stat-label">Afforested Area</div>
                   <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
-                  <div class="stat-percentage">${summaryStats.afforestedPercentage.toFixed(1)}% of total area</div>
                 </div>
                 
-                <div class="stat-card total">
+                
+              </div>
+              <div class="stats-grid">
+<div class="stat-card total">
                   <div class="stat-label">Total Area</div>
                   <div class="stat-value">${totalArea.toFixed(2)}<span class="stat-unit">km²</span></div>
-                  <div class="stat-percentage">Complete coverage</div>
                 </div>
                 
                 <div class="stat-card total">
                   <div class="stat-label">Data Quality</div>
                   <div class="stat-value">${summaryStats.withNotes}<span class="stat-unit">notes</span></div>
-                  <div class="stat-value" style="font-size: 20px;">${summaryStats.withImages}<span class="stat-unit">images</span></div>
                 </div>
               </div>
             ` : ''}
@@ -1929,7 +1931,7 @@ const handleExportToPDF = () => {
                   <tr>
                     ${showDivisionColumn ? `<td>${item.division || selectedDivision || 'N/A'}</td>` : ''}
                     <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? 'Afforested' : 'Degraded'}</span></td>
-                    <td>${item.ndvi_change?.toFixed(4) || 'N/A'}</td>
+                    <td>${item.NDVI_change?.toFixed(4) || 'N/A'}</td>
                     <td>${item.change_category || (item.status ? 'Afforestation' : 'Degradation')}</td>
                     <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
                     <td>${item.longitude?.toFixed(6) || 'N/A'}</td>
@@ -1999,10 +2001,6 @@ const handleExportToPDF = () => {
               <p style="margin: 5px 0; font-size: 14px; font-weight: 600;">FOREST PATROLLING & MONITORING SYSTEM</p>
               <p style="margin: 5px 0;">© ${new Date().getFullYear()} Gujarat Forest Department | All Rights Reserved</p>
               <p style="margin: 5px 0;">Data Source: Sentinel-2 NDVI Satellite Analysis | Report Generated Automatically</p>
-              <p style="margin: 10px 0 0 0; font-size: 11px; color: #94a3b8;">
-                <em>Note: Afforested area is calculated as (Total Coupe Area - Degraded Area). Values are rounded to 2-6 decimal places. 
-                This report is for official monitoring purposes only.</em>
-              </p>
             </div>
           </div>
           
@@ -2087,72 +2085,109 @@ const handleExportToPDF = () => {
       {/* Main Filters */}
       <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor: "transparent" }}>
         <CardContent>
-          <Grid container spacing={3}>
-            {/* Date Range Selection */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                Select Date Range
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12} md={5}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  views={['year', 'month']}
-                  label="Start Date"
-                  value={startDate}
-                  onChange={handleStartDateChange}
-                  minDate={new Date(2020, 0, 1)}
-                  maxDate={new Date(2030, 11, 31)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      size: "small",
-                      InputProps: {
-                        startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
-                      }
-                    }
-                  }}
-                />
-              </LocalizationProvider>
-            </Grid>
+  <Grid container spacing={3}>
+{/* Date Range Selection */}
+<Grid item xs={12}>
+  <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+    Select Date Range
+    {selectedDivision === 'all' 
+      ? ' (Maximum 6 months for All Divisions)' 
+      : ' (Maximum 12 months)'}
+  </Typography>
+</Grid>
 
-            <Grid item xs={12} md={5}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  views={['year', 'month']}
-                  label="End Date"
-                  value={endDate}
-                  onChange={handleEndDateChange}
-                  minDate={startDate || new Date(2020, 0, 1)}
-                  maxDate={new Date(2030, 11, 31)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      size: "small",
-                      InputProps: {
-                        startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
-                      }
-                    }
-                  }}
-                />
-              </LocalizationProvider>
-            </Grid>
-            
-            <Grid item xs={12} md={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                startIcon={<Send />}
-                onClick={handleSubmit}
-                sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
-              >
-                Submit
-              </Button>
-            </Grid>
-          </Grid>
-        </CardContent>
+<Grid item xs={12} md={5}>
+  <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <DatePicker
+      views={['year', 'month']}
+      label="Start Date"
+      value={startDate}
+      onChange={handleStartDateChange}
+      minDate={new Date(2020, 0, 1)}
+      maxDate={endDate ? new Date(Math.min(
+        new Date(2030, 11, 31).getTime(),
+        new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 5 : 11), 1).getTime()
+      )) : new Date(2030, 11, 31)}
+      slotProps={{
+        textField: {
+          fullWidth: true,
+          size: "small",
+          InputProps: {
+            startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+          }
+        }
+      }}
+    />
+  </LocalizationProvider>
+</Grid>
+
+<Grid item xs={12} md={5}>
+  <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <DatePicker
+      views={['year', 'month']}
+      label="End Date"
+      value={endDate}
+      onChange={handleEndDateChange}
+      minDate={startDate || new Date(2020, 0, 1)}
+      maxDate={startDate ? new Date(Math.min(
+        new Date(2030, 11, 31).getTime(),
+        new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 5 : 11), 1).getTime()
+      )) : new Date(2030, 11, 31)}
+      slotProps={{
+        textField: {
+          fullWidth: true,
+          size: "small",
+          InputProps: {
+            startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
+          }
+        }
+      }}
+    />
+  </LocalizationProvider>
+</Grid>
+
+<Grid item xs={12} md={2}>
+  <Button
+    variant="contained"
+    color="primary"
+    fullWidth
+    startIcon={<Send />}
+    onClick={handleSubmit}
+    disabled={!startDate || !endDate || (() => {
+      if (!startDate || !endDate) return true;
+      const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                        (endDate.getMonth() - startDate.getMonth());
+      const maxAllowed = selectedDivision === 'all' ? 6 : 12;
+      return monthsDiff > maxAllowed;
+    })()}
+    sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
+  >
+    Submit
+  </Button>
+</Grid>
+
+{/* Error message for range exceeding limits */}
+{startDate && endDate && (() => {
+  const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                    (endDate.getMonth() - startDate.getMonth());
+  
+  const maxAllowed = selectedDivision === 'all' ? 6 : 12;
+  
+  if (monthsDiff > maxAllowed) {
+    return (
+      <Grid item xs={12}>
+        <Alert severity="error" sx={{ mt: 1 }}>
+          {selectedDivision === 'all' 
+            ? 'For "All Divisions", date range cannot exceed 6 months. Please select a shorter range.'
+            : 'Date range cannot exceed 12 months. Please select a shorter range.'}
+        </Alert>
+      </Grid>
+    );
+  }
+  return null;
+})()}
+  </Grid>
+</CardContent>
       </Card>
 
       {/* Error Alert */}
@@ -2284,9 +2319,7 @@ const handleExportToPDF = () => {
                         km²
                       </Typography>
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {summaryStats.degradedPercentage.toFixed(1)}% of total area
-                    </Typography>
+                    
                   </Box>
                   <Warning sx={{ fontSize: 40, color: '#ef4444', opacity: 0.8 }} />
                 </Box>
@@ -2308,9 +2341,7 @@ const handleExportToPDF = () => {
                         km²
                       </Typography>
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {summaryStats.afforestedPercentage.toFixed(1)}% of total area
-                    </Typography>
+                    
                   </Box>
                   <CheckCircle sx={{ fontSize: 40, color: '#22c55e', opacity: 0.8 }} />
                 </Box>
@@ -2329,9 +2360,7 @@ const handleExportToPDF = () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#3b82f6' }}>
                       {summaryStats.withNotes}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {((summaryStats.withNotes / summaryStats.totalPolygons) * 100).toFixed(1)}% of total
-                    </Typography>
+                    
                   </Box>
                   <Note sx={{ fontSize: 40, color: '#3b82f6', opacity: 0.8 }} />
                 </Box>
@@ -2350,9 +2379,7 @@ const handleExportToPDF = () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#f59e0b' }}>
                       {summaryStats.withImages}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {((summaryStats.withImages / summaryStats.totalPolygons) * 100).toFixed(1)}% of total
-                    </Typography>
+                    
                   </Box>
                   <ImageIcon sx={{ fontSize: 40, color: '#f59e0b', opacity: 0.8 }} />
                 </Box>
@@ -2412,128 +2439,13 @@ const handleExportToPDF = () => {
       )}
 
       {/* ===== SECTION 1: CHARTS & ANALYSIS ===== */}
-      {Object.keys(monthlyData).length > 0 && (
-        <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
-          <CardHeader
-            title="1. Charts & Analysis"
-            titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
-            avatar={<BarChart color="primary" />}
-            action={
-              <IconButton onClick={() => toggleSection('charts')}>
-                {expandedSections.charts ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-              </IconButton>
-            }
-            sx={{ borderBottom: 1, borderColor: 'divider' }}
-          />
-          
-          {expandedSections.charts && (
-            <CardContent>
-              {/* Chart Type Selection */}
-              <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-                <Chip
-                  label="Bar Chart"
-                  onClick={() => setChartType('bar')}
-                  color={chartType === 'bar' ? 'primary' : 'default'}
-                  icon={<BarChart />}
-                  clickable
-                />
-                {/* <Chip
-                  label="Line Chart"
-                  onClick={() => setChartType('line')}
-                  color={chartType === 'line' ? 'primary' : 'default'}
-                  icon={<ShowChart />}
-                  clickable
-                />
-                <Chip
-                  label="Pie Chart"
-                  onClick={() => setChartType('pie')}
-                  color={chartType === 'pie' ? 'primary' : 'default'}
-                  icon={<PieChart />}
-                  clickable
-                /> */}
-              </Box>
-
-              {/* Chart Display */}
-              <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden' }}>
-                {renderChart()}
-              </Box>
-
-              {/* Analysis Notes */}
-              {summaryStats && (
-                <Card sx={{ mt: 4, borderRadius: 2, bgcolor:'transparent'}}>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Info color="primary" />
-                      Analysis Summary - {selectedMonth}
-                    </Typography>
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ p: 2, bgcolor: 'transparent', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
-                            Key Findings
-                          </Typography>
-                          <Stack spacing={1.5}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Box sx={{ width: 8, height: 8, bgcolor: '#ef4444', borderRadius: '50%', mr: 1.5 }} />
-                              <Typography variant="body2">
-                                <strong>Degraded Area:</strong> {summaryStats.degradedArea.toFixed(2)} km² ({summaryStats.degradedPercentage.toFixed(1)}% of total)
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Box sx={{ width: 8, height: 8, bgcolor: '#22c55e', borderRadius: '50%', mr: 1.5 }} />
-                              <Typography variant="body2">
-                                <strong>Afforested Area:</strong> {summaryStats.afforestedArea.toFixed(2)} km² ({summaryStats.afforestedPercentage.toFixed(1)}% of total)
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Box sx={{ width: 8, height: 8, bgcolor: '#3b82f6', borderRadius: '50%', mr: 1.5 }} />
-                              <Typography variant="body2">
-                                <strong>Net Change:</strong> 
-                                <span style={{ 
-                                  color: summaryStats.afforestedArea > summaryStats.degradedArea ? '#22c55e' : '#ef4444',
-                                  fontWeight: 600,
-                                  marginLeft: 4
-                                }}>
-                                  {(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)} km²
-                                </span>
-                                ({summaryStats.afforestedArea > summaryStats.degradedArea ? 'Positive' : 'Negative'} change)
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ p: 2, bgcolor: 'transparent', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-                          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: '#64748b' }}>
-                            Data Quality
-                          </Typography>
-                          <Stack spacing={1.5}>
-                            <Typography variant="body2">
-                              <strong>Records with notes:</strong> {summaryStats.withNotes} ({((summaryStats.withNotes / summaryStats.totalPolygons) * 100).toFixed(1)}%)
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Records with images:</strong> {summaryStats.withImages} ({((summaryStats.withImages / summaryStats.totalPolygons) * 100).toFixed(1)}%)
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Total polygons analyzed:</strong> {summaryStats.totalPolygons.toLocaleString()}
-                            </Typography>
-                          </Stack>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              )}
-            </CardContent>
-          )}
-        </Card>
-      )}
+      
 
       {/* ===== SECTION 2: DATA TABLE ===== */}
       {Object.keys(monthlyData).length > 0 && (
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
           <CardHeader
-            title="2. Detailed Data Table"
+            title="1. Detailed Data Table"
             titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
             avatar={<Visibility color="primary" />}
             action={
@@ -2640,12 +2552,12 @@ const handleExportToPDF = () => {
                             </Box>
                           </TableCell>
                         )}
-                        <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
+                        {/* <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
                           <Box display="flex" alignItems="center">
                             <strong>Status</strong>
                             <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                           </Box>
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell><strong>NDVI Change</strong></TableCell>
                         <TableCell><strong>Category</strong></TableCell>
                         <TableCell><strong>Location</strong></TableCell>
@@ -2692,18 +2604,18 @@ const handleExportToPDF = () => {
                                 </Typography>
                               </TableCell>
                             )}
-                            <TableCell>
+                            {/* <TableCell>
                               <Chip
-                                label={row.status ? 'Degraded' : 'Afforested'}
-                                color={row.status ? 'error' : 'success'} 
+                                label={row.status ? 'Afforested' : 'Degraded'}
+                                color={row.status ? 'success' : 'error'} 
                                 size="small"
                                 sx={{ fontWeight: 600 }}
                               />
-                            </TableCell>
+                            </TableCell> */}
                             <TableCell>
                               <Chip
-                                label={row.ndvi_change ? row.ndvi_change.toFixed(4) : 'N/A'}
-                                color={row.ndvi_change < 0 ? 'error' : 'success'}
+                                label={row.NDVI_change ? row.NDVI_change.toFixed(4) : 'N/A'}
+                                color={row.NDVI_change < 0 ? 'error' : 'success'}
                                 size="small"
                                 variant="outlined"
                                 sx={{ fontWeight: 600 }}
@@ -2819,7 +2731,7 @@ const handleExportToPDF = () => {
       {Object.keys(monthlyData).length > 0 && (
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
           <CardHeader
-            title="3. Monthly Overview"
+            title="2. Monthly Overview"
             titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
             avatar={<CalendarMonth color="primary" />}
             action={
@@ -2833,8 +2745,8 @@ const handleExportToPDF = () => {
           {expandedSections.monthlyOverview && (
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CalendarMonth color="primary" />
-                Monthly Comparison Overview {selectedDivision === 'all' && '(All Divisions)'}
+                {/* <CalendarMonth color="primary" /> */}
+                 {selectedDivision === 'all' && '(All Divisions)'}
               </Typography>
               <Grid container spacing={3}>
                 {Object.entries(monthlyData).sort().reverse().map(([month, data]) => (
@@ -2932,13 +2844,13 @@ const handleExportToPDF = () => {
                       NDVI Change Information
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                      {/* <Grid item xs={6}>
                         <Typography variant="body2">
                           <strong>Status:</strong> 
                           <Chip label={selectedRecord.status ? 'Afforested' : 'Degraded'} 
                                 color={selectedRecord.status ? 'success' : 'error'} size="small" sx={{ ml: 1 }} />
                         </Typography>
-                      </Grid>
+                      </Grid> */}
                       <Grid item xs={6}>
                         <Typography variant="body2">
                           <strong>Category:</strong> {selectedRecord.change_category || 'N/A'}
@@ -2946,7 +2858,7 @@ const handleExportToPDF = () => {
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>NDVI Change:</strong> {selectedRecord.ndvi_change?.toFixed(4) || 'N/A'}
+                          <strong>NDVI Change:</strong> {selectedRecord.NDVI_change?.toFixed(4) || 'N/A'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
@@ -3025,14 +2937,6 @@ const handleExportToPDF = () => {
             </Grid>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModalOpen(false)}>Close</Button>
-          {selectedRecord?.image_data && (
-            <Button variant="contained" startIcon={<ZoomIn />} onClick={() => setImageModalOpen(true)}>
-              View Image
-            </Button>
-          )}
-        </DialogActions>
       </Dialog>
 
       {/* Image Preview Modal */}

@@ -1,0 +1,251 @@
+/* HERO SECTION */
+html, body{
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin:0;
+  height:100%;
+}
+
+/* Hide scrollbar but keep scrolling */
+body::-webkit-scrollbar{
+  display:none;
+}
+
+body{
+  scrollbar-width:none;
+}
+
+/* Add to your CSS */
+#header {
+  position: relative; /* or fixed if you want it to stay at top while scrolling */
+  z-index: 1000;
+  background: white; /* ensure header has background to not show through */
+}
+
+.hero-section {
+  margin-top: 40px; /* remove any negative margins */
+}
+
+/* If header should be fixed at top */
+#header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: white;
+}
+
+/* Add padding to body or main container to account for fixed header */
+body {
+  margin: 0;
+  padding-top: 0; /* adjust if using fixed header */
+}
+
+
+.hero-section{
+    height: 715px;
+background-image:url("../assets/login-background1.png");
+background-size:cover;
+background-position:center;
+justify-content:center;
+position:relative;
+  z-index: 1;
+}
+
+.hero-overlay{
+padding-top: 110px;
+    color: white;
+}
+
+.hero-overlay2{
+    color: white;
+    font-size: 12px;
+    padding-left: 50px;
+    padding-top: 50px;
+}
+
+.hero-overlay h1{
+font-size:36px;
+margin-bottom:15px;
+font-weight:400;
+text-align: center;
+font-family: 'GravurCondensed', sans-serif;
+font-size: 65px;
+margin-top:15px;
+}
+
+
+
+.hero-overlay p{
+max-width:850px;
+margin:auto;
+line-height:1.6;
+font-size: 13px;
+}
+
+
+/* GREEN WAVE */
+
+.green-wave {
+  background-image: url("../assets/curve.png");
+  background-position: center;
+  background-repeat: no-repeat;
+   width:600px;
+  height: 92px;
+  margin-top: -85px; /* overlap previous section */
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  zoom: 190%;
+}
+
+
+/* OVERVIEW SECTION */
+
+.overview-section{
+padding:60px 3%;
+background: linear-gradient(180deg, #ECF3F8 0%, #BFE3FF 100%);
+  position:relative;
+  z-index:1;
+}
+
+.overview-heading{
+    margin: 0px;
+text-align:center;
+color:#f28c00;
+font-size:50px;
+  font-family: 'GravurCondensed', sans-serif;
+font-weight: 400;
+
+}
+
+.overview-container{
+display:flex;
+gap:120px;
+align-items:center;
+    margin-top: 60px;
+}
+
+.overview-image img{
+width:560px;
+border-radius:8px;
+}
+
+.overview-text-grid{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:25px;
+}
+
+.overview-header{
+text-align:center;
+font-size: 15px;
+}
+.overview-item h4{
+color:#F59E0B;
+margin-bottom:5px;
+font-size: 25px;
+}
+
+.overview-item p{
+font-size:14px;
+color:#555;
+}
+
+
+/* MODULE CARDS */
+
+.modules-section{
+padding:60px 3%;
+}
+
+.modules-grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+column-gap:20px;
+row-gap: 30px;
+}
+
+
+
+.module-image{
+height:250px;
+padding-left: 50px;
+    margin-top: 10px;
+    background: linear-gradient(181.21deg, rgba(255, 216, 150, 0.1) 1.01%, rgba(245, 158, 11, 0.1) 98.47%);
+
+border-top-left-radius:50px;
+text-align:center;
+border-top: 1px solid #F59E0B;
+border-left: 1px solid #F59E0B;
+border-right: 1px solid #F59E0B;
+padding: 13px;
+}
+
+.module-image img{
+width:100%;
+height:100%;
+object-fit:contain;
+}
+
+.module-card h3{
+color:#0a7d3c;
+font-size:20px;
+margin-bottom:10px;
+margin-top:0px;
+text-align: left;
+}
+
+
+
+
+.module-card p{
+font-size:13px;
+color:#444;
+text-align: left;
+}
+
+
+/* FOOTER */
+
+.footer{
+background: #1B75BA;
+color:white;
+text-align:center;
+padding:15px;
+margin-top:40px;
+display: flex;
+justify-content: space-around;
+align-items: center;
+}
+
+.footer p{
+  margin:0px;
+}
+
+.module-card:hover .module-title{
+    background: linear-gradient(180.29deg, #5CFFA9 0.25%, rgba(0, 146, 69, 0.8) 99.75%);
+    color: white;
+}
+
+.module-card:hover h3{
+    color: white;
+}
+
+.module-card:hover p{
+    color: white;
+}
+
+.module-title{
+    padding-left: 15px;
+    background: linear-gradient(181.21deg, rgba(255, 216, 150, 0.1) 1.01%, rgba(245, 158, 11, 0.1) 98.47%);
+
+border-bottom-right-radius:50px;
+text-align:center;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
+transition:0.3s;
+border-bottom: 1px solid #F59E0B;
+border-left: 1px solid #F59E0B;
+border-right: 1px solid #F59E0B;
+padding: 13px;
+height: 160px;
+}
