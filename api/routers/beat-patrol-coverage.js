@@ -190,9 +190,139 @@ GROUP BY b.beat_area_sq_m, u.union_geom;
   }
 });
 
+router.post("/coupe-patrol-coverage", verifyJwt, async (req, res) => {
 
+  let { coupe_table, month } = req.body;
 
+  if (!coupe_table || !month) {
+    return res.status(400).json({
+      success: false,
+      message: "Coupe table and month are required"
+    });
+  }
 
+  try {
+
+    // convert division name → table name
+    coupe_table = coupe_table.toLowerCase().replace(/\s+/g, "_") + "_coupe";
+
+    // convert YYYY-MM → YYYY-MM-01
+    const month_start = `${month}-01`;
+
+    const query = `
+WITH coupe AS (
+    SELECT
+        ST_Union(geom) AS coupe_geom,
+        ST_Area(ST_Union(geom)::geography) AS coupe_area
+    FROM public."${coupe_table}"
+),
+
+patrol_lines AS (
+    SELECT
+        p.patrol_id,
+        p.geom AS patrol_geom_text,
+
+        ST_MakeLine(
+            ARRAY(
+                SELECT
+                    ST_SetSRID(
+                        ST_MakePoint(
+                            CAST(SPLIT_PART(point,' ',2) AS FLOAT),
+                            CAST(SPLIT_PART(point,' ',1) AS FLOAT)
+                        ),
+                        4326
+                    )
+                FROM unnest(string_to_array(p.geom, ',')) AS point
+            )
+        ) AS line_geom
+
+    FROM public.patrols p
+    WHERE p.geom IS NOT NULL
+      AND p.geom LIKE '%,%'
+      AND p.start_time >= :month_start
+      AND p.start_time < (:month_start::date + INTERVAL '1 month')
+),
+
+patrol_buffers AS (
+    SELECT
+        patrol_id,
+        patrol_geom_text,
+        ST_Buffer(line_geom::geography, 30)::geometry AS buffer_geom
+    FROM patrol_lines
+),
+
+clipped_buffers AS (
+    SELECT
+        pb.patrol_id,
+        pb.patrol_geom_text,
+        ST_Intersection(pb.buffer_geom, c.coupe_geom) AS clipped_geom
+    FROM patrol_buffers pb
+    CROSS JOIN coupe c
+    WHERE ST_Intersects(pb.buffer_geom, c.coupe_geom)
+),
+
+unioned AS (
+    SELECT
+        ST_Union(clipped_geom) AS union_geom
+    FROM clipped_buffers
+),
+
+coverage_calc AS (
+    SELECT
+        c.coupe_area,
+        ST_Area(u.union_geom::geography) AS patrol_area
+    FROM coupe c
+    CROSS JOIN unioned u
+)
+
+SELECT
+    '${coupe_table}' AS coupe_table,
+
+    ROUND(cc.coupe_area::numeric,2) AS coupe_area_sq_m,
+
+    ROUND(cc.patrol_area::numeric,2) AS patrol_area_sq_m,
+
+    ROUND(
+        ((cc.patrol_area::numeric / cc.coupe_area::numeric) * 100),
+        2
+    ) AS coverage_percentage,
+
+    json_agg(
+        DISTINCT jsonb_build_object(
+            'patrol_id', cb.patrol_id,
+            'patrol_geom', cb.patrol_geom_text
+        )
+    ) AS patrols_covering_coupe
+
+FROM coverage_calc cc
+LEFT JOIN clipped_buffers cb ON TRUE
+GROUP BY cc.coupe_area, cc.patrol_area;
+`;
+
+    const result = await sequelize.query(query, {
+      replacements: { month_start },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    res.json({
+      success: true,
+      data: result[0] || null
+    });
+
+  } catch (error) {
+
+    console.error("Coupe patrol coverage error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to calculate coupe patrol coverage",
+      error: error.message
+    });
+
+  }
+
+});
+          
 
 
 module.exports = router;

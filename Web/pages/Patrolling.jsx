@@ -1216,22 +1216,22 @@ const handleClientSideSearch = () => {
     });
     
   // Load rounds
-  axios
-    .get(`${API_BASE_URL}/api/patrolling-round`)
-    .then((res) => {
-      const data = res.data;
-      if (Array.isArray(data)) {
-        setRounds1(data);
-      } else if (data && data.data && Array.isArray(data.data)) {
-        setRounds1(data.data);
-      } else {
-        setRounds1([]);
-      }
-    })
-    .catch((err) => {
-      console.error("Error fetching rounds:", err);
-      setRounds1([]);
-    });
+  // axios
+  //   .get(`${API_BASE_URL}/api/patrolling-round`)
+  //   .then((res) => {
+  //     const data = res.data;
+  //     if (Array.isArray(data)) {
+  //       setRounds1(data);
+  //     } else if (data && data.data && Array.isArray(data.data)) {
+  //       setRounds1(data.data);
+  //     } else {
+  //       setRounds1([]);
+  //     }
+  //   })
+  //   .catch((err) => {
+  //     console.error("Error fetching rounds:", err);
+  //     setRounds1([]);
+  //   });
 }, []);
 
 // Add this temporary debug code in your handleDivisionFilterChange
@@ -2355,7 +2355,7 @@ useEffect(() => {
                 color: "#000",
               }}
             >
-              {language === "gu" ? "બીટ પેટ્રોલ કવરેજ" : "Beat Patrol Coverage"}
+              {language === "gu" ? "બીટ પેટ્રોલ કવરેજ" : "Coupe Patrol Coverage"}
             </Button>
             
             
