@@ -844,9 +844,34 @@ router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, r
     
     // Handle image
     if (imageFile) {
-      if (!imageFile.mimetype.startsWith('image/')) {
-        return res.status(400).json({ success: false, message: 'Invalid file type' });
-      }
+     const allowedTypes = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+  'application/octet-stream',
+  'image/heic-sequence'
+];
+
+if (!allowedTypes.includes(imageFile.mimetype)) {
+  return res.status(400).json({
+    success: false,
+    error: 'Invalid file type',
+    message: 'Only JPG, PNG, GIF, HEIC, and HEIF images are allowed. SVG files are not permitted.'
+  });
+}
+
+// Check file extension
+const fileName = imageFile.originalname.toLowerCase();
+if (fileName.endsWith('.svg') || fileName.endsWith('.svgz')) {
+  return res.status(400).json({
+    success: false,
+    error: 'Invalid file type',
+    message: 'SVG files are not allowed due to security reasons.'
+  });
+}
       
       const fs = require('fs');
       const imageBuffer = fs.readFileSync(imageFile.path);
