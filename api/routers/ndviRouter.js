@@ -20,13 +20,6 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
         });
     }
 
-    const isValidVillageName = /^[a-zA-Z0-9\s\-_]+$/.test(village_name);
-    if (!isValidVillageName) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid village name format'
-            });
-        }
  
     try {
         // 1️⃣ Create columns if NOT EXISTS
