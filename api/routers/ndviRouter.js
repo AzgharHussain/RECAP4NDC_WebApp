@@ -512,8 +512,7 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
     }
 
     // Whitelist validation for table name pattern: YYYY-MM-DD_location_coupe_NDVI_Change
-    const tableNamePattern = /^\d{4}-\d{2}-\d{2}_[a-z]+_coupe_NDVI_Change$/;
-    
+ const tableNamePattern = /^\d{4}-\d{2}-\d{2}_[a-zA-Z0-9_-]+_coupe_NDVI_Change$/;
     if (!tableNamePattern.test(NdvicoupeName)) {
         return res.status(400).json({
             success: false,
@@ -825,14 +824,14 @@ let {coupename, note, status, id} = req.body;
   }
 
   // Allow only tables ending with _coupe_NDVI_Change
-  const tableRegex = /^[a-zA-Z0-9_]+_coupe_NDVI_Change$/;
+ const tableRegex = /^[a-zA-Z0-9_-]+_coupe_NDVI_Change$/;
 
-  if (!tableRegex.test(coupename)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid table name. Only tables ending with _coupe_NDVI_Change are allowed.'
-    });
-  }
+if (!tableRegex.test(coupename)) {
+  return res.status(400).json({
+    success: false,
+    message: "Invalid table name. Only tables ending with _coupe_NDVI_Change are allowed."
+  });
+}
 
   // Manual validation
   if (!id || isNaN(id) || id <= 0) {
