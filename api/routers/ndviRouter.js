@@ -11,12 +11,12 @@ const { body, param, validationResult } = require('express-validator');
 
 // POST: Create new NDVI record (with auto-generated ID)
 router.post('/ndvi-change',verifyJwt, async (req, res) => {
-    const { tableName,village_name } = req.body;
- 
-    if (!tableName || !village_name) {
+ // const { tableName,village_name } = req.body;
+  const { coupename,village_name } = req.body;
+    if (!coupename || !village_name) {
         return res.status(400).json({
             success: false,
-            message: 'tableName and village_name are required'
+            message: 'coupename and village_name are required'
         });
     }
 
@@ -31,7 +31,7 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
     try {
         // 1️⃣ Create columns if NOT EXISTS
         const alterTableQuery = `
-            ALTER TABLE public."${tableName}"
+            ALTER TABLE public."${coupename}"
             ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
             ADD COLUMN IF NOT EXISTS note TEXT,
             ADD COLUMN IF NOT EXISTS image_data TEXT,
@@ -45,7 +45,7 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
         // 2️⃣ Fetch all data
         const selectQuery = `
             SELECT pixle_id, longitude, latitude
-            FROM public."${tableName}"
+            FROM public."${coupename}"
             WHERE village = '${village_name}'
         ;
         `;
@@ -813,20 +813,21 @@ const sanitizeHtml = require('sanitize-html');
 // });
 
 router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, res) => {
-  let { tableName, note, status, id } = req.body;
+  //let { tableName, note, status, id } = req.body;
+let {coupename, note, status, id} = req.body;
   const imageFile = req.file;
 
-  if (!tableName) {
+  if (!coupename) {
     return res.status(400).json({
       success: false,
-      message: 'tableName is required'
+      message: 'coupename is required'
     });
   }
 
   // Allow only tables ending with _coupe_NDVI_Change
   const tableRegex = /^[a-zA-Z0-9_]+_coupe_NDVI_Change$/;
 
-  if (!tableRegex.test(tableName)) {
+  if (!tableRegex.test(coupename)) {
     return res.status(400).json({
       success: false,
       message: 'Invalid table name. Only tables ending with _coupe_NDVI_Change are allowed.'
@@ -906,7 +907,7 @@ router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, r
     }
 
     const updateQuery = `
-      UPDATE public."${tableName}"
+      UPDATE public."${coupename}"
       SET ${updates.join(', ')}, updated_at = NOW()
       WHERE pixle_id = :id
       RETURNING pixle_id, longitude, latitude, note, status;
@@ -945,13 +946,14 @@ router.put('/ndvi-change', verifyJwt, upload.single('image_data'), async (req, r
 
 // Alternative version without multer (if you prefer base64 in request body only)
 router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
-  const { tableName, note, image_data, status } = req.body;
+  //const { tableName, note, image_data, status } = req.body;
+ const {coupename,note,image_data,status} = req.body;
   const { id } = req.params;
 
-  if (!tableName) {
+  if (!coupename) {
     return res.status(400).json({
       success: false,
-      message: 'tableName is required in request body'
+      message: 'coupename is required in request body'
     });
   }
 
@@ -999,7 +1001,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
     }
 
     const updateQuery = `
-      UPDATE public."${tableName}"
+      UPDATE public."${coupename}"
       SET ${updates.join(', ')}, updated_at = NOW()
       WHERE id = :id
       RETURNING id, longitude, latitude, note, image_data, status;
@@ -1035,13 +1037,14 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
 
 // DELETE: Delete NDVI record by ID
 router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
-    const { tableName } = req.query;
+    //const { tableName } = req.query;
+      const { coupename } = req.query;
     const { id } = req.params;
 
-    if (!tableName) {
+    if (!coupename) {
         return res.status(400).json({
             success: false,
-            message: 'tableName query parameter is required'
+            message: 'coupename query parameter is required'
         });
     }
 
@@ -1055,7 +1058,7 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
     try {
         // First check if record exists
         const checkQuery = `
-            SELECT id FROM public."${tableName}" WHERE id = :id;
+            SELECT id FROM public."${coupename}" WHERE id = :id;
         `;
 
         const [existingRecord] = await sequelize.query(checkQuery, {
@@ -1072,7 +1075,7 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
 
         // Delete the record
         const deleteQuery = `
-            DELETE FROM public."${tableName}"
+            DELETE FROM public."${coupename}"
             WHERE id = :id
             RETURNING id;
         `;
