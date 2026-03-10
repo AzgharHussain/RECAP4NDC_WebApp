@@ -1657,7 +1657,7 @@ const layersData = {
         { Name: "morbi_coupe", Layer: "Morbi" },
         { Name: "narmada_coupe", Layer: "Narmada" },
         { Name: "sabarkantha_coupe", Layer: "Sabarkantha" },
-        { Name: "sabarkantha_south_coupe", Layer: "Sabarkantha_South" },
+        { Name: "aravali_coupe", Layer: "Sabarkantha_South" },
         { Name: "surendranagar_coupe", Layer: "Surendranagar" },
       ]
     },
