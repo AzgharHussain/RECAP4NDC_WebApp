@@ -1,4 +1,4 @@
-const regex = /^[a-zA-Z0-9 _-]+$/;
+const regex = /^[a-zA-Z0-9 _()\-]+$/;
 
 function validateAlphaNumSpaceUnderscore(req, res, next) {
 
