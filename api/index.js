@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-
+const validateAlphaNumSpaceUnderscore = require("./middlewares/validateAlphaNumSpaceUnderscore");
 const { verifyJwt } = require("./middlewares/verifyJwt");
 const { sequelize, testConnection } = require('./config/database');
 
@@ -61,8 +61,9 @@ app.get("/", (req, res) => {
 // ==================== MIDDLEWARE ==================== //
 
 const validateHttpHeaders = require('./middlewares/validateHttpHeaders');
-app.use('/api', validateHttpHeaders);
 
+app.use('/api', validateHttpHeaders);
+app.use('/api', validateAlphaNumSpaceUnderscore);
 const validateNoDuplicateParams = (req, res, next) => {
   // Check for duplicate keys in body
   if (req.body && typeof req.body === 'object') {
