@@ -329,6 +329,16 @@ useEffect(() => {
 </svg>
             NDVI Dashboard
           </NavLink>
+          <NavLink
+            to="PatrolCoverageAnalysis"
+            className={`menu-item ${
+              isActiveLink("/PatrolCoverageAnalysis") ? "active" : ""
+            }`}
+            onClick={handleLinkClick}
+          >
+          
+           Patrol Coverage Analysis
+          </NavLink>
            </div>
          <div className="header-right">
   <div className="user-dropdown">

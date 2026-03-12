@@ -881,7 +881,10 @@ const fetchAllDivisionsData = async (months) => {
                   change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
                   has_note: !!(item.note && item.note.trim() !== ''),
                   has_image: !!(item.image_data),
-                  pixle_id: item.pixle_id || 'N/A'
+                  pixle_id: item.pixle_id || 'N/A',
+                  NDVI_change: item.NDVI_change !== null && item.NDVI_change !== undefined 
+      ? parseFloat(item.NDVI_change) 
+      : null
                 };
               });
               
@@ -1931,7 +1934,7 @@ const handleExportToPDF = () => {
                   <tr>
                     ${showDivisionColumn ? `<td>${item.division || selectedDivision || 'N/A'}</td>` : ''}
                     <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? 'Afforested' : 'Degraded'}</span></td>
-                    <td>${item.NDVI_change?.toFixed(4) || 'N/A'}</td>
+                   <td>${item.NDVI_change && !isNaN(parseFloat(item.NDVI_change)) ? parseFloat(item.NDVI_change).toFixed(4) : 'N/A'}</td>
                     <td>${item.change_category || (item.status ? 'Afforestation' : 'Degradation')}</td>
                     <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
                     <td>${item.longitude?.toFixed(6) || 'N/A'}</td>
@@ -2614,12 +2617,14 @@ const handleExportToPDF = () => {
                             </TableCell> */}
                             <TableCell>
                               <Chip
-                                label={row.NDVI_change ? row.NDVI_change.toFixed(4) : 'N/A'}
-                                color={row.NDVI_change < 0 ? 'error' : 'success'}
-                                size="small"
-                                variant="outlined"
-                                sx={{ fontWeight: 600 }}
-                              />
+  label={row.NDVI_change !== null && row.NDVI_change !== undefined && !isNaN(parseFloat(row.NDVI_change)) 
+    ? parseFloat(row.NDVI_change).toFixed(4) 
+    : 'N/A'}
+  color={!isNaN(parseFloat(row.NDVI_change)) && parseFloat(row.NDVI_change) < 0 ? 'error' : 'success'}
+  size="small"
+  variant="outlined"
+  sx={{ fontWeight: 600 }}
+/>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" sx={{ 

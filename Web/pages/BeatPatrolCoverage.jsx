@@ -316,8 +316,9 @@ useEffect(() => {
   };
 
   return (
-    <div className="router-map-container">
+    <div >
       {setshowloader && <PatrolLoader />}
+      
       <style>{`
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
@@ -499,23 +500,21 @@ useEffect(() => {
         </div>
       )}
 
-      <div style={{ padding: "20px", overflow: "auto", height: "calc(100% - 40px)", position: "relative",fontFamily: "arial" }}>
+      <div style={{ padding: "20px", fontFamily: "arial" }}>
         {/* Header with close button */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "30px" }}>
           <div>
             <h1 style={{ fontSize: "32px", fontWeight: "700", marginBottom: "8px", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              {language === "gu" ? "કૂપ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Coupe Patrol Coverage Analysis"}
+              {language === "gu" ? "કૂપ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Patrol Coverage Analysis"}
             </h1>
-            <p style={{ fontSize: "16px", color: "#718096", marginBottom: "0" }}>
-              {language === "gu" ? "કૂપ પસંદ કરો અને મહિનો પસંદ કરો" : "Select a coupe and month to analyze patrol coverage"}
-            </p>
+            
           </div>
-          <button
+          {/* <button
             style={{ width: "45px", height: "45px", borderRadius: "50%", background: "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)", border: "none", color: "white", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 6px rgba(245, 101, 101, 0.3)", transition: "all 0.3s ease", flexShrink: 0, marginLeft: "20px" }}
             onMouseEnter={(e) => e.currentTarget.style.transform = "rotate(90deg)"}
             onMouseLeave={(e) => e.currentTarget.style.transform = "rotate(0deg)"}
             onClick={() => { setShowMapRoute(!showmaproute); handleReset(); }}
-          ><CloseOutlined /></button>
+          ><CloseOutlined /></button> */}
         </div>
 
         {/* Selection Card */}
@@ -699,7 +698,9 @@ useEffect(() => {
             )}
           </div>
         )}
+        
       </div>
+      
     </div>
   );
 };

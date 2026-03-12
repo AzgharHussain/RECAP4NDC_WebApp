@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
 const axios = require("axios");
+const https = require("https");
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
 
 const router = express.Router();
@@ -20,11 +21,27 @@ const PG_USER = "postgres";
 const PG_PASS = "P$DB@25%$#!26";
 const PG_DB = "Recap4NDC_new";
 
-const GEOSERVER_URL = "https://gisfy.co.in:8445/geoserver";
+const GEOSERVER_URL = "http://68.178.167.216:8081/geoserver";
 const GEOSERVER_USER = "admin";
-const GEOSERVER_PASS = "geoserver";
+const GEOSERVER_PASS = "Geo@$ecure#%26";
 const WORKSPACE = "Recap4NDC";
-const DATASTORE = "Recap4NDC_New";
+const DATASTORE = "Recap4NDC_New_Final";
+
+// Create HTTPS agent that ignores SSL certificate errors
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
+
+// Environment variables for GDAL
+const GDAL_ENV = {
+  ...process.env,
+  PATH: `${process.env.PATH};C:\\Users\\HP\\AppData\\Local\\Programs\\OSGeo4W\\bin;C:\\Program Files\\PostgreSQL\\17\\bin`,
+  GDAL_DATA: "C:\\Users\\HP\\AppData\\Local\\Programs\\OSGeo4W\\share\\gdal",
+  PROJ_LIB: "C:\\Users\\HP\\AppData\\Local\\Programs\\OSGeo4W\\share\\proj",
+  // Skip PROJ version check
+  PROJ_IGNORE_CATALOG_ERRORS: "YES",
+  PROJ_NETWORK: "OFF"
+};
 // --------------------------------
 
 // Multer storage
@@ -35,18 +52,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // --- Utility: Run shell commands ---
-// --- Utility: Run shell commands with GDAL path ---
-function runCommand(cmd, env = process.env) {
-  // Add GDAL to PATH for this command
-  const updatedEnv = {
-    ...env,
-    PATH: `${env.PATH};C:\\GisfyProject\\RECAP_OSGEO\\OSGeo4W\\bin`,
-    GDAL_DATA: "C:\\GisfyProject\\RECAP_OSGEO\\OSGeo4W\\share\\gdal",
-    PROJ_LIB: "C:\\GisfyProject\\RECAP_OSGEO\\OSGeo4W\\share\\proj"
-  };
-  
+function runCommand(cmd, env = GDAL_ENV) {
   return new Promise((resolve, reject) => {
-    exec(cmd, { maxBuffer: 1024 * 1024 * 50, env: updatedEnv }, (err, stdout, stderr) => {
+    console.log(`Running command: ${cmd.substring(0, 100)}...`);
+    exec(cmd, { maxBuffer: 1024 * 1024 * 50, env }, (err, stdout, stderr) => {
       if (err) {
         // For GDAL warnings that aren't fatal
         if (stderr && (
@@ -68,31 +77,19 @@ function runCommand(cmd, env = process.env) {
 async function testGDALConnection() {
   try {
     console.log("Testing GDAL installation...");
-    console.log("System PATH:", process.env.PATH);
+    const { stdout } = await runCommand('ogr2ogr --version');
+    console.log(`✓ GDAL Version: ${stdout.trim()}`);
     
-    // Try multiple ways to find GDAL
-    const gdalPaths = [
-      "C:\\GisfyProject\\RECAP_OSGEO\\OSGeo4W\\bin\\ogr2ogr.exe",
-      "ogr2ogr.exe",
-      "ogr2ogr"
-    ];
-    
-    for (const gdalPath of gdalPaths) {
-      try {
-        console.log(`Trying: ${gdalPath}`);
-        const { stdout } = await runCommand(`"${gdalPath}" --version`);
-        console.log(`✓ GDAL Found: ${stdout.trim()}`);
-        console.log(`✓ Using: ${gdalPath}`);
-        return true;
-      } catch (error) {
-        console.log(`✗ Not found: ${gdalPath}`);
-      }
+    try {
+      const { stdout: pgVersion } = await runCommand('psql --version');
+      console.log(`✓ PostgreSQL client: ${pgVersion.trim()}`);
+    } catch (pgError) {
+      console.warn("⚠ PostgreSQL client not found in PATH");
     }
     
-    console.error("✗ GDAL not found in any location");
-    return false;
+    return true;
   } catch (error) {
-    console.error("✗ GDAL test error:", error.message);
+    console.error("✗ GDAL not found or not in PATH");
     return false;
   }
 }
@@ -162,50 +159,57 @@ function generateSLD(layerName, color) {
 // --- Fix PostgreSQL table for GeoServer ---
 async function fixPostgreSQLTable(tableName) {
   try {
-    const env = { ...process.env, PGPASSWORD: PG_PASS };
+    const env = { ...GDAL_ENV, PGPASSWORD: PG_PASS };
     const lowerTable = tableName.toLowerCase();
 
     console.log(`Fixing PostgreSQL table: ${lowerTable}`);
 
-    // Check if fid exists; only create if missing
-    const checkFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name='fid';"`;
-    const { stdout } = await runCommand(checkFidCmd, env);
+    // Check if table exists
+    const checkTableCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '${lowerTable}');"`;
+    
+    try {
+      const { stdout } = await runCommand(checkTableCmd, env);
+      if (!stdout.trim().includes('t')) {
+        console.error(`Table ${lowerTable} does not exist in database`);
+        return false;
+      }
+    } catch (error) {
+      console.error("Error checking table existence:", error.stderr || error.message);
+      return false;
+    }
 
-    if (!stdout.trim()) {
+    // Check if fid exists
+    const checkFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name='fid';"`;
+    const { stdout: fidResult } = await runCommand(checkFidCmd, env);
+
+    if (!fidResult.trim()) {
       console.log(`Adding fid column to ${lowerTable}...`);
       const createFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL PRIMARY KEY;"`;
       await runCommand(createFidCmd, env);
-    } else {
-      console.log(`fid column already exists in ${lowerTable}`);
     }
 
-    // Check and rename geometry column if needed
+    // Check geometry column
     const checkGeomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name IN ('wkb_geometry', 'geom', 'geometry');"`;
     const { stdout: geomColumns } = await runCommand(checkGeomCmd, env);
     
     const columns = geomColumns.split('\n').map(col => col.trim()).filter(col => col);
     
-    if (columns.includes('wkb_geometry')) {
+    if (columns.includes('wkb_geometry') && !columns.includes('geom')) {
       console.log(`Renaming wkb_geometry to geom in ${lowerTable}...`);
       const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN wkb_geometry TO geom;"`;
       await runCommand(geomCmd, env);
-    } else if (!columns.includes('geom') && columns.includes('geometry')) {
+    } else if (columns.includes('geometry') && !columns.includes('geom')) {
       console.log(`Renaming geometry to geom in ${lowerTable}...`);
       const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN geometry TO geom;"`;
       await runCommand(geomCmd, env);
-    } else {
-      console.log(`Geometry column is already named 'geom' or doesn't exist`);
     }
 
-    // Create spatial index
-    console.log(`Creating spatial index for ${lowerTable}...`);
-    const indexCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "CREATE INDEX IF NOT EXISTS idx_${lowerTable}_geom ON ${lowerTable} USING GIST (geom);"`; 
-    await runCommand(indexCmd, env);
-
-    // Update geometry metadata
-    console.log(`Updating geometry metadata for ${lowerTable}...`);
-    const updateGeomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "SELECT UpdateGeometrySRID('${lowerTable}', 'geom', 4326);"`;
-    await runCommand(updateGeomCmd, env);
+    // Create spatial index if geom column exists
+    if (columns.includes('geom') || columns.includes('wkb_geometry') || columns.includes('geometry')) {
+      console.log(`Creating spatial index for ${lowerTable}...`);
+      const indexCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "CREATE INDEX IF NOT EXISTS idx_${lowerTable}_geom ON ${lowerTable} USING GIST (geom);"`; 
+      await runCommand(indexCmd, env);
+    }
 
     console.log(`PostgreSQL table ${lowerTable} fixed successfully`);
     return true;
@@ -216,13 +220,35 @@ async function fixPostgreSQLTable(tableName) {
 }
 
 // --- Publish to GeoServer ---
+// --- Publish to GeoServer ---
 async function publishToGeoServer(tableName, color) {
   try {
     const lowerTable = tableName.toLowerCase();
     console.log(`Publishing ${lowerTable} to GeoServer...`);
 
-    // Create or update feature type
-    const xml = `<featureType>
+    const axiosInstance = axios.create({
+      httpsAgent,
+      auth: {
+        username: GEOSERVER_USER,
+        password: GEOSERVER_PASS
+      },
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    // First, check if the layer already exists
+    try {
+      await axiosInstance.get(`${GEOSERVER_URL}/rest/layers/${WORKSPACE}:${lowerTable}`);
+      console.log(`Layer ${lowerTable} already exists, will update if needed`);
+    } catch (error) {
+      if (error.response?.status === 404) {
+        console.log(`Layer ${lowerTable} does not exist, will create`);
+      }
+    }
+
+    // Create feature type if it doesn't exist
+    const featureTypeXml = `<featureType>
   <name>${lowerTable}</name>
   <nativeName>${lowerTable}</nativeName>
   <title>${lowerTable}</title>
@@ -232,304 +258,385 @@ async function publishToGeoServer(tableName, color) {
 
     const featureTypeUrl = `${GEOSERVER_URL}/rest/workspaces/${WORKSPACE}/datastores/${DATASTORE}/featuretypes`;
 
-    console.log(`Creating feature type at: ${featureTypeUrl}`);
-    await axios.post(featureTypeUrl, xml, {
-      auth: { username: GEOSERVER_USER, password: GEOSERVER_PASS },
-      headers: { "Content-Type": "text/xml" }
-    });
+    try {
+      console.log(`Creating feature type at: ${featureTypeUrl}`);
+      await axiosInstance.post(featureTypeUrl, featureTypeXml, {
+        headers: { "Content-Type": "application/xml" } // Changed from text/xml
+      });
+    } catch (postError) {
+      if (postError.response?.status === 500) {
+        console.log("Feature type may already exist, attempting update...");
+        try {
+          const updateUrl = `${GEOSERVER_URL}/rest/workspaces/${WORKSPACE}/datastores/${DATASTORE}/featuretypes/${lowerTable}`;
+          await axiosInstance.put(updateUrl, featureTypeXml, {
+            headers: { "Content-Type": "application/xml" } // Changed from text/xml
+          });
+        } catch (updateError) {
+          if (updateError.response?.status === 404) {
+            console.log("Feature type not found for update, will continue with style creation");
+          } else {
+            throw updateError;
+          }
+        }
+      } else if (postError.response?.status !== 409) { // Conflict is OK
+        throw postError;
+      }
+    }
 
-    // Create SLD style
+    // Create/Update style - FIXED VERSION
     const styleName = `${lowerTable}_style`;
     const sld = generateSLD(lowerTable, color);
 
     console.log(`Creating/updating style: ${styleName}`);
+    
+    // First, check if style exists
+    let styleExists = false;
     try {
-      await axios.put(`${GEOSERVER_URL}/rest/styles/${styleName}`, sld, {
-        auth: { username: GEOSERVER_USER, password: GEOSERVER_PASS },
+      await axiosInstance.get(`${GEOSERVER_URL}/rest/styles/${styleName}.json`);
+      styleExists = true;
+      console.log(`Style ${styleName} already exists, updating...`);
+    } catch (error) {
+      if (error.response?.status === 404) {
+        styleExists = false;
+        console.log(`Style ${styleName} does not exist, creating...`);
+      } else {
+        throw error;
+      }
+    }
+
+    if (styleExists) {
+      // Update existing style - PUT with SLD content
+      await axiosInstance.put(`${GEOSERVER_URL}/rest/styles/${styleName}`, sld, {
         headers: { "Content-Type": "application/vnd.ogc.sld+xml" }
       });
-      console.log(`Style ${styleName} updated`);
-    } catch (putError) {
-      console.log(`Style ${styleName} doesn't exist, creating new...`);
-      await axios.post(`${GEOSERVER_URL}/rest/styles?name=${styleName}`, sld, {
-        auth: { username: GEOSERVER_USER, password: GEOSERVER_PASS },
+    } else {
+      // Create new style - need to POST to create the style first, then PUT the SLD
+      
+      // Step 1: Create the style (empty) - FIXED: Use application/xml instead of text/xml
+      const createStyleXml = `<style>
+  <name>${styleName}</name>
+  <filename>${styleName}.sld</filename>
+</style>`;
+      
+      await axiosInstance.post(`${GEOSERVER_URL}/rest/styles`, createStyleXml, {
+        headers: { "Content-Type": "application/xml" } // Changed from text/xml to application/xml
+      });
+      
+      // Step 2: Upload the SLD content
+      await axiosInstance.put(`${GEOSERVER_URL}/rest/styles/${styleName}`, sld, {
         headers: { "Content-Type": "application/vnd.ogc.sld+xml" }
       });
-      console.log(`Style ${styleName} created`);
     }
 
     // Apply style to layer
     console.log(`Applying style to layer ${WORKSPACE}:${lowerTable}`);
-    await axios.put(
-      `${GEOSERVER_URL}/rest/layers/${WORKSPACE}:${lowerTable}`,
-      `<layer><defaultStyle><name>${styleName}</name></defaultStyle></layer>`,
-      {
-        auth: { username: GEOSERVER_USER, password: GEOSERVER_PASS },
-        headers: { "Content-Type": "application/xml" }
+    
+    // Wait a moment for style to be fully created
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const layerXml = `<layer>
+  <defaultStyle>
+    <name>${styleName}</name>
+    <workspace>${WORKSPACE}</workspace>
+  </defaultStyle>
+  <enabled>true</enabled>
+</layer>`;
+
+    try {
+      await axiosInstance.put(
+        `${GEOSERVER_URL}/rest/layers/${WORKSPACE}:${lowerTable}`,
+        layerXml,
+        {
+          headers: { "Content-Type": "application/xml" } // Changed from text/xml
+        }
+      );
+    } catch (layerError) {
+      // If layer doesn't exist, try to create it
+      if (layerError.response?.status === 404) {
+        console.log(`Layer ${lowerTable} not found, creating with style...`);
+        
+        // Create layer with style
+        const createLayerXml = `<layer>
+  <name>${lowerTable}</name>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <name>${styleName}</name>
+    <workspace>${WORKSPACE}</workspace>
+  </defaultStyle>
+  <resource class="featureType">${WORKSPACE}:${lowerTable}</resource>
+  <enabled>true</enabled>
+</layer>`;
+        
+        await axiosInstance.post(
+          `${GEOSERVER_URL}/rest/layers`,
+          createLayerXml,
+          {
+            headers: { "Content-Type": "application/xml" } // Changed from text/xml
+          }
+        );
+      } else {
+        throw layerError;
       }
-    );
+    }
 
     console.log(`Published ${lowerTable} to GeoServer successfully`);
     return true;
   } catch (error) {
     console.error("GeoServer publish error:", error.response?.data || error.message);
-    if (error.response) {
-      console.error("Response status:", error.response.status);
-      console.error("Response data:", error.response.data);
-    }
+    console.error("Full error details:", error);
     throw error;
   }
 }
 
-// --- Add columns to coupe_village_master table ---
-async function addcolumnsintable(tableName) {
+const createPatrolBoundaryTable = async () => {
   try {
-    const lowerTable = tableName.toLowerCase();
-    
-    console.log(`Starting to process villages for table: ${lowerTable}`);
-    
-    // Get distinct village values
-    const [villages] = await sequelize.query(
-      `SELECT DISTINCT village 
-       FROM "${lowerTable}" 
-       WHERE village IS NOT NULL 
-       AND TRIM(village) != '' 
-       ORDER BY village`,
-      {
-        bind: []
-      }
-    );
-    
-    console.log(`Found ${villages.length} distinct villages`);
-    
-    if (villages.length === 0) {
-      console.log(`No village data found in table: ${lowerTable}`);
-      return false;
-    }
-    
-    // Insert villages into coupe_village_master (simple INSERT IGNORE approach)
-    let insertedCount = 0;
-    let duplicateCount = 0;
-    
-    for (const village of villages) {
-      try {
-        const villageName = village.village ? village.village.toString().trim() : '';
-        if (!villageName) continue;
-        
-        // Use a simple INSERT and catch duplicates
-        try {
-          await sequelize.query(
-            `INSERT INTO coupe_village_master (coupe_name, village_name) 
-             VALUES ($1, $2)`,
-            {
-              bind: [lowerTable, villageName]
-            }
-          );
-          insertedCount++;
-          console.log(`✓ Inserted: ${villageName} for ${lowerTable}`);
-        } catch (insertErr) {
-          // If it's a duplicate key error, just skip it
-          if (insertErr.message.includes('duplicate') || 
-              insertErr.message.includes('unique') ||
-              insertErr.code === '23505') {
-            duplicateCount++;
-            // Duplicate entry, skip it
-            continue;
-          } else {
-            console.error(`Error inserting village ${villageName}:`, insertErr.message);
-          }
-        }
-      } catch (villageErr) {
-        console.error(`Error processing village ${village.village}:`, villageErr.message);
-      }
-    }
-    
-    console.log(`Successfully inserted ${insertedCount} villages, skipped ${duplicateCount} duplicates from ${lowerTable} into coupe_village_master`);
-    
-    return insertedCount > 0;
-    
-  } catch (err) {
-    console.error('Error in addcolumnsintable:', err.message);
-    return false;
-  }
-}
-
-// --- Test GDAL Connection ---
-async function testGDALConnection() {
-  try {
-    console.log("Testing GDAL installation...");
-    const { stdout } = await runCommand('ogr2ogr --version');
-    console.log(`✓ GDAL Version: ${stdout.trim()}`);
-    return true;
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS patrol_boundaries (
+        id SERIAL PRIMARY KEY,
+        table_name VARCHAR(200) UNIQUE NOT NULL,
+        boundary_name VARCHAR(200),
+        workspace VARCHAR(100),
+        layer_name VARCHAR(200),
+        color VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log("Patrol boundaries table ready");
   } catch (error) {
-    console.error("✗ GDAL not found or not in PATH");
-    console.error("Please ensure GDAL is installed and in system PATH");
-    return false;
+    console.error("Error creating patrol_boundaries table:", error);
   }
-}
+};
 
-// --- Upload shapefile route ---
-router.post("/upload-shp", upload.array("files"), async (req, res) => {
-  let uploadedFiles = [];
-  try {
-    // Test GDAL connection first
-    const gdalAvailable = await testGDALConnection();
-    if (!gdalAvailable) {
-      return res.status(500).json({
-        success: false,
-        message: "GDAL not available. Please install GDAL and add to PATH.",
-        details: "Run 'ogr2ogr --version' in command prompt to verify installation"
-      });
-    }
+// --- Upload patrol boundary route ---
+router.post(
+  "/upload-patrol-boundary",
+  verifyJwt,
+  upload.array("files"),
+  async (req, res) => {
+    let uploadedFiles = [];
 
-    const color = req.body.color || "#0000ff";
-    const shpFile = req.files.find(f => f.originalname.endsWith(".shp"));
-    if (!shpFile) return res.status(400).json({ success: false, message: "No shapefile (.shp) found" });
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No files uploaded"
+        });
+      }
 
-    uploadedFiles = req.files;
+      uploadedFiles = req.files;
 
-    const originalTableName = path.basename(shpFile.originalname, ".shp");
-    const tableName = originalTableName.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-    const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
+      const gdalAvailable = await testGDALConnection();
+      if (!gdalAvailable) {
+        return res.status(500).json({
+          success: false,
+          message: "GDAL not available"
+        });
+      }
 
-    console.log(`========================================`);
-    console.log(`Processing shapefile: ${originalTableName}`);
-    console.log(`Table name will be: ${tableName}`);
-    console.log(`Color: ${color}`);
-    console.log(`========================================`);
+      const shpFile = req.files.find(f =>
+        f.originalname.toLowerCase().endsWith(".shp")
+      );
 
-    // Step 1: Import shapefile to PostgreSQL using ogr2ogr
-    console.log(`\n[1/6] Importing shapefile to PostgreSQL...`);
-    
-    // Build the ogr2ogr command
-// Use this if shapefile doesn't have projection info
-const ogrCmd = `ogr2ogr -f "PostgreSQL" \
+      const shxFile = req.files.find(f =>
+        f.originalname.toLowerCase().endsWith(".shx")
+      );
+
+      const dbfFile = req.files.find(f =>
+        f.originalname.toLowerCase().endsWith(".dbf")
+      );
+
+      if (!shpFile || !shxFile || !dbfFile) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing shapefile components (.shp .shx .dbf required)"
+        });
+      }
+
+      const color = req.body.color || "#ff0000";
+      const originalName = path.basename(shpFile.originalname, ".shp");
+      const cleanName = originalName.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+      const tableName = `patrol_boundary_${cleanName}`;
+      const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
+
+      console.log("Uploading Patrol Boundary:", tableName);
+
+      // Import to PostGIS - without specifying SRS to avoid PROJ error
+      const ogrCmd = `ogr2ogr -f "PostgreSQL" \
 PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
 "${shpPath}" \
 -nln "${tableName}" \
 -nlt PROMOTE_TO_MULTI \
 -lco GEOMETRY_NAME=geom \
 -lco FID=fid \
--lco PRECISION=NO \
--a_srs EPSG:4326 \
+-t_srs EPSG:4326 \
 -overwrite \
--skipfailures \
---config PG_USE_COPY YES`;
+-skipfailures`;
 
-    console.log("Running ogr2ogr command...");
-    console.log("Command preview:", ogrCmd.substring(0, 150) + "...");
-    
-    const ogrResult = await runCommand(ogrCmd);
-    
-    if (ogrResult.stdout) {
-      console.log("ogr2ogr output:", ogrResult.stdout.substring(0, 300));
-    }
-    
-    if (ogrResult.stderr && ogrResult.stderr.length > 0) {
-      console.warn("ogr2ogr warnings:", ogrResult.stderr.substring(0, 500));
-    }
-
-    console.log(`✓ Shapefile imported to PostgreSQL table: ${tableName}`);
-
-    // Step 2: Wait for table to be fully created
-    console.log(`\n[2/6] Waiting for table creation to complete...`);
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    // Step 3: Fix PostgreSQL table for GeoServer
-    console.log(`\n[3/6] Fixing PostgreSQL table for GeoServer...`);
-    const tableFixed = await fixPostgreSQLTable(tableName);
-    if (!tableFixed) {
-      console.warn("Table fixing encountered issues, but continuing...");
-    }
-
-    // Step 4: Publish to GeoServer
-    console.log(`\n[4/6] Publishing to GeoServer...`);
-    try {
-      await publishToGeoServer(tableName, color);
-      console.log(`✓ Published to GeoServer successfully`);
-    } catch (geoServerError) {
-      console.error("GeoServer publish failed:", geoServerError.message);
-      // Continue with village processing even if GeoServer fails
-    }
-
-    // Step 5: Add village data to coupe_village_master table
-    console.log(`\n[5/6] Adding village data to coupe_village_master...`);
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait before querying
-    const villageInserted = await addcolumnsintable(tableName);
-    
-    if (villageInserted) {
-      console.log(`✓ Village data added to coupe_village_master`);
-    } else {
-      console.log(`⚠ No village data found or inserted`);
-    }
-
-    // Step 6: Cleanup uploaded files
-    console.log(`\n[6/6] Cleaning up uploaded files...`);
-    uploadedFiles.forEach(file => {
-      const filePath = path.join(UPLOAD_DIR, file.originalname);
-      if (fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-          console.log(`✓ Deleted: ${file.originalname}`);
-        } catch (cleanupErr) {
-          console.warn(`⚠ Failed to delete ${filePath}:`, cleanupErr.message);
-        }
+      console.log("Running ogr2ogr command...");
+      
+      try {
+        await runCommand(ogrCmd);
+        console.log("PostGIS import completed:", tableName);
+      } catch (ogrError) {
+        console.error("ogr2ogr error:", ogrError.stderr);
+        
+        // Try alternative approach without SRS transformation
+        console.log("Retrying without SRS transformation...");
+        const altCmd = `ogr2ogr -f "PostgreSQL" \
+PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+"${shpPath}" \
+-nln "${tableName}" \
+-nlt PROMOTE_TO_MULTI \
+-lco GEOMETRY_NAME=geom \
+-lco FID=fid \
+-overwrite \
+-skipfailures`;
+        
+        await runCommand(altCmd);
+        console.log("PostGIS import completed on retry:", tableName);
       }
-    });
 
-    console.log(`\n✅ Upload process completed successfully!`);
-    console.log(`========================================`);
+      // Wait for table to be ready
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Success response
+      // Fix table
+      await fixPostgreSQLTable(tableName);
+
+      // Publish to GeoServer
+      try {
+        await publishToGeoServer(tableName, color);
+        console.log("GeoServer layer published:", tableName);
+      } catch (geoError) {
+        console.error("GeoServer publish failed but continuing:", geoError.message);
+      }
+
+      // Save metadata
+      await sequelize.query(
+        `
+        INSERT INTO patrol_boundaries
+        (table_name, boundary_name, workspace, layer_name, color)
+        VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT (table_name) DO NOTHING
+        `,
+        {
+          bind: [
+            tableName,
+            originalName,
+            WORKSPACE,
+            `${WORKSPACE}:${tableName}`,
+            color
+          ]
+        }
+      );
+
+      // Cleanup
+      uploadedFiles.forEach(file => {
+        const filePath = path.join(UPLOAD_DIR, file.originalname);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      });
+
+      res.json({
+        success: true,
+        message: "Patrol Boundary Uploaded Successfully",
+        data: {
+          table: tableName,
+          layer: `${WORKSPACE}:${tableName}`,
+          workspace: WORKSPACE,
+          wms_url: `${GEOSERVER_URL}/${WORKSPACE}/wms`,
+          color: color
+        }
+      });
+
+    } catch (error) {
+      console.error("Patrol Boundary Upload Error:", error);
+
+      uploadedFiles.forEach(file => {
+        const filePath = path.join(UPLOAD_DIR, file.originalname);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      });
+
+      res.status(500).json({
+        success: false,
+        message: "Patrol Boundary Upload Failed",
+        error: error.message,
+        details: error.stderr || error.stdout || null
+      });
+    }
+  }
+);
+
+// --- Get all patrol boundaries ---
+router.get("/patrol-boundaries", verifyJwt, async (req, res) => {
+  try {
+    const result = await sequelize.query(
+      `
+      SELECT
+        id,
+        boundary_name AS name,
+        table_name,
+        layer_name,
+        color,
+        created_at
+      FROM patrol_boundaries
+      ORDER BY created_at DESC
+      `,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+
     res.json({
       success: true,
-      message: "Shapefile uploaded & published successfully",
-      details: {
-        table: tableName,
-        color: color,
-        wmsUrl: `${GEOSERVER_URL}/${WORKSPACE}/wms`,
-        layerName: `${WORKSPACE}:${tableName}`,
-        wfsUrl: `${GEOSERVER_URL}/${WORKSPACE}/ows`,
-        villagesInserted: villageInserted,
-        timestamp: new Date().toISOString()
-      }
+      data: result
     });
-
-  } catch (err) {
-    console.error("\n❌ Upload error occurred:");
-    console.error("Error:", err.message);
-    console.error("Stack:", err.stack);
-    
-    if (err.stderr) {
-      console.error("Command stderr:", err.stderr.substring(0, 500));
-    }
-    
-    if (err.stdout) {
-      console.error("Command stdout:", err.stdout.substring(0, 500));
-    }
-    
-    // Cleanup on error
-    uploadedFiles.forEach(file => {
-      const filePath = path.join(UPLOAD_DIR, file.originalname);
-      if (fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-          console.log(`✓ Cleaned up on error: ${file.originalname}`);
-        } catch (cleanupErr) {
-          console.warn(`⚠ Failed to delete ${filePath}:`, cleanupErr.message);
-        }
-      }
-    });
-    
+  } catch (error) {
+    console.error("Error fetching patrol boundaries:", error);
     res.status(500).json({
       success: false,
-      message: "Upload failed",
-      error: err.message || "Unknown error",
-      details: {
-        stderr: err.stderr ? err.stderr.substring(0, 500) : null,
-        stdout: err.stdout ? err.stdout.substring(0, 500) : null,
-        code: err.code
+      message: "Failed to fetch patrol boundaries"
+    });
+  }
+});
+
+// --- Delete patrol boundary ---
+router.delete("/patrol-boundaries/:id", verifyJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await sequelize.query(
+      `SELECT table_name FROM patrol_boundaries WHERE id=$1`,
+      {
+        bind: [id],
+        type: sequelize.QueryTypes.SELECT
       }
+    );
+
+    if (!result.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Boundary not found"
+      });
+    }
+
+    const tableName = result[0].table_name;
+
+    await sequelize.query(`DROP TABLE IF EXISTS ${tableName}`);
+    await sequelize.query(
+      `DELETE FROM patrol_boundaries WHERE id=$1`,
+      { bind: [id] }
+    );
+
+    res.json({
+      success: true,
+      message: "Boundary deleted successfully"
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Delete failed"
     });
   }
 });
@@ -540,13 +647,11 @@ router.get("/test-gdal", async (req, res) => {
     const gdalAvailable = await testGDALConnection();
     
     if (gdalAvailable) {
-      // Test PostgreSQL connection
-      const env = { ...process.env, PGPASSWORD: PG_PASS };
+      const env = { ...GDAL_ENV, PGPASSWORD: PG_PASS };
       const testCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT version();"`;
       
       try {
         const { stdout } = await runCommand(testCmd, env);
-        console.log("PostgreSQL version:", stdout.trim());
         
         res.json({
           success: true,
@@ -580,17 +685,14 @@ router.get("/test-gdal", async (req, res) => {
   }
 });
 
-router.get('/admincoupes',  verifyJwt, async (req, res) => {
+// --- Admin coupes endpoint ---
+router.get('/admincoupes', verifyJwt, async (req, res) => {
   try {
-
     const [result] = await sequelize.query(
-      `	SELECT DISTINCT coupe_name FROM public.coupe_village_master`,
+      `SELECT DISTINCT coupe_name FROM public.coupe_village_master`,
     );
-
     res.json({ 
-      
       data: result,
-      
     });
   } catch (err) {
     console.error('Error /api/admincoupes:', err);
@@ -602,4 +704,5 @@ router.get('/admincoupes',  verifyJwt, async (req, res) => {
   }
 });
 
+createPatrolBoundaryTable();
 module.exports = router;

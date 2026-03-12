@@ -10,6 +10,7 @@ import {
 } from "react-icons/fi";
 import { RiAdminFill } from "react-icons/ri";
 import "./AdminDashboard.css";
+import UploadPatrolBoundary from "./UploadPatrolBoundary";
 
 function AdminDashboard() {
   const { language } = useLanguage();
@@ -439,7 +440,7 @@ const response = await axios.get(
         </main>
       </div>
 
-
+<UploadPatrolBoundary />
     </div>
   );
 }

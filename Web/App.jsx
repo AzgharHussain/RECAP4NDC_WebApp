@@ -21,6 +21,7 @@ const CoupeObservation = lazy(() => import("./pages/CoupeObservation"));
 const NDVIChangeDashboard = lazy(() => import("./pages/NDVIDashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Homepage = lazy(() => import("./pages/Homepage"));
+const BeatPatrolCoverage = lazy(() => import("./pages/BeatPatrolCoverage"));
 
 const LoadingFallback = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
@@ -54,7 +55,7 @@ export default function App() {
             <Route path="/working-plan/view" element={<ViewCoupe />} />
             <Route path="/working-plan/log" element={<CoupeObservation />} />
             <Route path="/ndvi-dashboard" element={<NDVIChangeDashboard />} />
-            
+           <Route path="/PatrolCoverageAnalysis" element={<BeatPatrolCoverage />} />
           </Route>
 
           <Route
