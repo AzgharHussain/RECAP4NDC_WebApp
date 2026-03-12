@@ -346,7 +346,7 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        error: error.details[0].message
+        message: 'Bad Request - Invalid syntax'
       });
     }
 

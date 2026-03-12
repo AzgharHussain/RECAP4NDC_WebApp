@@ -56,7 +56,7 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Server encountered an unexpected condition',
-            error: error.message
+           
         });
     }
 });
@@ -286,7 +286,7 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
             res.status(500).json({
                 success: false,
                 message: 'Server encountered an unexpected condition',
-                error: error.message
+               
             });
         }
     }
@@ -371,7 +371,7 @@ FROM
         res.status(500).json({
             success: false,
             message: 'Server encountered an unexpected condition',
-            error: error.message
+            
         });
     }
 });
@@ -479,7 +479,7 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Server encountered an unexpected condition',
-            error: error.message
+            
         });
     }
 });
@@ -540,7 +540,7 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Server encountered an unexpected condition',
-            error: error.message
+           
         });
     }
 });
@@ -582,7 +582,7 @@ router.get('/ndvi-change-tables', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Server encountered an unexpected condition',
-            error: error.message
+           
         });
     }
 });
@@ -1023,7 +1023,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server encountered an unexpected condition',
-      error: error.message
+     
     });
   }
 });
@@ -1089,7 +1089,7 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Server encountered an unexpected condition',
-            error: error.message
+           
         });
     }
 });
