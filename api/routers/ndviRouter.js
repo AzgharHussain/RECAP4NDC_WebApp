@@ -16,7 +16,7 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
     if (!coupename || !village_name) {
         return res.status(400).json({
             success: false,
-            message: 'coupename and village_name are required'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
@@ -55,7 +55,7 @@ router.post('/ndvi-change',verifyJwt, async (req, res) => {
         console.error('Error in NDVI change API:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to process NDVI change data',
+            message: 'Server encountered an unexpected condition',
             error: error.message
         });
     }
@@ -127,7 +127,7 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
     if (!tableName) {
         return res.status(400).json({
             success: false,
-            message: 'tableName is required'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
@@ -187,7 +187,7 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
         console.error('Error in filtered NDVI API:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch filtered NDVI data'
+            message: 'Server encountered an unexpected condition'
         });
     }
 });
@@ -200,7 +200,7 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
     if (!tableName) {
         return res.status(400).json({
             success: false,
-            message: 'tableName is required'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
@@ -285,7 +285,7 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
             console.error('Both area calculation methods failed:', transformError);
             res.status(500).json({
                 success: false,
-                message: 'Failed to fetch filtered degraded area',
+                message: 'Server encountered an unexpected condition',
                 error: error.message
             });
         }
@@ -341,7 +341,7 @@ router.post('/coupe-area',verifyJwt, async (req, res) => {
     if (!tableName) {
         return res.status(400).json({
             success: false,
-            message: 'tableName is required'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
@@ -370,7 +370,7 @@ FROM
         console.error('Error in NDVI change API:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to process NDVI change data',
+            message: 'Server encountered an unexpected condition',
             error: error.message
         });
     }
@@ -432,7 +432,7 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
     if (!NdvicoupeName) {
         return res.status(400).json({
             success: false,
-            message: 'NdvicoupeName is required'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
@@ -442,7 +442,7 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
     if (!tableNamePattern.test(NdvicoupeName)) {
         return res.status(400).json({
             success: false,
-            message: 'Invalid table name format.'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
@@ -478,7 +478,7 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
         console.error('Error in NDVI change API:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to process NDVI change data',
+            message: 'Server encountered an unexpected condition',
             error: error.message
         });
     }
@@ -493,14 +493,14 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
     if (!NdvicoupeName) {
         return res.status(400).json({
             success: false,
-            message: 'NdvicoupeName body parameter is required'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
     if (!id || isNaN(id)) {
         return res.status(400).json({
             success: false,
-            message: 'Valid ID is required'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
@@ -509,7 +509,7 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
     if (!tableNamePattern.test(NdvicoupeName)) {
         return res.status(400).json({
             success: false,
-            message: 'Invalid table name format.'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
@@ -525,7 +525,7 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
         if (!results || results.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: `Record with ID ${id} not found`
+                message: 'Bad Request - Invalid syntax'
             });
         }
 
@@ -539,7 +539,8 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
         console.error('Error fetching NDVI record by ID:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch NDVI record',
+            message: 'Server encountered an unexpected condition',
+            error: error.message
         });
     }
 });
@@ -561,7 +562,7 @@ router.get('/ndvi-change-tables', async (req, res) => {
         if (!results || results.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'No NDVI Change tables found',
+                message: 'Bad Request - Invalid syntax',
                 data: []
             });
         }
@@ -580,7 +581,7 @@ router.get('/ndvi-change-tables', async (req, res) => {
         console.error('Error fetching NDVI Change tables:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch NDVI Change tables',
+            message: 'Server encountered an unexpected condition',
             error: error.message
         });
     }
@@ -812,7 +813,7 @@ let {coupename, note, status, id} = req.body;
   if (!coupename) {
     return res.status(400).json({
       success: false,
-      message: 'coupename is required'
+      message: 'Bad Request - Invalid syntax'
     });
   }
 
@@ -822,7 +823,7 @@ let {coupename, note, status, id} = req.body;
 if (!tableRegex.test(coupename)) {
   return res.status(400).json({
     success: false,
-    message: "Invalid table name. Only tables ending with _coupe_NDVI_Change are allowed."
+    message: 'Bad Request - Invalid syntax'
   });
 }
 
@@ -830,7 +831,7 @@ if (!tableRegex.test(coupename)) {
   if (!id || isNaN(id) || id <= 0) {
     return res.status(400).json({
       success: false,
-      message: 'Valid ID required'
+      message: 'Bad Request - Invalid syntax'
     });
   }
 
@@ -872,7 +873,7 @@ if (!tableRegex.test(coupename)) {
         return res.status(400).json({
           success: false,
           error: 'Invalid file type',
-          message: 'SVG files are not allowed due to security reasons.'
+          message: 'Bad Request - Invalid syntax'
         });
       }
 
@@ -894,7 +895,7 @@ if (!tableRegex.test(coupename)) {
     if (updates.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No fields to update'
+        message: 'Bad Request - Invalid syntax'
       });
     }
 
@@ -913,7 +914,7 @@ if (!tableRegex.test(coupename)) {
     if (!results || results.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Record not found'
+        message: 'Bad Request - Invalid syntax'
       });
     }
 
@@ -945,14 +946,14 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
   if (!coupename) {
     return res.status(400).json({
       success: false,
-      message: 'coupename is required in request body'
+      message: 'Bad Request - Invalid syntax'
     });
   }
 
   if (!id || isNaN(id)) {
     return res.status(400).json({
       success: false,
-      message: 'Valid ID is required'
+      message: 'Bad Request - Invalid syntax'
     });
   }
 
@@ -975,7 +976,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
       } else {
         return res.status(400).json({
           success: false,
-          message: 'image_data should be a valid base64 image string starting with data:image'
+          message: 'Bad Request - Invalid syntax'
         });
       }
     }
@@ -988,7 +989,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
     if (updates.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No fields to update'
+        message: 'Bad Request - Invalid syntax'
       });
     }
 
@@ -1007,7 +1008,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
     if (!results || results.length === 0) {
       return res.status(404).json({
         success: false,
-        message: `Record with ID ${id} not found`
+        message: 'Bad Request - Invalid syntax'
       });
     }
 
@@ -1021,7 +1022,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
     console.error('Error updating NDVI record:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update NDVI record',
+      message: 'Server encountered an unexpected condition',
       error: error.message
     });
   }
@@ -1036,14 +1037,14 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
     if (!coupename) {
         return res.status(400).json({
             success: false,
-            message: 'coupename query parameter is required'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
     if (!id || isNaN(id)) {
         return res.status(400).json({
             success: false,
-            message: 'Valid ID is required'
+            message: 'Bad Request - Invalid syntax'
         });
     }
 
@@ -1061,7 +1062,7 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
         if (!existingRecord) {
             return res.status(404).json({
                 success: false,
-                message: `Record with ID ${id} not found`
+                message: `Bad Request - Invalid syntax`
             });
         }
 
@@ -1087,7 +1088,7 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
         console.error('Error deleting NDVI record:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to delete NDVI record',
+            message: 'Server encountered an unexpected condition',
             error: error.message
         });
     }
