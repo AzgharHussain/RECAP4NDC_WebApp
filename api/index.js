@@ -11,7 +11,7 @@ const { verifyJwt } = require("./middlewares/verifyJwt");
 const { sequelize, testConnection } = require('./config/database');
 const bcrypt = require('bcrypt');
 const setNoCacheHeaders = require('./middlewares/cacheControl');
-
+const admin = require("firebase-admin");
 const errorHandler = require("./middlewares/errorHandler");
 const Joi = require("joi");
 // At top of server.js
@@ -21,6 +21,14 @@ const crypto = require('crypto');
 const rateLimit = require("express-rate-limit");
 
 const app = express();
+
+const startNdviScheduler = require("./scheduler/ndviNotificationScheduler");
+
+
+// ----------------------------------------------------
+// 1. Initialize Firebase Admin SDK
+// ----------------------------------------------------
+
 
 // Strict Express settings
 app.set('query parser', 'simple');
@@ -39,6 +47,7 @@ app.use(errorHandler);
 // In app.js, enhance your Helmet configuration
 
 // ================= SECURITY HEADERS ================= //
+
 
 app.use(helmet());
 /* Content Security Policy */
@@ -278,20 +287,7 @@ app.post('/api/test-post', (req, res) => {
   });
 });
 
-app.post('/api/logout', (req, res) => {
-  const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    return res.status(400).json({ message: "Token required" });
-  }
-
-  const token = authHeader.split(' ')[1];
-console.log("Adding to blacklist:", token);
-  // Add token to blacklist
-  blacklistedTokens.add(token);
-
-  return res.json({ message: "Logged out successfully" });
-});
 
 
 const allowedParams = ["username", "password"];
@@ -333,7 +329,20 @@ function validateNoDuplicateParams22(req, res, next) {
 
   }
 }
+try {
+  const serviceAccount = require("./recap4ndc-ad332-d882dbe98b5e.json");
 
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log("🔥 Firebase Admin initialized");
+  }
+} catch (err) {
+  console.error("❌ Firebase service account missing:", err);
+}
+
+startNdviScheduler(admin);
 
 // --------------------------------------------------
 // 2. Schema-based Validation (Joi)

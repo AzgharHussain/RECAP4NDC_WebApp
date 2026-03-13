@@ -20,6 +20,7 @@ import patrollingIcon from "../assets/Patrolling.png";
 import incidentIcon from "../assets/Incident.png";
 import { useLanguage } from "../context/LanguageContext";
 import "./DashboardLayout.css";
+import { FaMapMarkedAlt } from "react-icons/fa";
 
 import { API_BASE_URL } from '../config';
 import axios from "axios";
@@ -336,7 +337,7 @@ useEffect(() => {
             }`}
             onClick={handleLinkClick}
           >
-          
+          <FaMapMarkedAlt />
            Patrol Coverage Analysis
           </NavLink>
            </div>
