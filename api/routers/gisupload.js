@@ -220,7 +220,6 @@ async function fixPostgreSQLTable(tableName) {
 }
 
 // --- Publish to GeoServer ---
-// --- Publish to GeoServer ---
 async function publishToGeoServer(tableName, color) {
   try {
     const lowerTable = tableName.toLowerCase();
@@ -238,9 +237,11 @@ async function publishToGeoServer(tableName, color) {
     });
 
     // First, check if the layer already exists
+    let layerExists = false;
     try {
       await axiosInstance.get(`${GEOSERVER_URL}/rest/layers/${WORKSPACE}:${lowerTable}`);
       console.log(`Layer ${lowerTable} already exists, will update if needed`);
+      layerExists = true;
     } catch (error) {
       if (error.response?.status === 404) {
         console.log(`Layer ${lowerTable} does not exist, will create`);
@@ -261,7 +262,7 @@ async function publishToGeoServer(tableName, color) {
     try {
       console.log(`Creating feature type at: ${featureTypeUrl}`);
       await axiosInstance.post(featureTypeUrl, featureTypeXml, {
-        headers: { "Content-Type": "application/xml" } // Changed from text/xml
+        headers: { "Content-Type": "application/xml" }
       });
     } catch (postError) {
       if (postError.response?.status === 500) {
@@ -269,7 +270,7 @@ async function publishToGeoServer(tableName, color) {
         try {
           const updateUrl = `${GEOSERVER_URL}/rest/workspaces/${WORKSPACE}/datastores/${DATASTORE}/featuretypes/${lowerTable}`;
           await axiosInstance.put(updateUrl, featureTypeXml, {
-            headers: { "Content-Type": "application/xml" } // Changed from text/xml
+            headers: { "Content-Type": "application/xml" }
           });
         } catch (updateError) {
           if (updateError.response?.status === 404) {
@@ -283,63 +284,56 @@ async function publishToGeoServer(tableName, color) {
       }
     }
 
-    // Create/Update style - FIXED VERSION
+    // Create and apply style
     const styleName = `${lowerTable}_style`;
     const sld = generateSLD(lowerTable, color);
 
     console.log(`Creating/updating style: ${styleName}`);
-    
-    // First, check if style exists
-    let styleExists = false;
+
     try {
-      await axiosInstance.get(`${GEOSERVER_URL}/rest/styles/${styleName}.json`);
-      styleExists = true;
-      console.log(`Style ${styleName} already exists, updating...`);
+      // Try to create style directly with SLD
+      await axiosInstance.post(
+        `${GEOSERVER_URL}/rest/styles?name=${styleName}`,
+        sld,
+        {
+          headers: {
+            "Content-Type": "application/vnd.ogc.sld+xml"
+          }
+        }
+      );
+      console.log(`Style ${styleName} created successfully`);
     } catch (error) {
-      if (error.response?.status === 404) {
-        styleExists = false;
-        console.log(`Style ${styleName} does not exist, creating...`);
+      // If style already exists (409), update it
+      if (error.response?.status === 409) {
+        console.log(`Style ${styleName} already exists, updating...`);
+        
+        // Update the style with PUT
+        await axiosInstance.put(
+          `${GEOSERVER_URL}/rest/styles/${styleName}`,
+          sld,
+          {
+            headers: {
+              "Content-Type": "application/vnd.ogc.sld+xml"
+            }
+          }
+        );
+        console.log(`Style ${styleName} updated successfully`);
       } else {
         throw error;
       }
     }
 
-    if (styleExists) {
-      // Update existing style - PUT with SLD content
-      await axiosInstance.put(`${GEOSERVER_URL}/rest/styles/${styleName}`, sld, {
-        headers: { "Content-Type": "application/vnd.ogc.sld+xml" }
-      });
-    } else {
-      // Create new style - need to POST to create the style first, then PUT the SLD
-      
-      // Step 1: Create the style (empty) - FIXED: Use application/xml instead of text/xml
-      const createStyleXml = `<style>
-  <name>${styleName}</name>
-  <filename>${styleName}.sld</filename>
-</style>`;
-      
-      await axiosInstance.post(`${GEOSERVER_URL}/rest/styles`, createStyleXml, {
-        headers: { "Content-Type": "application/xml" } // Changed from text/xml to application/xml
-      });
-      
-      // Step 2: Upload the SLD content
-      await axiosInstance.put(`${GEOSERVER_URL}/rest/styles/${styleName}`, sld, {
-        headers: { "Content-Type": "application/vnd.ogc.sld+xml" }
-      });
-    }
+    // Wait a moment for style to be fully created/updated
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Apply style to layer
     console.log(`Applying style to layer ${WORKSPACE}:${lowerTable}`);
-    
-    // Wait a moment for style to be fully created
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
     const layerXml = `<layer>
   <defaultStyle>
     <name>${styleName}</name>
     <workspace>${WORKSPACE}</workspace>
   </defaultStyle>
-  <enabled>true</enabled>
 </layer>`;
 
     try {
@@ -347,33 +341,40 @@ async function publishToGeoServer(tableName, color) {
         `${GEOSERVER_URL}/rest/layers/${WORKSPACE}:${lowerTable}`,
         layerXml,
         {
-          headers: { "Content-Type": "application/xml" } // Changed from text/xml
+          headers: { "Content-Type": "application/xml" }
         }
       );
+      console.log(`Style applied to layer successfully`);
     } catch (layerError) {
       // If layer doesn't exist, try to create it
       if (layerError.response?.status === 404) {
         console.log(`Layer ${lowerTable} not found, creating with style...`);
         
-        // Create layer with style
-        const createLayerXml = `<layer>
+        // First ensure feature type exists
+        try {
+          // Create layer with style
+          const createLayerXml = `<layer>
   <name>${lowerTable}</name>
   <type>VECTOR</type>
   <defaultStyle>
     <name>${styleName}</name>
-    <workspace>${WORKSPACE}</workspace>
   </defaultStyle>
   <resource class="featureType">${WORKSPACE}:${lowerTable}</resource>
   <enabled>true</enabled>
 </layer>`;
-        
-        await axiosInstance.post(
-          `${GEOSERVER_URL}/rest/layers`,
-          createLayerXml,
-          {
-            headers: { "Content-Type": "application/xml" } // Changed from text/xml
-          }
-        );
+          
+          await axiosInstance.post(
+            `${GEOSERVER_URL}/rest/layers`,
+            createLayerXml,
+            {
+              headers: { "Content-Type": "application/xml" }
+            }
+          );
+          console.log(`Layer created with style successfully`);
+        } catch (createLayerError) {
+          console.error("Error creating layer:", createLayerError.response?.data || createLayerError.message);
+          throw createLayerError;
+        }
       } else {
         throw layerError;
       }
@@ -384,7 +385,8 @@ async function publishToGeoServer(tableName, color) {
   } catch (error) {
     console.error("GeoServer publish error:", error.response?.data || error.message);
     console.error("Full error details:", error);
-    throw error;
+    // Don't throw the error - we want to continue even if GeoServer publish fails
+    return false;
   }
 }
 
@@ -407,7 +409,7 @@ const createPatrolBoundaryTable = async () => {
   }
 };
 
-// --- Upload patrol boundary route ---
+// --- Upload patrol boundary route (supports both SHP and KML) ---
 router.post(
   "/upload-patrol-boundary",
   verifyJwt,
@@ -433,67 +435,137 @@ router.post(
         });
       }
 
-      const shpFile = req.files.find(f =>
-        f.originalname.toLowerCase().endsWith(".shp")
-      );
-
-      const shxFile = req.files.find(f =>
-        f.originalname.toLowerCase().endsWith(".shx")
-      );
-
-      const dbfFile = req.files.find(f =>
-        f.originalname.toLowerCase().endsWith(".dbf")
-      );
-
-      if (!shpFile || !shxFile || !dbfFile) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing shapefile components (.shp .shx .dbf required)"
-        });
+      // Determine file type
+      const firstFile = req.files[0];
+      const fileExt = path.extname(firstFile.originalname).toLowerCase();
+      let isKML = false;
+      
+      if (fileExt === '.kml' || fileExt === '.kmz') {
+        isKML = true;
       }
 
       const color = req.body.color || "#ff0000";
-      const originalName = path.basename(shpFile.originalname, ".shp");
-      const cleanName = originalName.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
-      const tableName = `patrol_boundary_${cleanName}`;
-      const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
+      let tableName;
+      let importSuccess = false;
 
-      console.log("Uploading Patrol Boundary:", tableName);
+      if (isKML) {
+        // Handle KML file
+        const kmlFile = req.files.find(f => 
+          f.originalname.toLowerCase().endsWith('.kml') || 
+          f.originalname.toLowerCase().endsWith('.kmz')
+        );
 
-      // Import to PostGIS - without specifying SRS to avoid PROJ error
-      const ogrCmd = `ogr2ogr -f "PostgreSQL" \
+        if (!kmlFile) {
+          return res.status(400).json({
+            success: false,
+            message: "KML/KMZ file not found"
+          });
+        }
+
+        const originalName = path.basename(kmlFile.originalname, path.extname(kmlFile.originalname));
+        const cleanName = originalName.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+        tableName = `patrol_boundary_${cleanName}`;
+        const kmlPath = path.join(UPLOAD_DIR, kmlFile.originalname);
+
+        console.log("Uploading KML Patrol Boundary:", tableName);
+
+        // Import KML to PostGIS - Skip SRS transformation to avoid PROJ error
+        const ogrCmd = `ogr2ogr -f "PostgreSQL" \
 PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
-"${shpPath}" \
--nln "${tableName}" \
--nlt PROMOTE_TO_MULTI \
--lco GEOMETRY_NAME=geom \
--lco FID=fid \
--t_srs EPSG:4326 \
--overwrite \
--skipfailures`;
-
-      console.log("Running ogr2ogr command...");
-      
-      try {
-        await runCommand(ogrCmd);
-        console.log("PostGIS import completed:", tableName);
-      } catch (ogrError) {
-        console.error("ogr2ogr error:", ogrError.stderr);
-        
-        // Try alternative approach without SRS transformation
-        console.log("Retrying without SRS transformation...");
-        const altCmd = `ogr2ogr -f "PostgreSQL" \
-PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
-"${shpPath}" \
+"${kmlPath}" \
 -nln "${tableName}" \
 -nlt PROMOTE_TO_MULTI \
 -lco GEOMETRY_NAME=geom \
 -lco FID=fid \
 -overwrite \
 -skipfailures`;
+
+        console.log("Running ogr2ogr command for KML...");
         
-        await runCommand(altCmd);
-        console.log("PostGIS import completed on retry:", tableName);
+        try {
+          await runCommand(ogrCmd);
+          console.log("PostGIS import completed for KML:", tableName);
+          importSuccess = true;
+        } catch (ogrError) {
+          console.error("ogr2ogr error for KML:", ogrError.stderr);
+          
+          // If that fails, try with even simpler options
+          console.log("Retrying KML with minimal options...");
+          const altCmd = `ogr2ogr -f "PostgreSQL" \
+PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+"${kmlPath}" \
+-nln "${tableName}" \
+-overwrite`;
+          
+          await runCommand(altCmd);
+          console.log("PostGIS import completed on retry for KML:", tableName);
+          importSuccess = true;
+        }
+
+      } else {
+        // Handle SHP file
+        const shpFile = req.files.find(f =>
+          f.originalname.toLowerCase().endsWith(".shp")
+        );
+
+        const shxFile = req.files.find(f =>
+          f.originalname.toLowerCase().endsWith(".shx")
+        );
+
+        const dbfFile = req.files.find(f =>
+          f.originalname.toLowerCase().endsWith(".dbf")
+        );
+
+        if (!shpFile || !shxFile || !dbfFile) {
+          return res.status(400).json({
+            success: false,
+            message: "Missing shapefile components (.shp .shx .dbf required)"
+          });
+        }
+
+        const originalName = path.basename(shpFile.originalname, ".shp");
+        const cleanName = originalName.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+        tableName = `patrol_boundary_${cleanName}`;
+        const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
+
+        console.log("Uploading SHP Patrol Boundary:", tableName);
+
+        // Import to PostGIS - Skip SRS transformation to avoid PROJ error
+        const ogrCmd = `ogr2ogr -f "PostgreSQL" \
+PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+"${shpPath}" \
+-nln "${tableName}" \
+-nlt PROMOTE_TO_MULTI \
+-lco GEOMETRY_NAME=geom \
+-lco FID=fid \
+-overwrite \
+-skipfailures`;
+
+        console.log("Running ogr2ogr command for SHP...");
+        
+        try {
+          await runCommand(ogrCmd);
+          console.log("PostGIS import completed for SHP:", tableName);
+          importSuccess = true;
+        } catch (ogrError) {
+          console.error("ogr2ogr error for SHP:", ogrError.stderr);
+          
+          // If that fails, try with even simpler options
+          console.log("Retrying SHP with minimal options...");
+          const altCmd = `ogr2ogr -f "PostgreSQL" \
+PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+"${shpPath}" \
+-nln "${tableName}" \
+-overwrite`;
+          
+          await runCommand(altCmd);
+          console.log("PostGIS import completed on retry for SHP:", tableName);
+          importSuccess = true;
+        }
+      }
+
+      if (!importSuccess) {
+        throw new Error("Failed to import file to PostGIS");
       }
 
       // Wait for table to be ready
@@ -510,18 +582,21 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
         console.error("GeoServer publish failed but continuing:", geoError.message);
       }
 
-      // Save metadata
+      // Save metadata - FIXED: Only 5 columns for 5 values
       await sequelize.query(
         `
         INSERT INTO patrol_boundaries
         (table_name, boundary_name, workspace, layer_name, color)
-        VALUES ($1,$2,$3,$4,$5)
-        ON CONFLICT (table_name) DO NOTHING
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (table_name) 
+        DO UPDATE SET 
+          boundary_name = EXCLUDED.boundary_name,
+          color = EXCLUDED.color
         `,
         {
           bind: [
             tableName,
-            originalName,
+            path.basename(req.files[0].originalname, path.extname(req.files[0].originalname)),
             WORKSPACE,
             `${WORKSPACE}:${tableName}`,
             color
@@ -537,9 +612,11 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
         }
       });
 
+      const fileType = isKML ? 'KML' : 'SHP';
+      
       res.json({
         success: true,
-        message: "Patrol Boundary Uploaded Successfully",
+        message: `${fileType} Patrol Boundary Uploaded Successfully`,
         data: {
           table: tableName,
           layer: `${WORKSPACE}:${tableName}`,
@@ -579,6 +656,7 @@ router.get("/patrol-boundaries", verifyJwt, async (req, res) => {
         boundary_name AS name,
         table_name,
         layer_name,
+        workspace,
         color,
         created_at
       FROM patrol_boundaries
@@ -658,7 +736,7 @@ router.get("/test-gdal", async (req, res) => {
           gdal: "Available",
           postgresql: "Connected",
           postgresVersion: stdout.trim().split('\n')[0],
-          message: "System ready for shapefile uploads"
+          message: "System ready for shapefile and KML uploads"
         });
       } catch (pgError) {
         res.json({
@@ -685,24 +763,7 @@ router.get("/test-gdal", async (req, res) => {
   }
 });
 
-// --- Admin coupes endpoint ---
-router.get('/admincoupes', verifyJwt, async (req, res) => {
-  try {
-    const [result] = await sequelize.query(
-      `SELECT DISTINCT coupe_name FROM public.coupe_village_master`,
-    );
-    res.json({ 
-      data: result,
-    });
-  } catch (err) {
-    console.error('Error /api/admincoupes:', err);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal Server Error', 
-      message: err.message 
-    });
-  }
-});
+
 
 createPatrolBoundaryTable();
 module.exports = router;

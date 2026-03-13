@@ -214,6 +214,7 @@ const userlocations = require('./routers/userlocations');
 const changendvi = require('./routers/changendvi');
 const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 const gisupload = require('./routers/gisupload');
+const gisupload1 = require('./routers/gis-upload1');
 const forestLoginRoutes = require('./routers/forestLogin');
 
 const TEMP_SAVEUSER_TOKEN = "RECAP4NDC_TEMP_TOKEN";
@@ -646,6 +647,7 @@ app.use('/api', userlocations);
 app.use('/api', changendvi);
 app.use('/api', beat_patrol_coverage);
 app.use('/api', gisupload);
+app.use('/api', gisupload1);
 app.use('/api', forestLoginRoutes);
 
 // Error handling middleware
