@@ -474,7 +474,7 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
   );
 });
 
-const GEOSERVER_WMS = "/geoserver/wms";
+const GEOSERVER_WMS = "http://68.178.167.216:8081/geoserver/wms";
 
 // Complete nested data structure
 const layersData = {

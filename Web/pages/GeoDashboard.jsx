@@ -98,32 +98,32 @@ export default function MapView() {
 
   const [queryableLayers, setQueryableLayers] = useState([]);
 
-const ndviLayers = [
-  "cite:2025_09_01_BIO_W_C_COUPE_ndvi",
-  "cite:2025_09_01_AFF_W_C_COUPE_ndvi_",
-  "cite:2025_09_01_AFFORESTATION_W_C_COUPE_ndvi",
-  "cite:2025_08_01_BIO_W_C_COUPE_ndvi",
-  "cite:2025_08_01_AFF_W_C_COUPE_ndvi",
-  "cite:2025_08_01_AFFORESTATION_W_C_COUPE_ndvi",
-  "cite:2025_09_01_Adapur_view_ndvi",
-  "cite:2025_08_01_Abhapur_view_ndvi"
-];
-const ndwiLayers = [
-  "cite:2025_09_01_BIO_W_C_COUPE_ndwi",
-  "cite:2025_09_01_AFF_W_C_COUPE_ndwi",
-  "cite:2025_09_01_AFFORESTATION_W_C_COUPE_ndwi",
-  "cite:2025_08_01_BIO_W_C_COUPE_ndwi",
-  "cite:2025_08_01_AFF_W_C_COUPE_ndwi",
-  "cite:2025_08_01_AFFORESTATION_W_C_COUPE_ndwi",
-  "cite:2025_09_01_Adapur_view_ndwi",
- " cite:2025_08_01_Abhapur_view_ndwi"
-];
-const changeLayers = [
-  "cite:2025_09_01_BIO_W_C_COUPE_ndvi_change",
-  "cite:2025_09_01_Adapur_view_ndvi_change",
-  "cite:2025_09_01_AGAR_view_ndvi_change"
+// const ndviLayers = [
+//   "cite:2025_09_01_BIO_W_C_COUPE_ndvi",
+//   "cite:2025_09_01_AFF_W_C_COUPE_ndvi_",
+//   "cite:2025_09_01_AFFORESTATION_W_C_COUPE_ndvi",
+//   "cite:2025_08_01_BIO_W_C_COUPE_ndvi",
+//   "cite:2025_08_01_AFF_W_C_COUPE_ndvi",
+//   "cite:2025_08_01_AFFORESTATION_W_C_COUPE_ndvi",
+//   "cite:2025_09_01_Adapur_view_ndvi",
+//   "cite:2025_08_01_Abhapur_view_ndvi"
+// ];
+// const ndwiLayers = [
+//   "cite:2025_09_01_BIO_W_C_COUPE_ndwi",
+//   "cite:2025_09_01_AFF_W_C_COUPE_ndwi",
+//   "cite:2025_09_01_AFFORESTATION_W_C_COUPE_ndwi",
+//   "cite:2025_08_01_BIO_W_C_COUPE_ndwi",
+//   "cite:2025_08_01_AFF_W_C_COUPE_ndwi",
+//   "cite:2025_08_01_AFFORESTATION_W_C_COUPE_ndwi",
+//   "cite:2025_09_01_Adapur_view_ndwi",
+//  " cite:2025_08_01_Abhapur_view_ndwi"
+// ];
+// const changeLayers = [
+//   "cite:2025_09_01_BIO_W_C_COUPE_ndvi_change",
+//   "cite:2025_09_01_Adapur_view_ndvi_change",
+//   "cite:2025_09_01_AGAR_view_ndvi_change"
  
-];
+// ];
   const fetchCoupeLayers = async () => {
     try {
       const response = await axios.get("http://68.178.167.39:5000/api/coupe_metadata/location");
@@ -822,7 +822,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
               <WMSTileLayer
                 key="gujarat-difference"
-                url="/geoserver/cite/wms"
+                url="http://68.178.167.216:8081/geoserver/cite/wms"
                 layers="cite:Gujarat_difference"
                 format="image/png"
                 transparent={true}
@@ -843,7 +843,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
               <WMSTileLayer
                 key="tblIndia"
-                url="/geoserver/Recap4NDC/wms"
+                url="http://68.178.167.216:8081/geoserver/Recap4NDC/wms"
                 layers="Recap4NDC:tblIndia"
                 format="image/png"
                 transparent={true}
@@ -854,7 +854,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
               {showDistrictLayer && (
                 <WMSTileLayer
-                  url="/geoserver/cite/wms"
+                  url="http://68.178.167.216:8081/geoserver/cite/wms"
                   layers="cite:Gujarat_district"
                   format="image/png"
                   transparent
@@ -865,7 +865,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                 coupeLayers.map((layer) => (
                   <WMSTileLayer
                     key={layer.input_table_name || layer}
-                    url="/geoserver/cite/wms"
+                    url="http://68.178.167.216:8081/geoserver/cite/wms"
                     layers={layer.input_table_name || layer}
                     format="image/png"
                     transparent={true}
@@ -879,7 +879,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   ? filteredNdviLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="/geoserver/cite/wms"
+                        url="http://68.178.167.216:8081/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -890,7 +890,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   : ndviLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="/geoserver/cite/wms"
+                        url="http://68.178.167.216:8081/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -904,7 +904,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   ? filteredNdwiLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="/geoserver/cite/wms"
+                        url="http://68.178.167.216:8081/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -915,7 +915,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   : ndwiLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="/geoserver/cite/wms"
+                        url="http://68.178.167.216:8081/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -929,7 +929,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   ? filteredChangeLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="/geoserver/cite/wms"
+                        url="http://68.178.167.216:8081/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -940,7 +940,7 @@ const handleLayerToggle = (layerType, isChecked) => {
                   : changeLayers.map((layer) => (
                       <WMSTileLayer
                         key={layer}
-                        url="/geoserver/cite/wms"
+                        url="http://68.178.167.216:8081/geoserver/cite/wms"
                         layers={layer}
                         format="image/png"
                         transparent={true}
@@ -952,7 +952,7 @@ const handleLayerToggle = (layerType, isChecked) => {
               {showPatrollingLayer && (
                 <WMSTileLayer
                   key="patrols"
-                  url="/geoserver/cite/wms"
+                  url="http://68.178.167.216:8081/geoserver/cite/wms"
                   layers="cite:patrols"
                   format="image/png"
                   transparent={true}
@@ -964,7 +964,7 @@ const handleLayerToggle = (layerType, isChecked) => {
               {showIncidentLayer && (
                 <WMSTileLayer
                   key="incidents"
-                  url="/geoserver/cite/wms"
+                  url="http://68.178.167.216:8081/geoserver/cite/wms"
                   layers="cite:incidents"
                   format="image/png"
                   transparent={true}

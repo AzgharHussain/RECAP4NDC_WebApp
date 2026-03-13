@@ -10,55 +10,63 @@ const { clean } = require("../middlewares/sanitize");
 const { body, param, validationResult } = require('express-validator');
 
 // POST: Create new NDVI record (with auto-generated ID)
-router.post('/ndvi-change',verifyJwt, async (req, res) => {
- // const { tableName,village_name } = req.body;
-  const { coupename,village_name } = req.body;
-    if (!coupename || !village_name) {
-        return res.status(400).json({
-            success: false,
-            message: 'Bad Request - Invalid syntax'
-        });
-    }
+router.post('/ndvi-change', verifyJwt, async (req, res) => {
 
- 
-    try {
-        // 1️⃣ Create columns if NOT EXISTS
-        const alterTableQuery = `
-            ALTER TABLE public."${coupename}"
-            ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
-            ADD COLUMN IF NOT EXISTS note TEXT,
-            ADD COLUMN IF NOT EXISTS image_data TEXT,
-            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT true,
-            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-        `;
- 
-        await sequelize.query(alterTableQuery);
- 
-        // 2️⃣ Fetch all data
-        const selectQuery = `
-            SELECT pixle_id, longitude, latitude
-            FROM public."${coupename}"
-            WHERE village = '${village_name}'
-        ;
-        `;
- 
-        const [results] = await sequelize.query(selectQuery);
- 
-        res.json({
-            success: true,
-            message: 'Columns verified and data fetched successfully',
-            data: results
-        });
- 
-    } catch (error) {
-        console.error('Error in NDVI change API:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server encountered an unexpected condition',
-           
-        });
-    }
+ const { coupename, village_name } = req.body;
+
+ if (!coupename || !village_name) {
+   return res.status(400).json({
+     success: false,
+     message: 'Bad Request'
+   });
+ }
+
+ const tableRegex = /^[a-zA-Z0-9_]+$/;
+
+ if (!tableRegex.test(coupename)) {
+   return res.status(400).json({
+     success: false,
+     message: 'Invalid table name'
+   });
+ }
+
+ try {
+
+   const alterTableQuery = `
+     ALTER TABLE public."${coupename}"
+     ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
+     ADD COLUMN IF NOT EXISTS note TEXT,
+     ADD COLUMN IF NOT EXISTS image_data TEXT,
+     ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT true,
+     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+   `;
+
+   await sequelize.query(alterTableQuery);
+
+   const selectQuery = `
+     SELECT pixle_id, longitude, latitude
+     FROM public."${coupename}"
+     WHERE village = :village_name
+     order by pixle_id desc
+   `;
+
+   const [results] = await sequelize.query(selectQuery, {
+     replacements: { village_name }
+   });
+
+   res.json({
+     success: true,
+     data: results
+   });
+
+ } catch (error) {
+   res.status(500).json({
+     success: false,
+     message: 'Server error'
+   });
+ }
+
 });
 
 // Update the transformTableName function to handle all cases
