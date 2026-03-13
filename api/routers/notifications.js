@@ -21,9 +21,6 @@ const client = new Client({
   database: 'Recap4NDC_Query'
 });
 
-client.connect()
-  .then(() => console.log("🟢 Database connected"))
-  .catch(err => console.error("🔴 DB connection failed:", err));
 
 
 
@@ -40,6 +37,50 @@ const date = degraded_forest_Layer.match(/"(\d{4}-\d{2}-\d{2})_/)[1]; // "2025-0
 const dateObj = new Date(date);
 const monthFull = dateObj.toLocaleString('default', { month: 'long' }).toUpperCase(); // "FEBRUARY"
 
+// ----------------------------------------------------
+// Create notification tables if not exists
+// ----------------------------------------------------
+async function createNotificationTables() {
+
+  try {
+
+    // users table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public.ndvi_notification_users (
+        user_id TEXT PRIMARY KEY,
+        firebase_token TEXT,
+        village_name TEXT,
+        coupe_name TEXT
+      )
+    `);
+
+    // notification log table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public.ndvi_notification_log (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT,
+        table_name TEXT,
+        pixel_id INTEGER,
+        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, table_name, pixel_id)
+      )
+    `);
+
+    console.log("✅ Notification tables ready");
+
+  } catch (err) {
+
+    console.error("❌ Error creating notification tables:", err);
+
+  }
+
+}
+
+// run once
+createNotificationTables();
+client.connect()
+  .then(() => console.log("🟢 Database connected"))
+  .catch(err => console.error("🔴 DB connection failed:", err));
 
 // ----------------------------------------------------
 // 4. Helper: Send Notification using Firebase Admin
@@ -430,7 +471,7 @@ router.post('/logout', async (req, res) => {
     const token = authHeader.split(' ')[1];
 
     // get userId from request body or decoded token
-    const { userId } = req.body;
+    const { user_id } = req.body;
 
     const query = `
       DELETE FROM ndvi_notification_users
@@ -438,7 +479,7 @@ router.post('/logout', async (req, res) => {
       RETURNING *;
     `;
 
-    const values = [userId];
+    const values = [user_id];
 
     const result = await client.query(query, values);
 
