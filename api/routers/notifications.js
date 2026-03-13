@@ -7,7 +7,7 @@ const { sequelize } = require('../config/r_quire');
 const router = express.Router();
 const upload = multer();
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
-
+const blacklistedTokens = require("../middlewares/tokenBlacklist");
 
 
 // ----------------------------------------------------
@@ -416,6 +416,45 @@ router.post("/test-fcm", upload.none(), async (req, res) => {
       success: false,
       error: err.message
     });
+  }
+});
+
+router.post('/logout', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(400).json({ message: "Token required" });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // get userId from request body or decoded token
+    const { userId } = req.body;
+
+    const query = `
+      DELETE FROM ndvi_notification_users
+      WHERE user_id = $1
+      RETURNING *;
+    `;
+
+    const values = [userId];
+
+    const result = await client.query(query, values);
+
+    console.log("Adding to blacklist:", token);
+
+    // Add token to blacklist
+    blacklistedTokens.add(token);
+
+    return res.json({
+      message: "Logged out successfully",
+      deletedUser: result.rows[0] || null
+    });
+
+  } catch (error) {
+    console.error("Logout error:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 

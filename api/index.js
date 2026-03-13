@@ -287,20 +287,7 @@ app.post('/api/test-post', (req, res) => {
   });
 });
 
-app.post('/api/logout', (req, res) => {
-  const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    return res.status(400).json({ message: "Token required" });
-  }
-
-  const token = authHeader.split(' ')[1];
-console.log("Adding to blacklist:", token);
-  // Add token to blacklist
-  blacklistedTokens.add(token);
-
-  return res.json({ message: "Logged out successfully" });
-});
 
 
 const allowedParams = ["username", "password"];
