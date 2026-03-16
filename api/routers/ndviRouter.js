@@ -21,7 +21,7 @@ router.post('/ndvi-change', verifyJwt, async (req, res) => {
    });
  }
 
- const tableRegex = /^[a-zA-Z0-9_]+$/;
+  const tableRegex = /^[a-zA-Z0-9_-]+$/;
 
  if (!tableRegex.test(coupename)) {
    return res.status(400).json({
