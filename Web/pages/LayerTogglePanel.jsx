@@ -7,7 +7,7 @@ import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
 import { debounce } from 'lodash';
 import { API_BASE_URL } from "../config";
-
+import "leaflet.nontiledlayer";
 const Loader = () => {
   console.log("loading");
   return (
@@ -2154,15 +2154,13 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
 
   const createLayer = (layerName, layerLabel, zIndex) => {
     try {
-      return L.tileLayer.wms(GEOSERVER_WMS, {
-        layers: layerName,
-        format: "image/png",
-        transparent: true,
-        version: "1.3.0",
-        zIndex,
-        attribution: `© ${layerLabel}`,
-        tiled: true
-      });
+     
+return L.nonTiledLayer.wms(GEOSERVER_WMS, {
+  layers: layerName,
+  format: "image/png",
+  transparent: true,
+  version: "1.3.0"
+});
     } catch (error) {
       console.error(`Error creating layer ${layerName}:`, error);
       return null;
