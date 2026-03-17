@@ -4,6 +4,7 @@ const xml2js = require("xml2js");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const router = express.Router();
+const { sequelize } = require("../models"); // Assuming you have a sequelize instance
 
 // Define secret key (should be in environment variables in production)
 const SECRET_KEY = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
@@ -120,10 +121,41 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
       });
     }
 
-    // ✅ GENERATE JWT with user data
+    // ✅ CHECK IF USER EXISTS IN DATABASE
+    const trimmedUsername = username.trim();
+    
+    console.log('Checking if user exists in database with username:', trimmedUsername);
+    
+    // Check if user exists
+    const [users] = await sequelize.query(
+      `SELECT user_id, username, created_at FROM public.government_department_users WHERE username = $1`,
+      { bind: [trimmedUsername] }
+    );
+
+    console.log('User query result:', users);
+
+    let user;
+    let isNewUser = false;
+    
+    if (users.length > 0) {
+      user = users[0];
+      console.log('User already exists:', user);
+    } else {
+      // Insert new user
+      const [result] = await sequelize.query(
+        `INSERT INTO public.government_department_users (username, created_at) VALUES ($1, NOW()) RETURNING user_id, username, created_at`,
+        { bind: [trimmedUsername] }
+      );
+      user = result[0];
+      isNewUser = true;
+      console.log('New user created:', user);
+    }
+
+    // ✅ GENERATE JWT with user data including database user_id
     const token = jwt.sign(
       {
-        userId: userData.USER_ID || userData.NAME, // Using NAME as fallback for userId
+        userId: user.user_id, // Use database user_id
+        username: user.username,
         name: userData.NAME,
         cadre: userData.CadreName,
         circle: userData.CircleName,
@@ -143,7 +175,11 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
     return res.json({
       success: true,
       token,
-      user: userData
+      user: {
+        ...userData,
+        db_user_id: user.user_id,
+        is_new_user: isNewUser
+      }
     });
 
   } catch (error) {
@@ -162,6 +198,14 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
       return res.status(error.response.status).json({
         success: false,
         error: `Forest service error: ${error.response.status}`
+      });
+    }
+
+    // Handle database errors
+    if (error.name === 'SequelizeError' || error.code?.startsWith('23')) {
+      return res.status(500).json({
+        success: false,
+        error: "Database error occurred"
       });
     }
 
