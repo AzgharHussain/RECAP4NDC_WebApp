@@ -22,6 +22,8 @@ const NDVIChangeDashboard = lazy(() => import("./pages/NDVIDashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Homepage = lazy(() => import("./pages/Homepage"));
 const BeatPatrolCoverage = lazy(() => import("./pages/BeatPatrolCoverage"));
+const ChangePassword = lazy(() => import("./pages/changepassword"));
+
 
 const LoadingFallback = () => (
   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
@@ -66,6 +68,7 @@ export default function App() {
             }
           >
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/changepassword" element={<ChangePassword />} />
           </Route>
 
           {/* Fallback */}

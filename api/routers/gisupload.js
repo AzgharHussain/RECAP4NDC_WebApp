@@ -10,7 +10,7 @@ const { verifyJwt } = require("../middlewares/verifyJwt");
 
 const router = express.Router();
 
-const { sequelize, testConnection } = require('../config/ndvidatabase');
+const { sequelize, testConnection } = require('../config/database');
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -19,13 +19,13 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 const PG_HOST = "68.178.167.216";
 const PG_USER = "postgres";
 const PG_PASS = "P$DB@25%$#!26";
-const PG_DB = "Recap4NDC_new";
+const PG_DB = "Recap4NDC";
 
 const GEOSERVER_URL = "http://68.178.167.216:8081/geoserver";
 const GEOSERVER_USER = "admin";
 const GEOSERVER_PASS = "Geo@$ecure#%26";
 const WORKSPACE = "Recap4NDC";
-const DATASTORE = "Recap4NDC_New_Final";
+const DATASTORE = "Recap4NDC_New_final1";
 
 // Create HTTPS agent that ignores SSL certificate errors
 const httpsAgent = new https.Agent({

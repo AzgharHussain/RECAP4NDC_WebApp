@@ -67,27 +67,24 @@ const PatrolLoader = () => (
 );
 
 const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
-  // Coupe & month states
-  const [coupes, setCoupes] = useState([]);
+  // Selection states
   const [selectedCoupe, setSelectedCoupe] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState("");
-
-  // Boundary states
-  const [boundaries, setBoundaries] = useState([]);
   const [selectedBoundary, setSelectedBoundary] = useState(null);
-  const [selectedBoundaryMonth, setSelectedBoundaryMonth] = useState("");
-
+  
   // Data states
+  const [coupes, setCoupes] = useState([]);
+  const [boundaries, setBoundaries] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  
   const [loading, setLoading] = useState({
     coupes: false,
+    boundaries: false,
     coverage: false,
-    patrol: false,
-    boundaries: false
+    patrol: false
   });
+  
   const [coverageData, setCoverageData] = useState(null);
   const [patrols, setPatrols] = useState([]);
-  const [boundaryCoverageData, setBoundaryCoverageData] = useState(null);
-  const [boundaryPatrols, setBoundaryPatrols] = useState([]);
 
   // Patrol details modal
   const [selectedPatrol, setSelectedPatrol] = useState(null);
@@ -98,17 +95,9 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   const [imageRotation, setImageRotation] = useState(0);
   const [imageScale, setImageScale] = useState(1);
 
-  const [files, setFiles] = useState([]);
-  const [color, setColor] = useState("#ff0000");
-  const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("");
-  const [error, setError] = useState(false);
-
   // Fetch patrol boundaries
   const fetchPatrolBoundaries = async () => {
     setLoading(prev => ({ ...prev, boundaries: true }));
-    setError(false);
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(
@@ -118,7 +107,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
         }
       );
 
-      // Transform data for react-select
       const boundaryList = (res.data.data || []).map(item => ({
         value: item.id || item._id,
         label: item.name || item.boundary_name || `Boundary ${item.id}`,
@@ -126,10 +114,8 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
       }));
 
       setBoundaries(boundaryList);
-      console.log("Fetched patrol boundaries:", boundaryList);
     } catch (err) {
       console.error(err);
-      setError(true);
     } finally {
       setLoading(prev => ({ ...prev, boundaries: false }));
     }
@@ -139,6 +125,7 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     fetchPatrolBoundaries();
   }, []);
 
+  // Fetch coupes
   useEffect(() => {
     const fetchCoupes = async () => {
       setLoading(prev => ({ ...prev, coupes: true }));
@@ -151,7 +138,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
           }
         );
 
-        console.log("Coupe divisions response:", response.data);
         const divisions = response.data[0] || [];
         const coupeList = divisions.map(item => ({
           value: item.division,
@@ -172,58 +158,64 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   // Handle coupe change
   const handleCoupeChange = (selectedOption) => {
     setSelectedCoupe(selectedOption);
-    // Reset dependent data
-    setCoverageData(null);
-    setPatrols([]);
-    setSelectedPatrol(null);
-    setPatrolDetails(null);
-    setShowPatrolModal(false);
-    setSelectedImage(null);
+    setSelectedBoundary(null); // Clear boundary when coupe is selected
+    resetData();
   };
 
   // Handle boundary change
   const handleBoundaryChange = (selectedOption) => {
     setSelectedBoundary(selectedOption);
-    // Reset dependent data
-    setBoundaryCoverageData(null);
-    setBoundaryPatrols([]);
-    setSelectedPatrol(null);
-    setPatrolDetails(null);
-    setShowPatrolModal(false);
-    setSelectedImage(null);
+    setSelectedCoupe(null); // Clear coupe when boundary is selected
+    resetData();
   };
 
   // Handle month change
   const handleMonthChange = (e) => {
     setSelectedMonth(e.target.value);
+    resetData();
+  };
+
+  // Reset all data
+  const resetData = () => {
     setCoverageData(null);
     setPatrols([]);
+    setSelectedPatrol(null);
+    setPatrolDetails(null);
+    setShowPatrolModal(false);
+    setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
   };
 
-  // Handle boundary month change
-  const handleBoundaryMonthChange = (e) => {
-    setSelectedBoundaryMonth(e.target.value);
-    setBoundaryCoverageData(null);
-    setBoundaryPatrols([]);
-  };
-
-  // Fetch coverage and patrols for coupe
+  // Fetch coverage data
   const fetchCoverageData = async () => {
-    if (!selectedCoupe || !selectedMonth) {
-      alert("Please select both a coupe and a month");
+    if (!selectedCoupe && !selectedBoundary) {
+      alert("Please select either a Coupe or a Boundary");
+      return;
+    }
+    if (!selectedMonth) {
+      alert("Please select a month");
       return;
     }
 
     setLoading(prev => ({ ...prev, coverage: true }));
     setSelectedImage(null);
+    
     try {
       const token = localStorage.getItem("token");
+      
+      // Determine which API to call based on selection
+      const endpoint = selectedCoupe 
+        ? `${API_BASE_URL}/api/coupe-patrol-coverage`
+        : `${API_BASE_URL}/api/boundary-patrol-coverage`;
+      
+      const payload = selectedCoupe
+        ? { coupe_table: selectedCoupe.value, month: selectedMonth }
+        : { boundary: selectedBoundary.label, month: selectedMonth };
+
       const response = await axios.post(
-        `${API_BASE_URL}/api/coupe-patrol-coverage`,
-        {
-          coupe_table: selectedCoupe.value,
-          month: selectedMonth // format YYYY-MM
-        },
+        endpoint,
+        payload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -240,49 +232,8 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
         alert(response.data.message || "No coverage data found");
       }
     } catch (err) {
-      console.error("Error fetching coupe patrol coverage:", err);
+      console.error("Error fetching coverage data:", err);
       alert("Failed to load coverage data");
-    } finally {
-      setLoading(prev => ({ ...prev, coverage: false }));
-    }
-  };
-
-  // Fetch coverage and patrols for boundary
-  const fetchBoundaryCoverageData = async () => {
-    if (!selectedBoundary || !selectedBoundaryMonth) {
-      alert("Please select both a boundary and a month");
-      return;
-    }
-
-    setLoading(prev => ({ ...prev, coverage: true }));
-    setSelectedImage(null);
-    try {
-      const token = localStorage.getItem("token");
-      // You'll need to create this API endpoint
-      const response = await axios.post(
-        `${API_BASE_URL}/api/boundary-patrol-coverage`,
-        {
-          boundary: selectedBoundary.label,
-          month: selectedBoundaryMonth
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      if (response.data.success) {
-        const data = response.data.data;
-        setBoundaryCoverageData(data);
-        setBoundaryPatrols(data.patrols_covering_boundary || []);
-      } else {
-        alert(response.data.message || "No coverage data found");
-      }
-    } catch (err) {
-      console.error("Error fetching boundary patrol coverage:", err);
-      alert("Failed to load boundary coverage data");
     } finally {
       setLoading(prev => ({ ...prev, coverage: false }));
     }
@@ -322,14 +273,14 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     setImageScale(1);
   };
 
-  // Export to Excel for coupe
+  // Export to Excel
   const exportToExcel = () => {
     if (!coverageData) return;
 
     const summaryData = [
       {
-        "Coupe": selectedCoupe?.label,
-        "Coupe Area (sq m)": coverageData.coupe_area_sq_m,
+        [selectedCoupe ? "Coupe" : "Boundary"]: selectedCoupe ? selectedCoupe.label : selectedBoundary.label,
+        "Area (sq m)": selectedCoupe ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m,
         "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
         "Coverage %": coverageData.coverage_percentage,
       },
@@ -347,106 +298,23 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     }));
 
     const wb = XLSX.utils.book_new();
-
-    // Coverage Summary Sheet
-    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
-    const summaryHeaders = Object.keys(summaryData[0]);
-    summaryHeaders.forEach((_, i) => {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (summarySheet[cellRef]) summarySheet[cellRef].s = { font: { bold: true }, fill: { fgColor: { rgb: "D9E1F2" } } };
-    });
-    summarySheet["!cols"] = [{ wch: 25 }, { wch: 20 }, { wch: 28 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(wb, summarySheet, "Coverage Summary");
-
-    // Patrols Sheet
-    if (patrolData.length > 0) {
-      const patrolSheet = XLSX.utils.json_to_sheet(patrolData);
-      const patrolHeaders = Object.keys(patrolData[0]);
-      patrolHeaders.forEach((_, i) => {
-        const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-        if (patrolSheet[cellRef]) patrolSheet[cellRef].s = { font: { bold: true }, fill: { fgColor: { rgb: "D9E1F2" } } };
-      });
-      patrolSheet["!cols"] = [
-        { wch: 15 }, { wch: 22 }, { wch: 22 }, { wch: 15 },
-        { wch: 25 }, { wch: 18 }, { wch: 30 }, { wch: 30 }
-      ];
-      XLSX.utils.book_append_sheet(wb, patrolSheet, "Patrols");
-    }
-
-    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
-    saveAs(
-      new Blob([excelBuffer], { type: "application/octet-stream" }),
-      `${selectedCoupe?.value}_patrol_coverage.xlsx`
-    );
-  };
-
-  // Export to Excel for boundary
-  const exportBoundaryToExcel = () => {
-    if (!boundaryCoverageData) return;
-
-    const summaryData = [
-      {
-        "Boundary": selectedBoundary?.label,
-        "Boundary Area (sq m)": boundaryCoverageData.boundary_area_sq_m,
-        "Patrol Covered Area (sq m)": boundaryCoverageData.patrol_area_sq_m,
-        "Coverage %": boundaryCoverageData.coverage_percentage,
-      },
-    ];
-
-    const patrolData = boundaryPatrols.map((patrol) => ({
-      "Patrol ID": patrol.patrol_id,
-      "Start Time": formatDateTime(patrol.start_time),
-      "End Time": formatDateTime(patrol.end_time),
-      "Duration": formatDuration(patrol.start_time, patrol.end_time),
-      "Patrol Officer": patrol.patrol_officer_name,
-      "Distance (kms)": patrol.distance_kms,
-      "Start Location": patrol.start_location,
-      "End Location": patrol.end_location,
-    }));
-
-    const wb = XLSX.utils.book_new();
-
-    // Coverage Summary Sheet
     const summarySheet = XLSX.utils.json_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, summarySheet, "Coverage Summary");
 
-    // Patrols Sheet
     if (patrolData.length > 0) {
       const patrolSheet = XLSX.utils.json_to_sheet(patrolData);
       XLSX.utils.book_append_sheet(wb, patrolSheet, "Patrols");
     }
 
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
+    const fileName = selectedCoupe 
+      ? `${selectedCoupe.value}_patrol_coverage.xlsx`
+      : `${selectedBoundary.label}_patrol_coverage.xlsx`;
+    
     saveAs(
       new Blob([excelBuffer], { type: "application/octet-stream" }),
-      `${selectedBoundary?.label}_patrol_coverage.xlsx`
+      fileName
     );
-  };
-
-  const handleReset = () => {
-    setSelectedCoupe(null);
-    setSelectedMonth("");
-    setCoverageData(null);
-    setPatrols([]);
-    setSelectedPatrol(null);
-    setPatrolDetails(null);
-    setShowPatrolModal(false);
-    setSelectedImage(null);
-    setImageRotation(0);
-    setImageScale(1);
-  };
-
-  const handleBoundaryReset = () => {
-    setSelectedBoundary(null);
-    setSelectedBoundaryMonth("");
-    setBoundaryCoverageData(null);
-    setBoundaryPatrols([]);
-    setSelectedPatrol(null);
-    setPatrolDetails(null);
-    setShowPatrolModal(false);
-    setSelectedImage(null);
-    setImageRotation(0);
-    setImageScale(1);
   };
 
   // Custom styles for react-select
@@ -497,7 +365,7 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
         .modal-content { animation: slideIn 0.3s ease-out; }
       `}</style>
 
-      {/* Image Preview Modal */}
+      {/* Image Preview Modal - Same as before */}
       {selectedImage && (
         <div
           style={{
@@ -507,7 +375,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
           }}
           onClick={(e) => { if (e.target === e.currentTarget) { setSelectedImage(null); setShowPatrolModal(true); setImageRotation(0); setImageScale(1); } }}
         >
-          {/* Close button */}
           <button
             style={{
               position: "absolute", top: "20px", right: "370px",
@@ -521,7 +388,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
             <CloseCircleOutlined />
           </button>
 
-          {/* Image counter */}
           {patrolDetails?.images && (
             <div style={{
               position: "absolute", top: "20px", left: "20px",
@@ -532,7 +398,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
             </div>
           )}
 
-          {/* Rotation/Zoom Controls */}
           <div style={{
             position: "absolute", bottom: "30px", left: "50%", transform: "translateX(-50%)",
             display: "flex", gap: "10px", background: "rgba(0,0,0,0.7)", padding: "10px 20px",
@@ -548,7 +413,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
             </div>
           </div>
 
-          {/* The Image */}
           <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%", display: "flex", justifyContent: "center", alignItems: "center" }}>
             <img
               src={getImageUrl(selectedImage)}
@@ -564,7 +428,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
             />
           </div>
 
-          {/* Navigation buttons */}
           {patrolDetails?.images?.length > 1 && (
             <>
               <button
@@ -592,7 +455,7 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
         </div>
       )}
 
-      {/* Patrol Details Modal */}
+      {/* Patrol Details Modal - Same as before */}
       {showPatrolModal && patrolDetails && !selectedImage && (
         <div className="modal-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000, fontFamily: "arial" }} onClick={closePatrolModal}>
           <div className="modal-content" style={{ backgroundColor: "white", borderRadius: "12px", width: "90%", maxWidth: "800px", maxHeight: "60vh", overflow: "auto", position: "relative", boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }} onClick={(e) => e.stopPropagation()}>
@@ -605,7 +468,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
                 <div style={{ textAlign: "center", padding: "40px" }}><div style={{ border: "4px solid #f3f3f3", borderTop: "4px solid #2ada2aff", borderRadius: "50%", width: "60px", height: "60px", animation: "spin 1s linear infinite", margin: "0 auto 10px" }} /><p>Loading...</p></div>
               ) : (
                 <>
-                  {/* Basic Information */}
                   <div style={{ backgroundColor: "#fff", borderRadius: "10px", padding: "10px", marginBottom: "10px", border: "1px solid #e2e8f0" }}>
                     <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", borderBottom: "2px solid #e1bc42ff" }}>
                       <div style={{ backgroundColor: "#9ce142ff", width: "40px", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "12px", color: "white" }}><UserOutlined /></div>
@@ -631,7 +493,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
                     </div>
                   </div>
 
-                  {/* Images Section */}
                   {patrolDetails.images?.length > 0 && (
                     <div style={{ backgroundColor: "#fff", borderRadius: "10px", padding: "10px", border: "1px solid #e2e8f0" }}>
                       <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", borderBottom: "2px solid #4299e1" }}>
@@ -666,380 +527,223 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "30px" }}>
           <div>
             <h1 style={{ fontSize: "32px", fontWeight: "700", marginBottom: "8px", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              {language === "gu" ? "કૂપ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Patrol Coverage Analysis"}
+              {language === "gu" ? "પેટ્રોલ કવરેજ વિશ્લેષણ" : "Patrol Coverage Analysis"}
             </h1>
           </div>
         </div>
 
-        {/* COUPE SECTION */}
-        <div style={{ marginBottom: "40px", borderBottom: "2px solid #e2e8f0", paddingBottom: "30px" }}>
-          <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "20px", color: "#2d3748" }}>
-            {language === "gu" ? "કૂપ કવરેજ" : "Coupe Coverage"}
-          </h2>
-          
-          {/* Selection Card for Coupe */}
-          <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "25px", marginBottom: "25px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px", alignItems: "end" }}>
-              {/* Coupe Dropdown */}
-              <div>
-                <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                  {language === "gu" ? "કૂપ" : "Coupe"}
-                </label>
-                <Select
-                  value={selectedCoupe}
-                  onChange={handleCoupeChange}
-                  options={coupes}
-                  isSearchable
-                  isClearable
-                  placeholder={loading.coupes ? "Loading coupes..." : "Select Coupe..."}
-                  isLoading={loading.coupes}
-                  styles={customSelectStyles}
-                  noOptionsMessage={() => "No coupes available"}
-                />
-              </div>
+        {/* Selection Card */}
+        <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "25px", marginBottom: "25px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)" }}>
+          <div style={{  display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+            {/* Coupe Dropdown */}
+            <div style={{ width: "300px" }}>
+              <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
+                {language === "gu" ? "કૂપ" : "Coupe"}
+              </label>
+              <Select
+                value={selectedCoupe}
+                onChange={handleCoupeChange}
+                options={coupes}
+                isSearchable
+                isClearable
+                placeholder={loading.coupes ? "Loading coupes..." : "Select Coupe..."}
+                isLoading={loading.coupes}
+                styles={customSelectStyles}
+                noOptionsMessage={() => "No coupes available"}
+                isDisabled={!!selectedBoundary} // Disable if boundary is selected
+              />
+            </div>
+            <div>or</div>
 
-              {/* Month Picker */}
-              <div>
-                <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                  {language === "gu" ? "મહિનો" : "Month"}
-                </label>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={handleMonthChange}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    border: "2px solid #e2e8f0",
-                    fontSize: "14px",
-                    outline: "none",
-                    transition: "all 0.2s ease",
-                  }}
-                />
-              </div>
+            {/* Boundary Dropdown */}
+            <div style={{ width: "300px" }}>
+              <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
+                {language === "gu" ? "બાઉન્ડ્રી" : "Boundary"}
+              </label>
+              <Select
+                value={selectedBoundary}
+                onChange={handleBoundaryChange}
+                options={boundaries}
+                isSearchable
+                isClearable
+                placeholder={loading.boundaries ? "Loading boundaries..." : "Select Boundary..."}
+                isLoading={loading.boundaries}
+                styles={customSelectStyles}
+                noOptionsMessage={() => "No boundaries available"}
+                isDisabled={!!selectedCoupe} // Disable if coupe is selected
+              />
+            </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "12px", gridColumn: "span 2" }}>
-                <button
-                  className="glow-button"
-                  onClick={fetchCoverageData}
-                  disabled={!selectedCoupe || !selectedMonth || loading.coverage}
-                  style={{ fontFamily: "arial", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 24px", marginLeft: "auto" }}
-                >
-                  {loading.coverage ? (
-                    <>
-                      <div style={{ border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid white", borderRadius: "50%", width: "20px", height: "20px", animation: "spin 1s linear infinite" }} />
-                      {language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing..."}
-                    </>
-                  ) : (
-                    <>
-                      <EyeOutlined />
-                      {language === "gu" ? "કવરેજ વિશ્લેષણ કરો" : "Analyze Coverage"}
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={handleReset}
-                  disabled={loading.coverage}
-                  style={{ padding: "12px 24px", borderRadius: "8px", border: "2px solid #e2e8f0", fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "white", color: "#4a5568", fontWeight: "600" }}
-                >
-                  {language === "gu" ? "રીસેટ" : "Reset"}
-                </button>
-              </div>
+            {/* Month Picker */}
+            <div style={{ width: "300px" }}>
+              <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
+                {language === "gu" ? "મહિનો" : "Month"}
+              </label>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={handleMonthChange}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "2px solid #e2e8f0",
+                  fontSize: "14px",
+                  outline: "none",
+                  transition: "all 0.2s ease",
+                }}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "12px", marginTop: "10px", marginLeft: "auto" }}>
+              <button
+                className="glow-button"
+                onClick={fetchCoverageData}
+                disabled={(!selectedCoupe && !selectedBoundary) || !selectedMonth || loading.coverage}
+                style={{ fontFamily: "arial", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 24px", marginLeft: "auto" }}
+              >
+                {loading.coverage ? (
+                  <>
+                    <div style={{ border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid white", borderRadius: "50%", width: "20px", height: "20px", animation: "spin 1s linear infinite" }} />
+                    {language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing..."}
+                  </>
+                ) : (
+                  <>
+                    <EyeOutlined />
+                    {language === "gu" ? "કવરેજ વિશ્લેષણ કરો" : "Analyze Coverage"}
+                  </>
+                )}
+              </button>
+              <button
+                onClick={resetData}
+                disabled={loading.coverage}
+                style={{ padding: "12px 24px", borderRadius: "8px", border: "2px solid #e2e8f0", fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "white", color: "#4a5568", fontWeight: "600" }}
+              >
+                {language === "gu" ? "રીસેટ" : "Reset"}
+              </button>
             </div>
           </div>
-
-          {/* Loading indicator for coverage */}
-          {loading.coverage && (
-            <div style={{ textAlign: "center", padding: "60px" }}>
-              <div style={{ border: "6px solid #f3f3f3", borderTop: "6px solid #4299e1", borderRadius: "50%", width: "80px", height: "80px", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
-              <p style={{ color: "#718096", fontSize: "18px" }}>Loading coverage data...</p>
-            </div>
-          )}
-
-          {/* Coverage Data Display for Coupe */}
-          {coverageData && !loading.coverage && (
-            <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "25px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)" }}>
-              {/* Summary Cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", marginBottom: "30px" }}>
-                <div className="stats-card">
-                  <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Coupe</p>
-                  <div style={{ display: "inline-block", padding: "8px 20px", borderRadius: "20px", backgroundColor: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.3)", fontSize: "18px", fontWeight: "600", backdropFilter: "blur(10px)" }}>
-                    {selectedCoupe?.label}
-                  </div>
-                </div>
-                <div className="stats-card" style={{ background: "linear-gradient(135deg, #fbdf93ff 0%, #b8f557ff 100%)" }}>
-                  <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Coupe Area</p>
-                  <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
-                    {(Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
-                  </h3>
-                  <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
-                    {Number(coverageData.coupe_area_sq_m).toLocaleString()} m²
-                  </p>
-                </div>
-                <div className="stats-card" style={{ background: "linear-gradient(135deg, #fec14fff 0%, #6fb834ff 100%)" }}>
-                  <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Patrol Covered Area</p>
-                  <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
-                    {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
-                  </h3>
-                  <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
-                    {Number(coverageData.patrol_area_sq_m).toLocaleString()} m²
-                  </p>
-                </div>
-                <div className="stats-card" style={{ background: coverageData.coverage_percentage > 70 ? "linear-gradient(135deg, #e9e643ff 0%, #f93838ff 100%)" : coverageData.coverage_percentage > 40 ? "linear-gradient(135deg, #f8fa70ff 0%, #8cfe40ff 100%)" : "linear-gradient(135deg, #ffb108ff 0%, #dbff99ff 100%)" }}>
-                  <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Coverage</p>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <h3 style={{ margin: "0", fontSize: "36px", fontWeight: "700" }}>
-                      {Number(coverageData.coverage_percentage).toFixed(2)}%
-                    </h3>
-                    <div style={{ width: "60px", height: "60px", borderRadius: "25%", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid rgba(255,255,255,0.3)" }}>
-                      <span style={{ fontSize: "24px" }}>
-                        {coverageData.coverage_percentage > 70 ? "✓" : coverageData.coverage_percentage > 40 ? "⚡" : "⚠"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Export Button */}
-              <button className="glow-button" onClick={exportToExcel} style={{ marginBottom: "30px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", padding: "12px 30px" }}>
-                <DownloadOutlined /> {language === "gu" ? "એક્સેલમાં નિકાલ કરો" : "Export to Excel"}
-              </button>
-
-              {/* Patrols List */}
-              {patrols.length > 0 ? (
-                <div style={{ marginTop: "20px" }}>
-                  <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "20px", color: "#2d3748", display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ backgroundColor: "#a5e06eff", color: "white", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}>
-                      {patrols.length}
-                    </span>
-                    {language === "gu" ? "આ કૂપની અંદરના પેટ્રોલ" : "Patrols Inside This Coupe"}
-                  </h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "15px" }}>
-                    {patrols.map((patrol, index) => (
-                      <div key={patrol.patrol_id || index} className={`patrol-card ${selectedPatrol === patrol.patrol_id ? 'active' : ''}`} onClick={() => fetchPatrolDetails(patrol.patrol_id)}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                          <div>
-                            <p style={{ fontWeight: "700", margin: "0 0 8px 0", fontSize: "16px", color: selectedPatrol === patrol.patrol_id ? "#276749" : "#2d3748" }}>
-                              Patrol #{patrol.patrol_id}
-                            </p>
-                            {patrol.patrol_type && (
-                              <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", backgroundColor: patrol.patrol_type === "Day" ? "#ebf8ff" : "#faf5ff", color: patrol.patrol_type === "Day" ? "#2b6cb0" : "#6b46c1", border: `1px solid ${patrol.patrol_type === "Day" ? "#bee3f8" : "#e9d8fd"}` }}>
-                                {patrol.patrol_type} Patrol
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ backgroundColor: selectedPatrol === patrol.patrol_id ? "#48bb78" : "#d0eb5bff", color: "white", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "600" }}>
-                            {index + 1}
-                          </div>
-                        </div>
-                        {patrol.start_time && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" }}>
-                            <CalendarOutlined style={{ color: "#a0aec0" }} />
-                            <span style={{ fontSize: "12px", color: "#718096" }}>{new Date(patrol.start_time).toLocaleDateString()}</span>
-                          </div>
-                        )}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
-                          <span style={{ fontSize: "11px", color: "#a0aec0", fontStyle: "italic" }}>Click to view details</span>
-                          <span style={{ fontSize: "20px", color: selectedPatrol === patrol.patrol_id ? "#48bb78" : "#4299e1" }}>→</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ textAlign: "center", padding: "40px", backgroundColor: "#fff", borderRadius: "12px", border: "2px dashed #e2e8f0" }}>
-                  <div style={{ width: "60px", height: "60px", backgroundColor: "#fed7d7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#e53e3e", fontSize: "24px" }}>⚡</div>
-                  <p style={{ color: "#718096", fontSize: "16px", fontWeight: "500" }}>
-                    {language === "gu" ? "આ કૂપની અંદર કોઈ પેટ્રોલ મળ્યા નથી" : "No patrols found inside this coupe"}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* BOUNDARY SECTION */}
-        <div style={{ marginTop: "40px" }}>
-          <h2 style={{ fontSize: "24px", fontWeight: "600", marginBottom: "20px", color: "#2d3748" }}>
-            {language === "gu" ? "બાઉન્ડ્રી કવરેજ" : "Boundary Coverage"}
-          </h2>
-          
-          {/* Selection Card for Boundary */}
-          <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "25px", marginBottom: "25px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px", alignItems: "end" }}>
-              {/* Boundary Dropdown */}
-              <div>
-                <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                  {language === "gu" ? "બાઉન્ડ્રી" : "Boundary"}
-                </label>
-                <Select
-                  value={selectedBoundary}
-                  onChange={handleBoundaryChange}
-                  options={boundaries}
-                  isSearchable
-                  isClearable
-                  placeholder={loading.boundaries ? "Loading boundaries..." : "Select Boundary..."}
-                  isLoading={loading.boundaries}
-                  styles={customSelectStyles}
-                  noOptionsMessage={() => "No boundaries available"}
-                />
-              </div>
-
-              {/* Month Picker */}
-              <div>
-                <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                  {language === "gu" ? "મહિનો" : "Month"}
-                </label>
-                <input
-                  type="month"
-                  value={selectedBoundaryMonth}
-                  onChange={handleBoundaryMonthChange}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    border: "2px solid #e2e8f0",
-                    fontSize: "14px",
-                    outline: "none",
-                    transition: "all 0.2s ease",
-                  }}
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "12px", gridColumn: "span 2" }}>
-                <button
-                  className="glow-button"
-                  onClick={fetchBoundaryCoverageData}
-                  disabled={!selectedBoundary || !selectedBoundaryMonth || loading.coverage}
-                  style={{ fontFamily: "arial", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 24px", marginLeft: "auto" }}
-                >
-                  {loading.coverage ? (
-                    <>
-                      <div style={{ border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid white", borderRadius: "50%", width: "20px", height: "20px", animation: "spin 1s linear infinite" }} />
-                      {language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing..."}
-                    </>
-                  ) : (
-                    <>
-                      <EyeOutlined />
-                      {language === "gu" ? "બાઉન્ડ્રી કવરેજ વિશ્લેષણ કરો" : "Analyze Boundary Coverage"}
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={handleBoundaryReset}
-                  disabled={loading.coverage}
-                  style={{ padding: "12px 24px", borderRadius: "8px", border: "2px solid #e2e8f0", fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "white", color: "#4a5568", fontWeight: "600" }}
-                >
-                  {language === "gu" ? "રીસેટ" : "Reset"}
-                </button>
-              </div>
-            </div>
+        {/* Loading indicator */}
+        {loading.coverage && (
+          <div style={{ textAlign: "center", padding: "60px" }}>
+            <div style={{ border: "6px solid #f3f3f3", borderTop: "6px solid #4299e1", borderRadius: "50%", width: "80px", height: "80px", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
+            <p style={{ color: "#718096", fontSize: "18px" }}>Loading coverage data...</p>
           </div>
+        )}
 
-          {/* Coverage Data Display for Boundary */}
-          {boundaryCoverageData && !loading.coverage && (
-            <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "25px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)" }}>
-              {/* Summary Cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", marginBottom: "30px" }}>
-                <div className="stats-card">
-                  <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Boundary</p>
-                  <div style={{ display: "inline-block", padding: "8px 20px", borderRadius: "20px", backgroundColor: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.3)", fontSize: "18px", fontWeight: "600", backdropFilter: "blur(10px)" }}>
-                    {selectedBoundary?.label}
-                  </div>
+        {/* Coverage Data Display */}
+        {coverageData && !loading.coverage && (
+          <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "25px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)" }}>
+            {/* Summary Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", marginBottom: "30px" }}>
+              <div className="stats-card">
+                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>
+                  {selectedCoupe ? "Coupe" : "Boundary"}
+                </p>
+                <div style={{ display: "inline-block", padding: "8px 20px", borderRadius: "20px", backgroundColor: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.3)", fontSize: "18px", fontWeight: "600", backdropFilter: "blur(10px)" }}>
+                  {selectedCoupe ? selectedCoupe.label : selectedBoundary.label}
                 </div>
-                <div className="stats-card" style={{ background: "linear-gradient(135deg, #fbdf93ff 0%, #b8f557ff 100%)" }}>
-                  <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Boundary Area</p>
-                  <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
-                    {(Number(boundaryCoverageData.boundary_area_sq_m) / 1000000).toFixed(2)} km²
+              </div>
+              <div className="stats-card" style={{ background: "linear-gradient(135deg, #fbdf93ff 0%, #b8f557ff 100%)" }}>
+                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>
+                  {selectedCoupe ? "Coupe Area" : "Boundary Area"}
+                </p>
+                <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
+                  {(Number(selectedCoupe ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
+                </h3>
+                <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
+                  {Number(selectedCoupe ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m).toLocaleString()} m²
+                </p>
+              </div>
+              <div className="stats-card" style={{ background: "linear-gradient(135deg, #fec14fff 0%, #6fb834ff 100%)" }}>
+                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Patrol Covered Area</p>
+                <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
+                  {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
+                </h3>
+                <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
+                  {Number(coverageData.patrol_area_sq_m).toLocaleString()} m²
+                </p>
+              </div>
+              <div className="stats-card" style={{ background: coverageData.coverage_percentage > 70 ? "linear-gradient(135deg, #e9e643ff 0%, #f93838ff 100%)" : coverageData.coverage_percentage > 40 ? "linear-gradient(135deg, #f8fa70ff 0%, #8cfe40ff 100%)" : "linear-gradient(135deg, #ffb108ff 0%, #dbff99ff 100%)" }}>
+                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Coverage</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h3 style={{ margin: "0", fontSize: "36px", fontWeight: "700" }}>
+                    {Number(coverageData.coverage_percentage).toFixed(2)}%
                   </h3>
-                  <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
-                    {Number(boundaryCoverageData.boundary_area_sq_m).toLocaleString()} m²
-                  </p>
-                </div>
-                <div className="stats-card" style={{ background: "linear-gradient(135deg, #fec14fff 0%, #6fb834ff 100%)" }}>
-                  <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Patrol Covered Area</p>
-                  <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
-                    {(Number(boundaryCoverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
-                  </h3>
-                  <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
-                    {Number(boundaryCoverageData.patrol_area_sq_m).toLocaleString()} m²
-                  </p>
-                </div>
-                <div className="stats-card" style={{ background: boundaryCoverageData.coverage_percentage > 70 ? "linear-gradient(135deg, #e9e643ff 0%, #f93838ff 100%)" : boundaryCoverageData.coverage_percentage > 40 ? "linear-gradient(135deg, #f8fa70ff 0%, #8cfe40ff 100%)" : "linear-gradient(135deg, #ffb108ff 0%, #dbff99ff 100%)" }}>
-                  <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Coverage</p>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <h3 style={{ margin: "0", fontSize: "36px", fontWeight: "700" }}>
-                      {Number(boundaryCoverageData.coverage_percentage).toFixed(2)}%
-                    </h3>
-                    <div style={{ width: "60px", height: "60px", borderRadius: "25%", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid rgba(255,255,255,0.3)" }}>
-                      <span style={{ fontSize: "24px" }}>
-                        {boundaryCoverageData.coverage_percentage > 70 ? "✓" : boundaryCoverageData.coverage_percentage > 40 ? "⚡" : "⚠"}
-                      </span>
-                    </div>
+                  <div style={{ width: "60px", height: "60px", borderRadius: "25%", backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid rgba(255,255,255,0.3)" }}>
+                    <span style={{ fontSize: "24px" }}>
+                      {coverageData.coverage_percentage > 70 ? "✓" : coverageData.coverage_percentage > 40 ? "⚡" : "⚠"}
+                    </span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Export Button */}
-              <button className="glow-button" onClick={exportBoundaryToExcel} style={{ marginBottom: "30px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", padding: "12px 30px" }}>
-                <DownloadOutlined /> {language === "gu" ? "એક્સેલમાં નિકાલ કરો" : "Export to Excel"}
-              </button>
+            {/* Export Button */}
+            <button className="glow-button" onClick={exportToExcel} style={{ marginBottom: "30px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", padding: "12px 30px" }}>
+              <DownloadOutlined /> {language === "gu" ? "એક્સેલમાં નિકાલ કરો" : "Export to Excel"}
+            </button>
 
-              {/* Patrols List */}
-              {boundaryPatrols.length > 0 ? (
-                <div style={{ marginTop: "20px" }}>
-                  <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "20px", color: "#2d3748", display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ backgroundColor: "#a5e06eff", color: "white", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}>
-                      {boundaryPatrols.length}
-                    </span>
-                    {language === "gu" ? "આ બાઉન્ડ્રીની અંદરના પેટ્રોલ" : "Patrols Inside This Boundary"}
-                  </h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "15px" }}>
-                    {boundaryPatrols.map((patrol, index) => (
-                      <div key={patrol.patrol_id || index} className={`patrol-card ${selectedPatrol === patrol.patrol_id ? 'active' : ''}`} onClick={() => fetchPatrolDetails(patrol.patrol_id)}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                          <div>
-                            <p style={{ fontWeight: "700", margin: "0 0 8px 0", fontSize: "16px", color: selectedPatrol === patrol.patrol_id ? "#276749" : "#2d3748" }}>
-                              Patrol #{patrol.patrol_id}
-                            </p>
-                            {patrol.patrol_type && (
-                              <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", backgroundColor: patrol.patrol_type === "Day" ? "#ebf8ff" : "#faf5ff", color: patrol.patrol_type === "Day" ? "#2b6cb0" : "#6b46c1", border: `1px solid ${patrol.patrol_type === "Day" ? "#bee3f8" : "#e9d8fd"}` }}>
-                                {patrol.patrol_type} Patrol
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ backgroundColor: selectedPatrol === patrol.patrol_id ? "#48bb78" : "#d0eb5bff", color: "white", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "600" }}>
-                            {index + 1}
-                          </div>
+            {/* Patrols List */}
+            {patrols.length > 0 ? (
+              <div style={{ marginTop: "20px" }}>
+                <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "20px", color: "#2d3748", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ backgroundColor: "#a5e06eff", color: "white", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}>
+                    {patrols.length}
+                  </span>
+                  {language === "gu" 
+                    ? `આ ${selectedCoupe ? "કૂપ" : "બાઉન્ડ્રી"}ની અંદરના પેટ્રોલ`
+                    : `Patrols Inside This ${selectedCoupe ? "Coupe" : "Boundary"}`
+                  }
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "15px" }}>
+                  {patrols.map((patrol, index) => (
+                    <div key={patrol.patrol_id || index} className={`patrol-card ${selectedPatrol === patrol.patrol_id ? 'active' : ''}`} onClick={() => fetchPatrolDetails(patrol.patrol_id)}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
+                          <p style={{ fontWeight: "700", margin: "0 0 8px 0", fontSize: "16px", color: selectedPatrol === patrol.patrol_id ? "#276749" : "#2d3748" }}>
+                            Patrol #{patrol.patrol_id}
+                          </p>
+                          {patrol.patrol_type && (
+                            <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", backgroundColor: patrol.patrol_type === "Day" ? "#ebf8ff" : "#faf5ff", color: patrol.patrol_type === "Day" ? "#2b6cb0" : "#6b46c1", border: `1px solid ${patrol.patrol_type === "Day" ? "#bee3f8" : "#e9d8fd"}` }}>
+                              {patrol.patrol_type} Patrol
+                            </span>
+                          )}
                         </div>
-                        {patrol.start_time && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" }}>
-                            <CalendarOutlined style={{ color: "#a0aec0" }} />
-                            <span style={{ fontSize: "12px", color: "#718096" }}>{new Date(patrol.start_time).toLocaleDateString()}</span>
-                          </div>
-                        )}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
-                          <span style={{ fontSize: "11px", color: "#a0aec0", fontStyle: "italic" }}>Click to view details</span>
-                          <span style={{ fontSize: "20px", color: selectedPatrol === patrol.patrol_id ? "#48bb78" : "#4299e1" }}>→</span>
+                        <div style={{ backgroundColor: selectedPatrol === patrol.patrol_id ? "#48bb78" : "#d0eb5bff", color: "white", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "600" }}>
+                          {index + 1}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                      {patrol.start_time && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" }}>
+                          <CalendarOutlined style={{ color: "#a0aec0" }} />
+                          <span style={{ fontSize: "12px", color: "#718096" }}>{new Date(patrol.start_time).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
+                        <span style={{ fontSize: "11px", color: "#a0aec0", fontStyle: "italic" }}>Click to view details</span>
+                        <span style={{ fontSize: "20px", color: selectedPatrol === patrol.patrol_id ? "#48bb78" : "#4299e1" }}>→</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div style={{ textAlign: "center", padding: "40px", backgroundColor: "#fff", borderRadius: "12px", border: "2px dashed #e2e8f0" }}>
-                  <div style={{ width: "60px", height: "60px", backgroundColor: "#fed7d7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#e53e3e", fontSize: "24px" }}>⚡</div>
-                  <p style={{ color: "#718096", fontSize: "16px", fontWeight: "500" }}>
-                    {language === "gu" ? "આ બાઉન્ડ્રીની અંદર કોઈ પેટ્રોલ મળ્યા નથી" : "No patrols found inside this boundary"}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div> 
+            ) : (
+              <div style={{ textAlign: "center", padding: "40px", backgroundColor: "#fff", borderRadius: "12px", border: "2px dashed #e2e8f0" }}>
+                <div style={{ width: "60px", height: "60px", backgroundColor: "#fed7d7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#e53e3e", fontSize: "24px" }}>⚡</div>
+                <p style={{ color: "#718096", fontSize: "16px", fontWeight: "500" }}>
+                  {language === "gu" 
+                    ? `આ ${selectedCoupe ? "કૂપ" : "બાઉન્ડ્રી"}ની અંદર કોઈ પેટ્રોલ મળ્યા નથી`
+                    : `No patrols found inside this ${selectedCoupe ? "coupe" : "boundary"}`
+                  }
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

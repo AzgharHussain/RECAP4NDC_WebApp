@@ -801,11 +801,7 @@ const handleLayerToggle = (layerType, isChecked) => {
             <MapContainer
               center={position}
               zoom={6.8}
-          style={{
-  height: "82vh",
-  width:  "80vw" ,
-}}
-
+              className="map-container"
               whenCreated={(mapInstance) => {
                 mapRef.current = mapInstance;
                 mapInstance.rotate = true;

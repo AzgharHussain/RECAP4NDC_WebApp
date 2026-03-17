@@ -1,6 +1,6 @@
 import React, { useState, useEffect,useRef } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight} from "react-icons/fa"; 
+import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight, FaMapMarkedAlt} from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
 import brand from "../assets/FOREST DEPT.jpg";
@@ -37,6 +37,7 @@ export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate(); // Add useNavigate hook
   const { language, toggleLanguage } = useLanguage();
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   // Language Texts
   const text = {
@@ -74,6 +75,7 @@ export default function DashboardLayout() {
     },
   };
 
+  
   const getUserName = () => {
     try {
       // Try to get from session storage first
@@ -336,7 +338,7 @@ useEffect(() => {
             }`}
             onClick={handleLinkClick}
           >
-          
+          <FaMapMarkedAlt />
            Patrol Coverage Analysis
           </NavLink>
            </div>
