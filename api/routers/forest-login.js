@@ -4,8 +4,7 @@ const xml2js = require("xml2js");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const router = express.Router();
-const { sequelize } = require("../models"); // Assuming you have a sequelize instance
-
+const { sequelize } = require('../config/database');
 // Define secret key (should be in environment variables in production)
 const SECRET_KEY = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
 
@@ -51,7 +50,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
       soapRequest,
       {
         headers: {
-          "Content-Type": "text/xml; charset=utf-8",
+          "Content-Type": "application/soap+xml; charset=utf-8",
           SOAPAction: "http://tempuri.org/LOGIN_EGUJFOREST",
         },
         timeout: 30000,
@@ -128,7 +127,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
     
     // Check if user exists
     const [users] = await sequelize.query(
-      `SELECT user_id, username, created_at FROM public.government_department_users WHERE username = $1`,
+      `SELECT user_id, username FROM public.government_department_users WHERE username = $1`,
       { bind: [trimmedUsername] }
     );
 
@@ -143,7 +142,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
     } else {
       // Insert new user
       const [result] = await sequelize.query(
-        `INSERT INTO public.government_department_users (username, created_at) VALUES ($1, NOW()) RETURNING user_id, username, created_at`,
+        `INSERT INTO public.government_department_users (username) VALUES ($1, NOW()) RETURNING user_id, username`,
         { bind: [trimmedUsername] }
       );
       user = result[0];
