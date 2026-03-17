@@ -5,9 +5,9 @@ import { MdForest } from "react-icons/md";
 import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
-import { debounce } from 'lodash';
+import { debounce, min } from 'lodash';
 import { API_BASE_URL } from "../config";
-
+import "leaflet.nontiledlayer";
 const Loader = () => {
   console.log("loading");
   return (
@@ -312,8 +312,9 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
     return cleanKey;
   };
 
-  // Filter out geometry and long coordinate strings
+  // Filter out geometry, long coordinate strings, and unwanted fields
   const filteredEntries = Object.entries(data).filter(([key, value]) => {
+    // Skip geometry fields
     if (key.toLowerCase().includes('geometry') || 
         key.toLowerCase().includes('coord') ||
         key === 'layer_1_geometry' ||
@@ -321,7 +322,17 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
       return false;
     }
     
+    // Skip long strings
     if (typeof value === 'string' && value.length > 100) {
+      return false;
+    }
+    
+    // Skip timestamp fields
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes('updated_at') || 
+        lowerKey.includes('created_at') || 
+        lowerKey.includes('updatedat') || 
+        lowerKey.includes('createdat')) {
       return false;
     }
     
@@ -421,6 +432,7 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
           }}>
             <tbody>
               {filteredEntries.map(([key, value], index) => {
+                // Skip coordinates and layer name as they're already displayed
                 if (key === 'coordinates' || key === 'layer_1_name') {
                   return null;
                 }
@@ -1739,6 +1751,8 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
   const [availableCoupeLayers, setAvailableCoupeLayers] = useState([]);
   const [coupeGroups, setCoupeGroups] = useState([]);
   const [isLoadingCoupes, setIsLoadingCoupes] = useState(false);
+  // Add state for legend visibility
+  const [isLegendVisible, setIsLegendVisible] = useState(true);
   
   const layerCounterRef = useRef(0);
   const clickHandlerRef = useRef(null);
@@ -2154,15 +2168,13 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
 
   const createLayer = (layerName, layerLabel, zIndex) => {
     try {
-      return L.tileLayer.wms(GEOSERVER_WMS, {
-        layers: layerName,
-        format: "image/png",
-        transparent: true,
-        version: "1.3.0",
-        zIndex,
-        attribution: `© ${layerLabel}`,
-        tiled: true
-      });
+     
+return L.nonTiledLayer.wms(GEOSERVER_WMS, {
+  layers: layerName,
+  format: "image/png",
+  transparent: true,
+  version: "1.3.0"
+});
     } catch (error) {
       console.error(`Error creating layer ${layerName}:`, error);
       return null;
@@ -2280,87 +2292,127 @@ const layerManager = {
     
   }, [addedLayers, layerManager, coupeGroups]);
 
-  const getLayerBoundsFromAPI = async (layerName) => {
-    try {
-      const cleanLayerName = layerName.replace(/^cite:/, '');
-      
-      const response = await fetch(`${API_BASE_URL}/api/layer-bounds/${cleanLayerName}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error:', error);
-      return null;
+// Add this function to LayerTogglePanel.js - Modified to handle NDVI change layers separately
+// Add this function to LayerTogglePanel.js - FIXED to handle your API response format
+const getLayerBoundsFromAPI = useCallback(async (layerName, isNdviChangeLayer = false) => {
+  try {
+    const cleanLayerName = layerName.replace(/^cite:/, '');
+    
+    // Use different API endpoint for NDVI change layers
+    const apiEndpoint = isNdviChangeLayer 
+      ? `${API_BASE_URL}/api/ndvi-change-layer-bounds/${cleanLayerName}`
+      : `${API_BASE_URL}/api/layer-bounds/${cleanLayerName}`;
+    
+    console.log('Fetching bounds from:', apiEndpoint);
+    const response = await fetch(apiEndpoint);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+    
+    const result = await response.json();
+    console.log('Bounds API response:', result);
+    
+    // Handle your API response format (direct bounds object, not wrapped in success.data)
+    if (result && result.minX !== undefined && result.minY !== undefined && 
+        result.maxX !== undefined && result.maxY !== undefined) {
+      return {
+        minX: result.minX,
+        minY: result.minY,
+        maxX: result.maxX,
+        maxY: result.maxY
+      };
+    }
+    
+    // If we get here, no valid bounds were found
+    console.warn('No valid bounds found in response:', result);
+    return null;
+  } catch (error) {
+    console.error('Error fetching layer bounds:', error);
+    return null;
+  }
+}, []);
 
   // Toggle layer function for regular layers
-  const toggleLayer = useCallback(
-    async (layerConfig, groupId) => {
-      const uniqueKey = `${layerConfig.Name}-${groupId}`;
+// Toggle layer function for regular layers - UPDATED to handle NDVI change layers
+const toggleLayer = useCallback(
+  async (layerConfig, groupId) => {
+    const uniqueKey = `${layerConfig.Name}-${groupId}`;
 
-      try {
-        if (addedLayers[uniqueKey]) {
-          // Remove the layer
-          await layerManager.removeLayer(layerConfig.Name);
-          setAddedLayers((prev) => {
-            const { [uniqueKey]: removedLayer, ...rest } = prev;
-            return rest;
-          });
-          setOpacity((prev) => {
-            const { [uniqueKey]: removedOpacity, ...rest } = prev;
-            return rest;
-          });
-        } else {
-          // Add the new layer
-          const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer);
-          if (!layer) throw new Error(`Failed to add layer: ${layerConfig.Name}`);
+    try {
+      if (addedLayers[uniqueKey]) {
+        // Remove the layer
+        await layerManager.removeLayer(layerConfig.Name);
+        setAddedLayers((prev) => {
+          const { [uniqueKey]: removedLayer, ...rest } = prev;
+          return rest;
+        });
+        setOpacity((prev) => {
+          const { [uniqueKey]: removedOpacity, ...rest } = prev;
+          return rest;
+        });
+      } else {
+        // Add the new layer
+        const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer);
+        if (!layer) throw new Error(`Failed to add layer: ${layerConfig.Name}`);
 
-          const layerOpacity = 1;
-          setAddedLayers((prev) => ({ ...prev, [uniqueKey]: layer }));
-          setOpacity((prev) => ({ ...prev, [uniqueKey]: layerOpacity }));
-          layer.setOpacity(layerOpacity);
+        const layerOpacity = 1;
+        setAddedLayers((prev) => ({ ...prev, [uniqueKey]: layer }));
+        setOpacity((prev) => ({ ...prev, [uniqueKey]: layerOpacity }));
+        layer.setOpacity(layerOpacity);
 
-          // Get bounds from API and zoom
-          setTimeout(async () => {
-            try {
-              const bounds = await getLayerBoundsFromAPI(layerConfig.Name);
+        // Determine if this is an NDVI change layer
+        const isNdviChangeLayer = layerConfig.Name.includes('NDVI_Change') || 
+                                  layerConfig.Name.includes('coupe_NDVI_Change');
+
+        // Get bounds from API and zoom
+        setTimeout(async () => {
+          try {
+            const bounds = await getLayerBoundsFromAPI(layerConfig.Name, isNdviChangeLayer);
+            
+            if (bounds && mapRef.current) {
+              const sw = L.latLng(bounds.minY, bounds.minX);
+              const ne = L.latLng(bounds.maxY, bounds.maxX);
+              const layerBounds = L.latLngBounds(sw, ne);
               
-              if (bounds && mapRef.current) {
-                const sw = L.latLng(bounds.minY, bounds.minX);
-                const ne = L.latLng(bounds.maxY, bounds.maxX);
-                const layerBounds = L.latLngBounds(sw, ne);
+              console.log(`🎯 Zooming to ${layerConfig.Name}:`, {
+                sw: [bounds.minY, bounds.minX],
+                ne: [bounds.maxY, bounds.maxX]
+              });
+              
+              mapRef.current.fitBounds(layerBounds, {
+                padding: [50, 50],
+                animate: true,
+                duration: 1
+              });
+
+              setTimeout(() => {
+                const currentZoom = mapRef.current.getZoom();
+                const desiredMinZoom = 12; // Your desired minimum zoom
                 
-                console.log(`🎯 Zooming to ${layerConfig.Name}:`, {
-                  sw: [bounds.minY, bounds.minX],
-                  ne: [bounds.maxY, bounds.maxX]
-                });
-                
-                mapRef.current.fitBounds(layerBounds, {
-                  padding: [50, 50],
-                  maxZoom: 14,
-                  animate: true,
-                  duration: 1
-                });
-                
-                console.log(`✅ Successfully zoomed to ${layerConfig.Name}`);
-              }
-            } catch (error) {
-              console.error(`❌ Error zooming to layer ${layerConfig.Name}:`, error);
+                if (currentZoom < desiredMinZoom) {
+                  console.log(`Zooming further from ${currentZoom} to ${desiredMinZoom}`);
+                  mapRef.current.setZoom(desiredMinZoom, {
+                    animate: true,
+                    duration: 0.5
+                  });
+                }
+              }, 100);
+              
+              console.log(`✅ Successfully zoomed to ${layerConfig.Name}`);
             }
-          }, 1000);
-        }
-      } catch (err) {
-        console.error(`❌ Layer toggle failed for ${layerConfig.Name}:`, err);
-        setIsLayerLoading(false);
+          } catch (error) {
+            console.error(`❌ Error zooming to layer ${layerConfig.Name}:`, error);
+          }
+        }, 1000);
       }
-    },
-    [addedLayers, layerManager, mapRef]
-  );
+    } catch (err) {
+      console.error(`❌ Layer toggle failed for ${layerConfig.Name}:`, err);
+      setIsLayerLoading(false);
+    }
+  },
+  [addedLayers, layerManager, mapRef, getLayerBoundsFromAPI]
+);
 
   const toggleGroup = useCallback((groupId) => {
     setOpenGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
@@ -2379,8 +2431,12 @@ const layerManager = {
     [addedLayers]
   );
 
-// Handle month change for coupe groups - with year support
+// Handle month change for coupe groups - FIXED
+// Handle month change for coupe groups - UPDATED with NDVI change API
 const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
+  const prevSelection = groupSelections[groupId];
+  
+  // Update the selection state
   setGroupSelections((prev) => ({
     ...prev,
     [groupId]: { month, year }
@@ -2404,87 +2460,106 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
   }
 
   const newMonthlyLayerName = selectedMonthData.layerName;
-
-  // Find ALL existing layers that belong to this group
-  const existingLayerKeys = Object.keys(addedLayers).filter(key => 
-    key.endsWith(`-${groupId}-0`)
-  );
-
-  // Remove all existing layers for this group
-  if (existingLayerKeys.length > 0) {
-    for (const existingKey of existingLayerKeys) {
-      const existingLayer = addedLayers[existingKey];
-      if (existingLayer) {
-        if (mapRef.current && mapRef.current.hasLayer(existingLayer)) {
-          mapRef.current.removeLayer(existingLayer);
-        }
-        existingLayer.off();
-      }
-    }
-
-    setAddedLayers((prev) => {
-      const newState = { ...prev };
-      existingLayerKeys.forEach(key => delete newState[key]);
-      return newState;
-    });
-
-    setOpacity((prev) => {
-      const newState = { ...prev };
-      existingLayerKeys.forEach(key => delete newState[key]);
-      return newState;
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-
-  // Add the new layer
-  try {
-    console.log(`Adding new layer: ${newMonthlyLayerName}`);
-    const layer = await layerManager.addLayer(newMonthlyLayerName, group.title);
+  
+  // Check if this group has any active layer
+  const hasActiveLayer = Object.keys(addedLayers).some(key => key.includes(`-${groupId}-`));
+  
+  // If the group has an active layer, we need to update it
+  if (hasActiveLayer) {
+    // Find the old layer key
+    const oldLayerKey = Object.keys(addedLayers).find(key => key.includes(`-${groupId}-`));
     
-    if (layer) {
-      const uniqueKey = `${newMonthlyLayerName}-${groupId}-0`;
-      
-      setAddedLayers((prev) => ({ ...prev, [uniqueKey]: layer }));
-      setOpacity((prev) => ({ ...prev, [uniqueKey]: 1 }));
-      layer.setOpacity(1);
-      
-      setActiveCoupeGroups((prev) => ({
-        ...prev,
-        [groupId]: true
-      }));
-
-      // Zoom to bounds
-      setTimeout(async () => {
-        try {
-          const bounds = await getLayerBoundsFromAPI(newMonthlyLayerName);
-          if (bounds && mapRef.current) {
-            const sw = L.latLng(bounds.minY, bounds.minX);
-            const ne = L.latLng(bounds.maxY, bounds.maxX);
-            mapRef.current.fitBounds(L.latLngBounds(sw, ne), {
-              padding: [50, 50],
-              maxZoom: 14,
-              animate: true,
-              duration: 1
-            });
-          }
-        } catch (error) {
-          console.error('Error zooming to layer:', error);
+    try {
+      // Remove the old layer
+      if (oldLayerKey) {
+        const oldLayer = addedLayers[oldLayerKey];
+        if (oldLayer && mapRef.current) {
+          mapRef.current.removeLayer(oldLayer);
+          oldLayer.off();
         }
-      }, 1000);
-    }
-  } catch (error) {
-    console.error('Error adding layer for month change:', error);
-  }
-}, [addedLayers, coupeGroups, getAvailableMonthsForCoupe, layerManager, mapRef]);
+        
+        setAddedLayers((prev) => {
+          const { [oldLayerKey]: removed, ...rest } = prev;
+          return rest;
+        });
+        
+        setOpacity((prev) => {
+          const { [oldLayerKey]: removed, ...rest } = prev;
+          return rest;
+        });
+      }
 
-  // Component for Coupe Group without checkboxes
-// Component for Coupe Group without checkboxes
-const CoupeGroupWithoutCheckbox = ({ group, groupId, selection, onMonthChange, language }) => {
+      // Add the new layer
+      console.log(`Auto-adding new layer: ${newMonthlyLayerName}`);
+      const layer = await layerManager.addLayer(newMonthlyLayerName, group.title);
+      
+      if (layer) {
+        const newKey = `${newMonthlyLayerName}-${groupId}-0`;
+        setAddedLayers((prev) => ({ ...prev, [newKey]: layer }));
+        setOpacity((prev) => ({ ...prev, [newKey]: 1 }));
+        layer.setOpacity(1);
+        
+        setActiveCoupeGroups((prev) => ({
+          ...prev,
+          [groupId]: true
+        }));
+
+        // Zoom to bounds using NDVI change API
+        setTimeout(async () => {
+          try {
+            const bounds = await getLayerBoundsFromAPI(newMonthlyLayerName, true);
+            
+            if (bounds && mapRef.current) {
+              const sw = L.latLng(bounds.minY, bounds.minX);
+              const ne = L.latLng(bounds.maxY, bounds.maxX);
+              mapRef.current.fitBounds(L.latLngBounds(sw, ne), {
+                // padding: [50, 50],
+                maxZoom: 16,
+                minZoom: 15,
+                animate: true,
+                duration: 1
+              });
+            }
+          } catch (error) {
+            console.error('Error zooming to layer:', error);
+          }
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error updating layer for month change:', error);
+    }
+  }
+}, [coupeGroups, getAvailableMonthsForCoupe, layerManager, mapRef, groupSelections, addedLayers, getLayerBoundsFromAPI]);
+
+// Component for Coupe Group with checkbox on the group title - FIXED
+const CoupeGroupWithoutCheckbox = ({ 
+  group, 
+  groupId, 
+  selection, 
+  onMonthChange, 
+  language, 
+  addedLayers, 
+  toggleLayer,
+  openGroups,
+  toggleGroup,
+  layerManager,
+  mapRef,
+  setAddedLayers,
+  setOpacity,
+  setActiveCoupeGroups,
+  getLayerBoundsFromAPI
+}) => {
   const isExpanded = openGroups[groupId] || false;
   const firstLayer = group.children[0];
   const baseName = firstLayer.baseName || firstLayer.Name;
   const availableMonths = getAvailableMonthsForCoupe(baseName);
+  
+  const monthNames = {
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    gu: ['જાન', 'ફેબ', 'માર્ચ', 'એપ્રિલ', 'મે', 'જૂન', 'જુલાઈ', 'ઑગસ્ટ', 'સપ્ટે', 'ઑક્ટો', 'નવે', 'ડિસે']
+  };
+  
+  const months = monthNames[language] || monthNames.en;
   
   // Get unique years
   const availableYears = useMemo(() => {
@@ -2508,6 +2583,131 @@ const CoupeGroupWithoutCheckbox = ({ group, groupId, selection, onMonthChange, l
       : { month: 0, year: availableYears[0] || 2025 };
   }, [selection, availableMonths, availableYears]);
 
+  // Get the layer name for the current selection
+  const currentLayerName = useMemo(() => {
+    const selectedMonthData = availableMonths.find(m => 
+      m.month === validSelection.month && m.year === validSelection.year
+    );
+    return selectedMonthData?.layerName;
+  }, [availableMonths, validSelection]);
+
+  // Check if this group has any active layer
+  const isChecked = useMemo(() => {
+    return Object.keys(addedLayers).some(key => key.includes(`-${groupId}-`));
+  }, [addedLayers, groupId]);
+
+  // Get the currently active month/year for display
+  const activeInfo = useMemo(() => {
+    const activeKey = Object.keys(addedLayers).find(key => key.includes(`-${groupId}-`));
+    if (!activeKey) return null;
+    
+    // Extract month and year from layer name
+    const match = activeKey.match(/(\d{4})[_-](\d{2})/);
+    if (match) {
+      const year = parseInt(match[1]);
+      const month = parseInt(match[2]) - 1;
+      return { month, year };
+    }
+    return null;
+  }, [addedLayers, groupId]);
+
+  // Handle checkbox toggle
+// In the handleGroupCheckbox function inside CoupeGroupWithoutCheckbox, update the zoom call:
+
+// Handle checkbox toggle - with NDVI change layer bounds
+const handleGroupCheckbox = useCallback(async (e) => {
+  e.stopPropagation();
+  
+  if (isChecked) {
+    // Remove all layers from this group
+    const keysToRemove = Object.keys(addedLayers).filter(key => key.includes(`-${groupId}-`));
+    
+    for (const key of keysToRemove) {
+      const layer = addedLayers[key];
+      if (layer && mapRef.current) {
+        mapRef.current.removeLayer(layer);
+        layer.off();
+      }
+    }
+    
+    // Update state
+    setAddedLayers((prev) => {
+      const newState = { ...prev };
+      keysToRemove.forEach(key => delete newState[key]);
+      return newState;
+    });
+    
+    setOpacity((prev) => {
+      const newState = { ...prev };
+      keysToRemove.forEach(key => delete newState[key]);
+      return newState;
+    });
+    
+    setActiveCoupeGroups((prev) => ({
+      ...prev,
+      [groupId]: false
+    }));
+  } else {
+    // Add the current layer
+    if (!currentLayerName) return;
+    
+    try {
+      const layer = await layerManager.addLayer(
+        currentLayerName, 
+        `${group.title} (${months[validSelection.month]} ${validSelection.year})`
+      );
+      
+      if (layer) {
+        const newKey = `${currentLayerName}-${groupId}-0`;
+        setAddedLayers((prev) => ({ ...prev, [newKey]: layer }));
+        setOpacity((prev) => ({ ...prev, [newKey]: 1 }));
+        layer.setOpacity(1);
+        
+        setActiveCoupeGroups((prev) => ({
+          ...prev,
+          [groupId]: true
+        }));
+
+        // Zoom to bounds using the new API
+        setTimeout(async () => {
+          try {
+            // NDVI change layers always use the separate API
+            const bounds = await getLayerBoundsFromAPI(currentLayerName, true);
+            
+            if (bounds && mapRef.current) {
+              const sw = L.latLng(bounds.minY, bounds.minX);
+              const ne = L.latLng(bounds.maxY, bounds.maxX);
+              mapRef.current.fitBounds(L.latLngBounds(sw, ne), {
+                padding: [50, 50],
+                animate: true,
+                duration: 1
+              });
+
+              setTimeout(() => {
+                const currentZoom = mapRef.current.getZoom();
+                const desiredMinZoom = 12; // Your desired minimum zoom
+                
+                if (currentZoom < desiredMinZoom) {
+                  console.log(`Zooming further from ${currentZoom} to ${desiredMinZoom}`);
+                  mapRef.current.setZoom(desiredMinZoom, {
+                    animate: true,
+                    duration: 0.5
+                  });
+                }
+              }, 100);
+
+            }
+          } catch (error) {
+            console.error('Error zooming to layer:', error);
+          }
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error adding layer:', error);
+    }
+  }
+}, [isChecked, groupId, addedLayers, currentLayerName, group.title, validSelection, months, layerManager, mapRef, setAddedLayers, setOpacity, setActiveCoupeGroups, getLayerBoundsFromAPI]);
+
   return (
     <div className="layer-group flat-group coupe-group-no-checkbox">
       <button
@@ -2517,15 +2717,23 @@ const CoupeGroupWithoutCheckbox = ({ group, groupId, selection, onMonthChange, l
         aria-expanded={isExpanded ? "true" : "false"}
       >
         <span className="group-title-content">
+          {/* Checkbox for the group */}
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={handleGroupCheckbox}
+            onClick={(e) => e.stopPropagation()}
+            style={{ marginRight: "8px", cursor: 'pointer' }}
+          />
           <FaLayerGroup style={{ marginRight: "8px" }} />
           {group.title}
-          {activeCoupeGroups[groupId] && (
+          {isChecked && activeInfo && (
             <span className="active-indicator" style={{
               marginLeft: '8px',
               color: '#4CAF50',
               fontSize: '12px'
             }}>
-              ● Active
+              ● Active ({months[activeInfo.month]} {activeInfo.year})
             </span>
           )}
         </span>
@@ -2536,103 +2744,114 @@ const CoupeGroupWithoutCheckbox = ({ group, groupId, selection, onMonthChange, l
       
       {isExpanded && (
         <div className="layer-list-wrapper expanded">
-            <MonthRangeSelector
-              onMonthSelect={(month, year) => onMonthChange(groupId, month, year)}
-              selectedMonth={validSelection.month}
-              selectedYear={validSelection.year}
-              language={language}
-              groupTitle={group.title}
-              availableMonths={availableMonths}
-            />
-          
-          {/* Show available months summary */}
-       
+          <MonthRangeSelector
+            onMonthSelect={(month, year) => onMonthChange(groupId, month, year)}
+            selectedMonth={validSelection.month}
+            selectedYear={validSelection.year}
+            language={language}
+            groupTitle={group.title}
+            availableMonths={availableMonths}
+          />
+         
         </div>
       )}
     </div>
   );
 };
 
+
+
   // Render groups based on type
-  const renderGroup = (group, index, section = "layers") => {
-    const groupId = `${section}-${index}`;
-    
-    if (section === "coupes") {
-  return (
-    <CoupeGroupWithoutCheckbox
-      key={groupId}
-      group={group}
-      groupId={groupId}
-      selection={groupSelections[groupId] || { month: 0, year: 2025 }}
-      onMonthChange={handleGroupMonthChange}
-      language={language}
-    />
-  );
-}
-    
-    if (group.type === "nested" || group.type === "group") {
-      return (
-        <NestedLayerGroup
-          key={groupId}
-          group={group}
-          groupId={groupId}
-          addedLayers={addedLayers}
-          toggleLayer={toggleLayer}
-          opacity={opacity}
-          handleOpacityChange={handleOpacityChange}
-          openGroups={openGroups}
-          toggleGroup={toggleGroup}
-          isLayerLoading={isLayerLoading}
-          nestingLevel={0}
-          language={language}
-        />
-      );
-    } else {
-      // Flat group for regular layers
-      return (
-        <div key={groupId} className="layer-group flat-group">
-          <button
-            type="button"
-            className="group-title"
-            onClick={() => toggleGroup(groupId)}
-            aria-expanded={openGroups[groupId] ? "true" : "false"}
-          >
-            <span className="group-title-content">
-              <FaLayerGroup style={{ marginRight: "8px" }} />
-              {group.title}
-            </span>
-            <span className="arrow-icon">
-              {openGroups[groupId] ? <FaChevronUp /> : <FaChevronDown />}
-            </span>
-          </button>
-          
-          {openGroups[groupId] && (
-            <div className="layer-list-wrapper expanded">
-              {group.children && group.children.map((layer, layerIndex) => {
-                const uniqueKey = `${layer.Name}-${groupId}-${layerIndex}`;
-                const isChecked = !!addedLayers[uniqueKey];
-                
-                return (
-                  <div key={`${uniqueKey}`} className={`layer-item ${isChecked ? "active" : ""}`}>
-                    <label className="layer-label-container">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleLayer(layer, `${groupId}-${layerIndex}`)}
-                      />
-                      <span className={`layer-label ${isChecked ? "layer-label-bold" : ""}`}>
-                        {layer.Layer}
-                      </span>
-                    </label>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      );
-    }
-  };
+// Render groups based on type - FIXED
+const renderGroup = (group, index, section = "layers") => {
+  const groupId = `${section}-${index}`;
+  
+  if (section === "coupes") {
+    return (
+      <CoupeGroupWithoutCheckbox
+        key={groupId}
+        group={group}
+        groupId={groupId}
+        selection={groupSelections[groupId] || { month: 0, year: 2025 }}
+        onMonthChange={handleGroupMonthChange}
+        language={language}
+        addedLayers={addedLayers}
+        toggleLayer={toggleLayer}
+        openGroups={openGroups}
+        toggleGroup={toggleGroup}
+        layerManager={layerManager}
+        mapRef={mapRef}
+        setAddedLayers={setAddedLayers}
+        setOpacity={setOpacity}
+        setActiveCoupeGroups={setActiveCoupeGroups}
+        getLayerBoundsFromAPI={getLayerBoundsFromAPI}
+      />
+    );
+  }
+  
+  if (group.type === "nested" || group.type === "group") {
+    return (
+      <NestedLayerGroup
+        key={groupId}
+        group={group}
+        groupId={groupId}
+        addedLayers={addedLayers}
+        toggleLayer={toggleLayer}
+        opacity={opacity}
+        handleOpacityChange={handleOpacityChange}
+        openGroups={openGroups}
+        toggleGroup={toggleGroup}
+        isLayerLoading={isLayerLoading}
+        nestingLevel={0}
+        language={language}
+      />
+    );
+  } else {
+    // Flat group for regular layers
+    return (
+      <div key={groupId} className="layer-group flat-group">
+        <button
+          type="button"
+          className="group-title"
+          onClick={() => toggleGroup(groupId)}
+          aria-expanded={openGroups[groupId] ? "true" : "false"}
+        >
+          <span className="group-title-content">
+            <FaLayerGroup style={{ marginRight: "8px" }} />
+            {group.title}
+          </span>
+          <span className="arrow-icon">
+            {openGroups[groupId] ? <FaChevronUp /> : <FaChevronDown />}
+          </span>
+        </button>
+        
+        {openGroups[groupId] && (
+          <div className="layer-list-wrapper expanded">
+            {group.children && group.children.map((layer, layerIndex) => {
+              const uniqueKey = `${layer.Name}-${groupId}-${layerIndex}`;
+              const isChecked = !!addedLayers[uniqueKey];
+              
+              return (
+                <div key={`${uniqueKey}`} className={`layer-item ${isChecked ? "active" : ""}`}>
+                  <label className="layer-label-container">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleLayer(layer, `${groupId}-${layerIndex}`)}
+                    />
+                    <span className={`layer-label ${isChecked ? "layer-label-bold" : ""}`}>
+                      {layer.Layer}
+                    </span>
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+};
 
   // Legend Component
   const LegendPanel = () => {
@@ -2711,30 +2930,48 @@ const CoupeGroupWithoutCheckbox = ({ group, groupId, selection, onMonthChange, l
 
   return (
     <>
-      <LegendPanel />
+      {isLegendVisible && <LegendPanel />}
       
-      <aside className="leftpanel">
+    <aside className="leftpanel">
         <h3 className="sidebar-title">
           <FaLayerGroup style={{ marginRight: "8px" }} />
           {text[language].exploreData}
-          <button 
-            style={{
-              alignItems: 'end',
-              marginLeft: 'auto',
-              backgroundColor: '#e74c3c',
-              color: '#fff',
-              border: 'none', 
-              padding: '5px 10px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-            onClick={clearAllLayers}
-            className="clear-all-btn"
-            title="Clear all layers"
-            disabled={Object.keys(addedLayers).length === 0}
-          >
-            Clear All
-          </button>
+          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+            {/* Add Legend Toggle Button */}
+            <button 
+              style={{
+                backgroundColor: isLegendVisible ? '#3498db' : '#95a5a6',
+                color: '#fff',
+                border: 'none', 
+                padding: '5px 10px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setIsLegendVisible(!isLegendVisible)}
+              className="legend-toggle-btn"
+              title={isLegendVisible ? "Hide legend" : "Show legend"}
+            >
+              {isLegendVisible ? 'Hide Legend' : 'Show Legend'}
+            </button>
+            <button 
+              style={{
+                backgroundColor: '#e74c3c',
+                color: '#fff',
+                border: 'none', 
+                padding: '5px 10px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+              onClick={clearAllLayers}
+              className="clear-all-btn"
+              title="Clear all layers"
+              disabled={Object.keys(addedLayers).length === 0}
+            >
+              Clear All
+            </button>
+          </div>
         </h3>
         
         <div className="layer-groups-container">

@@ -207,19 +207,20 @@ function Login() {
       
       // Make SOAP request through Vite proxy
       const response = await axios.post(
-        '/forest-proxy/FMIS/CommonService/forestcommonservice.asmx',
-        soapRequest,
-        {
-          headers: {
-            'Content-Type': 'text/xml; charset=utf-8',
-            'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
-          },
-          timeout: 30000,
-          responseType: 'text'
-        }
-      );
+  '/forest-proxy/FMIS/CommonService/forestcommonservice.asmx',
+  soapRequest,
+  {
+    headers: {
+      'Content-Type': 'text/xml; charset=utf-8',
+      'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
+    },
+    withCredentials: true,   // ⭐ IMPORTANT
+    timeout: 30000,
+    responseType: 'text'
+  }
+);
 
-      console.log('SOAP Response Status:', response.status);
+      console.log('SOAP Response Status:', response);
       
       if (response.status !== 200) {
         throw new Error('FOREST_SERVICE_UNAVAILABLE');

@@ -19,7 +19,7 @@ const blacklistedTokens = require("./middlewares/tokenBlacklist");
 const helmet = require("helmet");
 const crypto = require('crypto');
 const rateLimit = require("express-rate-limit");
-
+const forestRoutes = require("./routers/forest-login");
 const app = express();
 
 const startNdviScheduler = require("./scheduler/ndviNotificationScheduler");
@@ -242,6 +242,7 @@ const userlocations = require('./routers/userlocations');
 const changendvi = require('./routers/changendvi');
 const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 const gisupload = require('./routers/gisupload');
+const gisupload1 = require('./routers/gis-upload1');
 const forestLoginRoutes = require('./routers/forestLogin');
 
 const TEMP_SAVEUSER_TOKEN = "RECAP4NDC_TEMP_TOKEN";
@@ -362,6 +363,74 @@ const loginSchema = Joi.object({
 
 }).unknown(false); // Reject unknown fields
 
+app.post("/api/changepassword", verifyJwt, async (req, res) => {
+  try {
+    console.log("Change password request received");
+
+    const { username, currentPassword, newPassword } = req.body;
+
+    console.log(`Password change attempt for user: ${username}`);
+
+    // Verify the user exists and get current password hash
+    const [users] = await sequelize.query(
+      `SELECT username, password FROM admin WHERE username = '${username}'`,
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
+    }
+
+    const user = users[0];
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: "Current password is incorrect"
+      });
+    }
+
+    // Check if new password is same as old password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        error: "New password must be different from current password"
+      });
+    }
+
+    // Hash the new password
+    const saltRounds = 10;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password in database
+    await sequelize.query(
+      `UPDATE admin SET password = '${hashedNewPassword}' WHERE username = '${username}'`,
+    );
+
+    // Log the password change (optional, for audit trail)
+    console.log(`Password changed successfully for user: ${username}`);
+
+    return res.json({
+      success: true,
+      message: "Password changed successfully"
+    });
+
+  } catch (err) {
+    console.error("Change password error:", err);
+    
+    return res.status(500).json({
+      success: false,
+      error: "Internal Server Error"
+    });
+  }
+});
+
 app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
 
   try {
@@ -386,7 +455,6 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
     // Query database
     const [result] = await sequelize.query(
       `SELECT username, password FROM admin WHERE username = '${username}'`,
-        
     );
 
     if (result.length === 0) {
@@ -398,8 +466,15 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
 
     const admin = result[0];
 
-   
-   
+    // Compare password with bcrypt
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid admin credentials"
+      });
+    }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -522,7 +597,7 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
 
 const saveUserLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Allow only 10 requests per IP per 15 mins
+  max: 5, // Allow only 5 requests per IP per 15 mins
   message: {
     success: false,
     error: "Too many requests. Please try again after 15 minutes."
@@ -531,90 +606,90 @@ const saveUserLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-app.post("/api/saveuser",  verifyTempToken, validateNoDuplicateParams, saveUserLimiter, async (req, res) => {
-  try {
-    console.log('✅ /api/saveuser POST route accessed');
-    console.log('Request body:', req.body);
-    console.log('Request params:', req.params);
-    console.log('Request query:', req.query);
+// app.post("/api/saveuser22",  verifyTempToken, validateNoDuplicateParams, saveUserLimiter, async (req, res) => {
+//   try {
+//     console.log('✅ /api/saveuser POST route accessed');
+//     console.log('Request body:', req.body);
+//     console.log('Request params:', req.params);
+//     console.log('Request query:', req.query);
     
-    // Get username from body, params, or query (prioritize body > params > query)
-    const username = req.body?.username;
+//     // Get username from body, params, or query (prioritize body > params > query)
+//     const username = req.body?.username;
     
-    console.log('Extracted username:', username);
-    console.log('Username type:', typeof username);
-    // console.log('Source:', req.body?.username ? 'body' : (req.params?.username ? 'params' : (req.query?.username ? 'query' : 'none')));
+//     console.log('Extracted username:', username);
+//     console.log('Username type:', typeof username);
+//     // console.log('Source:', req.body?.username ? 'body' : (req.params?.username ? 'params' : (req.query?.username ? 'query' : 'none')));
     
-    if (username === undefined || username === null) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Username field is missing. Provide it in request body, URL parameter, or query string." 
-      });
-    }
+//     if (username === undefined || username === null) {
+//       return res.status(400).json({ 
+//         success: false, 
+//         error: "Username field is missing. Provide it in request body, URL parameter, or query string." 
+//       });
+//     }
     
-    if (typeof username !== 'string') {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Username must be a string" 
-      });
-    }
+//     if (typeof username !== 'string') {
+//       return res.status(400).json({ 
+//         success: false, 
+//         error: "Username must be a string" 
+//       });
+//     }
     
-    if (username.trim() === "") {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Username cannot be empty" 
-      });
-    }
+//     if (username.trim() === "") {
+//       return res.status(400).json({ 
+//         success: false, 
+//         error: "Username cannot be empty" 
+//       });
+//     }
 
-    const trimmedUsername = username.trim();
-    console.log('Processing username:', trimmedUsername);
+//     const trimmedUsername = username.trim();
+//     console.log('Processing username:', trimmedUsername);
 
-    // Check if user exists
-    const [users] = await sequelize.query(
-      `SELECT user_id, username FROM public.government_department_users WHERE username = $1`,
-      { bind: [trimmedUsername] }
-    );
+//     // Check if user exists
+//     const [users] = await sequelize.query(
+//       `SELECT user_id, username FROM public.government_department_users WHERE username = $1`,
+//       { bind: [trimmedUsername] }
+//     );
 
-    console.log('User query result:', users);
+//     console.log('User query result:', users);
 
-    let user;
-    if (users.length > 0) {
-      user = users[0];
-      console.log('User already exists:', user);
-    } else {
-      const [result] = await sequelize.query(
-        `INSERT INTO public.government_department_users (username) VALUES ($1) RETURNING user_id, username`,
-        { bind: [trimmedUsername] }
-      );
-      user = result[0];
-      console.log('New user created:', user);
-    }
+//     let user;
+//     if (users.length > 0) {
+//       user = users[0];
+//       console.log('User already exists:', user);
+//     } else {
+//       const [result] = await sequelize.query(
+//         `INSERT INTO public.government_department_users (username) VALUES ($1) RETURNING user_id, username`,
+//         { bind: [trimmedUsername] }
+//       );
+//       user = result[0];
+//       console.log('New user created:', user);
+//     }
 
-    // Generate JWT
-    const token = jwt.sign(
-      { userId: user.user_id, username: user.username }, 
-      SECRET_KEY,
-      { expiresIn: "24h" }
-    );
+//     // Generate JWT
+//     const token = jwt.sign(
+//       { userId: user.user_id, username: user.username }, 
+//       SECRET_KEY,
+//       { expiresIn: "24h" }
+//     );
 
-    console.log('JWT generated successfully');
+//     console.log('JWT generated successfully');
 
-    res.json({
-      success: true,
-      message: users.length > 0 ? "User already exists" : "User created",
-      user,
-      token,
-    });
+//     res.json({
+//       success: true,
+//       message: users.length > 0 ? "User already exists" : "User created",
+//       user,
+//       token,
+//     });
     
-  } catch (err) {
-    console.error("❌ Error in /api/saveuser:", err);
-    res.status(500).json({ 
-      success: false, 
-      error: "Server error", 
-      message: err.message 
-    });
-  }
-});
+//   } catch (err) {
+//     console.error("❌ Error in /api/saveuser:", err);
+//     res.status(500).json({ 
+//       success: false, 
+//       error: "Server error", 
+//       message: err.message 
+//     });
+//   }
+// });
 
 
 
@@ -674,8 +749,9 @@ app.use('/api', userlocations);
 app.use('/api', changendvi);
 app.use('/api', beat_patrol_coverage);
 app.use('/api', gisupload);
+app.use('/api', gisupload1);
 app.use('/api', forestLoginRoutes);
-
+app.use("/api", forestRoutes);
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server error:', err.stack);

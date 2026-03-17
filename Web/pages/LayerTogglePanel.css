@@ -845,6 +845,20 @@ input[type="checkbox"]:focus {
     0 4px 20px rgba(0, 0, 0, 0.2);
 } */
 
+/* Add to your LayerTogglePanel.css */
+.coupe-group-no-checkbox .group-title-content input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #4CAF50;
+}
+
+.coupe-group-no-checkbox .group-title-content {
+  display: flex;
+  align-items: center;
+}
+
 
 /* Legend Panel Styles */
 .legend-panel {
@@ -856,7 +870,7 @@ input[type="checkbox"]:focus {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 5px;
   max-width: 550px;
-  max-height: 400px;
+  max-height: 250px;
   overflow-y: auto;
   z-index: 1000;
   border: 1px solid #ddd;
@@ -1058,3 +1072,4 @@ input[type="checkbox"]:focus {
   border-radius: 4px;
   margin: 10px 0;
 }
+

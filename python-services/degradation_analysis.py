@@ -23,11 +23,12 @@ DB_CONFIG = {
     "port": 5432
 }
 
-GEOSERVER_URL = "https://gisfy.co.in:8445/geoserver"
+
+GEOSERVER_URL = "http://68.178.167.216:8081/geoserver"
 GEOSERVER_USER = "admin"
-GEOSERVER_PASS = "geoserver"
+GEOSERVER_PASS = "Geo@$ecure#%26"
 WORKSPACE = "Recap4NDC"
-DATASTORE = "Recap4NDC_New"
+DATASTORE = "Recap4NDC_NEW1"
 STYLE_NAME = "NDVI_CHANGE_NEW2222"
 
 CHECKPOINT_FILE = "checkpoint_all_coupes.json"
@@ -37,10 +38,13 @@ GRID_SIZE = 0.00027
 MAX_RETRIES = 3
 RETRY_DELAY = 5
 
-first_month_START = "2025-12-01"
-first_month_END   = "2025-12-31"
-second_month_START = "2026-01-01"
-second_month_END   = "2026-01-28"
+
+
+
+first_month_START = "2026-01-01"
+first_month_END   = "2026-01-30"
+second_month_START = "2026-02-01"
+second_month_END   = "2026-02-28"
 
 PROJECT_ID = "giz-gujarat"
 
@@ -77,16 +81,6 @@ def initialize_ee():
         ee.Initialize(project=PROJECT_ID)
         log("Earth Engine authenticated")
 
-# ---------------- GEOSERVER FUNCTIONS (FIXED) ----------------
-def sanitize_layer_name(name):
-    """Sanitize layer name for GeoServer - remove special characters, lowercase"""
-    # Replace special characters with underscores and convert to lowercase
-    sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', name).lower()
-    # Remove multiple consecutive underscores
-    sanitized = re.sub(r'_+', '_', sanitized)
-    # Remove leading/trailing underscores
-    sanitized = sanitized.strip('_')
-    return sanitized
 
 def check_geoserver_connection():
     """Simple GeoServer connection check"""
@@ -144,7 +138,7 @@ def publish_layer_simple(table_name):
     """Fixed layer publishing function"""
     try:
         # Sanitize the layer name for GeoServer
-        layer_name = sanitize_layer_name(table_name)
+        layer_name = table_name
         original_table = table_name  # Keep original for PostgreSQL
         
         log(f"Publishing layer: {layer_name} (from table: {original_table})")
@@ -774,7 +768,7 @@ def process_all_coupes():
     
     # Get list of coupes
     try:
-        cur.execute("""SELECT DISTINCT coupe_name FROM public.coupe_village_master OFFSET 10""")
+        cur.execute("""SELECT DISTINCT division as coupe_name FROM public.coupe_all""")
         coupes = [r[0] for r in cur.fetchall()]
         log(f"Found {len(coupes)} coupes to process")
     except Exception as e:
@@ -800,21 +794,21 @@ def process_all_coupes():
         try:
             # Step 1: Fix geometry
             log(f"Step 1/5: Fixing geometry for {coupe}")
-            fix_geometry(cur, coupe)
+            fix_geometry(cur, f"{coupe}_coupe")
             conn.commit()
             
             # Step 2: Create degradation table
             log(f"Step 2/5: Creating degradation table")
-            table_name = f"2026_01_01_{coupe}_NDVI_Change"
+            table_name = f"2026-02-01_{coupe}_coupe_NDVI_Change"
             create_degradation_table(cur, table_name)
             conn.commit()
             
             # Step 3: Get polygons for this coupe
             log(f"Step 3/5: Fetching polygons")
-            cur.execute(f"""SELECT fid, ST_AsGeoJSON(geom), village, coupe_no 
-                          FROM "{coupe}" ORDER BY fid LIMIT 2""")
+            cur.execute(f"""SELECT id as fid, ST_AsGeoJSON(geom), village, coupe_no 
+                          FROM "{coupe}_coupe" ORDER BY fid LIMIT 2""")
             polys = cur.fetchall()
-            log(f"  Found {len(polys)} polygons in {coupe}")
+            log(f"  Found {len(polys)} polygons in {coupe}_coupe")
             
             # Step 4: Process each polygon
             log(f"Step 4/5: Processing polygons")
@@ -879,7 +873,7 @@ def process_all_coupes():
             log(f"Step 5/5: Publishing to GeoServer")
             if geoserver_available:
                 # Get sanitized layer name
-                layer_name = sanitize_layer_name(table_name)
+                layer_name=table_name
                 
                 if check_layer_exists(layer_name):
                     log(f"  Layer '{layer_name}' already exists in GeoServer")
@@ -903,7 +897,7 @@ def process_all_coupes():
             log(f"  Skipped polygons: {skipped_polygons}")
             log(f"  Total polygons: {len(polys)}")
             log(f"  Table created: {table_name}")
-            log(f"  GeoServer layer: {sanitize_layer_name(table_name) if geoserver_available else 'Not published'}")
+            log(f"  GeoServer layer: {table_name if geoserver_available else 'Not published'}")
             
         except Exception as e:
             log(f"Fatal error processing coupe {coupe}: {e}")

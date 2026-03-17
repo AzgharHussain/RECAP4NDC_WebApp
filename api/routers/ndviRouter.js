@@ -21,7 +21,7 @@ router.post('/ndvi-change', verifyJwt, async (req, res) => {
    });
  }
 
- const tableRegex = /^[a-zA-Z0-9_]+$/;
+  const tableRegex = /^[a-zA-Z0-9_-]+$/;
 
  if (!tableRegex.test(coupename)) {
    return res.status(400).json({
@@ -1101,6 +1101,77 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
         });
     }
 });
+
+router.get('/ndvi-change-layer-bounds/:layerName', async (req, res) => {
+  try {
+    const { layerName } = req.params;
+    
+    // Clean the layer name (remove workspace prefix if present)
+    const cleanLayerName = layerName.replace(/^cite:/, '').replace(/^public\./, '');
+    
+    // Extract table name from the layer name (handle different formats)
+    let tableName = cleanLayerName;
+    
+    // Query to get bounds from the table
+    const query = `
+      SELECT 
+        ST_XMin(ST_Extent(geom)) AS min_x,
+        ST_YMin(ST_Extent(geom)) AS min_y,
+        ST_XMax(ST_Extent(geom)) AS max_x,
+        ST_YMax(ST_Extent(geom)) AS max_y,
+        ST_X(ST_Centroid(ST_Union(geom))) AS centroid_x,
+        ST_Y(ST_Centroid(ST_Union(geom))) AS centroid_y,
+        COUNT(*) AS feature_count
+      FROM "${tableName}";
+    `;
+    
+    // Execute query - Sequelize returns [results, metadata]
+    const [results, metadata] = await sequelize.query(query);
+    
+    console.log('Query results:', results);
+    
+    // Check if we got any results
+    if (!results || results.length === 0 || !results[0] || !results[0].min_x) {
+      return res.status(404).json({ 
+        error: 'Layer not found or has no geometry',
+        table: validTableName 
+      });
+    }
+    
+    const bounds = {
+      minX: parseFloat(results[0].min_x),
+      minY: parseFloat(results[0].min_y),
+      maxX: parseFloat(results[0].max_x),
+      maxY: parseFloat(results[0].max_y),
+      centroid: {
+        x: parseFloat(results[0].centroid_x),
+        y: parseFloat(results[0].centroid_y)
+      },
+      featureCount: parseInt(results[0].feature_count),
+      metadata: {
+        range: results[0].range || 'N/A',
+        division: results[0].division || 'N/A',
+        circle: results[0].circle || 'N/A'
+      }
+    };
+    
+    console.log('Sending bounds:', bounds);
+    res.json(bounds);
+  } catch (error) {
+    console.error('Error fetching NDVI change layer bounds:', error);
+    // Return default Gujarat bounds as fallback
+    res.json({
+      success: true,
+      data: {
+        minX: 68.5,
+        minY: 20.5,
+        maxX: 74.5,
+        maxY: 24.5
+      }
+    });
+  }
+});
+
 
 
 
