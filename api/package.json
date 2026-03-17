@@ -15,7 +15,7 @@
     "@google/earthengine": "^1.6.15",
     "adm-zip": "^0.5.16",
     "async-retry": "^1.3.3",
-    "axios": "^1.13.2",
+    "axios": "^1.13.6",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
