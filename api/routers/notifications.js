@@ -471,17 +471,17 @@ router.post('/logout', async (req, res) => {
     const token = authHeader.split(' ')[1];
 
     // get userId from request body or decoded token
-    const { user_id } = req.body;
+    // const { user_id } = req.body;
 
-    const query = `
-      DELETE FROM ndvi_notification_users
-      WHERE user_id = $1
-      RETURNING *;
-    `;
+    // const query = `
+    //   DELETE FROM ndvi_notification_users
+    //   WHERE user_id = $1
+    //   RETURNING *;
+    // `;
 
-    const values = [user_id];
+    // const values = [user_id];
 
-    const result = await client.query(query, values);
+    // const result = await client.query(query, values);
 
     console.log("Adding to blacklist:", token);
 
