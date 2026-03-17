@@ -1547,5 +1547,22 @@ color: #000;
   height: 64px !important; /* equal or greater specificity */
 }
 
+@media only screen 
+  and (min-width: 1560px) {
+  
+  .map-wrapper {
+    height: 14vh;
+  }
+}
 
+.map-container {
+  height: 82vh;
+  width: 80vw;
+}
 
+@media (min-width: 1560px) {
+  .map-container {
+    width: 81vw;
+    height: 85vh;
+  }
+}

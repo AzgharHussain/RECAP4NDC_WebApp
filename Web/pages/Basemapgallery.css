@@ -17,6 +17,12 @@
     left: 56%;
   }
 }
+
+@media (min-width: 1560px) {
+  .basemap-deck {
+    left: 34%;
+  }
+}
 .basemap-card {
   position: absolute;
   width: 100%;

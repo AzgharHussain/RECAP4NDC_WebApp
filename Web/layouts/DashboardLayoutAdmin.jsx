@@ -325,33 +325,48 @@ useEffect(() => {
           <Outlet />
         </main>
      
-     {isAdminMenuOpen && (  <div className="admin-dropdown ">
- <button
-                className={`lang-chip ${language === "en" ? "active" : ""}`}
-                onClick={() => toggleLanguage("en")}
-              >
-                EN
-              </button>
-              <button
-                className={`lang-chip ${language === "gu" ? "active" : ""}`}
-                onClick={() => toggleLanguage("gu")}
-              >
-                જીયુ
-              </button>
-      </div>
-    )}  {isDropdownOpen && (
-          <div className="dropdown-menu">
-            
-            
-          
-            <button
-              className="logout-btn dropdown-item"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-          </div>
-        )}
+   {isAdminMenuOpen && (
+           <div className="admin-dropdown">
+             <div className="admin-dropdown-section">
+               <button
+                 className={`lang-chip ${language === "en" ? "active" : ""}`}
+                 onClick={() => {
+                   toggleLanguage("en");
+                   setIsAdminMenuOpen(false);
+                 }}
+               >
+                 EN
+               </button>
+               <button
+                 className={`lang-chip ${language === "gu" ? "active" : ""}`}
+                 onClick={() => {
+                   toggleLanguage("gu");
+                   setIsAdminMenuOpen(false);
+                 }}
+               >
+                 જીયુ
+               </button>
+             </div>
+             
+             
+           </div>
+         )}
+            {isDropdownOpen && (
+         <div className="dropdown-menu">
+          <a href="/changepassword">Change Password</a>
+           <div className="username">
+           <b>{username}</b>
+           {isAdmin && <span className="admin-badge"> (Admin)</span>}
+         </div>
+         
+           <button
+             className="logout-btn dropdown-item"
+             onClick={handleLogout}
+           >
+             Logout
+           </button>
+         </div>
+       )}
     </div>
   );
 }

@@ -21,3 +21,10 @@
     left: 18%;
   }
 }
+
+@media (min-width: 1560px) {
+  .lat-lng-display {
+    bottom: 4%;
+    left: 10%;
+  }
+}

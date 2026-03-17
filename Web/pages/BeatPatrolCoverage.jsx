@@ -24,6 +24,7 @@ import Select from 'react-select';
 import { Image } from 'antd';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import UploadPatrolBoundary from "./UploadPatrolBoundary";
 
 // Helper to format date/time
 const formatDateTime = (dateTime) => {
@@ -66,17 +67,22 @@ const PatrolLoader = () => (
 );
 
 const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
-  // Coupe & month states
-  const [coupes, setCoupes] = useState([]);
+  // Selection states
   const [selectedCoupe, setSelectedCoupe] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState("");
-
+  const [selectedBoundary, setSelectedBoundary] = useState(null);
+  
   // Data states
+  const [coupes, setCoupes] = useState([]);
+  const [boundaries, setBoundaries] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  
   const [loading, setLoading] = useState({
     coupes: false,
+    boundaries: false,
     coverage: false,
     patrol: false
   });
+  
   const [coverageData, setCoverageData] = useState(null);
   const [patrols, setPatrols] = useState([]);
 
@@ -89,77 +95,127 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   const [imageRotation, setImageRotation] = useState(0);
   const [imageScale, setImageScale] = useState(1);
 
-useEffect(() => {
-  const fetchCoupes = async () => {
-    setLoading(prev => ({ ...prev, coupes: true }));
+  // Fetch patrol boundaries
+  const fetchPatrolBoundaries = async () => {
+    setLoading(prev => ({ ...prev, boundaries: true }));
     try {
       const token = localStorage.getItem("token");
-
-      const response = await axios.get(
-        `${API_BASE_URL}/api/coupe-divisions`,
+      const res = await axios.get(
+        `${API_BASE_URL}/api/patrol-boundaries`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      console.log("Coupe divisions response:", response.data);
-
-      const divisions = response.data[0] || [];
-
-      const coupeList = divisions.map(item => ({
-        value: item.division,
-        label: item.division
+      const boundaryList = (res.data.data || []).map(item => ({
+        value: item.id || item._id,
+        label: item.name || item.boundary_name || `Boundary ${item.id}`,
+        data: item
       }));
 
-      setCoupes(coupeList);
-
-    } catch (error) {
-      console.error("Error fetching coupes:", error);
-      alert("Failed to load coupe list");
+      setBoundaries(boundaryList);
+    } catch (err) {
+      console.error(err);
     } finally {
-      setLoading(prev => ({ ...prev, coupes: false }));
+      setLoading(prev => ({ ...prev, boundaries: false }));
     }
   };
 
-  fetchCoupes();
-}, []);
+  useEffect(() => {
+    fetchPatrolBoundaries();
+  }, []);
+
+  // Fetch coupes
+  useEffect(() => {
+    const fetchCoupes = async () => {
+      setLoading(prev => ({ ...prev, coupes: true }));
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          `${API_BASE_URL}/api/coupe-divisions`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+
+        const divisions = response.data[0] || [];
+        const coupeList = divisions.map(item => ({
+          value: item.division,
+          label: item.division
+        }));
+        setCoupes(coupeList);
+      } catch (error) {
+        console.error("Error fetching coupes:", error);
+        alert("Failed to load coupe list");
+      } finally {
+        setLoading(prev => ({ ...prev, coupes: false }));
+      }
+    };
+
+    fetchCoupes();
+  }, []);
 
   // Handle coupe change
   const handleCoupeChange = (selectedOption) => {
     setSelectedCoupe(selectedOption);
-    // Reset dependent data
+    setSelectedBoundary(null); // Clear boundary when coupe is selected
+    resetData();
+  };
+
+  // Handle boundary change
+  const handleBoundaryChange = (selectedOption) => {
+    setSelectedBoundary(selectedOption);
+    setSelectedCoupe(null); // Clear coupe when boundary is selected
+    resetData();
+  };
+
+  // Handle month change
+  const handleMonthChange = (e) => {
+    setSelectedMonth(e.target.value);
+    resetData();
+  };
+
+  // Reset all data
+  const resetData = () => {
     setCoverageData(null);
     setPatrols([]);
     setSelectedPatrol(null);
     setPatrolDetails(null);
     setShowPatrolModal(false);
     setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
   };
 
-  // Handle month change
-  const handleMonthChange = (e) => {
-    setSelectedMonth(e.target.value);
-    setCoverageData(null);
-    setPatrols([]);
-  };
-
-  // Fetch coverage and patrols
+  // Fetch coverage data
   const fetchCoverageData = async () => {
-    if (!selectedCoupe || !selectedMonth) {
-      alert("Please select both a coupe and a month");
+    if (!selectedCoupe && !selectedBoundary) {
+      alert("Please select either a Coupe or a Boundary");
+      return;
+    }
+    if (!selectedMonth) {
+      alert("Please select a month");
       return;
     }
 
     setLoading(prev => ({ ...prev, coverage: true }));
     setSelectedImage(null);
+    
     try {
       const token = localStorage.getItem("token");
+      
+      // Determine which API to call based on selection
+      const endpoint = selectedCoupe 
+        ? `${API_BASE_URL}/api/coupe-patrol-coverage`
+        : `${API_BASE_URL}/api/boundary-patrol-coverage`;
+      
+      const payload = selectedCoupe
+        ? { coupe_table: selectedCoupe.value, month: selectedMonth }
+        : { boundary: selectedBoundary.label, month: selectedMonth };
+
       const response = await axios.post(
-        `${API_BASE_URL}/api/coupe-patrol-coverage`,
-        {
-          coupe_table: selectedCoupe.value,
-          month: selectedMonth // format YYYY-MM
-        },
+        endpoint,
+        payload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -171,13 +227,12 @@ useEffect(() => {
       if (response.data.success) {
         const data = response.data.data;
         setCoverageData(data);
-        // Assuming the API also returns an array of patrols under `patrols_covering_coupe`
         setPatrols(data.patrols_covering_coupe || []);
       } else {
         alert(response.data.message || "No coverage data found");
       }
     } catch (err) {
-      console.error("Error fetching coupe patrol coverage:", err);
+      console.error("Error fetching coverage data:", err);
       alert("Failed to load coverage data");
     } finally {
       setLoading(prev => ({ ...prev, coverage: false }));
@@ -224,8 +279,8 @@ useEffect(() => {
 
     const summaryData = [
       {
-        "Coupe": selectedCoupe?.label,
-        "Coupe Area (sq m)": coverageData.coupe_area_sq_m,
+        [selectedCoupe ? "Coupe" : "Boundary"]: selectedCoupe ? selectedCoupe.label : selectedBoundary.label,
+        "Area (sq m)": selectedCoupe ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m,
         "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
         "Coverage %": coverageData.coverage_percentage,
       },
@@ -243,50 +298,23 @@ useEffect(() => {
     }));
 
     const wb = XLSX.utils.book_new();
-
-    // Coverage Summary Sheet
     const summarySheet = XLSX.utils.json_to_sheet(summaryData);
-    const summaryHeaders = Object.keys(summaryData[0]);
-    summaryHeaders.forEach((_, i) => {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (summarySheet[cellRef]) summarySheet[cellRef].s = { font: { bold: true }, fill: { fgColor: { rgb: "D9E1F2" } } };
-    });
-    summarySheet["!cols"] = [{ wch: 25 }, { wch: 20 }, { wch: 28 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, summarySheet, "Coverage Summary");
 
-    // Patrols Sheet
     if (patrolData.length > 0) {
       const patrolSheet = XLSX.utils.json_to_sheet(patrolData);
-      const patrolHeaders = Object.keys(patrolData[0]);
-      patrolHeaders.forEach((_, i) => {
-        const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-        if (patrolSheet[cellRef]) patrolSheet[cellRef].s = { font: { bold: true }, fill: { fgColor: { rgb: "D9E1F2" } } };
-      });
-      patrolSheet["!cols"] = [
-        { wch: 15 }, { wch: 22 }, { wch: 22 }, { wch: 15 },
-        { wch: 25 }, { wch: 18 }, { wch: 30 }, { wch: 30 }
-      ];
       XLSX.utils.book_append_sheet(wb, patrolSheet, "Patrols");
     }
 
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
+    const fileName = selectedCoupe 
+      ? `${selectedCoupe.value}_patrol_coverage.xlsx`
+      : `${selectedBoundary.label}_patrol_coverage.xlsx`;
+    
     saveAs(
       new Blob([excelBuffer], { type: "application/octet-stream" }),
-      `${selectedCoupe?.value}_patrol_coverage.xlsx`
+      fileName
     );
-  };
-
-  const handleReset = () => {
-    setSelectedCoupe(null);
-    setSelectedMonth("");
-    setCoverageData(null);
-    setPatrols([]);
-    setSelectedPatrol(null);
-    setPatrolDetails(null);
-    setShowPatrolModal(false);
-    setSelectedImage(null);
-    setImageRotation(0);
-    setImageScale(1);
   };
 
   // Custom styles for react-select
@@ -316,7 +344,7 @@ useEffect(() => {
   };
 
   return (
-    <div >
+    <div>
       {setshowloader && <PatrolLoader />}
       
       <style>{`
@@ -337,17 +365,16 @@ useEffect(() => {
         .modal-content { animation: slideIn 0.3s ease-out; }
       `}</style>
 
-      {/* Image Preview Modal (same as before) */}
+      {/* Image Preview Modal - Same as before */}
       {selectedImage && (
         <div
           style={{
             position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
             display: "flex", justifyContent: "center", alignItems: "center",
-            zIndex: 9999, padding: "5px",fontFamily: "arial"
+            zIndex: 9999, padding: "5px", fontFamily: "arial"
           }}
           onClick={(e) => { if (e.target === e.currentTarget) { setSelectedImage(null); setShowPatrolModal(true); setImageRotation(0); setImageScale(1); } }}
         >
-          {/* Close button */}
           <button
             style={{
               position: "absolute", top: "20px", right: "370px",
@@ -361,18 +388,16 @@ useEffect(() => {
             <CloseCircleOutlined />
           </button>
 
-          {/* Image counter */}
           {patrolDetails?.images && (
             <div style={{
               position: "absolute", top: "20px", left: "20px",
               background: "rgba(0,0,0,0.7)", color: "white", padding: "8px 16px",
-              borderRadius: "20px", fontSize: "14px", fontWeight: "600", zIndex: 10000,fontFamily: "arial"
+              borderRadius: "20px", fontSize: "14px", fontWeight: "600", zIndex: 10000, fontFamily: "arial"
             }}>
               Image {patrolDetails.images.findIndex(img => img.image_data === selectedImage) + 1} / {patrolDetails.images.length}
             </div>
           )}
 
-          {/* Rotation/Zoom Controls */}
           <div style={{
             position: "absolute", bottom: "30px", left: "50%", transform: "translateX(-50%)",
             display: "flex", gap: "10px", background: "rgba(0,0,0,0.7)", padding: "10px 20px",
@@ -388,7 +413,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* The Image */}
           <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%", display: "flex", justifyContent: "center", alignItems: "center" }}>
             <img
               src={getImageUrl(selectedImage)}
@@ -404,7 +428,6 @@ useEffect(() => {
             />
           </div>
 
-          {/* Navigation buttons */}
           {patrolDetails?.images?.length > 1 && (
             <>
               <button
@@ -432,7 +455,7 @@ useEffect(() => {
         </div>
       )}
 
-      {/* Patrol Details Modal (same as before) */}
+      {/* Patrol Details Modal - Same as before */}
       {showPatrolModal && patrolDetails && !selectedImage && (
         <div className="modal-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000, fontFamily: "arial" }} onClick={closePatrolModal}>
           <div className="modal-content" style={{ backgroundColor: "white", borderRadius: "12px", width: "90%", maxWidth: "800px", maxHeight: "60vh", overflow: "auto", position: "relative", boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }} onClick={(e) => e.stopPropagation()}>
@@ -445,7 +468,6 @@ useEffect(() => {
                 <div style={{ textAlign: "center", padding: "40px" }}><div style={{ border: "4px solid #f3f3f3", borderTop: "4px solid #2ada2aff", borderRadius: "50%", width: "60px", height: "60px", animation: "spin 1s linear infinite", margin: "0 auto 10px" }} /><p>Loading...</p></div>
               ) : (
                 <>
-                  {/* Basic Information */}
                   <div style={{ backgroundColor: "#fff", borderRadius: "10px", padding: "10px", marginBottom: "10px", border: "1px solid #e2e8f0" }}>
                     <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", borderBottom: "2px solid #e1bc42ff" }}>
                       <div style={{ backgroundColor: "#9ce142ff", width: "40px", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "12px", color: "white" }}><UserOutlined /></div>
@@ -471,7 +493,6 @@ useEffect(() => {
                     </div>
                   </div>
 
-                  {/* Images Section */}
                   {patrolDetails.images?.length > 0 && (
                     <div style={{ backgroundColor: "#fff", borderRadius: "10px", padding: "10px", border: "1px solid #e2e8f0" }}>
                       <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", borderBottom: "2px solid #4299e1" }}>
@@ -500,28 +521,22 @@ useEffect(() => {
         </div>
       )}
 
+      {/* Main Container */}
       <div style={{ padding: "20px", fontFamily: "arial" }}>
-        {/* Header with close button */}
+        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "30px" }}>
           <div>
             <h1 style={{ fontSize: "32px", fontWeight: "700", marginBottom: "8px", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              {language === "gu" ? "કૂપ પેટ્રોલ કવરેજ વિશ્લેષણ" : "Patrol Coverage Analysis"}
+              {language === "gu" ? "પેટ્રોલ કવરેજ વિશ્લેષણ" : "Patrol Coverage Analysis"}
             </h1>
-            
           </div>
-          {/* <button
-            style={{ width: "45px", height: "45px", borderRadius: "50%", background: "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)", border: "none", color: "white", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 6px rgba(245, 101, 101, 0.3)", transition: "all 0.3s ease", flexShrink: 0, marginLeft: "20px" }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = "rotate(90deg)"}
-            onMouseLeave={(e) => e.currentTarget.style.transform = "rotate(0deg)"}
-            onClick={() => { setShowMapRoute(!showmaproute); handleReset(); }}
-          ><CloseOutlined /></button> */}
         </div>
 
         {/* Selection Card */}
         <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "25px", marginBottom: "25px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px", alignItems: "end" }}>
+          <div style={{  display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
             {/* Coupe Dropdown */}
-            <div>
+            <div style={{ width: "300px" }}>
               <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
                 {language === "gu" ? "કૂપ" : "Coupe"}
               </label>
@@ -535,11 +550,32 @@ useEffect(() => {
                 isLoading={loading.coupes}
                 styles={customSelectStyles}
                 noOptionsMessage={() => "No coupes available"}
+                isDisabled={!!selectedBoundary} // Disable if boundary is selected
+              />
+            </div>
+            <div>or</div>
+
+            {/* Boundary Dropdown */}
+            <div style={{ width: "300px" }}>
+              <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
+                {language === "gu" ? "બાઉન્ડ્રી" : "Boundary"}
+              </label>
+              <Select
+                value={selectedBoundary}
+                onChange={handleBoundaryChange}
+                options={boundaries}
+                isSearchable
+                isClearable
+                placeholder={loading.boundaries ? "Loading boundaries..." : "Select Boundary..."}
+                isLoading={loading.boundaries}
+                styles={customSelectStyles}
+                noOptionsMessage={() => "No boundaries available"}
+                isDisabled={!!selectedCoupe} // Disable if coupe is selected
               />
             </div>
 
             {/* Month Picker */}
-            <div>
+            <div style={{ width: "300px" }}>
               <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
                 {language === "gu" ? "મહિનો" : "Month"}
               </label>
@@ -560,13 +596,13 @@ useEffect(() => {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: "flex", gap: "12px", gridColumn: "span 2" }}>
+            <div style={{ display: "flex", gap: "12px", marginTop: "10px", marginLeft: "auto" }}>
               <button
                 className="glow-button"
                 onClick={fetchCoverageData}
-                disabled={!selectedCoupe || !selectedMonth || loading.coverage}
-                style={{ fontFamily: "arial", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 24px" ,marginLeft: "auto" }}
-              >``
+                disabled={(!selectedCoupe && !selectedBoundary) || !selectedMonth || loading.coverage}
+                style={{ fontFamily: "arial", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 24px", marginLeft: "auto" }}
+              >
                 {loading.coverage ? (
                   <>
                     <div style={{ border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid white", borderRadius: "50%", width: "20px", height: "20px", animation: "spin 1s linear infinite" }} />
@@ -580,7 +616,7 @@ useEffect(() => {
                 )}
               </button>
               <button
-                onClick={handleReset}
+                onClick={resetData}
                 disabled={loading.coverage}
                 style={{ padding: "12px 24px", borderRadius: "8px", border: "2px solid #e2e8f0", fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "white", color: "#4a5568", fontWeight: "600" }}
               >
@@ -590,7 +626,7 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Loading indicator for coverage */}
+        {/* Loading indicator */}
         {loading.coverage && (
           <div style={{ textAlign: "center", padding: "60px" }}>
             <div style={{ border: "6px solid #f3f3f3", borderTop: "6px solid #4299e1", borderRadius: "50%", width: "80px", height: "80px", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
@@ -604,18 +640,22 @@ useEffect(() => {
             {/* Summary Cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", marginBottom: "30px" }}>
               <div className="stats-card">
-                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Coupe</p>
+                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>
+                  {selectedCoupe ? "Coupe" : "Boundary"}
+                </p>
                 <div style={{ display: "inline-block", padding: "8px 20px", borderRadius: "20px", backgroundColor: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.3)", fontSize: "18px", fontWeight: "600", backdropFilter: "blur(10px)" }}>
-                  {selectedCoupe?.label}
+                  {selectedCoupe ? selectedCoupe.label : selectedBoundary.label}
                 </div>
               </div>
               <div className="stats-card" style={{ background: "linear-gradient(135deg, #fbdf93ff 0%, #b8f557ff 100%)" }}>
-                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Coupe Area</p>
+                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>
+                  {selectedCoupe ? "Coupe Area" : "Boundary Area"}
+                </p>
                 <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
-                  {(Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
+                  {(Number(selectedCoupe ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
                 </h3>
                 <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
-                  {Number(coverageData.coupe_area_sq_m).toLocaleString()} m²
+                  {Number(selectedCoupe ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m).toLocaleString()} m²
                 </p>
               </div>
               <div className="stats-card" style={{ background: "linear-gradient(135deg, #fec14fff 0%, #6fb834ff 100%)" }}>
@@ -654,7 +694,10 @@ useEffect(() => {
                   <span style={{ backgroundColor: "#a5e06eff", color: "white", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}>
                     {patrols.length}
                   </span>
-                  {language === "gu" ? "આ કૂપની અંદરના પેટ્રોલ" : "Patrols Inside This Coupe"}
+                  {language === "gu" 
+                    ? `આ ${selectedCoupe ? "કૂપ" : "બાઉન્ડ્રી"}ની અંદરના પેટ્રોલ`
+                    : `Patrols Inside This ${selectedCoupe ? "Coupe" : "Boundary"}`
+                  }
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "15px" }}>
                   {patrols.map((patrol, index) => (
@@ -687,20 +730,21 @@ useEffect(() => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </div> 
             ) : (
               <div style={{ textAlign: "center", padding: "40px", backgroundColor: "#fff", borderRadius: "12px", border: "2px dashed #e2e8f0" }}>
                 <div style={{ width: "60px", height: "60px", backgroundColor: "#fed7d7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#e53e3e", fontSize: "24px" }}>⚡</div>
                 <p style={{ color: "#718096", fontSize: "16px", fontWeight: "500" }}>
-                  {language === "gu" ? "આ કૂપની અંદર કોઈ પેટ્રોલ મળ્યા નથી" : "No patrols found inside this coupe"}
+                  {language === "gu" 
+                    ? `આ ${selectedCoupe ? "કૂપ" : "બાઉન્ડ્રી"}ની અંદર કોઈ પેટ્રોલ મળ્યા નથી`
+                    : `No patrols found inside this ${selectedCoupe ? "coupe" : "boundary"}`
+                  }
                 </p>
               </div>
             )}
           </div>
         )}
-        
       </div>
-      
     </div>
   );
 };

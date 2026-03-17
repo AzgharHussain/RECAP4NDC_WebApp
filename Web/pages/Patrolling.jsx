@@ -2344,7 +2344,7 @@ useEffect(() => {
             >
               {language === "gu" ? "ફિલ્ટર સાફ કરો" : "Clear Filters"}
             </Button>
-            <Button 
+            {/* <Button 
               onClick={() => {
                 setShowMapRoute(!showmaproute);
               }}
@@ -2356,7 +2356,7 @@ useEffect(() => {
               }}
             >
               {language === "gu" ? "બીટ પેટ્રોલ કવરેજ" : "Coupe Patrol Coverage"}
-            </Button>
+            </Button> */}
             
             
 

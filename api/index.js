@@ -242,6 +242,7 @@ const userlocations = require('./routers/userlocations');
 const changendvi = require('./routers/changendvi');
 const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 const gisupload = require('./routers/gisupload');
+const gisupload1 = require('./routers/gis-upload1');
 const forestLoginRoutes = require('./routers/forestLogin');
 
 const TEMP_SAVEUSER_TOKEN = "RECAP4NDC_TEMP_TOKEN";
@@ -362,6 +363,74 @@ const loginSchema = Joi.object({
 
 }).unknown(false); // Reject unknown fields
 
+app.post("/api/changepassword", verifyJwt, async (req, res) => {
+  try {
+    console.log("Change password request received");
+
+    const { username, currentPassword, newPassword } = req.body;
+
+    console.log(`Password change attempt for user: ${username}`);
+
+    // Verify the user exists and get current password hash
+    const [users] = await sequelize.query(
+      `SELECT username, password FROM admin WHERE username = '${username}'`,
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
+    }
+
+    const user = users[0];
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: "Current password is incorrect"
+      });
+    }
+
+    // Check if new password is same as old password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        error: "New password must be different from current password"
+      });
+    }
+
+    // Hash the new password
+    const saltRounds = 10;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password in database
+    await sequelize.query(
+      `UPDATE admin SET password = '${hashedNewPassword}' WHERE username = '${username}'`,
+    );
+
+    // Log the password change (optional, for audit trail)
+    console.log(`Password changed successfully for user: ${username}`);
+
+    return res.json({
+      success: true,
+      message: "Password changed successfully"
+    });
+
+  } catch (err) {
+    console.error("Change password error:", err);
+    
+    return res.status(500).json({
+      success: false,
+      error: "Internal Server Error"
+    });
+  }
+});
+
 app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
 
   try {
@@ -386,7 +455,6 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
     // Query database
     const [result] = await sequelize.query(
       `SELECT username, password FROM admin WHERE username = '${username}'`,
-        
     );
 
     if (result.length === 0) {
@@ -398,8 +466,15 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
 
     const admin = result[0];
 
-   
-   
+    // Compare password with bcrypt
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid admin credentials"
+      });
+    }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -674,6 +749,7 @@ app.use('/api', userlocations);
 app.use('/api', changendvi);
 app.use('/api', beat_patrol_coverage);
 app.use('/api', gisupload);
+app.use('/api', gisupload1);
 app.use('/api', forestLoginRoutes);
 
 // Error handling middleware
