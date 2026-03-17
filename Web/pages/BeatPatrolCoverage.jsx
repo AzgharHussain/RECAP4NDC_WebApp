@@ -67,17 +67,29 @@ const PatrolLoader = () => (
 );
 
 const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
-  // Selection states
-  const [selectedCoupe, setSelectedCoupe] = useState(null);
-  const [selectedBoundary, setSelectedBoundary] = useState(null);
+  // Beat selection states
+  const [selectedDivision, setSelectedDivision] = useState(null);
+  const [selectedRange, setSelectedRange] = useState(null);
+  const [selectedRound, setSelectedRound] = useState(null);
+  const [selectedBeat, setSelectedBeat] = useState(null);
   
-  // Data states
-  const [coupes, setCoupes] = useState([]);
+  // Data states for dropdowns
+  const [divisions, setDivisions] = useState([]);
+  const [ranges, setRanges] = useState([]);
+  const [rounds, setRounds] = useState([]);
+  const [beats, setBeats] = useState([]);
+  
+  // Boundary selection
+  const [selectedBoundary, setSelectedBoundary] = useState(null);
   const [boundaries, setBoundaries] = useState([]);
+  
   const [selectedMonth, setSelectedMonth] = useState("");
   
   const [loading, setLoading] = useState({
-    coupes: false,
+    divisions: false,
+    ranges: false,
+    rounds: false,
+    beats: false,
     boundaries: false,
     coverage: false,
     patrol: false
@@ -94,6 +106,180 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   const [setshowloader, setSetShowLoader] = useState(false);
   const [imageRotation, setImageRotation] = useState(0);
   const [imageScale, setImageScale] = useState(1);
+
+  // Selection mode: 'beat' or 'boundary'
+  const [selectionMode, setSelectionMode] = useState('beat'); // 'beat' or 'boundary'
+
+  // Fetch divisions (Beat Coupe)
+  const fetchDivisions = async () => {
+    setLoading(prev => ({ ...prev, divisions: true }));
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${API_BASE_URL}/api/beat-coupe-divisions`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      // Handle the response format from the API
+      const divisionsData = response.data[0] || response.data || [];
+      const divisionList = divisionsData.map(item => ({
+        value: item.division,
+        label: item.division
+      }));
+      setDivisions(divisionList);
+    } catch (error) {
+      console.error("Error fetching divisions:", error);
+      alert("Failed to load divisions list");
+    } finally {
+      setLoading(prev => ({ ...prev, divisions: false }));
+    }
+  };
+
+  // Fetch ranges based on selected division
+// Fetch ranges based on selected division
+const fetchRanges = async (division) => {
+  if (!division) return;
+  
+  setLoading(prev => ({ ...prev, ranges: true }));
+  setSelectedRange(null);
+  setSelectedRound(null);
+  setSelectedBeat(null);
+  setRounds([]);
+  setBeats([]);
+  
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${API_BASE_URL}/api/beat-coupe-ranges`,
+      { division: division.value },
+      {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    // Handle the response correctly - it might be an array directly or have data property
+    let rangesData = [];
+    if (Array.isArray(response.data)) {
+      rangesData = response.data;
+    } else if (response.data && Array.isArray(response.data.data)) {
+      rangesData = response.data.data;
+    } else if (response.data && Array.isArray(response.data[0])) {
+      rangesData = response.data[0];
+    }
+
+    const rangeList = rangesData.map(item => ({
+      value: item.range,
+      label: item.range
+    }));
+    setRanges(rangeList);
+  } catch (error) {
+    console.error("Error fetching ranges:", error);
+    alert("Failed to load ranges");
+  } finally {
+    setLoading(prev => ({ ...prev, ranges: false }));
+  }
+};
+
+// Fetch rounds based on selected division and range
+const fetchRounds = async (division, range) => {
+  if (!division || !range) return;
+  
+  setLoading(prev => ({ ...prev, rounds: true }));
+  setSelectedRound(null);
+  setSelectedBeat(null);
+  setBeats([]);
+  
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${API_BASE_URL}/api/beat-coupe-rounds`,
+      { 
+        division: division.value,
+        range: range.value 
+      },
+      {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    // Handle the response correctly
+    let roundsData = [];
+    if (Array.isArray(response.data)) {
+      roundsData = response.data;
+    } else if (response.data && Array.isArray(response.data.data)) {
+      roundsData = response.data.data;
+    } else if (response.data && Array.isArray(response.data[0])) {
+      roundsData = response.data[0];
+    }
+
+    const roundList = roundsData.map(item => ({
+      value: item.round,
+      label: item.round
+    }));
+    setRounds(roundList);
+  } catch (error) {
+    console.error("Error fetching rounds:", error);
+    alert("Failed to load rounds");
+  } finally {
+    setLoading(prev => ({ ...prev, rounds: false }));
+  }
+};
+
+// Fetch beats based on selected division, range, and round
+const fetchBeats = async (division, range, round) => {
+  if (!division || !range || !round) return;
+  
+  setLoading(prev => ({ ...prev, beats: true }));
+  setSelectedBeat(null);
+  
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${API_BASE_URL}/api/beat-coupe-beats`,
+      { 
+        division: division.value,
+        range: range.value,
+        round: round.value
+      },
+      {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    // Handle the response correctly
+    let beatsData = [];
+    if (Array.isArray(response.data)) {
+      beatsData = response.data;
+    } else if (response.data && Array.isArray(response.data.data)) {
+      beatsData = response.data.data;
+    } else if (response.data && Array.isArray(response.data[0])) {
+      beatsData = response.data[0];
+    }
+
+    const beatList = beatsData.map(item => ({
+      value: item.beat,
+      label: item.beat
+    }));
+    setBeats(beatList);
+  } catch (error) {
+    console.error("Error fetching beats:", error);
+    alert("Failed to load beats");
+  } finally {
+    setLoading(prev => ({ ...prev, beats: false }));
+  }
+};
+
 
   // Fetch patrol boundaries
   const fetchPatrolBoundaries = async () => {
@@ -122,50 +308,81 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   };
 
   useEffect(() => {
+    fetchDivisions();
     fetchPatrolBoundaries();
   }, []);
 
-  // Fetch coupes
-  useEffect(() => {
-    const fetchCoupes = async () => {
-      setLoading(prev => ({ ...prev, coupes: true }));
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(
-          `${API_BASE_URL}/api/coupe-divisions`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
+  // Handle division change
+  const handleDivisionChange = (selectedOption) => {
+    setSelectedDivision(selectedOption);
+    setSelectedRange(null);
+    setSelectedRound(null);
+    setSelectedBeat(null);
+    setRanges([]);
+    setRounds([]);
+    setBeats([]);
+    resetData();
+    
+    if (selectedOption) {
+      fetchRanges(selectedOption);
+    }
+  };
 
-        const divisions = response.data[0] || [];
-        const coupeList = divisions.map(item => ({
-          value: item.division,
-          label: item.division
-        }));
-        setCoupes(coupeList);
-      } catch (error) {
-        console.error("Error fetching coupes:", error);
-        alert("Failed to load coupe list");
-      } finally {
-        setLoading(prev => ({ ...prev, coupes: false }));
-      }
-    };
+  // Handle range change
+  const handleRangeChange = (selectedOption) => {
+    setSelectedRange(selectedOption);
+    setSelectedRound(null);
+    setSelectedBeat(null);
+    setRounds([]);
+    setBeats([]);
+    resetData();
+    
+    if (selectedOption && selectedDivision) {
+      fetchRounds(selectedDivision, selectedOption);
+    }
+  };
 
-    fetchCoupes();
-  }, []);
+  // Handle round change
+  const handleRoundChange = (selectedOption) => {
+    setSelectedRound(selectedOption);
+    setSelectedBeat(null);
+    setBeats([]);
+    resetData();
+    
+    if (selectedOption && selectedDivision && selectedRange) {
+      fetchBeats(selectedDivision, selectedRange, selectedOption);
+    }
+  };
 
-  // Handle coupe change
-  const handleCoupeChange = (selectedOption) => {
-    setSelectedCoupe(selectedOption);
-    setSelectedBoundary(null); // Clear boundary when coupe is selected
+  // Handle beat change
+  const handleBeatChange = (selectedOption) => {
+    setSelectedBeat(selectedOption);
     resetData();
   };
 
   // Handle boundary change
   const handleBoundaryChange = (selectedOption) => {
     setSelectedBoundary(selectedOption);
-    setSelectedCoupe(null); // Clear coupe when boundary is selected
+    if (selectedOption) {
+      // Clear beat selection when boundary is selected
+      setSelectedDivision(null);
+      setSelectedRange(null);
+      setSelectedRound(null);
+      setSelectedBeat(null);
+      setSelectionMode('boundary');
+    }
+    resetData();
+  };
+
+  // Toggle selection mode
+  const toggleSelectionMode = (mode) => {
+    setSelectionMode(mode);
+    // Clear all selections when switching modes
+    setSelectedDivision(null);
+    setSelectedRange(null);
+    setSelectedRound(null);
+    setSelectedBeat(null);
+    setSelectedBoundary(null);
     resetData();
   };
 
@@ -189,8 +406,12 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
 
   // Fetch coverage data
   const fetchCoverageData = async () => {
-    if (!selectedCoupe && !selectedBoundary) {
-      alert("Please select either a Coupe or a Boundary");
+    if (selectionMode === 'beat' && !selectedBeat) {
+      alert("Please complete the beat selection (Division → Range → Round → Beat)");
+      return;
+    }
+    if (selectionMode === 'boundary' && !selectedBoundary) {
+      alert("Please select a Boundary");
       return;
     }
     if (!selectedMonth) {
@@ -204,14 +425,20 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     try {
       const token = localStorage.getItem("token");
       
-      // Determine which API to call based on selection
-      const endpoint = selectedCoupe 
+      // Determine which API to call based on selection mode
+      const endpoint = selectionMode === 'beat'
         ? `${API_BASE_URL}/api/coupe-patrol-coverage`
         : `${API_BASE_URL}/api/boundary-patrol-coverage`;
       
-      const payload = selectedCoupe
-        ? { coupe_table: selectedCoupe.value, month: selectedMonth }
-        : { boundary: selectedBoundary.label, month: selectedMonth };
+      const payload = selectionMode === 'beat'
+        ? { 
+            coupe_table: selectedBeat.value, 
+            month: selectedMonth 
+          }
+        : { 
+            boundary: selectedBoundary.label, 
+            month: selectedMonth 
+          };
 
       const response = await axios.post(
         endpoint,
@@ -279,8 +506,8 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
 
     const summaryData = [
       {
-        [selectedCoupe ? "Coupe" : "Boundary"]: selectedCoupe ? selectedCoupe.label : selectedBoundary.label,
-        "Area (sq m)": selectedCoupe ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m,
+        [selectionMode === 'beat' ? "Beat" : "Boundary"]: selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
+        "Area (sq m)": selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m,
         "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
         "Coverage %": coverageData.coverage_percentage,
       },
@@ -307,8 +534,8 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
     }
 
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
-    const fileName = selectedCoupe 
-      ? `${selectedCoupe.value}_patrol_coverage.xlsx`
+    const fileName = selectionMode === 'beat'
+      ? `${selectedBeat.value}_patrol_coverage.xlsx`
       : `${selectedBoundary.label}_patrol_coverage.xlsx`;
     
     saveAs(
@@ -363,6 +590,9 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
         .image-card:hover { border-color: #c9e142ff; transform: scale(1.05); }
         .modal-overlay { animation: fadeIn 0.3s ease-out; }
         .modal-content { animation: slideIn 0.3s ease-out; }
+        .mode-toggle { display: flex; gap: 10px; margin-bottom: 20px; }
+        .mode-button { padding: 10px 20px; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
+        .mode-button.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: transparent; }
       `}</style>
 
       {/* Image Preview Modal - Same as before */}
@@ -532,50 +762,126 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
           </div>
         </div>
 
+        {/* Mode Toggle */}
+        <div className="mode-toggle">
+          <button
+            className={`mode-button ${selectionMode === 'beat' ? 'active' : ''}`}
+            onClick={() => toggleSelectionMode('beat')}
+          >
+            {language === "gu" ? "બીટ દ્વારા" : "By Beat"}
+          </button>
+          <button
+            className={`mode-button ${selectionMode === 'boundary' ? 'active' : ''}`}
+            onClick={() => toggleSelectionMode('boundary')}
+          >
+            {language === "gu" ? "બાઉન્ડ્રી દ્વારા" : "By Boundary"}
+          </button>
+        </div>
+
         {/* Selection Card */}
         <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "25px", marginBottom: "25px", border: "1px solid #e2e8f0", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)" }}>
-          <div style={{  display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
-            {/* Coupe Dropdown */}
-            <div style={{ width: "300px" }}>
-              <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                {language === "gu" ? "કૂપ" : "Coupe"}
-              </label>
-              <Select
-                value={selectedCoupe}
-                onChange={handleCoupeChange}
-                options={coupes}
-                isSearchable
-                isClearable
-                placeholder={loading.coupes ? "Loading coupes..." : "Select Coupe..."}
-                isLoading={loading.coupes}
-                styles={customSelectStyles}
-                noOptionsMessage={() => "No coupes available"}
-                isDisabled={!!selectedBoundary} // Disable if boundary is selected
-              />
-            </div>
-            <div>or</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+            
+            {selectionMode === 'beat' ? (
+              /* Beat Selection (Division → Range → Round → Beat) */
+              <>
+                {/* Division Dropdown */}
+                <div style={{ width: "200px" }}>
+                  <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
+                    {language === "gu" ? "ડિવિઝન" : "Division"}
+                  </label>
+                  <Select
+                    value={selectedDivision}
+                    onChange={handleDivisionChange}
+                    options={divisions}
+                    isSearchable
+                    isClearable
+                    placeholder={loading.divisions ? "Loading..." : "Select Division"}
+                    isLoading={loading.divisions}
+                    styles={customSelectStyles}
+                    noOptionsMessage={() => "No divisions available"}
+                  />
+                </div>
 
-            {/* Boundary Dropdown */}
-            <div style={{ width: "300px" }}>
-              <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                {language === "gu" ? "બાઉન્ડ્રી" : "Boundary"}
-              </label>
-              <Select
-                value={selectedBoundary}
-                onChange={handleBoundaryChange}
-                options={boundaries}
-                isSearchable
-                isClearable
-                placeholder={loading.boundaries ? "Loading boundaries..." : "Select Boundary..."}
-                isLoading={loading.boundaries}
-                styles={customSelectStyles}
-                noOptionsMessage={() => "No boundaries available"}
-                isDisabled={!!selectedCoupe} // Disable if coupe is selected
-              />
-            </div>
+                {/* Range Dropdown */}
+                <div style={{ width: "200px" }}>
+                  <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
+                    {language === "gu" ? "રેંજ" : "Range"}
+                  </label>
+                  <Select
+                    value={selectedRange}
+                    onChange={handleRangeChange}
+                    options={ranges}
+                    isSearchable
+                    isClearable
+                    placeholder={loading.ranges ? "Loading..." : "Select Range"}
+                    isLoading={loading.ranges}
+                    styles={customSelectStyles}
+                    noOptionsMessage={() => "No ranges available"}
+                    isDisabled={!selectedDivision}
+                  />
+                </div>
+
+                {/* Round Dropdown */}
+                <div style={{ width: "200px" }}>
+                  <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
+                    {language === "gu" ? "રાઉન્ડ" : "Round"}
+                  </label>
+                  <Select
+                    value={selectedRound}
+                    onChange={handleRoundChange}
+                    options={rounds}
+                    isSearchable
+                    isClearable
+                    placeholder={loading.rounds ? "Loading..." : "Select Round"}
+                    isLoading={loading.rounds}
+                    styles={customSelectStyles}
+                    noOptionsMessage={() => "No rounds available"}
+                    isDisabled={!selectedRange}
+                  />
+                </div>
+
+                {/* Beat Dropdown */}
+                <div style={{ width: "200px" }}>
+                  <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
+                    {language === "gu" ? "બીટ" : "Beat"}
+                  </label>
+                  <Select
+                    value={selectedBeat}
+                    onChange={handleBeatChange}
+                    options={beats}
+                    isSearchable
+                    isClearable
+                    placeholder={loading.beats ? "Loading..." : "Select Beat"}
+                    isLoading={loading.beats}
+                    styles={customSelectStyles}
+                    noOptionsMessage={() => "No beats available"}
+                    isDisabled={!selectedRound}
+                  />
+                </div>
+              </>
+            ) : (
+              /* Boundary Selection */
+              <div style={{ width: "300px" }}>
+                <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
+                  {language === "gu" ? "બાઉન્ડ્રી" : "Boundary"}
+                </label>
+                <Select
+                  value={selectedBoundary}
+                  onChange={handleBoundaryChange}
+                  options={boundaries}
+                  isSearchable
+                  isClearable
+                  placeholder={loading.boundaries ? "Loading boundaries..." : "Select Boundary..."}
+                  isLoading={loading.boundaries}
+                  styles={customSelectStyles}
+                  noOptionsMessage={() => "No boundaries available"}
+                />
+              </div>
+            )}
 
             {/* Month Picker */}
-            <div style={{ width: "300px" }}>
+            <div style={{ width: "200px" }}>
               <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
                 {language === "gu" ? "મહિનો" : "Month"}
               </label>
@@ -600,7 +906,12 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
               <button
                 className="glow-button"
                 onClick={fetchCoverageData}
-                disabled={(!selectedCoupe && !selectedBoundary) || !selectedMonth || loading.coverage}
+                disabled={
+                  (selectionMode === 'beat' && !selectedBeat) ||
+                  (selectionMode === 'boundary' && !selectedBoundary) ||
+                  !selectedMonth || 
+                  loading.coverage
+                }
                 style={{ fontFamily: "arial", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 24px", marginLeft: "auto" }}
               >
                 {loading.coverage ? (
@@ -641,21 +952,21 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", marginBottom: "30px" }}>
               <div className="stats-card">
                 <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>
-                  {selectedCoupe ? "Coupe" : "Boundary"}
+                  {selectionMode === 'beat' ? "Beat" : "Boundary"}
                 </p>
                 <div style={{ display: "inline-block", padding: "8px 20px", borderRadius: "20px", backgroundColor: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.3)", fontSize: "18px", fontWeight: "600", backdropFilter: "blur(10px)" }}>
-                  {selectedCoupe ? selectedCoupe.label : selectedBoundary.label}
+                  {selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label}
                 </div>
               </div>
               <div className="stats-card" style={{ background: "linear-gradient(135deg, #fbdf93ff 0%, #b8f557ff 100%)" }}>
                 <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>
-                  {selectedCoupe ? "Coupe Area" : "Boundary Area"}
+                  {selectionMode === 'beat' ? "Beat Area" : "Boundary Area"}
                 </p>
                 <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
-                  {(Number(selectedCoupe ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
+                  {(Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m) / 1000000).toFixed(2)} km²
                 </h3>
                 <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
-                  {Number(selectedCoupe ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m).toLocaleString()} m²
+                  {Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m).toLocaleString()} m²
                 </p>
               </div>
               <div className="stats-card" style={{ background: "linear-gradient(135deg, #fec14fff 0%, #6fb834ff 100%)" }}>
@@ -695,8 +1006,8 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
                     {patrols.length}
                   </span>
                   {language === "gu" 
-                    ? `આ ${selectedCoupe ? "કૂપ" : "બાઉન્ડ્રી"}ની અંદરના પેટ્રોલ`
-                    : `Patrols Inside This ${selectedCoupe ? "Coupe" : "Boundary"}`
+                    ? `આ ${selectionMode === 'beat' ? "બીટ" : "બાઉન્ડ્રી"}ની અંદરના પેટ્રોલ`
+                    : `Patrols Inside This ${selectionMode === 'beat' ? "Beat" : "Boundary"}`
                   }
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "15px" }}>
@@ -736,8 +1047,8 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
                 <div style={{ width: "60px", height: "60px", backgroundColor: "#fed7d7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#e53e3e", fontSize: "24px" }}>⚡</div>
                 <p style={{ color: "#718096", fontSize: "16px", fontWeight: "500" }}>
                   {language === "gu" 
-                    ? `આ ${selectedCoupe ? "કૂપ" : "બાઉન્ડ્રી"}ની અંદર કોઈ પેટ્રોલ મળ્યા નથી`
-                    : `No patrols found inside this ${selectedCoupe ? "coupe" : "boundary"}`
+                    ? `આ ${selectionMode === 'beat' ? "બીટ" : "બાઉન્ડ્રી"}ની અંદર કોઈ પેટ્રોલ મળ્યા નથી`
+                    : `No patrols found inside this ${selectionMode === 'beat' ? "beat" : "boundary"}`
                   }
                 </p>
               </div>

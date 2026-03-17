@@ -203,10 +203,6 @@ router.post("/coupe-patrol-coverage", verifyJwt, async (req, res) => {
 
   try {
 
-    // convert division name → table name
-    coupe_table = coupe_table.toLowerCase().replace(/\s+/g, "_") + "_coupe";
-
-    // convert YYYY-MM → YYYY-MM-01
     const month_start = `${month}-01`;
 
     const query = `
@@ -214,7 +210,8 @@ WITH coupe AS (
     SELECT
         ST_Union(geom) AS coupe_geom,
         ST_Area(ST_Union(geom)::geography) AS coupe_area
-    FROM public."${coupe_table}"
+    FROM public.beat_witheeee22
+    WHERE beat = :coupe_table
 ),
 
 patrol_lines AS (
@@ -270,29 +267,26 @@ unioned AS (
 coverage_calc AS (
     SELECT
         c.coupe_area,
-        ST_Area(u.union_geom::geography) AS patrol_area
+        COALESCE(ST_Area(u.union_geom::geography),0) AS patrol_area
     FROM coupe c
-    CROSS JOIN unioned u
+    LEFT JOIN unioned u ON TRUE
 )
 
 SELECT
-    '${coupe_table}' AS coupe_table,
-
+    :coupe_table AS coupe_table,
     ROUND(cc.coupe_area::numeric,2) AS coupe_area_sq_m,
-
     ROUND(cc.patrol_area::numeric,2) AS patrol_area_sq_m,
-
-    ROUND(
-        ((cc.patrol_area::numeric / cc.coupe_area::numeric) * 100),
-        2
-    ) AS coverage_percentage,
+   ROUND(
+    (cc.patrol_area / NULLIF(cc.coupe_area,0) * 100)::numeric,
+    2
+) AS coverage_percentage,
 
     json_agg(
         DISTINCT jsonb_build_object(
             'patrol_id', cb.patrol_id,
             'patrol_geom', cb.patrol_geom_text
         )
-    ) AS patrols_covering_coupe
+    ) FILTER (WHERE cb.patrol_id IS NOT NULL) AS patrols_covering_coupe
 
 FROM coverage_calc cc
 LEFT JOIN clipped_buffers cb ON TRUE
@@ -300,7 +294,10 @@ GROUP BY cc.coupe_area, cc.patrol_area;
 `;
 
     const result = await sequelize.query(query, {
-      replacements: { month_start },
+      replacements: {
+        month_start,
+        coupe_table
+      },
       type: sequelize.QueryTypes.SELECT
     });
 

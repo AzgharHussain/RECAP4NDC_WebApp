@@ -1179,5 +1179,110 @@ router.post('/coupe-beats', async (req, res) => {
   }
 });
 
+// Get all divisions
+router.get('/beat-coupe-divisions',  verifyJwt,async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT division
+      FROM public.beat_witheeee22
+      ORDER BY division
+    `;
+    
+    const result = await sequelize.query(query);
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching divisions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get ranges based on selected division - POST with body
+router.post('/beat-coupe-ranges', async (req, res) => {
+  try {
+    const { division } = req.body;
+    
+    if (!division) {
+      return res.status(400).json({ error: 'division is required' });
+    }
+
+    const query = `
+      SELECT DISTINCT range
+      FROM public.beat_witheeee22
+      WHERE division = ?
+      ORDER BY range
+    `;
+    
+    // Using parameterized query with replacements
+    const result = await sequelize.query(query, {
+      replacements: [division],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching ranges:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/beat-coupe-rounds', async (req, res) => {
+  try {
+    const { division, range } = req.body;
+    
+    if (!division || !range) {
+      return res.status(400).json({ error: 'division and range are required' });
+    }
+
+    const query = `
+      SELECT DISTINCT round
+      FROM public.beat_witheeee22
+      WHERE division = ?
+      AND range = ?
+      ORDER BY round
+    `;
+    
+    // Using parameterized query with replacements
+    const result = await sequelize.query(query, {
+      replacements: [division, range],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching beats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get beats based on selected division and range - POST with body
+router.post('/beat-coupe-beats', async (req, res) => {
+  try {
+    const { division, range , round} = req.body;
+    
+    if (!division || !range) {
+      return res.status(400).json({ error: 'division and range are required' });
+    }
+
+    const query = `
+      SELECT DISTINCT beat
+      FROM public.beat_witheeee22
+      WHERE division = ?
+      AND range = ? AND round = ?
+      ORDER BY beat
+    `;
+    
+    // Using parameterized query with replacements
+    const result = await sequelize.query(query, {
+      replacements: [division, range, round],
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching beats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 module.exports = router;
