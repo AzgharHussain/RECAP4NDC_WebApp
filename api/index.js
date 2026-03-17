@@ -21,7 +21,7 @@ const crypto = require('crypto');
 const rateLimit = require("express-rate-limit");
 const forestRoutes = require("./routers/forest-login");
 const app = express();
-
+app.set('trust proxy', 1);
 const startNdviScheduler = require("./scheduler/ndviNotificationScheduler");
 
 
