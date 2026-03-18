@@ -142,9 +142,11 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
     } else {
       // Insert new user
       const [result] = await sequelize.query(
-        `INSERT INTO public.government_department_users (username) VALUES ($1, NOW()) RETURNING user_id, username`,
-        { bind: [trimmedUsername] }
-      );
+  `INSERT INTO public.government_department_users (username) 
+   VALUES ($1) 
+   RETURNING user_id, username`,
+  { bind: [trimmedUsername] }
+);
       user = result[0];
       isNewUser = true;
       console.log('New user created:', user);

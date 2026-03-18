@@ -963,10 +963,10 @@ const fetchBeats = async (division, range, round) => {
                   {selectionMode === 'beat' ? "Beat Area" : "Boundary Area"}
                 </p>
                 <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
-                  {(Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m) / 1000000).toFixed(2)} km²
+                  {(Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
                 </h3>
                 <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
-                  {Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m).toLocaleString()} m²
+                  {Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m).toLocaleString()} m²
                 </p>
               </div>
               <div className="stats-card" style={{ background: "linear-gradient(135deg, #fec14fff 0%, #6fb834ff 100%)" }}>
