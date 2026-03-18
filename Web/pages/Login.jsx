@@ -289,23 +289,25 @@ function Login() {
     }
   };
 
-const saveUser = async (username) => {
+const saveUser = async (username, password) => {
   try {
     console.log("📝 Attempting to save user:", username);
     
     // Validate input
-    if (!username) {
-      console.error("❌ Username is empty or invalid");
+    if (!username || !password) {
+      console.error("❌ Username or password is empty or invalid");
       return null;
     }
 
     // Log the request details
     console.log("Sending request to:", `${API_BASE_URL}/api/saveuser`);
-    console.log("Request payload:", { username: username });
+    console.log("Request payload:", { username: username, password: password ? "********" : "No password provided" });
 
     const response = await axios.post(
       `${API_BASE_URL}/api/saveuser`,
-      { username: username },  // Send as object with trimmed username
+      { username: username,
+        password: password
+      },  // Send as object with trimmed username
       {
         headers: {
           'Content-Type': 'application/json',
@@ -314,7 +316,9 @@ const saveUser = async (username) => {
         },
         timeout: 10000 // 10 second timeout
       }
-    );
+    );  
+       
+    
 
     console.log("✅ Save user response received:", {
       status: response.status,
@@ -458,7 +462,7 @@ const saveUser = async (username) => {
       localStorage.setItem("authToken", "forest_authenticated");
 
       // Save user to backend
-      await saveUser(userId);
+      await saveUser(userId, password);
 
       console.log("✅ User session created successfully");
       
