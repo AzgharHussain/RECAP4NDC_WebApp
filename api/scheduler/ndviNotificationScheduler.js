@@ -3,7 +3,7 @@ const { sequelize } = require("../config/r_quire");
 
 module.exports = function startNdviScheduler(admin) {
 
-  cron.schedule("*/10 * * * *", async () => {
+  cron.schedule("*/1000 * * * *", async () => {
 
     console.log("🌿 Running NDVI notification scheduler...");
 

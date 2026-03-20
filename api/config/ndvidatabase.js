@@ -43,6 +43,13 @@ const testConnection = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ Database connection established successfully.');
+    process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION:', err);
+});
     return true;
   } catch (error) {
     console.error('❌ Unable to connect to the database:', error);
