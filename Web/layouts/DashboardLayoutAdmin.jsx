@@ -266,9 +266,9 @@ useEffect(() => {
                                     <img src={giz} alt="giz logo" style={{width:'160px'}}></img>
                             </div>
                             <div className="l_3">
-                                {/* <a href="#!" target="_blank">
-                                    </a> */}
-                                    <img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img>
+                                <a href="/" >
+                                    
+                                    <img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img></a>
                             </div>
                             {/* <div>
 <button
@@ -327,37 +327,51 @@ useEffect(() => {
      
    {isAdminMenuOpen && (
            <div className="admin-dropdown">
-             <div className="admin-dropdown-section">
-               <button
-                 className={`lang-chip ${language === "en" ? "active" : ""}`}
-                 onClick={() => {
-                   toggleLanguage("en");
-                   setIsAdminMenuOpen(false);
-                 }}
-               >
-                 EN
-               </button>
-               <button
-                 className={`lang-chip ${language === "gu" ? "active" : ""}`}
-                 onClick={() => {
-                   toggleLanguage("gu");
-                   setIsAdminMenuOpen(false);
-                 }}
-               >
-                 જીયુ
-               </button>
-             </div>
+             
              
              
            </div>
          )}
             {isDropdownOpen && (
-         <div className="dropdown-menu">
-          <a href="/changepassword">Change Password</a>
-           <div className="username">
-           <b>{username}</b>
-           {isAdmin && <span className="admin-badge"> (Admin)</span>}
-         </div>
+      <div className="dropdown-menu">
+        <div className="username">
+        <b>{username}</b>
+        {isAdmin && <span className="admin-badge"> (Admin)</span>}
+      </div>
+      <a href="/changepassword">Change Password</a>
+
+      <div className="language-section">
+      <div className="language-label">Change Language</div>
+      <div className="language-buttons">
+  <label className={`lang-radio ${language === "en" ? "active" : ""}`}>
+    <input
+      type="radio"
+      name="language"
+      value="en"
+      checked={language === "en"}
+      onChange={() => {
+        toggleLanguage("en");
+        // setIsDropdownOpen(false);
+      }}
+    />
+    <span className="radio-label">English</span>
+  </label>
+  
+  <label className={`lang-radio ${language === "gu" ? "active" : ""}`}>
+    <input
+      type="radio"
+      name="language"
+      value="gu"
+      checked={language === "gu"}
+      onChange={() => {
+        toggleLanguage("gu");
+        // setIsDropdownOpen(false);
+      }}
+    />
+    <span className="radio-label">ગુજરાતી</span>
+  </label>
+</div>
+    </div>
          
            <button
              className="logout-btn dropdown-item"

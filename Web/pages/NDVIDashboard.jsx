@@ -88,6 +88,7 @@ import {
   KeyboardArrowUp
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
+import { useLanguage } from "../context/LanguageContext"; // Add this import
 
 // Register ChartJS components
 ChartJS.register(
@@ -103,6 +104,278 @@ ChartJS.register(
 );
 
 // ============================================
+// Language texts - Add this constant
+// ============================================
+const dashboardText = {
+  en: {
+    // Header
+    forestCoverMonitoring: "Forest Cover Change Monitoring System",
+    realTimeAnalysis: "Real-time NDVI Change Analysis Dashboard",
+    exportPDF: "Export PDF",
+    
+    // Hierarchy Navigation
+    forestHierarchy: "Forest Hierarchy Navigation",
+    
+    // Date Range Selection
+    selectDateRange: "Select Date Range",
+    allDivisionsMaxMonths: "(Maximum 6 months for All Divisions)",
+    maxMonths: "(Maximum 12 months)",
+    startDate: "Start Date",
+    endDate: "End Date",
+    submit: "Submit",
+    
+    // Error messages
+    errorAllDivisionsRange: 'For "All Divisions", date range cannot exceed 6 months. Please select a shorter range.',
+    errorRangeExceed: 'Date range cannot exceed 12 months. Please select a shorter range.',
+    
+    // Loading states
+    loadingData: "Loading Data...",
+    fetchingCoupeArea: "Fetching coupe area...",
+    calculatingDegradedArea: "Calculating degraded area...",
+    loadingNDVIChange: "Loading NDVI change data for multiple months...",
+    
+    // Area Analysis
+    areaAnalysis: "Area Analysis",
+    totalArea: "Total Area",
+    afforestedArea: "Afforested Area",
+    degradedArea: "Degraded Area",
+    latest: "(Latest)",
+    
+    // Summary Cards
+    degradedAreaLatest: "Degraded Area (Latest)",
+    afforestedAreaLatest: "Afforested Area (Latest)",
+    recordsWithNotes: "Records with Notes",
+    recordsWithImages: "Records with Images",
+    
+    // Division-wise Breakdown
+    divisionWiseBreakdown: "Division-wise Breakdown",
+    
+    // Data Table Section
+    detailedDataTable: "1. Detailed Data Table",
+    searchPlaceholder: "Search by ID, status, coordinates, notes, division...",
+    showDivisionColumn: "Show Division Column",
+    onlyWithNotes: "Only with Notes",
+    onlyWithImages: "Only with Images",
+    clearFilters: "CLEAR FILTERS",
+    
+    // Table Headers
+    division: "Division",
+    range: "Range",
+    round: "Round",
+    beat: "Beat",
+    status: "Status",
+    ndviChange: "NDVI Change",
+    category: "Category",
+    location: "Location",
+    areaKm: "Area (km²)",
+    hasNote: "Has Note",
+    hasImage: "Has Image",
+    actions: "Actions",
+    lat: "Lat",
+    lon: "Lon",
+    
+    // Table Actions
+    details: "Details",
+    yes: "Yes",
+    no: "No",
+    
+    // Empty State
+    noRecordsFound: "No records found",
+    adjustFilters: "Try adjusting your filters",
+    noDataAvailable: "No data available for the selected criteria",
+    
+    // Pagination
+    showing: "Showing",
+    to: "to",
+    of: "of",
+    records: "records",
+    page: "Page",
+    previous: "Previous",
+    next: "Next",
+    
+    // Monthly Overview
+    monthlyOverview: "2. Monthly Overview",
+    degraded: "Degraded",
+    afforested: "Afforested",
+    positive: "↑ Positive",
+    negative: "↓ Negative",
+    records_count: "Records",
+    divisions: "Divisions",
+    
+    // Pixel Details Modal
+    pixelDetails: "Pixel Details",
+    ndviChangeInfo: "NDVI Change Information",
+    geographicInfo: "Geographic Information",
+    coordinates: "Coordinates",
+    additionalInfo: "Additional Information",
+    notes: "Notes",
+    noAdditionalNotes: "No additional notes",
+    imageAvailable: "Image Available",
+    clickToView: "Click to view image",
+    
+    // Image Preview Modal
+    imagePreview: "Image Preview",
+    noImageAvailable: "No Image Available",
+    close: "Close",
+    
+    // Footer
+    footerNote: "Note: All area measurements are in square kilometers (km²). Afforested area is calculated as (Total Coupe Area - Degraded Area from NDVI analysis).",
+    
+    // Month Select
+    selectMonth: "Select Month",
+    
+    // All Divisions
+    allDivisions: "All Divisions",
+    
+    // Area values
+    degradedAreaValue: "Degraded Area",
+    afforestedAreaValue: "Afforested Area",
+    netChange: "Net Change",
+    
+    // Chart titles
+    monthlyNDVIChange: "Monthly NDVI Change - Area Analysis",
+    monthlyAreaChangeTrend: "Monthly Area Change Trend",
+    areaDistribution: "Area Distribution (Square Kilometers)",
+    
+    // Messages
+    noDataMessage: "No data available for the selected criteria"
+  },
+  gu: {
+    // Header
+    forestCoverMonitoring: "વન આવરણ પરિવર્તન મોનિટરિંગ સિસ્ટમ",
+    realTimeAnalysis: "રીઅલ-ટાઇમ NDVI ફેરફાર વિશ્લેષણ ડેશબોર્ડ",
+    exportPDF: "પીડીએફ એક્સપોર્ટ",
+    
+    // Hierarchy Navigation
+    forestHierarchy: "વન વંશવેલો નેવિગેશન",
+    
+    // Date Range Selection
+    selectDateRange: "તારીખ શ્રેણી પસંદ કરો",
+    allDivisionsMaxMonths: "(બધા વિભાગો માટે મહત્તમ 6 મહિના)",
+    maxMonths: "(મહત્તમ 12 મહિના)",
+    startDate: "પ્રારંભ તારીખ",
+    endDate: "અંતિમ તારીખ",
+    submit: "સબમિટ કરો",
+    
+    // Error messages
+    errorAllDivisionsRange: '"બધા વિભાગો" માટે, તારીખ શ્રેણી 6 મહિનાથી વધુ ન હોઈ શકે. કૃપા કરીને ટૂંકી શ્રેણી પસંદ કરો.',
+    errorRangeExceed: 'તારીખ શ્રેણી 12 મહિનાથી વધુ ન હોઈ શકે. કૃપા કરીને ટૂંકી શ્રેણી પસંદ કરો.',
+    
+    // Loading states
+    loadingData: "ડેટા લોડ થઈ રહ્યો છે...",
+    fetchingCoupeArea: "કૂપ વિસ્તાર મેળવી રહ્યા છે...",
+    calculatingDegradedArea: "ડિગ્રેડેડ વિસ્તાર ગણતરી કરી રહ્યા છે...",
+    loadingNDVIChange: "બહુવિધ મહિનાઓ માટે NDVI ફેરફાર ડેટા લોડ થઈ રહ્યો છે...",
+    
+    // Area Analysis
+    areaAnalysis: "વિસ્તાર વિશ્લેષણ",
+    totalArea: "કુલ વિસ્તાર",
+    afforestedArea: "વનીકૃત વિસ્તાર",
+    degradedArea: "અધોગતિ વિસ્તાર",
+    latest: "(નવીનતમ)",
+    
+    // Summary Cards
+    degradedAreaLatest: "અધોગતિ વિસ્તાર (નવીનતમ)",
+    afforestedAreaLatest: "વનીકૃત વિસ્તાર (નવીનતમ)",
+    recordsWithNotes: "નોંધો સાથે રેકોર્ડ્સ",
+    recordsWithImages: "છબીઓ સાથે રેકોર્ડ્સ",
+    
+    // Division-wise Breakdown
+    divisionWiseBreakdown: "વિભાગ-વાર વિભાજન",
+    
+    // Data Table Section
+    detailedDataTable: "૧. વિગતવાર ડેટા ટેબલ",
+    searchPlaceholder: "ID, સ્થિતિ, સ્થાન, નોંધો, વિભાગ દ્વારા શોધો...",
+    showDivisionColumn: "વિભાગ કૉલમ બતાવો",
+    onlyWithNotes: "માત્ર નોંધો સાથે",
+    onlyWithImages: "માત્ર છબીઓ સાથે",
+    clearFilters: "ફિલ્ટર સાફ કરો",
+    
+    // Table Headers
+    division: "વિભાગ",
+    range: "રेंज",
+    round: "રાઉન્ડ",
+    beat: "બીટ",
+    status: "સ્થિતિ",
+    ndviChange: "NDVI ફેરફાર",
+    category: "શ્રેણી",
+    location: "સ્થાન",
+    areaKm: "વિસ્તાર (કિમી²)",
+    hasNote: "નોંધ છે",
+    hasImage: "છબી છે",
+    actions: "ક્રિયાઓ",
+    lat: "અક્ષાંશ",
+    lon: "રેખાંશ",
+    
+    // Table Actions
+    details: "વિગતો",
+    yes: "હા",
+    no: "ના",
+    
+    // Empty State
+    noRecordsFound: "કોઈ રેકોર્ડ મળ્યા નથી",
+    adjustFilters: "તમારા ફિલ્ટર્સ સમાયોજિત કરવાનો પ્રયાસ કરો",
+    noDataAvailable: "પસંદ કરેલ માપદંડ માટે કોઈ ડેટા ઉપલબ્ધ નથી",
+    
+    // Pagination
+    showing: "બતાવી રહ્યા છે",
+    to: "થી",
+    of: "માંથી",
+    records: "રેકોર્ડ્સ",
+    page: "પૃષ્ઠ",
+    previous: "પાછળ",
+    next: "આગળ",
+    
+    // Monthly Overview
+    monthlyOverview: "૨. માસિક ઝાંખી",
+    degraded: "અધોગતિ",
+    afforested: "વનીકૃત",
+    positive: "↑ હકારાત્મક",
+    negative: "↓ નકારાત્મક",
+    records_count: "રેકોર્ડ્સ",
+    divisions: "વિભાગો",
+    
+    // Pixel Details Modal
+    pixelDetails: "પિક્સેલ વિગતો",
+    ndviChangeInfo: "NDVI ફેરફાર માહિતી",
+    geographicInfo: "ભૌગોલિક માહિતી",
+    coordinates: "સ્થાન",
+    additionalInfo: "વધારાની માહિતી",
+    notes: "નોંધો",
+    noAdditionalNotes: "કોઈ વધારાની નોંધો નથી",
+    imageAvailable: "છબી ઉપલબ્ધ છે",
+    clickToView: "છબી જોવા માટે ક્લિક કરો",
+    
+    // Image Preview Modal
+    imagePreview: "છબી પૂર્વાવલોકન",
+    noImageAvailable: "કોઈ છબી ઉપલબ્ધ નથી",
+    close: "બંધ કરો",
+    
+    // Footer
+    footerNote: "નોંધ: બધા વિસ્તાર માપન ચોરસ કિલોમીટર (કિમી²) માં છે. વનીકૃત વિસ્તાર (કુલ કૂપ વિસ્તાર - NDVI વિશ્લેષણથી અધોગતિ વિસ્તાર) તરીકે ગણવામાં આવે છે.",
+    
+    // Month Select
+    selectMonth: "મહિનો પસંદ કરો",
+    
+    // All Divisions
+    allDivisions: "બધા વિભાગો",
+    
+    // Area values
+    degradedAreaValue: "અધોગતિ વિસ્તાર",
+    afforestedAreaValue: "વનીકૃત વિસ્તાર",
+    netChange: "ચોખ્ખો ફેરફાર",
+    
+    // Chart titles
+    monthlyNDVIChange: "માસિક NDVI ફેરફાર - વિસ્તાર વિશ્લેષણ",
+    monthlyAreaChangeTrend: "માસિક વિસ્તાર ફેરફાર વલણ",
+    areaDistribution: "વિસ્તાર વિતરણ (ચોરસ કિલોમીટર)",
+    
+    // Messages
+    noDataMessage: "પસંદ કરેલ માપદંડ માટે કોઈ ડેટા ઉપલબ્ધ નથી"
+  }
+};
+
+// ============================================
 // NDVIMyCoups_dropdown Component
 // ============================================
 const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
@@ -114,6 +387,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
   const [range, setRange] = useState("");
   const [round, setRound] = useState("");
   const [beat, setBeat] = useState("");
+  const { language } = useLanguage(); // Add this
 
   /* ------------------ Load Divisions from coupe_dropdown_master ------------------ */
   useEffect(() => {
@@ -299,6 +573,8 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
     }
   };
 
+  const t = dashboardText[language]; // Add this for translations
+
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -308,11 +584,11 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
     }}>
       {/* Division Dropdown */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
-        <InputLabel>Division</InputLabel>
+        <InputLabel>{t.division}</InputLabel>
         <Select
           value={division}
           onChange={handleDivisionChange}
-          label="Division"
+          label={t.division}
         >
           <MenuItem value="">Select Division</MenuItem>
           <MenuItem value="all" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
@@ -328,11 +604,11 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
 
       {/* Range Dropdown - Disabled when "All Divisions" is selected */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
-        <InputLabel>Range</InputLabel>
+        <InputLabel>{t.range}</InputLabel>
         <Select
           value={range}
           onChange={handleRangeChange}
-          label="Range"
+          label={t.range}
           disabled={!division || division === 'all'}
         >
           <MenuItem value="">Select Range</MenuItem>
@@ -346,11 +622,11 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
 
       {/* Round Dropdown - Disabled when "All Divisions" is selected */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
-        <InputLabel>Round</InputLabel>
+        <InputLabel>{t.round}</InputLabel>
         <Select
           value={round}
           onChange={handleRoundChange}
-          label="Round"
+          label={t.round}
           disabled={!range || division === 'all'}
         >
           <MenuItem value="">Select Round</MenuItem>
@@ -364,11 +640,11 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
 
       {/* Beat Dropdown - Disabled when "All Divisions" is selected */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
-        <InputLabel>Beat</InputLabel>
+        <InputLabel>{t.beat}</InputLabel>
         <Select
           value={beat}
           onChange={handleBeatChange}
-          label="Beat"
+          label={t.beat}
           disabled={!round || division === 'all'}
         >
           <MenuItem value="">Select Beat</MenuItem>
@@ -426,6 +702,10 @@ const NDVIChangeDashboard = () => {
   const [selectedRound, setSelectedRound] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
   const [hierarchyCoupeName, setHierarchyCoupeName] = useState(null);
+
+  // Add language context
+  const { language } = useLanguage();
+  const t = dashboardText[language]; // Translation object
 
   // Add state for coupeOptions
   const [coupeOptions, setCoupeOptions] = useState([
@@ -635,150 +915,204 @@ const NDVIChangeDashboard = () => {
 
   // Simplified function to fetch data for all divisions separately
 const fetchAllDivisionsData = async (months) => {
-  try {
-    const token = localStorage.getItem("token");
-
-    // 1. Fetch divisions
-    const divisionsRes = await axios.get(
-      `${API_BASE_URL}/api/coupe-divisions`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+    try {
+      const token = localStorage.getItem("token");
+      
+      // First, get all divisions
+      const divisionsRes = await axios.get(
+        `${API_BASE_URL}/api/coupe-divisions`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      const allDivisions = divisionsRes.data[0] || [];
+      
+      if (allDivisions.length === 0) {
+        setError('No divisions found');
+        return;
       }
-    );
-
-    const allDivisions = divisionsRes.data[0] || [];
-    if (!allDivisions.length) {
-      setError("No divisions found");
-      return;
-    }
-
-    // 2. Build ALL tableNames for ALL months + divisions
-    const tableNames = months.flatMap(month =>
-      allDivisions.map(div => {
-        const coupe = transformDivisionToCoupe(div.division);
-        return `${month}-01_${coupe}_NDVI_Change`;
-      })
-    );
-
-    // 3. Single API call
-    const dataResponse = await axios.post(
-      `${API_BASE_URL}/api/ndvi-change-get-filtered-union`,
-      {
-        tableNames,
-        range: selectedRange,
-        round: selectedRound,
-        beat: selectedBeat
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    if (!dataResponse.data.success) {
-      setError("Failed to fetch NDVI data");
-      return;
-    }
-
-    const rawData = dataResponse.data.data;
-
-    // 4. Fetch total area per division (once)
-    const divisionAreas = {};
-    for (const div of allDivisions) {
-      const coupe = transformDivisionToCoupe(div.division);
-      divisionAreas[div.division] = await fetchDivisionTotalArea(coupe);
-    }
-
-    const tempMonthlyData = {};
-
-    // 5. Process data
-    rawData.forEach(item => {
-      const table = item.source_table; 
-      const month = table.split("_")[0]; 
-      const division = item.division;
-
-      if (!tempMonthlyData[month]) {
-        tempMonthlyData[month] = { data: [], divisionStats: {}, stats: {} };
+      
+      console.log(`Fetching data for ${allDivisions.length} divisions`);
+      
+      // Create a temporary object to store data per division per month
+      const tempMonthlyData = {};
+      
+      // For each month, fetch data for each division separately
+      for (const month of months) {
+        let monthAllData = [];
+        
+        for (const division of allDivisions) {
+          try {
+            const divisionName = division.division;
+            const coupeToUse = transformDivisionToCoupe(divisionName);
+            
+            if (!coupeToUse) continue;
+            
+            // Fetch total area for this division's coupe
+            const divisionTotalArea = await fetchDivisionTotalArea(coupeToUse);
+            
+            if (divisionTotalArea <= 0) continue;
+            
+            // Construct table name for this month
+            const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
+            
+            console.log(`Fetching data for division: ${divisionName}, month: ${month}`);
+            
+            // Fetch data with hierarchy filters (range/round/beat may be null)
+            const dataResponse = await axios.post(
+              `${API_BASE_URL}/api/ndvi-change-get-filtered`,
+              {
+                tableName,
+                division: divisionName,
+                range: selectedRange,
+                round: selectedRound,
+                beat: selectedBeat
+              },
+              { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            );
+            
+            if (dataResponse.data.success) {
+              const data = dataResponse.data.data;
+              
+              if (data.length > 0) {
+                // Fetch degraded area for this division
+                const degradedAreaResponse = await axios.post(
+                  `${API_BASE_URL}/api/ndvi-change-degraded-area`,
+                  {
+                    tableName,
+                    division: divisionName,
+                    range: selectedRange,
+                    round: selectedRound,
+                    beat: selectedBeat
+                  },
+                  { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+                );
+                
+                const degradedAreaValue = degradedAreaResponse.data.success 
+                  ? parseFloat(degradedAreaResponse.data.data[0]?.total_area_sq_km || 0)
+                  : 0;
+                
+                const afforestedAreaValue = Math.max(0, divisionTotalArea - degradedAreaValue);
+                
+                // Count polygons by status
+                const degradedPolygons = data.filter(item => item.status === true).length;
+                const afforestedPolygons = data.filter(item => item.status === false).length;
+                
+                // Calculate area per polygon
+                const degradedAreaPerPolygon = degradedPolygons > 0 ? degradedAreaValue / degradedPolygons : 0;
+                const afforestedAreaPerPolygon = afforestedPolygons > 0 ? afforestedAreaValue / afforestedPolygons : 0;
+                
+                // Enhance data with area calculations and division info
+                const enhancedData = data.map(item => {
+                  const isDegraded = item.status === true;
+                  const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
+                  
+                  return {
+                    ...item,
+                    area_sq_km: polygonArea,
+                    month: month,
+                    division: divisionName,
+                    status: isDegraded,
+                    change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
+                    has_note: !!(item.note && item.note.trim() !== ''),
+                    has_image: !!(item.image_data),
+                    pixle_id: `${divisionName}_${item.pixle_id || 'N/A'}`
+                  };
+                });
+                
+                monthAllData = [...monthAllData, ...enhancedData];
+              }
+            }
+          } catch (err) {
+            console.error(`Error fetching data for division`);
+          }
+        }
+        
+        // If we have data for this month, store it with division information preserved
+        if (monthAllData.length > 0) {
+          // Group data by division for statistics
+          const divisionsInMonth = [...new Set(monthAllData.map(item => item.division))];
+          
+          // Calculate statistics for each division separately
+          const divisionStats = {};
+          divisionsInMonth.forEach(div => {
+            const divData = monthAllData.filter(item => item.division === div);
+            const divDegradedArea = divData
+              .filter(item => item.status === true)
+              .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
+            const divAfforestedArea = divData
+              .filter(item => item.status === false)
+              .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
+            
+            divisionStats[div] = {
+              withNotes: divData.filter(item => item.has_note).length,
+              withImages: divData.filter(item => item.has_image).length,
+              degradedArea: divDegradedArea,
+              afforestedArea: divAfforestedArea,
+              totalArea: divDegradedArea + divAfforestedArea,
+              totalPolygons: divData.length,
+              degradedPercentage: (divDegradedArea + divAfforestedArea) > 0 
+                ? (divDegradedArea / (divDegradedArea + divAfforestedArea)) * 100 
+                : 0,
+              afforestedPercentage: (divDegradedArea + divAfforestedArea) > 0 
+                ? (divAfforestedArea / (divDegradedArea + divAfforestedArea)) * 100 
+                : 0
+            };
+          });
+          
+          // Overall statistics (sum of all divisions)
+          const totalDegradedArea = monthAllData
+            .filter(item => item.status === true)
+            .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
+          const totalAfforestedArea = monthAllData
+            .filter(item => item.status === false)
+            .reduce((sum, item) => sum + (item.area_sq_km || 0), 0);
+          const totalArea = totalDegradedArea + totalAfforestedArea;
+          
+          tempMonthlyData[month] = {
+            data: monthAllData,
+            divisionStats, // Store stats per division
+            stats: {
+              withNotes: monthAllData.filter(item => item.has_note).length,
+              withImages: monthAllData.filter(item => item.has_image).length,
+              degradedArea: totalDegradedArea,
+              afforestedArea: totalAfforestedArea,
+              totalArea: totalArea,
+              totalPolygons: monthAllData.length,
+              degradedPercentage: totalArea > 0 ? (totalDegradedArea / totalArea) * 100 : 0,
+              afforestedPercentage: totalArea > 0 ? (totalAfforestedArea / totalArea) * 100 : 0
+            },
+            month: month
+          };
+        }
       }
-
-      tempMonthlyData[month].data.push({
-        ...item,
-        month,
-        division,
-        has_note: !!(item.note && item.note.trim() !== ""),
-        has_image: !!item.image_data,
-        pixle_id: `${division}_${item.pixle_id || "N/A"}`,
-        change_category: item.status ? "Degradation" : "Afforestation"
-      });
-    });
-
-    // 6. Calculate stats per month & division
-    Object.keys(tempMonthlyData).forEach(month => {
-      const monthData = tempMonthlyData[month].data;
-
-      const divisions = [...new Set(monthData.map(d => d.division))];
-
-      let totalDegradedArea = 0;
-      let totalAfforestedArea = 0;
-
-      divisions.forEach(div => {
-        const divData = monthData.filter(d => d.division === div);
-        const totalArea = divisionAreas[div] || 0;
-
-        const degradedPolygons = divData.filter(d => d.status === true).length;
-        const afforestedPolygons = divData.filter(d => d.status === false).length;
-
-        const degradedArea = totalArea * (degradedPolygons / (divData.length || 1));
-        const afforestedArea = totalArea - degradedArea;
-
-        totalDegradedArea += degradedArea;
-        totalAfforestedArea += afforestedArea;
-
-        tempMonthlyData[month].divisionStats[div] = {
-          withNotes: divData.filter(d => d.has_note).length,
-          withImages: divData.filter(d => d.has_image).length,
-          degradedArea,
-          afforestedArea,
-          totalArea,
-          totalPolygons: divData.length,
-          degradedPercentage: totalArea ? (degradedArea / totalArea) * 100 : 0,
-          afforestedPercentage: totalArea ? (afforestedArea / totalArea) * 100 : 0
-        };
-      });
-
-      const totalArea = totalDegradedArea + totalAfforestedArea;
-
-      tempMonthlyData[month].stats = {
-        withNotes: monthData.filter(d => d.has_note).length,
-        withImages: monthData.filter(d => d.has_image).length,
-        degradedArea: totalDegradedArea,
-        afforestedArea: totalAfforestedArea,
-        totalArea,
-        totalPolygons: monthData.length,
-        degradedPercentage: totalArea ? (totalDegradedArea / totalArea) * 100 : 0,
-        afforestedPercentage: totalArea ? (totalAfforestedArea / totalArea) * 100 : 0
-      };
-    });
-
-    // 7. Update state
-    if (Object.keys(tempMonthlyData).length > 0) {
-      setMonthlyData(tempMonthlyData);
-
-      const firstMonth = Object.keys(tempMonthlyData).sort()[0];
-
-      setTotalArea(tempMonthlyData[firstMonth].stats.totalArea);
-      setCurrentTableData(tempMonthlyData[firstMonth].data);
-      setSummaryStats(tempMonthlyData[firstMonth].stats);
-      setSelectedMonth(firstMonth);
-    } else {
-      setError("No data found for selected criteria");
+      
+      // Update state with all data (preserving division information)
+      if (Object.keys(tempMonthlyData).length > 0) {
+        setMonthlyData(tempMonthlyData);
+        
+        // Set total area as sum of all divisions' areas for the first month
+        const firstMonth = Object.keys(tempMonthlyData).sort()[0];
+        if (tempMonthlyData[firstMonth]) {
+          setTotalArea(tempMonthlyData[firstMonth].stats.totalArea);
+          setCurrentTableData(tempMonthlyData[firstMonth].data);
+          setSummaryStats(tempMonthlyData[firstMonth].stats);
+          setSelectedMonth(firstMonth);
+        }
+      } else {
+        setError('No data found for any division with the selected criteria');
+      }
+      
+    } catch (error) {
+      console.error('Error fetching all divisions data:', error);
+      setError('Failed to fetch data for all divisions');
     }
+  };
 
-  } catch (error) {
-    console.error("Error fetching all divisions data:", error);
-    setError("Failed to fetch data for all divisions");
-  }
-};
 
   // Fetch filtered data based on hierarchy and date
   const fetchFilteredData = async (months) => {
@@ -927,7 +1261,7 @@ const fetchAllDivisionsData = async (months) => {
           setSelectedMonth(firstMonth);
         }
       } else {
-        setError('No data found for the selected criteria');
+        setError(t.noDataMessage);
       }
       
     } catch (err) {
@@ -1184,14 +1518,14 @@ const fetchAllDivisionsData = async (months) => {
       labels: monthLabels,
       datasets: [
         {
-          label: 'Degraded Area (sq km)',
+          label: `${t.degraded} (sq km)`,
           data: degradedAreaData,
           backgroundColor: 'rgba(239, 68, 68, 0.7)',
           borderColor: 'rgba(239, 68, 68, 1)',
           borderWidth: 2
         },
         {
-          label: 'Afforested Area (sq km)',
+          label: `${t.afforested} (sq km)`,
           data: afforestedAreaData,
           backgroundColor: 'rgba(34, 197, 94, 0.7)',
           borderColor: 'rgba(34, 197, 94, 1)',
@@ -1220,7 +1554,7 @@ const fetchAllDivisionsData = async (months) => {
       labels: monthLabels,
       datasets: [
         {
-          label: 'Degraded Area (sq km)',
+          label: `${t.degraded} (sq km)`,
           data: degradedAreaData,
           borderColor: 'rgb(239, 68, 68)',
           backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -1228,7 +1562,7 @@ const fetchAllDivisionsData = async (months) => {
           fill: true
         },
         {
-          label: 'Afforested Area (sq km)',
+          label: `${t.afforested} (sq km)`,
           data: afforestedAreaData,
           borderColor: 'rgb(34, 197, 94)',
           backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -1243,7 +1577,7 @@ const fetchAllDivisionsData = async (months) => {
     if (!summaryStats) return null;
     
     return {
-      labels: ['Degraded Area', 'Afforested Area'],
+      labels: [t.degraded, t.afforested],
       datasets: [{
         data: [summaryStats.degradedArea, summaryStats.afforestedArea],
         backgroundColor: [
@@ -1268,7 +1602,7 @@ const fetchAllDivisionsData = async (months) => {
       legend: { position: 'top' },
       title: {
         display: true,
-        text: 'Monthly NDVI Change - Area Analysis',
+        text: t.monthlyNDVIChange,
         font: { size: 16, weight: 'bold' }
       },
       tooltip: {
@@ -1278,7 +1612,7 @@ const fetchAllDivisionsData = async (months) => {
           label: function(context) {
             let label = context.dataset.label || '';
             if (label) label += ': ';
-            label += context.parsed.y.toFixed(2) + ' sq km';
+            label += context.parsed.y.toFixed(2) + ' km²';
             return label;
           }
         }
@@ -1289,7 +1623,7 @@ const fetchAllDivisionsData = async (months) => {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Area (Square Kilometers)',
+          text: 'Area (km²)',
           font: { weight: 'bold' }
         },
         ticks: {
@@ -1314,7 +1648,7 @@ const fetchAllDivisionsData = async (months) => {
       ...barChartOptions.plugins,
       title: {
         display: true,
-        text: 'Monthly Area Change Trend',
+        text: t.monthlyAreaChangeTrend,
         font: { size: 16, weight: 'bold' }
       }
     }
@@ -1327,7 +1661,7 @@ const fetchAllDivisionsData = async (months) => {
       legend: { position: 'right' },
       title: {
         display: true,
-        text: 'Area Distribution (Square Kilometers)',
+        text: t.areaDistribution,
         font: { size: 16, weight: 'bold' }
       },
       tooltip: {
@@ -1348,7 +1682,7 @@ const fetchAllDivisionsData = async (months) => {
       return (
         <Box sx={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Typography variant="h6" color="text.secondary">
-            No data available for the selected criteria
+            {t.noDataMessage}
           </Typography>
         </Box>
       );
@@ -1767,8 +2101,8 @@ const handleExportToPDF = () => {
             <!-- Report Information -->
             <div class="info-grid">
               <div class="info-item">
-                <div class="info-label">Division</div>
-                <div class="info-value">${selectedDivision === 'all' ? 'All Divisions' : (selectedDivision || 'N/A')}</div>
+                <div class="info-label">${t.division}</div>
+                <div class="info-value">${selectedDivision === 'all' ? t.allDivisions : (selectedDivision || 'N/A')}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Range / Round / Beat</div>
@@ -1800,7 +2134,7 @@ const handleExportToPDF = () => {
               ${summaryStats ? `
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
                   <div style="text-align: center;">
-                    <div style="font-size: 14px; opacity: 0.9;">Total Area Monitored</div>
+                    <div style="font-size: 14px; opacity: 0.9;">${t.totalArea}</div>
                     <div style="font-size: 36px; font-weight: 700;">${totalArea.toFixed(2)}</div>
                     <div style="font-size: 14px; opacity: 0.9;">km²</div>
                   </div>
@@ -1825,12 +2159,12 @@ const handleExportToPDF = () => {
               <h2>📈 Key Statistics - ${selectedMonth} (Latest Month)</h2>
               <div class="stats-grid">
                 <div class="stat-card degraded">
-                  <div class="stat-label">Degraded Area</div>
+                  <div class="stat-label">${t.degraded}</div>
                   <div class="stat-value">${summaryStats.degradedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
                 </div>
                 
                 <div class="stat-card afforested">
-                  <div class="stat-label">Afforested Area</div>
+                  <div class="stat-label">${t.afforested}</div>
                   <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
                 </div>
                 
@@ -1838,20 +2172,20 @@ const handleExportToPDF = () => {
               </div>
               <div class="stats-grid">
 <div class="stat-card total">
-                  <div class="stat-label">Total Area</div>
+                  <div class="stat-label">${t.totalArea}</div>
                   <div class="stat-value">${totalArea.toFixed(2)}<span class="stat-unit">km²</span></div>
                 </div>
                 
                 <div class="stat-card total">
                   <div class="stat-label">Data Quality</div>
-                  <div class="stat-value">${summaryStats.withNotes}<span class="stat-unit">notes</span></div>
+                  <div class="stat-value">${summaryStats.withNotes}<span class="stat-unit">${t.notes}</span> / ${summaryStats.withImages}<span class="stat-unit">${t.imageAvailable}</span></div>
                 </div>
               </div>
             ` : ''}
             
             <!-- Division-wise Breakdown (if All Divisions) -->
             ${selectedDivision === 'all' && monthlyData[selectedMonth]?.divisionStats ? `
-              <h2>🏢 Division-wise Breakdown - ${selectedMonth}</h2>
+              <h2>🏢 ${t.divisionWiseBreakdown} - ${selectedMonth}</h2>
               <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin: 20px 0;">
                 ${Object.entries(monthlyData[selectedMonth].divisionStats).map(([division, stats]) => `
                   <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px;">
@@ -1860,7 +2194,7 @@ const handleExportToPDF = () => {
                     </h3>
                     <div style="margin-bottom: 15px;">
                       <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="color: #ef4444; font-size: 13px;">Degraded</span>
+                        <span style="color: #ef4444; font-size: 13px;">${t.degraded}</span>
                         <span style="font-weight: 600;">${stats.degradedArea.toFixed(2)} km²</span>
                       </div>
                       <div class="progress-bar">
@@ -1868,7 +2202,7 @@ const handleExportToPDF = () => {
                       </div>
                       
                       <div style="display: flex; justify-content: space-between; margin: 10px 0 5px;">
-                        <span style="color: #22c55e; font-size: 13px;">Afforested</span>
+                        <span style="color: #22c55e; font-size: 13px;">${t.afforested}</span>
                         <span style="font-weight: 600;">${stats.afforestedArea.toFixed(2)} km²</span>
                       </div>
                       <div class="progress-bar">
@@ -1877,8 +2211,8 @@ const handleExportToPDF = () => {
                     </div>
                     
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: #64748b;">
-                      <span>📝 Notes: ${stats.withNotes}</span>
-                      <span>🖼️ Images: ${stats.withImages}</span>
+                      <span>📝 ${t.notes}: ${stats.withNotes}</span>
+                      <span>🖼️ ${t.imageAvailable}: ${stats.withImages}</span>
                     </div>
                   </div>
                 `).join('')}
@@ -1892,21 +2226,21 @@ const handleExportToPDF = () => {
                 <div class="month-card">
                   <div class="month-title">${month}</div>
                   <div class="month-stat">
-                    <span>Degraded:</span>
+                    <span>${t.degraded}:</span>
                     <span style="color: #ef4444; font-weight: 600;">${data.stats.degradedArea.toFixed(2)} km²</span>
                   </div>
                   <div class="month-stat">
-                    <span>Afforested:</span>
+                    <span>${t.afforested}:</span>
                     <span style="color: #22c55e; font-weight: 600;">${data.stats.afforestedArea.toFixed(2)} km²</span>
                   </div>
                   <div class="month-stat">
-                    <span>Net Change:</span>
+                    <span>${t.netChange}:</span>
                     <span style="color: ${data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444'}; font-weight: 600;">
                       ${(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
                     </span>
                   </div>
                   <div class="month-stat">
-                    <span>Records:</span>
+                    <span>${t.records_count}:</span>
                     <span>${data.data.length}</span>
                   </div>
                 </div>
@@ -1918,24 +2252,24 @@ const handleExportToPDF = () => {
             <table>
               <thead>
                 <tr>
-                  ${showDivisionColumn ? '<th>Division</th>' : ''}
-                  <th>Status</th>
-                  <th>NDVI Change</th>
-                  <th>Category</th>
-                  <th>Latitude</th>
-                  <th>Longitude</th>
-                  <th>Area (km²)</th>
-                  <th>Note</th>
-                  <th>Image</th>
+                  ${showDivisionColumn ? `<th>${t.division}</th>` : ''}
+                  <th>${t.status}</th>
+                  <th>${t.ndviChange}</th>
+                  <th>${t.category}</th>
+                  <th>${t.lat}</th>
+                  <th>${t.lon}</th>
+                  <th>${t.areaKm}</th>
+                  <th>${t.note}</th>
+                  <th>${t.imageAvailable}</th>
                 </tr>
               </thead>
               <tbody>
                 ${filteredData.slice(0, 20).map(item => `
                   <tr>
                     ${showDivisionColumn ? `<td>${item.division || selectedDivision || 'N/A'}</td>` : ''}
-                    <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? 'Afforested' : 'Degraded'}</span></td>
+                    <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? t.afforested : t.degraded}</span></td>
                    <td>${item.NDVI_change && !isNaN(parseFloat(item.NDVI_change)) ? parseFloat(item.NDVI_change).toFixed(4) : 'N/A'}</td>
-                    <td>${item.change_category || (item.status ? 'Afforestation' : 'Degradation')}</td>
+                    <td>${item.change_category || (item.status ? t.afforested : t.degraded)}</td>
                     <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
                     <td>${item.longitude?.toFixed(6) || 'N/A'}</td>
                     <td>${item.area_sq_km?.toFixed(6) || '0.000000'}</td>
@@ -1960,12 +2294,12 @@ const handleExportToPDF = () => {
               <thead>
                 <tr>
                   <th>Month</th>
-                  <th>Degraded Area (km²)</th>
-                  <th>Afforested Area (km²)</th>
-                  <th>Degraded %</th>
-                  <th>Afforested %</th>
-                  <th>Net Change (km²)</th>
-                  <th>Records</th>
+                  <th>${t.degraded} (km²)</th>
+                  <th>${t.afforested} (km²)</th>
+                  <th>${t.degraded} %</th>
+                  <th>${t.afforested} %</th>
+                  <th>${t.netChange} (km²)</th>
+                  <th>${t.records_count}</th>
                 </tr>
               </thead>
               <tbody>
@@ -2050,10 +2384,10 @@ const handleExportToPDF = () => {
             </Grid>
             <Grid item xs>
               <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-                Forest Cover Change Monitoring System
+                {t.forestCoverMonitoring}
               </Typography>
               <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
-                Real-time NDVI Change Analysis Dashboard
+                {t.realTimeAnalysis}
               </Typography>
             </Grid>
             <Grid item>
@@ -2066,7 +2400,7 @@ const handleExportToPDF = () => {
                   disabled={Object.keys(monthlyData).length === 0}
                   sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 >
-                  Export PDF
+                  {t.exportPDF}
                 </Button>
                 
               </Stack>
@@ -2078,7 +2412,7 @@ const handleExportToPDF = () => {
       {/* Hierarchy Navigation */}
       <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor: "transparent" }}>
         <CardHeader 
-          title="Forest Hierarchy Navigation"
+          title={t.forestHierarchy}
           titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
           avatar={<Forest />}
         />
@@ -2092,10 +2426,10 @@ const handleExportToPDF = () => {
 {/* Date Range Selection */}
 <Grid item xs={12}>
   <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-    Select Date Range
+    {t.selectDateRange}
     {selectedDivision === 'all' 
-      ? ' (Maximum 6 months for All Divisions)' 
-      : ' (Maximum 12 months)'}
+      ? t.allDivisionsMaxMonths
+      : t.maxMonths}
   </Typography>
 </Grid>
 
@@ -2103,7 +2437,7 @@ const handleExportToPDF = () => {
   <LocalizationProvider dateAdapter={AdapterDateFns}>
     <DatePicker
       views={['year', 'month']}
-      label="Start Date"
+      label={t.startDate}
       value={startDate}
       onChange={handleStartDateChange}
       minDate={new Date(2020, 0, 1)}
@@ -2128,7 +2462,7 @@ const handleExportToPDF = () => {
   <LocalizationProvider dateAdapter={AdapterDateFns}>
     <DatePicker
       views={['year', 'month']}
-      label="End Date"
+      label={t.endDate}
       value={endDate}
       onChange={handleEndDateChange}
       minDate={startDate || new Date(2020, 0, 1)}
@@ -2165,7 +2499,7 @@ const handleExportToPDF = () => {
     })()}
     sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
   >
-    Submit
+    {t.submit}
   </Button>
 </Grid>
 
@@ -2180,9 +2514,7 @@ const handleExportToPDF = () => {
     return (
       <Grid item xs={12}>
         <Alert severity="error" sx={{ mt: 1 }}>
-          {selectedDivision === 'all' 
-            ? 'For "All Divisions", date range cannot exceed 6 months. Please select a shorter range.'
-            : 'Date range cannot exceed 12 months. Please select a shorter range.'}
+          {selectedDivision === 'all' ? t.errorAllDivisionsRange : t.errorRangeExceed}
         </Alert>
       </Grid>
     );
@@ -2208,12 +2540,12 @@ const handleExportToPDF = () => {
               <CircularProgress sx={{ mr: 2 }} />
               <Box>
                 <Typography variant="body1" fontWeight={600}>
-                  Loading Data...
+                  {t.loadingData}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {loadingArea ? 'Fetching coupe area...' : 
-                   loadingNDVIArea ? 'Calculating degraded area...' : 
-                   'Loading NDVI change data for multiple months...'}
+                  {loadingArea ? t.fetchingCoupeArea : 
+                   loadingNDVIArea ? t.calculatingDegradedArea : 
+                   t.loadingNDVIChange}
                 </Typography>
                 <MuiLinearProgress sx={{ mt: 1 }} />
               </Box>
@@ -2228,7 +2560,7 @@ const handleExportToPDF = () => {
           <CardContent>
             <Box sx={{ mb: 4 }}>
               <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Select Month</InputLabel>
+                <InputLabel>{t.selectMonth}</InputLabel>
                 <Select
                   value={selectedMonth}
                   onChange={(e) => {
@@ -2239,7 +2571,7 @@ const handleExportToPDF = () => {
                       setSummaryStats(monthlyData[month].stats);
                     }
                   }}
-                  label="Select Month"
+                  label={t.selectMonth}
                 >
                   {Object.keys(monthlyData).sort().reverse().map((month) => (
                     <MenuItem key={month} value={month}>
@@ -2260,13 +2592,13 @@ const handleExportToPDF = () => {
               
               <Grid item xs>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 700 }}>
-                  Area Analysis - {selectedDivision === 'all' ? 'All Divisions' : (selectedDivision || selectedCoupe || hierarchyCoupeName)}
+                  {t.areaAnalysis} - {selectedDivision === 'all' ? t.allDivisions : (selectedDivision || selectedCoupe || hierarchyCoupeName)}
                 </Typography>
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={4}>
                     <Box>
                       <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                        Total Area
+                        {t.totalArea}
                       </Typography>
                       <Typography variant="h5" sx={{ fontWeight: 800 }}>
                         {totalArea.toFixed(2)} km²
@@ -2278,7 +2610,7 @@ const handleExportToPDF = () => {
                       <Grid item xs={12} md={4}>
                         <Box>
                           <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                            Afforested Area (Latest)
+                            {t.afforestedArea} {t.latest}
                           </Typography>
                           <Typography variant="h5" sx={{ fontWeight: 800, color: '#22c55e' }}>
                             {summaryStats.afforestedArea.toFixed(2)} km²
@@ -2288,7 +2620,7 @@ const handleExportToPDF = () => {
                       <Grid item xs={12} md={4}>
                         <Box>
                           <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                            Degraded Area (Latest)
+                            {t.degradedArea} {t.latest}
                           </Typography>
                           <Typography variant="h5" sx={{ fontWeight: 800, color: '#ef4444' }}>
                             {summaryStats.degradedArea.toFixed(2)} km²
@@ -2314,7 +2646,7 @@ const handleExportToPDF = () => {
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
                     <Typography color="text.secondary" variant="body2" sx={{ fontWeight: 600 }}>
-                      Degraded Area (Latest)
+                      {t.degradedAreaLatest}
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#ef4444' }}>
                       {summaryStats.degradedArea.toFixed(2)}
@@ -2336,7 +2668,7 @@ const handleExportToPDF = () => {
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
                     <Typography color="text.secondary" variant="body2" sx={{ fontWeight: 600 }}>
-                      Afforested Area (Latest)
+                      {t.afforestedAreaLatest}
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#22c55e' }}>
                       {summaryStats.afforestedArea.toFixed(2)}
@@ -2358,7 +2690,7 @@ const handleExportToPDF = () => {
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
                     <Typography color="text.secondary" variant="body2" sx={{ fontWeight: 600 }}>
-                      Records with Notes
+                      {t.recordsWithNotes}
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#3b82f6' }}>
                       {summaryStats.withNotes}
@@ -2377,7 +2709,7 @@ const handleExportToPDF = () => {
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
                     <Typography color="text.secondary" variant="body2" sx={{ fontWeight: 600 }}>
-                      Records with Images
+                      {t.recordsWithImages}
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#f59e0b' }}>
                       {summaryStats.withImages}
@@ -2398,11 +2730,11 @@ const handleExportToPDF = () => {
           <CardContent>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Info color="primary" />
-              Division-wise Breakdown - {selectedMonth}
+              {t.divisionWiseBreakdown} - {selectedMonth}
             </Typography>
             <Grid container spacing={2}>
               {Object.entries(monthlyData[selectedMonth].divisionStats).map(([division, stats]) => (
-                <Grid item xs={12} sm={6} md={4} key={division}>
+                <Grid item xs={12} sm={6} md={3} lg={3} xl={2} key={division}>
                   <Card sx={{ borderRadius: 2, border: '1px solid #e2e8f0' }}>
                     <CardContent>
                       <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ color: 'primary.main' }}>
@@ -2410,10 +2742,10 @@ const handleExportToPDF = () => {
                       </Typography>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
-                          Degraded: {stats.degradedArea.toFixed(2)} km²
+                          {t.degradedArea}: {stats.degradedArea.toFixed(2)} km²
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 , paddingLeft: '20px' }}>
-                          Afforested: {stats.afforestedArea.toFixed(2)} km²
+                          {t.afforestedArea}: {stats.afforestedArea.toFixed(2)} km²
                         </Typography>
                       </Box>
                       {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -2426,10 +2758,10 @@ const handleExportToPDF = () => {
                       </Box> */}
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="caption" color="text.secondary">
-                          Notes: {stats.withNotes}
+                          {t.notes}: {stats.withNotes}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Images: {stats.withImages}
+                          {t.imageAvailable}: {stats.withImages}
                         </Typography>
                       </Box>
                     </CardContent>
@@ -2448,7 +2780,7 @@ const handleExportToPDF = () => {
       {Object.keys(monthlyData).length > 0 && (
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
           <CardHeader
-            title="1. Detailed Data Table"
+            title={t.detailedDataTable}
             titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
             avatar={<Visibility color="primary" />}
             action={
@@ -2468,7 +2800,7 @@ const handleExportToPDF = () => {
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        placeholder="Search by ID, status, coordinates, notes, division..."
+                        placeholder={t.searchPlaceholder}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         variant="outlined"
@@ -2492,7 +2824,7 @@ const handleExportToPDF = () => {
             size="small"
           />
         }
-        label="Show Division Column"
+        label={t.showDivisionColumn}
       />
     )}
     
@@ -2505,7 +2837,7 @@ const handleExportToPDF = () => {
           size="small"
         />
       }
-      label="Only with Notes"
+      label={t.onlyWithNotes}
     />
     
     <FormControlLabel
@@ -2517,7 +2849,7 @@ const handleExportToPDF = () => {
           size="small"
         />
       }
-      label="Only with Images"
+      label={t.onlyWithImages}
     />
   </FormGroup>
   
@@ -2533,7 +2865,7 @@ const handleExportToPDF = () => {
     }}
     sx={{ borderRadius: 2 }}
   >
-    CLEAR FILTERS
+    {t.clearFilters}
   </Button>
 </Box>
                     </Grid>
@@ -2550,7 +2882,7 @@ const handleExportToPDF = () => {
                         {showDivisionColumn && (
                           <TableCell onClick={() => handleSort('division')} sx={{ cursor: 'pointer' }}>
                             <Box display="flex" alignItems="center">
-                              <strong>Division</strong>
+                              <strong>{t.division}</strong>
                               <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                             </Box>
                           </TableCell>
@@ -2561,23 +2893,23 @@ const handleExportToPDF = () => {
                             <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                           </Box>
                         </TableCell> */}
-                        <TableCell><strong>NDVI Change</strong></TableCell>
-                        <TableCell><strong>Category</strong></TableCell>
-                        <TableCell><strong>Location</strong></TableCell>
-                        <TableCell><strong>Area (km²)</strong></TableCell>
+                        <TableCell><strong>{t.ndviChange}</strong></TableCell>
+                        <TableCell><strong>{t.category}</strong></TableCell>
+                        <TableCell><strong>{t.location}</strong></TableCell>
+                        <TableCell><strong>{t.areaKm}</strong></TableCell>
                         <TableCell onClick={() => handleSort('has_note')} sx={{ cursor: 'pointer' }}>
                           <Box display="flex" alignItems="center">
-                            <strong>Has Note</strong>
+                            <strong>{t.hasNote}</strong>
                             <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                           </Box>
                         </TableCell>
                         <TableCell onClick={() => handleSort('has_image')} sx={{ cursor: 'pointer' }}>
                           <Box display="flex" alignItems="center">
-                            <strong>Has Image</strong>
+                            <strong>{t.hasImage}</strong>
                             <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                           </Box>
                         </TableCell>
-                        <TableCell><strong>Actions</strong></TableCell>
+                        <TableCell><strong>{t.actions}</strong></TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -2587,12 +2919,12 @@ const handleExportToPDF = () => {
                             <Box sx={{ textAlign: 'center' }}>
                               <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                               <Typography variant="h6" color="text.secondary" gutterBottom>
-                                No records found
+                                {t.noRecordsFound}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
                                 {searchTerm || showOnlyWithNotes || showOnlyWithImages 
-                                  ? 'Try adjusting your filters' 
-                                  : 'No data available for the selected criteria'}
+                                  ? t.adjustFilters
+                                  : t.noDataAvailable}
                               </Typography>
                             </Box>
                           </TableCell>
@@ -2631,16 +2963,16 @@ const handleExportToPDF = () => {
                                 color: row.change_category === 'Degradation' ? '#ef4444' : '#22c55e',
                                 fontWeight: 600
                               }}>
-                                {row.change_category || (row.status ? 'Degradation' : 'Afforestation')}
+                                {row.change_category || (row.status ? t.afforested : t.degraded)}
                               </Typography>
                             </TableCell>
                             <TableCell>
                               <Box>
                                 <Typography variant="caption" display="block" color="text.secondary">
-                                  Lat: {row.latitude?.toFixed(6) || 'N/A'}
+                                  {t.lat}: {row.latitude?.toFixed(6) || 'N/A'}
                                 </Typography>
                                 <Typography variant="caption" display="block" color="text.secondary">
-                                  Lon: {row.longitude?.toFixed(6) || 'N/A'}
+                                  {t.lon}: {row.longitude?.toFixed(6) || 'N/A'}
                                 </Typography>
                               </Box>
                             </TableCell>
@@ -2651,17 +2983,17 @@ const handleExportToPDF = () => {
                             </TableCell>
                             <TableCell>
                               {row.has_note ? (
-                                <MuiTooltip title={row.note || 'Note available'}>
-                                  <Chip label="Yes" color="primary" size="small" icon={<Note />} />
+                                <MuiTooltip title={row.note || t.notes}>
+                                  <Chip label={t.yes} color="primary" size="small" icon={<Note />} />
                                 </MuiTooltip>
                               ) : (
-                                <Chip label="No" color="default" size="small" variant="outlined" />
+                                <Chip label={t.no} color="default" size="small" variant="outlined" />
                               )}
                             </TableCell>
                             <TableCell>
                               {row.has_image ? (
                                 <Chip
-                                  label="Yes"
+                                  label={t.yes}
                                   color="warning"
                                   size="small"
                                   icon={<ImageIcon />}
@@ -2672,7 +3004,7 @@ const handleExportToPDF = () => {
                                   clickable
                                 />
                               ) : (
-                                <Chip label="No" color="default" size="small" variant="outlined" />
+                                <Chip label={t.no} color="default" size="small" variant="outlined" />
                               )}
                             </TableCell>
                             <TableCell>
@@ -2685,7 +3017,7 @@ const handleExportToPDF = () => {
                                   setModalOpen(true);
                                 }}
                               >
-                                Details
+                                {t.details}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -2699,7 +3031,7 @@ const handleExportToPDF = () => {
                 {filteredData.length > 0 && (
                   <Box sx={{ p: 2, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="body2" color="text.secondary">
-                      Showing {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filteredData.length)} of {filteredData.length.toLocaleString()} records
+                      {t.showing} {page * rowsPerPage + 1} {t.to} {Math.min((page + 1) * rowsPerPage, filteredData.length)} {t.of} {filteredData.length.toLocaleString()} {t.records}
                     </Typography>
                     <Box display="flex" alignItems="center" gap={2}>
                       <Select
@@ -2714,13 +3046,13 @@ const handleExportToPDF = () => {
                       </Select>
                       <Box display="flex" gap={1}>
                         <Button size="small" onClick={() => setPage(page - 1)} disabled={page === 0}>
-                          Previous
+                          {t.previous}
                         </Button>
                         <Typography variant="body2" sx={{ alignSelf: 'center' }}>
-                          Page {page + 1} of {Math.ceil(filteredData.length / rowsPerPage)}
+                          {t.page} {page + 1} {t.of} {Math.ceil(filteredData.length / rowsPerPage)}
                         </Typography>
                         <Button size="small" onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(filteredData.length / rowsPerPage) - 1}>
-                          Next
+                          {t.next}
                         </Button>
                       </Box>
                     </Box>
@@ -2736,7 +3068,7 @@ const handleExportToPDF = () => {
       {Object.keys(monthlyData).length > 0 && (
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', bgcolor: "transparent" }}>
           <CardHeader
-            title="2. Monthly Overview"
+            title={t.monthlyOverview}
             titleTypographyProps={{ variant: 'h5', fontWeight: 700 }}
             avatar={<CalendarMonth color="primary" />}
             action={
@@ -2751,7 +3083,7 @@ const handleExportToPDF = () => {
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                 {/* <CalendarMonth color="primary" /> */}
-                 {selectedDivision === 'all' && '(All Divisions)'}
+                 {selectedDivision === 'all' && `(${t.allDivisions})`}
               </Typography>
               <Grid container spacing={3}>
                 {Object.entries(monthlyData).sort().reverse().map(([month, data]) => (
@@ -2784,30 +3116,30 @@ const handleExportToPDF = () => {
                           <>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                               <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
-                                Degraded: {data.stats.degradedArea?.toFixed(2)} km²
+                                {t.degradedAreaValue}: {data.stats.degradedArea?.toFixed(2)} km²
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600, paddingLeft: '20px' }}>
-                                Afforested: {data.stats.afforestedArea?.toFixed(2)} km²
+                                {t.afforestedAreaValue}: {data.stats.afforestedArea?.toFixed(2)} km²
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                               <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
-                                Δ: {(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
+                                {t.netChange}: {(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
                               </Typography>
                               <Typography variant="caption" sx={{ 
                                 color: data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444',
                                 fontWeight: 600
                               }}>
-                                {data.stats.afforestedArea > data.stats.degradedArea ? '↑ Positive' : '↓ Negative'}
+                                {data.stats.afforestedArea > data.stats.degradedArea ? t.positive : t.negative}
                               </Typography>
                             </Box>
                             <Box sx={{ mt: 1 }}>
                               <Typography variant="caption" color="text.secondary">
-                                Records: {data.data.length}
+                                {t.records_count}: {data.data.length}
                               </Typography>
                               {selectedDivision === 'all' && data.divisionStats && (
                                 <Typography variant="caption" color="text.secondary" display="block">
-                                  Divisions: {Object.keys(data.divisionStats).length}
+                                  {t.divisions}: {Object.keys(data.divisionStats).length}
                                 </Typography>
                               )}
                             </Box>
@@ -2831,7 +3163,7 @@ const handleExportToPDF = () => {
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6">
               <Visibility sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Pixel Details - ID: {selectedRecord?.pixle_id}
+              {t.pixelDetails} - ID: {selectedRecord?.pixle_id}
             </Typography>
             <IconButton onClick={() => setModalOpen(false)} sx={{ color: 'white' }}>
               <Close />
@@ -2846,7 +3178,7 @@ const handleExportToPDF = () => {
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Info color="primary" />
-                      NDVI Change Information
+                      {t.ndviChangeInfo}
                     </Typography>
                     <Grid container spacing={2}>
                       {/* <Grid item xs={6}>
@@ -2858,17 +3190,17 @@ const handleExportToPDF = () => {
                       </Grid> */}
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>Category:</strong> {selectedRecord.change_category || 'N/A'}
+                          <strong>{t.category}:</strong> {selectedRecord.change_category || 'N/A'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>NDVI Change:</strong> {selectedRecord.NDVI_change?.toFixed(4) || 'N/A'}
+                          <strong>{t.ndviChange}:</strong> {selectedRecord.NDVI_change?.toFixed(4) || 'N/A'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>Area:</strong> {selectedRecord.area_sq_km?.toFixed(6) || 'N/A'} km²
+                          <strong>{t.areaKm}:</strong> {selectedRecord.area_sq_km?.toFixed(6) || 'N/A'} km²
                         </Typography>
                       </Grid>
                     </Grid>
@@ -2881,7 +3213,7 @@ const handleExportToPDF = () => {
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Map color="primary" />
-                      Geographic Information
+                      {t.geographicInfo}
                     </Typography>
                     <List dense>
                       <ListItem>
@@ -2889,11 +3221,11 @@ const handleExportToPDF = () => {
                           <Avatar sx={{ bgcolor: 'primary.light' }}><Map /></Avatar>
                         </ListItemAvatar>
                         <ListItemText
-                          primary="Coordinates"
+                          primary={t.coordinates}
                           secondary={
                             <>
-                              <Typography variant="body2">Lat: {selectedRecord.latitude?.toFixed(6) || 'N/A'}</Typography>
-                              <Typography variant="body2">Lon: {selectedRecord.longitude?.toFixed(6) || 'N/A'}</Typography>
+                              <Typography variant="body2">{t.lat}: {selectedRecord.latitude?.toFixed(6) || 'N/A'}</Typography>
+                              <Typography variant="body2">{t.lon}: {selectedRecord.longitude?.toFixed(6) || 'N/A'}</Typography>
                             </>
                           }
                         />
@@ -2908,7 +3240,7 @@ const handleExportToPDF = () => {
                   <CardContent>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Note color="primary" />
-                      Additional Information
+                      {t.additionalInfo}
                     </Typography>
                     <List dense>
                       <ListItem>
@@ -2916,8 +3248,8 @@ const handleExportToPDF = () => {
                           <Avatar sx={{ bgcolor: 'warning.light' }}><Note /></Avatar>
                         </ListItemAvatar>
                         <ListItemText
-                          primary="Notes"
-                          secondary={selectedRecord.note || 'No additional notes'}
+                          primary={t.notes}
+                          secondary={selectedRecord.note || t.noAdditionalNotes}
                         />
                       </ListItem>
                       {selectedRecord.image_data && (
@@ -2926,10 +3258,10 @@ const handleExportToPDF = () => {
                             <Avatar sx={{ bgcolor: 'info.light' }}><ImageIcon /></Avatar>
                           </ListItemAvatar>
                           <ListItemText
-                            primary="Image Available"
+                            primary={t.imageAvailable}
                             secondary={
                               <Typography color="primary" sx={{ cursor: 'pointer' }} onClick={() => setImageModalOpen(true)}>
-                                Click to view image
+                                {t.clickToView}
                               </Typography>
                             }
                           />
@@ -2950,7 +3282,7 @@ const handleExportToPDF = () => {
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6">
               <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Image Preview - Pixel ID: {selectedRecord?.pixle_id}
+              {t.imagePreview} - ID: {selectedRecord?.pixle_id}
             </Typography>
             <IconButton onClick={() => setImageModalOpen(false)} sx={{ color: 'white' }}>
               <Close />
@@ -2970,12 +3302,12 @@ const handleExportToPDF = () => {
           ) : (
             <Box textAlign="center" py={8}>
               <ImageIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">No Image Available</Typography>
+              <Typography variant="h6" color="text.secondary">{t.noImageAvailable}</Typography>
             </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setImageModalOpen(false)}>Close</Button>
+          <Button onClick={() => setImageModalOpen(false)}>{t.close}</Button>
         </DialogActions>
       </Dialog>
 
@@ -2986,8 +3318,7 @@ const handleExportToPDF = () => {
           Data Source: Sentinel-2 Satellite NDVI Analysis
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block">
-          <strong>Note:</strong> All area measurements are in square kilometers (km²). 
-          Afforested area is calculated as (Total Coupe Area - Degraded Area from NDVI analysis).
+          {t.footerNote}
         </Typography>
       </Box>
     </Container>
