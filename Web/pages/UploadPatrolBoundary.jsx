@@ -217,9 +217,7 @@ const UploadPatrolBoundary = () => {
 
                         <div className="actions-cell">
 
-                          <button className="btn-action view">
-                            <FiEye />
-                          </button>
+                         
 
                           <button className="btn-action edit">
                             <FiEdit />

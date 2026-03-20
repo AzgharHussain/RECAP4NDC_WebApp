@@ -214,9 +214,9 @@ a{
 }
 
 /* Active NavLink */
-.sidebar .menu-item.active {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+.menu-item.active {
+  /* background: rgba(255, 255, 255, 0.2); */
+  /* border: 1px solid rgba(255, 255, 255, 0.4); */
   color: #00a651;
   font-weight: 700;
 }
@@ -533,7 +533,7 @@ body{
 .dropdown-menu {
   position: fixed;
   top: 19%;
-  right: 3%;
+  right: 4%;
   background: white;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -620,27 +620,27 @@ body{
 /* iPad / small laptops */
 @media only screen and (min-width: 835px) and (max-width: 1130px) {
   .newcontainer {
-    height: 18vh;
+    height: 19vh;
   }
 }
  
 /* Large screens */
 @media only screen and (min-width: 1131px) {
   .newcontainer {
-    height: 17vh;
+    height: 18vh;
   }
 }
 /* Large screens */
 @media only screen and (min-width: 1131px) {
   .newcontainer {
-    height: 17vh;
+    height: 18vh;
   }
 }
  
 /* Extra large screens */
 @media only screen and (min-width: 1500px) {
   .newcontainer {
-    height: 17vh;
+    height: 18vh;
   }
 }
  
@@ -649,4 +649,70 @@ body{
   .newcontainer {
     height: 14vh;
   }
+}
+
+.admin-dropdown-section {
+  display: flex;
+  gap: 10px;
+  justify-content: space-evenly;
+  padding-bottom: 10px;
+}
+
+.language-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.lang-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.lang-radio:hover {
+  background-color: #f0f0f0;
+}
+
+.lang-radio.active {
+  background-color: #e6f7e6;
+}
+
+.lang-radio input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #2e7d32; /* Forest green color to match your theme */
+}
+
+.radio-label {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Dark mode support if needed */
+@media (prefers-color-scheme: dark) {
+  .lang-radio:hover {
+    background-color: #333;
+  }
+  
+  .lang-radio.active {
+    background-color: #1a3b1a;
+  }
+  
+  .radio-label {
+    color: #fff;
+  }
+}
+
+.language-label{
+  padding-left: 10px;
+  padding-top: 10px;
+  border-top: 1px solid gray;
+  font-size: 13px;
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { FaChevronDown, FaChevronUp, FaLayerGroup, FaCircle, FaFolder, FaFolderOpen } from "react-icons/fa";
+import { BsGraphDownArrow } from "react-icons/bs";
 import { MdForest } from "react-icons/md";
 import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
@@ -486,7 +487,7 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
   );
 });
 
-const GEOSERVER_WMS = "http://68.178.167.216:8081/geoserver/wms";
+const GEOSERVER_WMS = "/geoserver/wms";
 
 // Complete nested data structure
 const layersData = {
@@ -1707,12 +1708,12 @@ const text = {
     coupeLegend: "Coupe NDVI Change"
   },
   gu: {
-    exploreData: "ડેટા તપાસો",
-    coupesData: "NDVI ફેરફાર",
+    exploreData: "ડેટા શોધો",
+    coupesData: "NDVI Change",
     forestCoverChange: "વન આવરણમાં ફેરફાર",
     selectLayer: "લેયર પસંદ કરો:",
     selectBoundaries: "સીમા પસંદ કરો:",
-    selectPatrollingIncident: "પેટ્રોલિંગ / ઘટના પસંદ કરો:",
+    selectPatrollingIncident: "પેટ્રોલિંગ / ઘટના પસંద કરો:",
     district: "જિલ્લો",
     coupe: "કૂપ",
     patrollingRoutes: "પેટ્રોલિંગ માર્ગો",
@@ -2255,42 +2256,65 @@ const layerManager = {
   },
 };
 
-  const clearAllLayers = useCallback(async () => {
-    try {
-      // Clear cache when clearing all layers
-      layersInfoCache.current.clear();
-      
-      // Remove all layers from the map
-      const removePromises = Object.keys(addedLayers).map(async (uniqueKey) => {
-        const layer = addedLayers[uniqueKey];
-        if (layer && layer._metadata?.name) {
-          await layerManager.removeLayer(layer._metadata.name);
-        }
-      });
-      
-      await Promise.all(removePromises);
-      
-      // Clear all states
-      setAddedLayers({});
-      setOpacity({});
-      
-      // Reset active coupe groups
-          const resetSelections = {};
+const clearAllLayers = useCallback(async () => {
+  try {
+    // Set loading state if you have one
+    setIsLayerLoading(true);
+    
+    // Clear cache
+    layersInfoCache.current.clear();
+    
+    // Get all unique layer names to remove (to avoid duplicate removal attempts)
+    const layersToRemove = new Set();
+    Object.values(addedLayers).forEach(layer => {
+      if (layer && layer._metadata?.name) {
+        layersToRemove.add(layer._metadata.name);
+      }
+    });
+
+    // Remove each unique layer from the map
+    const removePromises = Array.from(layersToRemove).map(async (layerName) => {
+      if (mapRef.current) {
+        // Find all layers with this name and remove them
+        const layersToRemove = Object.values(addedLayers).filter(
+          layer => layer._metadata?.name === layerName
+        );
+        
+        layersToRemove.forEach(layer => {
+          if (mapRef.current.hasLayer(layer)) {
+            mapRef.current.removeLayer(layer);
+          }
+          layer.off(); // Remove all event listeners
+        });
+      }
+    });
+    
+    await Promise.all(removePromises);
+    
+    // Clear all states
+    setAddedLayers({});
+    setOpacity({});
+    
+    // Reset coupe-related states
+    const resetSelections = {};
+    const resetActiveGroups = {};
+    
     coupeGroups.forEach((_, idx) => {
       const groupId = `coupes-${idx}`;
       resetSelections[groupId] = { month: 0, year: 2025 };
+      resetActiveGroups[groupId] = false;
     });
+    
     setGroupSelections(resetSelections);
+    setActiveCoupeGroups(resetActiveGroups);
     
     console.log("All layers cleared successfully");
-      
-      console.log("All layers cleared successfully");
-    } catch (error) {
-      console.error("Error clearing all layers:", error);
-    }
-
-    
-  }, [addedLayers, layerManager, coupeGroups]);
+  } catch (error) {
+    console.error("Error clearing all layers:", error);
+  } finally {
+    setIsLayerLoading(false);
+  }
+}, [addedLayers, mapRef, coupeGroups]);
 
 // Add this function to LayerTogglePanel.js - Modified to handle NDVI change layers separately
 // Add this function to LayerTogglePanel.js - FIXED to handle your API response format
@@ -2333,8 +2357,6 @@ const getLayerBoundsFromAPI = useCallback(async (layerName, isNdviChangeLayer = 
   }
 }, []);
 
-  // Toggle layer function for regular layers
-// Toggle layer function for regular layers - UPDATED to handle NDVI change layers
 const toggleLayer = useCallback(
   async (layerConfig, groupId) => {
     const uniqueKey = `${layerConfig.Name}-${groupId}`;
@@ -2352,9 +2374,15 @@ const toggleLayer = useCallback(
           return rest;
         });
       } else {
+        // Set loading to true BEFORE adding layer
+        setIsLayerLoading(true);
+
         // Add the new layer
         const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer);
-        if (!layer) throw new Error(`Failed to add layer: ${layerConfig.Name}`);
+        if (!layer) {
+          setIsLayerLoading(false); // Turn off loading if layer addition fails
+          throw new Error(`Failed to add layer: ${layerConfig.Name}`);
+        }
 
         const layerOpacity = 1;
         setAddedLayers((prev) => ({ ...prev, [uniqueKey]: layer }));
@@ -2362,49 +2390,44 @@ const toggleLayer = useCallback(
         layer.setOpacity(layerOpacity);
 
         // Determine if this is an NDVI change layer
-        const isNdviChangeLayer = layerConfig.Name.includes('NDVI_Change') || 
+        const isNdviChangeLayer = layerConfig.Name.includes('NDVI_Change') ||
                                   layerConfig.Name.includes('coupe_NDVI_Change');
 
         // Get bounds from API and zoom
-        setTimeout(async () => {
-          try {
-            const bounds = await getLayerBoundsFromAPI(layerConfig.Name, isNdviChangeLayer);
-            
-            if (bounds && mapRef.current) {
-              const sw = L.latLng(bounds.minY, bounds.minX);
-              const ne = L.latLng(bounds.maxY, bounds.maxX);
-              const layerBounds = L.latLngBounds(sw, ne);
-              
-              console.log(`🎯 Zooming to ${layerConfig.Name}:`, {
-                sw: [bounds.minY, bounds.minX],
-                ne: [bounds.maxY, bounds.maxX]
-              });
-              
+        try {
+          const bounds = await getLayerBoundsFromAPI(layerConfig.Name, isNdviChangeLayer);
+
+          if (bounds && mapRef.current) {
+            const sw = L.latLng(bounds.minY, bounds.minX);
+            const ne = L.latLng(bounds.maxY, bounds.maxX);
+            const layerBounds = L.latLngBounds(sw, ne);
+
+            // Create a promise that resolves when zoom animation completes
+            await new Promise((resolve) => {
+              const onZoomEnd = () => {
+                mapRef.current.off('zoomend', onZoomEnd);
+                // Add a small delay to ensure everything is rendered
+                setTimeout(resolve, 300);
+              };
+
+              mapRef.current.on('zoomend', onZoomEnd);
+
+              // Start the initial fitBounds animation
               mapRef.current.fitBounds(layerBounds, {
                 padding: [50, 50],
                 animate: true,
                 duration: 1
               });
+            });
 
-              setTimeout(() => {
-                const currentZoom = mapRef.current.getZoom();
-                const desiredMinZoom = 12; // Your desired minimum zoom
-                
-                if (currentZoom < desiredMinZoom) {
-                  console.log(`Zooming further from ${currentZoom} to ${desiredMinZoom}`);
-                  mapRef.current.setZoom(desiredMinZoom, {
-                    animate: true,
-                    duration: 0.5
-                  });
-                }
-              }, 100);
-              
-              console.log(`✅ Successfully zoomed to ${layerConfig.Name}`);
-            }
-          } catch (error) {
-            console.error(`❌ Error zooming to layer ${layerConfig.Name}:`, error);
+            console.log(`✅ Successfully zoomed to ${layerConfig.Name}`);
           }
-        }, 1000);
+        } catch (error) {
+          console.error(`❌ Error zooming to layer ${layerConfig.Name}:`, error);
+        } finally {
+          // Turn off loader ONLY after zoom animation is complete
+          setIsLayerLoading(false);
+        }
       }
     } catch (err) {
       console.error(`❌ Layer toggle failed for ${layerConfig.Name}:`, err);
@@ -2413,6 +2436,7 @@ const toggleLayer = useCallback(
   },
   [addedLayers, layerManager, mapRef, getLayerBoundsFromAPI]
 );
+
 
   const toggleGroup = useCallback((groupId) => {
     setOpenGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
@@ -2430,12 +2454,10 @@ const toggleLayer = useCallback(
     },
     [addedLayers]
   );
-
-// Handle month change for coupe groups - FIXED
-// Handle month change for coupe groups - UPDATED with NDVI change API
+// Handle month change for coupe groups - FIXED with proper loader timing
 const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
   const prevSelection = groupSelections[groupId];
-  
+
   // Update the selection state
   setGroupSelections((prev) => ({
     ...prev,
@@ -2448,10 +2470,10 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
 
   const firstLayer = group.children[0];
   const baseName = firstLayer.baseName || firstLayer.Name;
-  
+
   // Get available layers for this coupe
   const availableMonths = getAvailableMonthsForCoupe(baseName);
-  
+
   // Find the layer name for the selected month and year
   const selectedMonthData = availableMonths.find(m => m.month === month && m.year === year);
   if (!selectedMonthData) {
@@ -2460,15 +2482,18 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
   }
 
   const newMonthlyLayerName = selectedMonthData.layerName;
-  
+
   // Check if this group has any active layer
   const hasActiveLayer = Object.keys(addedLayers).some(key => key.includes(`-${groupId}-`));
-  
+
   // If the group has an active layer, we need to update it
   if (hasActiveLayer) {
     // Find the old layer key
     const oldLayerKey = Object.keys(addedLayers).find(key => key.includes(`-${groupId}-`));
-    
+
+    // Set loading to true before updating
+    setIsLayerLoading(true);
+
     try {
       // Remove the old layer
       if (oldLayerKey) {
@@ -2477,12 +2502,12 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
           mapRef.current.removeLayer(oldLayer);
           oldLayer.off();
         }
-        
+
         setAddedLayers((prev) => {
           const { [oldLayerKey]: removed, ...rest } = prev;
           return rest;
         });
-        
+
         setOpacity((prev) => {
           const { [oldLayerKey]: removed, ...rest } = prev;
           return rest;
@@ -2492,44 +2517,61 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
       // Add the new layer
       console.log(`Auto-adding new layer: ${newMonthlyLayerName}`);
       const layer = await layerManager.addLayer(newMonthlyLayerName, group.title);
-      
+
       if (layer) {
         const newKey = `${newMonthlyLayerName}-${groupId}-0`;
         setAddedLayers((prev) => ({ ...prev, [newKey]: layer }));
         setOpacity((prev) => ({ ...prev, [newKey]: 1 }));
         layer.setOpacity(1);
-        
+
         setActiveCoupeGroups((prev) => ({
           ...prev,
           [groupId]: true
         }));
 
-        // Zoom to bounds using NDVI change API
-        setTimeout(async () => {
-          try {
-            const bounds = await getLayerBoundsFromAPI(newMonthlyLayerName, true);
-            
-            if (bounds && mapRef.current) {
-              const sw = L.latLng(bounds.minY, bounds.minX);
-              const ne = L.latLng(bounds.maxY, bounds.maxX);
-              mapRef.current.fitBounds(L.latLngBounds(sw, ne), {
-                // padding: [50, 50],
-                maxZoom: 16,
-                minZoom: 15,
+        // Zoom to bounds with loader
+        try {
+          const bounds = await getLayerBoundsFromAPI(newMonthlyLayerName, true);
+
+          if (bounds && mapRef.current) {
+            const sw = L.latLng(bounds.minY, bounds.minX);
+            const ne = L.latLng(bounds.maxY, bounds.maxX);
+            const layerBounds = L.latLngBounds(sw, ne);
+
+            // Create a promise that resolves when zoom animation completes
+            await new Promise((resolve) => {
+              const onZoomEnd = () => {
+                mapRef.current.off('zoomend', onZoomEnd);
+                // Add a small delay to ensure everything is rendered
+                setTimeout(resolve, 300);
+              };
+
+              mapRef.current.on('zoomend', onZoomEnd);
+
+              // Start the initial fitBounds animation
+              mapRef.current.fitBounds(layerBounds, {
+                padding: [50, 50],
                 animate: true,
                 duration: 1
               });
-            }
-          } catch (error) {
-            console.error('Error zooming to layer:', error);
+            });
+
+            console.log(`✅ Successfully zoomed to ${newMonthlyLayerName}`);
           }
-        }, 1000);
+        } catch (error) {
+          console.error('Error zooming to layer:', error);
+        } finally {
+          // Turn off loader ONLY after zoom animation is complete
+          setIsLayerLoading(false);
+        }
       }
     } catch (error) {
       console.error('Error updating layer for month change:', error);
+      setIsLayerLoading(false);
     }
   }
 }, [coupeGroups, getAvailableMonthsForCoupe, layerManager, mapRef, groupSelections, addedLayers, getLayerBoundsFromAPI]);
+
 
 // Component for Coupe Group with checkbox on the group title - FIXED
 const CoupeGroupWithoutCheckbox = ({ 
@@ -2547,7 +2589,8 @@ const CoupeGroupWithoutCheckbox = ({
   setAddedLayers,
   setOpacity,
   setActiveCoupeGroups,
-  getLayerBoundsFromAPI
+  getLayerBoundsFromAPI,
+  setIsLayerLoading 
 }) => {
   const isExpanded = openGroups[groupId] || false;
   const firstLayer = group.children[0];
@@ -2651,6 +2694,9 @@ const handleGroupCheckbox = useCallback(async (e) => {
     // Add the current layer
     if (!currentLayerName) return;
     
+    // Set loading to true BEFORE adding layer
+    setIsLayerLoading(true);
+    
     try {
       const layer = await layerManager.addLayer(
         currentLayerName, 
@@ -2668,42 +2714,45 @@ const handleGroupCheckbox = useCallback(async (e) => {
           [groupId]: true
         }));
 
-        // Zoom to bounds using the new API
-        setTimeout(async () => {
-          try {
-            // NDVI change layers always use the separate API
-            const bounds = await getLayerBoundsFromAPI(currentLayerName, true);
+        // Get bounds and zoom
+        try {
+          const bounds = await getLayerBoundsFromAPI(currentLayerName, true);
+          
+          if (bounds && mapRef.current) {
+            const sw = L.latLng(bounds.minY, bounds.minX);
+            const ne = L.latLng(bounds.maxY, bounds.maxX);
+            const layerBounds = L.latLngBounds(sw, ne);
             
-            if (bounds && mapRef.current) {
-              const sw = L.latLng(bounds.minY, bounds.minX);
-              const ne = L.latLng(bounds.maxY, bounds.maxX);
-              mapRef.current.fitBounds(L.latLngBounds(sw, ne), {
+            // Create a promise that resolves when zoom animation completes
+            await new Promise((resolve) => {
+              const onZoomEnd = () => {
+                mapRef.current.off('zoomend', onZoomEnd);
+                // Add a small delay to ensure everything is rendered
+                setTimeout(resolve, 300);
+              };
+              
+              mapRef.current.on('zoomend', onZoomEnd);
+              
+              // Start the initial fitBounds animation
+              mapRef.current.fitBounds(layerBounds, {
                 padding: [50, 50],
                 animate: true,
                 duration: 1
               });
-
-              setTimeout(() => {
-                const currentZoom = mapRef.current.getZoom();
-                const desiredMinZoom = 12; // Your desired minimum zoom
-                
-                if (currentZoom < desiredMinZoom) {
-                  console.log(`Zooming further from ${currentZoom} to ${desiredMinZoom}`);
-                  mapRef.current.setZoom(desiredMinZoom, {
-                    animate: true,
-                    duration: 0.5
-                  });
-                }
-              }, 100);
-
-            }
-          } catch (error) {
-            console.error('Error zooming to layer:', error);
+            });
+            
+            console.log(`✅ Successfully zoomed to ${currentLayerName}`);
           }
-        }, 1000);
+        } catch (error) {
+          console.error('Error zooming to layer:', error);
+        } finally {
+          // Turn off loader ONLY after zoom animation is complete
+          setIsLayerLoading(false);
+        }
       }
     } catch (error) {
       console.error('Error adding layer:', error);
+      setIsLayerLoading(false);
     }
   }
 }, [isChecked, groupId, addedLayers, currentLayerName, group.title, validSelection, months, layerManager, mapRef, setAddedLayers, setOpacity, setActiveCoupeGroups, getLayerBoundsFromAPI]);
@@ -2725,7 +2774,7 @@ const handleGroupCheckbox = useCallback(async (e) => {
             onClick={(e) => e.stopPropagation()}
             style={{ marginRight: "8px", cursor: 'pointer' }}
           />
-          <FaLayerGroup style={{ marginRight: "8px" }} />
+          {/* <FaLayerGroup style={{ marginRight: "8px" }} /> */}
           {group.title}
           {isChecked && activeInfo && (
             <span className="active-indicator" style={{
@@ -2785,6 +2834,7 @@ const renderGroup = (group, index, section = "layers") => {
         setOpacity={setOpacity}
         setActiveCoupeGroups={setActiveCoupeGroups}
         getLayerBoundsFromAPI={getLayerBoundsFromAPI}
+        setIsLayerLoading={setIsLayerLoading} 
       />
     );
   }
@@ -2981,7 +3031,7 @@ const renderGroup = (group, index, section = "layers") => {
         <div className="coupe-section">
           <div className="coupe-header" onClick={() => setIsCoupesDataOpen(!isCoupesDataOpen)}>
             <h3 style={{ cursor: 'pointer', fontSize: "14px", marginLeft: "5px", fontWeight: 600 }}>
-              <FaLayerGroup style={{ marginLeft: "8px", fontSize: "14px" }} />
+              <BsGraphDownArrow style={{ marginLeft: "8px", fontSize: "14px" }} />
               <span style={{ marginLeft: "8px" }}>{text[language].coupesData}</span>
             </h3>
             <span style={{ cursor: 'pointer', marginRight: "15px" }}>

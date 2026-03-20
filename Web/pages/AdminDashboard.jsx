@@ -29,6 +29,14 @@ function AdminDashboard() {
     totalSize: "0 MB"
   });
 
+  const [divisions, setDivisions] = useState([]);
+  const [divisionsLoading, setDivisionsLoading] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+  const [divisionsError, setDivisionsError] = useState(null);
+
+  // New state for edit mode
+  const [selectedCoupe, setSelectedCoupe] = useState(null);
+
   // Language text objects
   const text = {
     en: {
@@ -76,6 +84,7 @@ function AdminDashboard() {
   // Fetch coupes from API
   useEffect(() => {
     fetchCoupes();
+    fetchDivisions();
   }, []);
 
   const fetchCoupes = async () => {
@@ -84,15 +93,14 @@ function AdminDashboard() {
       setError(null);
       
       const token = localStorage.getItem("token");
-
-const response = await axios.get(
-  `${API_BASE_URL}/api/admincoupes`,
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
+      const response = await axios.get(
+        `${API_BASE_URL}/api/admincoupes`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       
       if (response.data && response.data.data) {
         const coupeList = response.data.data.map(item => item.coupe_name);
@@ -114,6 +122,57 @@ const response = await axios.get(
     }
   };
 
+  const fetchDivisions = async () => {
+    try {
+      setDivisionsLoading(true);
+      setDivisionsError(null);
+      
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${API_BASE_URL}/api/coupe-divisions`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      console.log("Divisions API response:", response);
+      
+      let divisionsData = [];
+      
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          if (response.data.length > 0 && Array.isArray(response.data[0])) {
+            divisionsData = response.data[0];
+          } else {
+            divisionsData = response.data;
+          }
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          divisionsData = response.data.data;
+        }
+      }
+      
+      console.log("Extracted divisions data:", divisionsData);
+      setDivisions(divisionsData);
+      
+    } catch (err) {
+      console.error("Error fetching divisions:", err);
+      if (err.response) {
+        console.error("Error response:", err.response.data);
+        console.error("Error status:", err.response.status);
+      }
+    } finally {
+      setDivisionsLoading(false);
+    }
+  };
+
+  // Handle edit button click
+  const handleEditCoupe = (coupeName) => {
+    setSelectedCoupe({ name: coupeName });
+    document.querySelector('.upload-card').scrollIntoView({ behavior: 'smooth' });
+  };
+
   // Upload shapefile with progress simulation
   const uploadFiles = async () => {
     if (!files || files.length === 0) {
@@ -128,7 +187,6 @@ const response = await axios.get(
     setUploadProgress(0);
     setUploadStatus(null);
 
-    // Simulate progress
     const progressInterval = setInterval(() => {
       setUploadProgress(prev => {
         if (prev >= 90) {
@@ -142,6 +200,9 @@ const response = await axios.get(
     const form = new FormData();
     Array.from(files).forEach(f => form.append("files", f));
     form.append("color", selectedColor);
+    if (selectedCoupe) {
+      form.append("coupe_name", selectedCoupe.name);
+    }
 
     try {
       const res = await axios.post(`${API_BASE_URL}/api/upload-shp`, form, {
@@ -157,9 +218,9 @@ const response = await axios.get(
       });
 
       setFiles([]);
-      fetchCoupes(); // Refresh coupe list
+      setSelectedCoupe(null);
+      fetchCoupes();
 
-      // Reset progress after success
       setTimeout(() => setUploadProgress(0), 2000);
 
     } catch (err) {
@@ -202,19 +263,8 @@ const response = await axios.get(
 
   return (
     <div className="admin-dashboard">
-      {/* Top Navigation */}
-     
-
       <div className="dashboard-main">
-        {/* Left Sidebar */}
-
-
-        {/* Main Content */}
         <main className="admin-content">
-          {/* Quick Stats Cards */}
-
-
-          {/* Two Column Layout */}
           <div className="content-columns">
             {/* Left Column - Coupe List */}
             <div className="column">
@@ -260,10 +310,11 @@ const response = await axios.get(
                               <span className="status-badge published">Published</span>
                             </div>
                             <div className="actions-cell">
-                              <button className="btn-action view" title="View">
-                                <FiEye />
-                              </button>
-                              <button className="btn-action edit" title="Edit">
+                              <button 
+                                className="btn-action edit" 
+                                title="Edit"
+                                onClick={() => handleEditCoupe(coupe)}
+                              >
                                 <FiEdit />
                               </button>
                               <button className="btn-action delete" title="Delete">
@@ -283,9 +334,6 @@ const response = await axios.get(
                   )}
                 </div>
               </div>
-
-              {/* Recent Activity */}
-
             </div>
 
             {/* Right Column - Upload Section */}
@@ -294,6 +342,47 @@ const response = await axios.get(
                 <div className="card-header">
                   <h3><FiUpload /> {text[language].uploadTitle}</h3>
                 </div>
+
+                <div className="division-selector">
+                  <label htmlFor="division-dropdown">Select Division:</label>
+                  <select 
+                    id="division-dropdown"
+                    className="dropdown-select"
+                    value={selectedOption}
+                    onChange={(e) => setSelectedOption(e.target.value)}
+                  >
+                    <option value="">-- Choose a division --</option>
+                    {divisionsLoading ? (
+                      <option disabled>Loading divisions...</option>
+                    ) : divisionsError ? (
+                      <option disabled>Error: {divisionsError}</option>
+                    ) : divisions.length > 0 ? (
+                      divisions.map((division, index) => {
+                        const divisionName = division.division || Object.values(division)[0] || "Unknown";
+                        return (
+                          <option key={index} value={divisionName}>
+                            {divisionName}
+                          </option>
+                        );
+                      })
+                    ) : (
+                      <option disabled>No divisions available</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Edit mode indicator */}
+                {selectedCoupe && (
+                  <div className="edit-mode-indicator">
+                    <FiEdit /> Editing: <strong>{selectedCoupe.name}</strong>
+                    <button 
+                      className="btn-clear-selection"
+                      onClick={() => setSelectedCoupe(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
 
                 {/* File Upload Area */}
                 <div className="upload-area" 
@@ -396,7 +485,7 @@ const response = await axios.get(
                     </>
                   ) : (
                     <>
-                      <FiUpload /> {text[language].uploadTitle}
+                      <FiUpload /> {selectedCoupe ? `Replace ${selectedCoupe.name}` : text[language].uploadTitle}
                     </>
                   )}
                 </button>
@@ -440,7 +529,7 @@ const response = await axios.get(
         </main>
       </div>
 
-<UploadPatrolBoundary />
+      <UploadPatrolBoundary />
     </div>
   );
 }
