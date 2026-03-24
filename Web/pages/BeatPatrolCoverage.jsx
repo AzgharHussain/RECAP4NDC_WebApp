@@ -27,18 +27,22 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import UploadPatrolBoundary from "./UploadPatrolBoundary";
 
 // Helper to format date/time
-const formatDateTime = (dateTime) => {
+const formatDateTime = (dateTime, language = 'en') => {
   if (!dateTime) return "N/A";
-  return new Date(dateTime).toLocaleString();
+  return new Date(dateTime).toLocaleString(language === 'gu' ? 'gu-IN' : 'en-US');
 };
 
-const formatDuration = (startTime, endTime) => {
+const formatDuration = (startTime, endTime, language = 'en') => {
   if (!startTime || !endTime) return "N/A";
   const start = new Date(startTime);
   const end = new Date(endTime);
   const durationMs = end - start;
   const hours = Math.floor(durationMs / (1000 * 60 * 60));
   const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (language === 'gu') {
+    return `${hours} કલાક ${minutes} મિનિટ`;
+  }
   return `${hours}h ${minutes}m`;
 };
 
@@ -67,6 +71,144 @@ const PatrolLoader = () => (
 );
 
 const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
+  // Translations
+  const translations = {
+    en: {
+      title: "Plantation Coverage Analysis",
+      loading: "Loading...",
+      analyzing: "Analyzing...",
+      analyzeCoverage: "Analyze Coverage",
+      reset: "Reset",
+      exportToExcel: "Export to Excel",
+      patrolDetails: "Patrol Details",
+      patrolInformation: "Patrol Information",
+      patrolOfficer: "Patrol Officer",
+      patrolId: "Patrol ID",
+      distance: "Distance",
+      patrolType: "Patrol Type",
+      notes: "Notes",
+      date: "Date",
+      startTime: "Start Time",
+      endTime: "End Time",
+      duration: "Duration",
+      patrolImages: "Patrol Images",
+      images: "Images",
+      view: "View",
+      uncategorized: "Uncategorized",
+      division: "Division",
+      range: "Range",
+      round: "Round",
+      beat: "Beat",
+      boundary: "Plantation Boundary",
+      month: "Month",
+      selectDivision: "Select Division",
+      selectRange: "Select Range",
+      selectRound: "Select Round",
+      selectBeat: "Select Beat",
+      selectBoundary: "Select Boundary...",
+      loadingBoundaries: "Loading boundaries...",
+      noDivisions: "No divisions available",
+      noRanges: "No ranges available",
+      noRounds: "No rounds available",
+      noBeats: "No beats available",
+      noBoundaries: "No boundaries available",
+      beatArea: "Beat Area",
+      boundaryArea: "Boundary Area",
+      patrolCoveredArea: "Patrol Covered Area",
+      coverage: "Coverage",
+      patrolsInside: "Patrols Inside This",
+      beatLabel: "Beat",
+      boundaryLabel: "Boundary",
+      noPatrolsFound: "No patrols found inside this",
+      clickToView: "Click to view details",
+      dayPatrol: "Day Patrol",
+      nightPatrol: "Night Patrol",
+      areaUnit: "km²",
+      squareMeters: "m²",
+      loadingCoverage: "Loading coverage data...",
+      completeSelection: "Please complete the beat selection (Division → Range → Round → Beat)",
+      selectBoundaryFirst: "Please select a Boundary",
+      selectMonthFirst: "Please select a month",
+      noCoverageData: "No coverage data found",
+      failedToLoad: "Failed to load coverage data",
+      failedToLoadDivisions: "Failed to load divisions list",
+      failedToLoadRanges: "Failed to load ranges",
+      failedToLoadRounds: "Failed to load rounds",
+      failedToLoadBeats: "Failed to load beats",
+      failedToLoadBoundaries: "Failed to load patrol boundaries",
+      failedToLoadPatrolDetails: "Failed to load patrol details",
+      invalidDataFormat: "Failed to load patrol details: Invalid data format"
+    },
+    gu: {
+      title: "પ્લાન્ટેશન કવરેજ વિશ્લેષણ",
+      loading: "લોડ થઈ રહ્યું છે...",
+      analyzing: "વિશ્લેષણ કરી રહ્યા છીએ...",
+      analyzeCoverage: "કવરેજ વિશ્લેષણ કરો",
+      reset: "રીસેટ",
+      exportToExcel: "એક્સેલમાં નિકાલ કરો",
+      patrolDetails: "પેટ્રોલ વિગતો",
+      patrolInformation: "પેટ્રોલ માહિતી",
+      patrolOfficer: "પેટ્રોલ અધિકારી",
+      patrolId: "પેટ્રોલ ID",
+      distance: "અંતર",
+      patrolType: "પેટ્રોલ પ્રકાર",
+      notes: "નોંધ",
+      date: "તારીખ",
+      startTime: "શરૂઆતનો સમય",
+      endTime: "સમાપ્તિ સમય",
+      duration: "અવધિ",
+      patrolImages: "પેટ્રોલ છબીઓ",
+      images: "છબીઓ",
+      view: "જુઓ",
+      uncategorized: "શ્રેણી વગરનું",
+      division: "ડિવિઝન",
+      range: "રેંજ",
+      round: "રાઉન્ડ",
+      beat: "બીટ",
+      boundary: "પ્લાન્ટેશન બાઉન્ડ્રી",
+      month: "મહિનો",
+      selectDivision: "ડિવિઝન પસંદ કરો",
+      selectRange: "રેંજ પસંદ કરો",
+      selectRound: "રાઉન્ડ પસંદ કરો",
+      selectBeat: "બીટ પસંદ કરો",
+      selectBoundary: "બાઉન્ડ્રી પસંદ કરો...",
+      loadingBoundaries: "બાઉન્ડ્રીઓ લોડ થઈ રહી છે...",
+      noDivisions: "કોઈ ડિવિઝન ઉપલબ્ધ નથી",
+      noRanges: "કોઈ રેંજ ઉપલબ્ધ નથી",
+      noRounds: "કોઈ રાઉન્ડ ઉપલબ્ધ નથી",
+      noBeats: "કોઈ બીટ ઉપલબ્ધ નથી",
+      noBoundaries: "કોઈ બાઉન્ડ્રી ઉપલબ્ધ નથી",
+      beatArea: "બીટ વિસ્તાર",
+      boundaryArea: "બાઉન્ડ્રી વિસ્તાર",
+      patrolCoveredArea: "પેટ્રોલ કવરેજ વિસ્તાર",
+      coverage: "કવરેજ",
+      patrolsInside: "આની અંદરના પેટ્રોલ",
+      beatLabel: "બીટ",
+      boundaryLabel: "બાઉન્ડ્રી",
+      noPatrolsFound: "આની અંદર કોઈ પેટ્રોલ મળ્યા નથી",
+      clickToView: "વિગતો જોવા ક્લિક કરો",
+      dayPatrol: "દિવસનો પેટ્રોલ",
+      nightPatrol: "રાત્રિનો પેટ્રોલ",
+      areaUnit: "કિમી²",
+      squareMeters: "મી²",
+      loadingCoverage: "કવરેજ ડેટા લોડ થઈ રહ્યો છે...",
+      completeSelection: "કૃપા કરીને બીટ પસંદગી પૂર્ણ કરો (ડિવિઝન → રેંજ → રાઉન્ડ → બીટ)",
+      selectBoundaryFirst: "કૃપા કરીને બાઉન્ડ્રી પસંદ કરો",
+      selectMonthFirst: "કૃપા કરીને મહિનો પસંદ કરો",
+      noCoverageData: "કોઈ કવરેજ ડેટા મળ્યો નથી",
+      failedToLoad: "કવરેજ ડેટા લોડ કરવામાં નિષ્ફળતા",
+      failedToLoadDivisions: "ડિવિઝન સૂચિ લોડ કરવામાં નિષ્ફળ",
+      failedToLoadRanges: "રેંજ લોડ કરવામાં નિષ્ફળતા",
+      failedToLoadRounds: "રાઉન્ડ લોડ કરવામાં નિષ્ફળતા",
+      failedToLoadBeats: "બીટ લોડ કરવામાં નિષ્ફળતા",
+      failedToLoadBoundaries: "પેટ્રોલ બાઉન્ડ્રીઓ લોડ કરવામાં નિષ્ફળતા",
+      failedToLoadPatrolDetails: "પેટ્રોલ વિગતો લોડ કરવામાં નિષ્ફળતા",
+      invalidDataFormat: "પેટ્રોલ વિગતો લોડ કરવામાં નિષ્ફળતા: અમાન્ય ડેટા ફોર્મેટ"
+    }
+  };
+
+  const t = translations[language] || translations.en;
+
   // Beat selection states
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
@@ -108,7 +250,7 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
   const [imageScale, setImageScale] = useState(1);
 
   // Selection mode: 'beat' or 'boundary'
-  const [selectionMode, setSelectionMode] = useState('beat'); // 'beat' or 'boundary'
+  const [selectionMode, setSelectionMode] = useState('boundary'); // 'beat' or 'boundary'
 
   // Fetch divisions (Beat Coupe)
   const fetchDivisions = async () => {
@@ -122,7 +264,6 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
         }
       );
 
-      // Handle the response format from the API
       const divisionsData = response.data[0] || response.data || [];
       const divisionList = divisionsData.map(item => ({
         value: item.division,
@@ -131,155 +272,150 @@ const BeatPatrolCoverage = ({ language, setShowMapRoute, showmaproute }) => {
       setDivisions(divisionList);
     } catch (error) {
       console.error("Error fetching divisions:", error);
-      alert("Failed to load divisions list");
+      alert(t.failedToLoadDivisions);
     } finally {
       setLoading(prev => ({ ...prev, divisions: false }));
     }
   };
 
   // Fetch ranges based on selected division
-// Fetch ranges based on selected division
-const fetchRanges = async (division) => {
-  if (!division) return;
-  
-  setLoading(prev => ({ ...prev, ranges: true }));
-  setSelectedRange(null);
-  setSelectedRound(null);
-  setSelectedBeat(null);
-  setRounds([]);
-  setBeats([]);
-  
-  try {
-    const token = localStorage.getItem("token");
-    const response = await axios.post(
-      `${API_BASE_URL}/api/beat-coupe-ranges`,
-      { division: division.value },
-      {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
+  const fetchRanges = async (division) => {
+    if (!division) return;
+    
+    setLoading(prev => ({ ...prev, ranges: true }));
+    setSelectedRange(null);
+    setSelectedRound(null);
+    setSelectedBeat(null);
+    setRounds([]);
+    setBeats([]);
+    
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_BASE_URL}/api/beat-coupe-ranges`,
+        { division: division.value },
+        {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
         }
+      );
+
+      let rangesData = [];
+      if (Array.isArray(response.data)) {
+        rangesData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        rangesData = response.data.data;
+      } else if (response.data && Array.isArray(response.data[0])) {
+        rangesData = response.data[0];
       }
-    );
 
-    // Handle the response correctly - it might be an array directly or have data property
-    let rangesData = [];
-    if (Array.isArray(response.data)) {
-      rangesData = response.data;
-    } else if (response.data && Array.isArray(response.data.data)) {
-      rangesData = response.data.data;
-    } else if (response.data && Array.isArray(response.data[0])) {
-      rangesData = response.data[0];
+      const rangeList = rangesData.map(item => ({
+        value: item.range,
+        label: item.range
+      }));
+      setRanges(rangeList);
+    } catch (error) {
+      console.error("Error fetching ranges:", error);
+      alert(t.failedToLoadRanges);
+    } finally {
+      setLoading(prev => ({ ...prev, ranges: false }));
     }
+  };
 
-    const rangeList = rangesData.map(item => ({
-      value: item.range,
-      label: item.range
-    }));
-    setRanges(rangeList);
-  } catch (error) {
-    console.error("Error fetching ranges:", error);
-    alert("Failed to load ranges");
-  } finally {
-    setLoading(prev => ({ ...prev, ranges: false }));
-  }
-};
-
-// Fetch rounds based on selected division and range
-const fetchRounds = async (division, range) => {
-  if (!division || !range) return;
-  
-  setLoading(prev => ({ ...prev, rounds: true }));
-  setSelectedRound(null);
-  setSelectedBeat(null);
-  setBeats([]);
-  
-  try {
-    const token = localStorage.getItem("token");
-    const response = await axios.post(
-      `${API_BASE_URL}/api/beat-coupe-rounds`,
-      { 
-        division: division.value,
-        range: range.value 
-      },
-      {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
+  // Fetch rounds based on selected division and range
+  const fetchRounds = async (division, range) => {
+    if (!division || !range) return;
+    
+    setLoading(prev => ({ ...prev, rounds: true }));
+    setSelectedRound(null);
+    setSelectedBeat(null);
+    setBeats([]);
+    
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_BASE_URL}/api/beat-coupe-rounds`,
+        { 
+          division: division.value,
+          range: range.value 
+        },
+        {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
         }
+      );
+
+      let roundsData = [];
+      if (Array.isArray(response.data)) {
+        roundsData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        roundsData = response.data.data;
+      } else if (response.data && Array.isArray(response.data[0])) {
+        roundsData = response.data[0];
       }
-    );
 
-    // Handle the response correctly
-    let roundsData = [];
-    if (Array.isArray(response.data)) {
-      roundsData = response.data;
-    } else if (response.data && Array.isArray(response.data.data)) {
-      roundsData = response.data.data;
-    } else if (response.data && Array.isArray(response.data[0])) {
-      roundsData = response.data[0];
+      const roundList = roundsData.map(item => ({
+        value: item.round,
+        label: item.round
+      }));
+      setRounds(roundList);
+    } catch (error) {
+      console.error("Error fetching rounds:", error);
+      alert(t.failedToLoadRounds);
+    } finally {
+      setLoading(prev => ({ ...prev, rounds: false }));
     }
+  };
 
-    const roundList = roundsData.map(item => ({
-      value: item.round,
-      label: item.round
-    }));
-    setRounds(roundList);
-  } catch (error) {
-    console.error("Error fetching rounds:", error);
-    alert("Failed to load rounds");
-  } finally {
-    setLoading(prev => ({ ...prev, rounds: false }));
-  }
-};
-
-// Fetch beats based on selected division, range, and round
-const fetchBeats = async (division, range, round) => {
-  if (!division || !range || !round) return;
-  
-  setLoading(prev => ({ ...prev, beats: true }));
-  setSelectedBeat(null);
-  
-  try {
-    const token = localStorage.getItem("token");
-    const response = await axios.post(
-      `${API_BASE_URL}/api/beat-coupe-beats`,
-      { 
-        division: division.value,
-        range: range.value,
-        round: round.value
-      },
-      {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
+  // Fetch beats based on selected division, range, and round
+  const fetchBeats = async (division, range, round) => {
+    if (!division || !range || !round) return;
+    
+    setLoading(prev => ({ ...prev, beats: true }));
+    setSelectedBeat(null);
+    
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_BASE_URL}/api/beat-coupe-beats`,
+        { 
+          division: division.value,
+          range: range.value,
+          round: round.value
+        },
+        {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
         }
+      );
+
+      let beatsData = [];
+      if (Array.isArray(response.data)) {
+        beatsData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        beatsData = response.data.data;
+      } else if (response.data && Array.isArray(response.data[0])) {
+        beatsData = response.data[0];
       }
-    );
 
-    // Handle the response correctly
-    let beatsData = [];
-    if (Array.isArray(response.data)) {
-      beatsData = response.data;
-    } else if (response.data && Array.isArray(response.data.data)) {
-      beatsData = response.data.data;
-    } else if (response.data && Array.isArray(response.data[0])) {
-      beatsData = response.data[0];
+      const beatList = beatsData.map(item => ({
+        value: item.beat,
+        label: item.beat
+      }));
+      setBeats(beatList);
+    } catch (error) {
+      console.error("Error fetching beats:", error);
+      alert(t.failedToLoadBeats);
+    } finally {
+      setLoading(prev => ({ ...prev, beats: false }));
     }
-
-    const beatList = beatsData.map(item => ({
-      value: item.beat,
-      label: item.beat
-    }));
-    setBeats(beatList);
-  } catch (error) {
-    console.error("Error fetching beats:", error);
-    alert("Failed to load beats");
-  } finally {
-    setLoading(prev => ({ ...prev, beats: false }));
-  }
-};
-
+  };
 
   // Fetch patrol boundaries
   const fetchPatrolBoundaries = async () => {
@@ -302,6 +438,7 @@ const fetchBeats = async (division, range, round) => {
       setBoundaries(boundaryList);
     } catch (err) {
       console.error(err);
+      alert(t.failedToLoadBoundaries);
     } finally {
       setLoading(prev => ({ ...prev, boundaries: false }));
     }
@@ -407,15 +544,15 @@ const fetchBeats = async (division, range, round) => {
   // Fetch coverage data
   const fetchCoverageData = async () => {
     if (selectionMode === 'beat' && !selectedBeat) {
-      alert("Please complete the beat selection (Division → Range → Round → Beat)");
+      alert(t.completeSelection);
       return;
     }
     if (selectionMode === 'boundary' && !selectedBoundary) {
-      alert("Please select a Boundary");
+      alert(t.selectBoundaryFirst);
       return;
     }
     if (!selectedMonth) {
-      alert("Please select a month");
+      alert(t.selectMonthFirst);
       return;
     }
 
@@ -456,11 +593,11 @@ const fetchBeats = async (division, range, round) => {
         setCoverageData(data);
         setPatrols(data.patrols_covering_coupe || []);
       } else {
-        alert(response.data.message || "No coverage data found");
+        alert(response.data.message || t.noCoverageData);
       }
     } catch (err) {
       console.error("Error fetching coverage data:", err);
-      alert("Failed to load coverage data");
+      alert(t.failedToLoad);
     } finally {
       setLoading(prev => ({ ...prev, coverage: false }));
     }
@@ -480,11 +617,11 @@ const fetchBeats = async (division, range, round) => {
         setSelectedPatrol(patrolId);
         setShowPatrolModal(true);
       } else {
-        alert("Failed to load patrol details: Invalid data format");
+        alert(t.invalidDataFormat);
       }
     } catch (error) {
       console.error("Error fetching patrol details:", error);
-      alert("Failed to load patrol details");
+      alert(t.failedToLoadPatrolDetails);
     } finally {
       setLoading(prev => ({ ...prev, patrol: false }));
       setSetShowLoader(false);
@@ -506,22 +643,22 @@ const fetchBeats = async (division, range, round) => {
 
     const summaryData = [
       {
-        [selectionMode === 'beat' ? "Beat" : "Boundary"]: selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
-        "Area (sq m)": selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m,
-        "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
-        "Coverage %": coverageData.coverage_percentage,
+        [selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel]: selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
+        [t.areaUnit === "km²" ? "Area (sq m)" : "વિસ્તાર (ચો.મી.)"]: selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m,
+        [t.patrolCoveredArea === "Patrol Covered Area" ? "Patrol Covered Area (sq m)" : "પેટ્રોલ કવરેજ વિસ્તાર (ચો.મી.)"]: coverageData.patrol_area_sq_m,
+        [t.coverage === "Coverage" ? "Coverage %" : "કવરેજ %"]: coverageData.coverage_percentage,
       },
     ];
 
     const patrolData = patrols.map((patrol) => ({
-      "Patrol ID": patrol.patrol_id,
-      "Start Time": formatDateTime(patrol.start_time),
-      "End Time": formatDateTime(patrol.end_time),
-      "Duration": formatDuration(patrol.start_time, patrol.end_time),
-      "Patrol Officer": patrol.patrol_officer_name,
-      "Distance (kms)": patrol.distance_kms,
-      "Start Location": patrol.start_location,
-      "End Location": patrol.end_location,
+      [t.patrolId === "Patrol ID" ? "Patrol ID" : "પેટ્રોલ ID"]: patrol.patrol_id,
+      [t.startTime === "Start Time" ? "Start Time" : "શરૂઆતનો સમય"]: formatDateTime(patrol.start_time, language),
+      [t.endTime === "End Time" ? "End Time" : "સમાપ્તિ સમય"]: formatDateTime(patrol.end_time, language),
+      [t.duration === "Duration" ? "Duration" : "અવધિ"]: formatDuration(patrol.start_time, patrol.end_time, language),
+      [t.patrolOfficer === "Patrol Officer" ? "Patrol Officer" : "પેટ્રોલ અધિકારી"]: patrol.patrol_officer_name,
+      [t.distance === "Distance" ? "Distance (kms)" : "અંતર (કિમી)"]: patrol.distance_kms,
+      ["Start Location"]: patrol.start_location,
+      ["End Location"]: patrol.end_location,
     }));
 
     const wb = XLSX.utils.book_new();
@@ -595,7 +732,7 @@ const fetchBeats = async (division, range, round) => {
         .mode-button.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: transparent; }
       `}</style>
 
-      {/* Image Preview Modal - Same as before */}
+      {/* Image Preview Modal */}
       {selectedImage && (
         <div
           style={{
@@ -624,7 +761,7 @@ const fetchBeats = async (division, range, round) => {
               background: "rgba(0,0,0,0.7)", color: "white", padding: "8px 16px",
               borderRadius: "20px", fontSize: "14px", fontWeight: "600", zIndex: 10000, fontFamily: "arial"
             }}>
-              Image {patrolDetails.images.findIndex(img => img.image_data === selectedImage) + 1} / {patrolDetails.images.length}
+              {language === "gu" ? "છબી" : "Image"} {patrolDetails.images.findIndex(img => img.image_data === selectedImage) + 1} / {patrolDetails.images.length}
             </div>
           )}
 
@@ -685,41 +822,41 @@ const fetchBeats = async (division, range, round) => {
         </div>
       )}
 
-      {/* Patrol Details Modal - Same as before */}
+      {/* Patrol Details Modal */}
       {showPatrolModal && patrolDetails && !selectedImage && (
         <div className="modal-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000, fontFamily: "arial" }} onClick={closePatrolModal}>
           <div className="modal-content" style={{ backgroundColor: "white", borderRadius: "12px", width: "90%", maxWidth: "800px", maxHeight: "60vh", overflow: "auto", position: "relative", boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: "10px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg, #00c853 0%, #bcc758ff 100%)", color: "white", borderRadius: "12px 12px 0 0" }}>
-              <h2 style={{ fontSize: "24px", fontWeight: "600", margin: 0 }}>{language === "gu" ? "પેટ્રોલ વિગતો" : "Patrol Details"}</h2>
+              <h2 style={{ fontSize: "24px", fontWeight: "600", margin: 0 }}>{t.patrolDetails}</h2>
               <button onClick={closePatrolModal} style={{ background: "rgba(255,255,255,0.2)", border: "none", fontSize: "20px", cursor: "pointer", color: "white", width: "40px", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
             <div style={{ padding: "10px" }}>
               {loading.patrol ? (
-                <div style={{ textAlign: "center", padding: "40px" }}><div style={{ border: "4px solid #f3f3f3", borderTop: "4px solid #2ada2aff", borderRadius: "50%", width: "60px", height: "60px", animation: "spin 1s linear infinite", margin: "0 auto 10px" }} /><p>Loading...</p></div>
+                <div style={{ textAlign: "center", padding: "40px" }}><div style={{ border: "4px solid #f3f3f3", borderTop: "4px solid #2ada2aff", borderRadius: "50%", width: "60px", height: "60px", animation: "spin 1s linear infinite", margin: "0 auto 10px" }} /><p>{t.loading}</p></div>
               ) : (
                 <>
                   <div style={{ backgroundColor: "#fff", borderRadius: "10px", padding: "10px", marginBottom: "10px", border: "1px solid #e2e8f0" }}>
                     <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", borderBottom: "2px solid #e1bc42ff" }}>
                       <div style={{ backgroundColor: "#9ce142ff", width: "40px", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "12px", color: "white" }}><UserOutlined /></div>
-                      <h3 style={{ margin: 0, fontSize: "20px", color: "#2d3748" }}>Patrol Information</h3>
+                      <h3 style={{ margin: 0, fontSize: "20px", color: "#2d3748" }}>{t.patrolInformation}</h3>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "15px" }}>
-                      <div><label>Patrol Officer</label><div>{patrolDetails.patrol_officer_name || "N/A"}</div></div>
-                      <div><label>Patrol ID</label><div>{patrolDetails.patrol_id}</div></div>
-                      <div><label>Distance</label><div>{patrolDetails.distance_kms ? `${Number(patrolDetails.distance_kms).toFixed(2)} km` : "N/A"}</div></div>
-                      <div><label>Patrol Type</label><div>{patrolDetails.type_name}</div></div>
+                      <div><label>{t.patrolOfficer}</label><div>{patrolDetails.patrol_officer_name || "N/A"}</div></div>
+                      <div><label>{t.patrolId}</label><div>{patrolDetails.patrol_id}</div></div>
+                      <div><label>{t.distance}</label><div>{patrolDetails.distance_kms ? `${Number(patrolDetails.distance_kms).toFixed(2)} km` : "N/A"}</div></div>
+                      <div><label>{t.patrolType}</label><div>{patrolDetails.type_name}</div></div>
                     </div>
                     {patrolDetails.note && (
                       <div style={{ marginTop: "20px" }}>
-                        <label>Notes</label>
+                        <label>{t.notes}</label>
                         <div>{patrolDetails.note}</div>
                       </div>
                     )}
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px", marginTop: "20px" }}>
-                      <div><label><CalendarOutlined /> Date</label><div>{new Date(patrolDetails.start_time).toLocaleDateString()}</div></div>
-                      <div><label><ClockCircleOutlined /> Start Time</label><div>{formatDateTime(patrolDetails.start_time)}</div></div>
-                      <div><label><ClockCircleOutlined /> End Time</label><div>{formatDateTime(patrolDetails.end_time)}</div></div>
-                      <div><label>Duration</label><div>{formatDuration(patrolDetails.start_time, patrolDetails.end_time)}</div></div>
+                      <div><label><CalendarOutlined /> {t.date}</label><div>{new Date(patrolDetails.start_time).toLocaleDateString(language === 'gu' ? 'gu-IN' : 'en-US')}</div></div>
+                      <div><label><ClockCircleOutlined /> {t.startTime}</label><div>{formatDateTime(patrolDetails.start_time, language)}</div></div>
+                      <div><label><ClockCircleOutlined /> {t.endTime}</label><div>{formatDateTime(patrolDetails.end_time, language)}</div></div>
+                      <div><label>{t.duration}</label><div>{formatDuration(patrolDetails.start_time, patrolDetails.end_time, language)}</div></div>
                     </div>
                   </div>
 
@@ -727,17 +864,17 @@ const fetchBeats = async (division, range, round) => {
                     <div style={{ backgroundColor: "#fff", borderRadius: "10px", padding: "10px", border: "1px solid #e2e8f0" }}>
                       <div style={{ display: "flex", alignItems: "center", marginBottom: "10px", borderBottom: "2px solid #4299e1" }}>
                         <div style={{ backgroundColor: "#4299e1", width: "40px", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "6px", color: "white" }}><PictureOutlined /></div>
-                        <h3 style={{ margin: 0, fontSize: "20px", color: "#2d3748" }}>Patrol Images ({patrolDetails.images.length})</h3>
+                        <h3 style={{ margin: 0, fontSize: "20px", color: "#2d3748" }}>{t.patrolImages} ({patrolDetails.images.length})</h3>
                       </div>
                       <Image.PreviewGroup>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "15px" }}>
                           {patrolDetails.images.map((image, index) => (
                             <div key={index} className="image-card" style={{ border: "2px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => { setSelectedImage(image.image_data); setShowPatrolModal(false); setImageRotation(0); setImageScale(1); }}>
                               <div style={{ width: "100%", height: "140px", overflow: "hidden", position: "relative" }}>
-                                <Image width="100%" height="100%" style={{ objectFit: "cover" }} src={getImageUrl(image.image_data)} alt={`Image ${index + 1}`} preview={{ mask: <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "white" }}><SearchOutlined style={{ fontSize: "20px", marginBottom: "5px" }} /><span>View</span></div> }} />
+                                <Image width="100%" height="100%" style={{ objectFit: "cover" }} src={getImageUrl(image.image_data)} alt={`${t.images} ${index + 1}`} preview={{ mask: <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "white" }}><SearchOutlined style={{ fontSize: "20px", marginBottom: "5px" }} /><span>{t.view}</span></div> }} />
                                 <div style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "rgba(0,0,0,0.7)", color: "white", fontSize: "12px", padding: "1px 4px", borderRadius: "4px", zIndex: 1 }}>{index + 1}</div>
                               </div>
-                              <div style={{ padding: "5px", backgroundColor: "#f8fafc", textAlign: "center" }}>{image.image_category || "Uncategorized"}</div>
+                              <div style={{ padding: "5px", backgroundColor: "#f8fafc", textAlign: "center" }}>{image.image_category || t.uncategorized}</div>
                             </div>
                           ))}
                         </div>
@@ -757,25 +894,9 @@ const fetchBeats = async (division, range, round) => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "30px" }}>
           <div>
             <h1 style={{ fontSize: "32px", fontWeight: "700", marginBottom: "8px", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              {language === "gu" ? "પેટ્રોલ કવરેજ વિશ્લેષણ" : "Patrol Coverage Analysis"}
+              {t.title}
             </h1>
           </div>
-        </div>
-
-        {/* Mode Toggle */}
-        <div className="mode-toggle">
-          <button
-            className={`mode-button ${selectionMode === 'beat' ? 'active' : ''}`}
-            onClick={() => toggleSelectionMode('beat')}
-          >
-            {language === "gu" ? "બીટ દ્વારા" : "By Beat"}
-          </button>
-          <button
-            className={`mode-button ${selectionMode === 'boundary' ? 'active' : ''}`}
-            onClick={() => toggleSelectionMode('boundary')}
-          >
-            {language === "gu" ? "બાઉન્ડ્રી દ્વારા" : "By Boundary"}
-          </button>
         </div>
 
         {/* Selection Card */}
@@ -788,7 +909,7 @@ const fetchBeats = async (division, range, round) => {
                 {/* Division Dropdown */}
                 <div style={{ width: "200px" }}>
                   <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                    {language === "gu" ? "ડિવિઝન" : "Division"}
+                    {t.division}
                   </label>
                   <Select
                     value={selectedDivision}
@@ -796,17 +917,17 @@ const fetchBeats = async (division, range, round) => {
                     options={divisions}
                     isSearchable
                     isClearable
-                    placeholder={loading.divisions ? "Loading..." : "Select Division"}
+                    placeholder={loading.divisions ? t.loading : t.selectDivision}
                     isLoading={loading.divisions}
                     styles={customSelectStyles}
-                    noOptionsMessage={() => "No divisions available"}
+                    noOptionsMessage={() => t.noDivisions}
                   />
                 </div>
 
                 {/* Range Dropdown */}
                 <div style={{ width: "200px" }}>
                   <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                    {language === "gu" ? "રેંજ" : "Range"}
+                    {t.range}
                   </label>
                   <Select
                     value={selectedRange}
@@ -814,10 +935,10 @@ const fetchBeats = async (division, range, round) => {
                     options={ranges}
                     isSearchable
                     isClearable
-                    placeholder={loading.ranges ? "Loading..." : "Select Range"}
+                    placeholder={loading.ranges ? t.loading : t.selectRange}
                     isLoading={loading.ranges}
                     styles={customSelectStyles}
-                    noOptionsMessage={() => "No ranges available"}
+                    noOptionsMessage={() => t.noRanges}
                     isDisabled={!selectedDivision}
                   />
                 </div>
@@ -825,7 +946,7 @@ const fetchBeats = async (division, range, round) => {
                 {/* Round Dropdown */}
                 <div style={{ width: "200px" }}>
                   <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                    {language === "gu" ? "રાઉન્ડ" : "Round"}
+                    {t.round}
                   </label>
                   <Select
                     value={selectedRound}
@@ -833,10 +954,10 @@ const fetchBeats = async (division, range, round) => {
                     options={rounds}
                     isSearchable
                     isClearable
-                    placeholder={loading.rounds ? "Loading..." : "Select Round"}
+                    placeholder={loading.rounds ? t.loading : t.selectRound}
                     isLoading={loading.rounds}
                     styles={customSelectStyles}
-                    noOptionsMessage={() => "No rounds available"}
+                    noOptionsMessage={() => t.noRounds}
                     isDisabled={!selectedRange}
                   />
                 </div>
@@ -844,7 +965,7 @@ const fetchBeats = async (division, range, round) => {
                 {/* Beat Dropdown */}
                 <div style={{ width: "200px" }}>
                   <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                    {language === "gu" ? "બીટ" : "Beat"}
+                    {t.beat}
                   </label>
                   <Select
                     value={selectedBeat}
@@ -852,10 +973,10 @@ const fetchBeats = async (division, range, round) => {
                     options={beats}
                     isSearchable
                     isClearable
-                    placeholder={loading.beats ? "Loading..." : "Select Beat"}
+                    placeholder={loading.beats ? t.loading : t.selectBeat}
                     isLoading={loading.beats}
                     styles={customSelectStyles}
-                    noOptionsMessage={() => "No beats available"}
+                    noOptionsMessage={() => t.noBeats}
                     isDisabled={!selectedRound}
                   />
                 </div>
@@ -864,7 +985,7 @@ const fetchBeats = async (division, range, round) => {
               /* Boundary Selection */
               <div style={{ width: "300px" }}>
                 <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                  {language === "gu" ? "બાઉન્ડ્રી" : "Boundary"}
+                  {t.boundary}
                 </label>
                 <Select
                   value={selectedBoundary}
@@ -872,10 +993,10 @@ const fetchBeats = async (division, range, round) => {
                   options={boundaries}
                   isSearchable
                   isClearable
-                  placeholder={loading.boundaries ? "Loading boundaries..." : "Select Boundary..."}
+                  placeholder={loading.boundaries ? t.loadingBoundaries : t.selectBoundary}
                   isLoading={loading.boundaries}
                   styles={customSelectStyles}
-                  noOptionsMessage={() => "No boundaries available"}
+                  noOptionsMessage={() => t.noBoundaries}
                 />
               </div>
             )}
@@ -883,7 +1004,7 @@ const fetchBeats = async (division, range, round) => {
             {/* Month Picker */}
             <div style={{ width: "200px" }}>
               <label style={{ display: "block", fontWeight: "600", marginBottom: "10px", fontSize: "14px", color: "#2d3748", textTransform: "uppercase" }}>
-                {language === "gu" ? "મહિનો" : "Month"}
+                {t.month}
               </label>
               <input
                 type="month"
@@ -917,12 +1038,12 @@ const fetchBeats = async (division, range, round) => {
                 {loading.coverage ? (
                   <>
                     <div style={{ border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid white", borderRadius: "50%", width: "20px", height: "20px", animation: "spin 1s linear infinite" }} />
-                    {language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing..."}
+                    {t.analyzing}
                   </>
                 ) : (
                   <>
                     <EyeOutlined />
-                    {language === "gu" ? "કવરેજ વિશ્લેષણ કરો" : "Analyze Coverage"}
+                    {t.analyzeCoverage}
                   </>
                 )}
               </button>
@@ -931,7 +1052,7 @@ const fetchBeats = async (division, range, round) => {
                 disabled={loading.coverage}
                 style={{ padding: "12px 24px", borderRadius: "8px", border: "2px solid #e2e8f0", fontSize: "14px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "white", color: "#4a5568", fontWeight: "600" }}
               >
-                {language === "gu" ? "રીસેટ" : "Reset"}
+                {t.reset}
               </button>
             </div>
           </div>
@@ -941,7 +1062,7 @@ const fetchBeats = async (division, range, round) => {
         {loading.coverage && (
           <div style={{ textAlign: "center", padding: "60px" }}>
             <div style={{ border: "6px solid #f3f3f3", borderTop: "6px solid #4299e1", borderRadius: "50%", width: "80px", height: "80px", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
-            <p style={{ color: "#718096", fontSize: "18px" }}>Loading coverage data...</p>
+            <p style={{ color: "#718096", fontSize: "18px" }}>{t.loadingCoverage}</p>
           </div>
         )}
 
@@ -952,7 +1073,7 @@ const fetchBeats = async (division, range, round) => {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", marginBottom: "30px" }}>
               <div className="stats-card">
                 <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>
-                  {selectionMode === 'beat' ? "Beat" : "Boundary"}
+                  {selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}
                 </p>
                 <div style={{ display: "inline-block", padding: "8px 20px", borderRadius: "20px", backgroundColor: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.3)", fontSize: "18px", fontWeight: "600", backdropFilter: "blur(10px)" }}>
                   {selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label}
@@ -960,26 +1081,26 @@ const fetchBeats = async (division, range, round) => {
               </div>
               <div className="stats-card" style={{ background: "linear-gradient(135deg, #fbdf93ff 0%, #b8f557ff 100%)" }}>
                 <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>
-                  {selectionMode === 'beat' ? "Beat Area" : "Boundary Area"}
+                  {selectionMode === 'beat' ? t.beatArea : t.boundaryArea}
                 </p>
                 <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
-                  {(Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
+                  {(Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} {t.areaUnit}
                 </h3>
                 <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
-                  {Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m).toLocaleString()} m²
+                  {Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m).toLocaleString()} {t.squareMeters}
                 </p>
               </div>
               <div className="stats-card" style={{ background: "linear-gradient(135deg, #fec14fff 0%, #6fb834ff 100%)" }}>
-                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Patrol Covered Area</p>
+                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>{t.patrolCoveredArea}</p>
                 <h3 style={{ margin: "0", fontSize: "28px", fontWeight: "700" }}>
-                  {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
+                  {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} {t.areaUnit}
                 </h3>
                 <p style={{ fontSize: "12px", margin: "8px 0 0 0", opacity: 0.8 }}>
-                  {Number(coverageData.patrol_area_sq_m).toLocaleString()} m²
+                  {Number(coverageData.patrol_area_sq_m).toLocaleString()} {t.squareMeters}
                 </p>
               </div>
               <div className="stats-card" style={{ background: coverageData.coverage_percentage > 70 ? "linear-gradient(135deg, #e9e643ff 0%, #f93838ff 100%)" : coverageData.coverage_percentage > 40 ? "linear-gradient(135deg, #f8fa70ff 0%, #8cfe40ff 100%)" : "linear-gradient(135deg, #ffb108ff 0%, #dbff99ff 100%)" }}>
-                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>Coverage</p>
+                <p style={{ fontSize: "14px", margin: "0 0 12px 0", opacity: 0.9 }}>{t.coverage}</p>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <h3 style={{ margin: "0", fontSize: "36px", fontWeight: "700" }}>
                     {Number(coverageData.coverage_percentage).toFixed(2)}%
@@ -995,7 +1116,7 @@ const fetchBeats = async (division, range, round) => {
 
             {/* Export Button */}
             <button className="glow-button" onClick={exportToExcel} style={{ marginBottom: "30px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", padding: "12px 30px" }}>
-              <DownloadOutlined /> {language === "gu" ? "એક્સેલમાં નિકાલ કરો" : "Export to Excel"}
+              <DownloadOutlined /> {t.exportToExcel}
             </button>
 
             {/* Patrols List */}
@@ -1005,10 +1126,7 @@ const fetchBeats = async (division, range, round) => {
                   <span style={{ backgroundColor: "#a5e06eff", color: "white", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}>
                     {patrols.length}
                   </span>
-                  {language === "gu" 
-                    ? `આ ${selectionMode === 'beat' ? "બીટ" : "બાઉન્ડ્રી"}ની અંદરના પેટ્રોલ`
-                    : `Patrols Inside This ${selectionMode === 'beat' ? "Beat" : "Boundary"}`
-                  }
+                  {t.patrolsInside} {selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "15px" }}>
                   {patrols.map((patrol, index) => (
@@ -1016,11 +1134,11 @@ const fetchBeats = async (division, range, round) => {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                         <div>
                           <p style={{ fontWeight: "700", margin: "0 0 8px 0", fontSize: "16px", color: selectedPatrol === patrol.patrol_id ? "#276749" : "#2d3748" }}>
-                            Patrol #{patrol.patrol_id}
+                            {t.patrolId} #{patrol.patrol_id}
                           </p>
                           {patrol.patrol_type && (
                             <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", backgroundColor: patrol.patrol_type === "Day" ? "#ebf8ff" : "#faf5ff", color: patrol.patrol_type === "Day" ? "#2b6cb0" : "#6b46c1", border: `1px solid ${patrol.patrol_type === "Day" ? "#bee3f8" : "#e9d8fd"}` }}>
-                              {patrol.patrol_type} Patrol
+                              {patrol.patrol_type === "Day" ? t.dayPatrol : t.nightPatrol}
                             </span>
                           )}
                         </div>
@@ -1031,11 +1149,11 @@ const fetchBeats = async (division, range, round) => {
                       {patrol.start_time && (
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" }}>
                           <CalendarOutlined style={{ color: "#a0aec0" }} />
-                          <span style={{ fontSize: "12px", color: "#718096" }}>{new Date(patrol.start_time).toLocaleDateString()}</span>
+                          <span style={{ fontSize: "12px", color: "#718096" }}>{new Date(patrol.start_time).toLocaleDateString(language === 'gu' ? 'gu-IN' : 'en-US')}</span>
                         </div>
                       )}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
-                        <span style={{ fontSize: "11px", color: "#a0aec0", fontStyle: "italic" }}>Click to view details</span>
+                        <span style={{ fontSize: "11px", color: "#a0aec0", fontStyle: "italic" }}>{t.clickToView}</span>
                         <span style={{ fontSize: "20px", color: selectedPatrol === patrol.patrol_id ? "#48bb78" : "#4299e1" }}>→</span>
                       </div>
                     </div>
@@ -1046,10 +1164,7 @@ const fetchBeats = async (division, range, round) => {
               <div style={{ textAlign: "center", padding: "40px", backgroundColor: "#fff", borderRadius: "12px", border: "2px dashed #e2e8f0" }}>
                 <div style={{ width: "60px", height: "60px", backgroundColor: "#fed7d7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "#e53e3e", fontSize: "24px" }}>⚡</div>
                 <p style={{ color: "#718096", fontSize: "16px", fontWeight: "500" }}>
-                  {language === "gu" 
-                    ? `આ ${selectionMode === 'beat' ? "બીટ" : "બાઉન્ડ્રી"}ની અંદર કોઈ પેટ્રોલ મળ્યા નથી`
-                    : `No patrols found inside this ${selectionMode === 'beat' ? "beat" : "boundary"}`
-                  }
+                  {t.noPatrolsFound} {selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}
                 </p>
               </div>
             )}

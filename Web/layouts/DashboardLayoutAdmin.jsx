@@ -50,7 +50,14 @@ export default function DashboardLayoutAdmin() {
       viewCoupe: "View Coupe Boundaries",
       coupeLog: "Coupe Observation Log",
       patrollingIncident: "Patrolling",
-
+      coupeDashboard: "Coupe Dashboard",
+      patrolBoundary: "Patrol Boundary",
+      changePassword: "Change Password",
+      changeLanguage: "Change Language",
+      english: "English",
+      gujarati: "ગુજરાતી",
+      logout: "Logout",
+      forestPatrollingSystem: "FOREST PATROLLING & MONITORING SYSTEM"
     },
     gu: {
       overview: "સારાંશ",
@@ -62,6 +69,14 @@ export default function DashboardLayoutAdmin() {
       viewCoupe: "કૂપ બાઉન્ડરી જુઓ",
       coupeLog: "કૂપ અવલોકન લોગ",
       patrollingIncident: "પેટ્રોલિંગ",
+      coupeDashboard: "કૂપ ડેશબોર્ડ",
+      patrolBoundary: "પેટ્રોલ બાઉન્ડરી",
+      changePassword: "પાસવર્ડ બદલો",
+      changeLanguage: "ભાષા બદલો",
+      english: "English",
+      gujarati: "ગુજરાતી",
+      logout: "લોગઆઉટ",
+      forestPatrollingSystem: "વન પેટ્રોલિંગ અને મોનિટરિંગ સિસ્ટમ"
     },
   };
  const getUserName = () => {
@@ -187,59 +202,7 @@ useEffect(() => {
   return (
     <div className="layout">
       {/* Header */}
-          {/* ===== TOP ROW ===== */}
-          {/* <div className="header-top">
-            <div className="header-left">
-              <button
-                className="hamburger-btn"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              >
-                {isSidebarOpen ? <FaTimes /> : <FaBars />}
-              </button>
-              <img src={brand} alt="RECAP4NDC" className="header-logo" />
-            </div>
-  
-            <div className="header-logos">
-              <img src={logos1} alt="Logo 1" />
-              <img src={logos2} alt="Logo 2" />
-              <img src={logos3} alt="Logo 3" />
-              <img src={logos4} alt="Logo 4" />
-              <img src={logos5} alt="Logo 5" />
-              <img src={logos6} alt="Logo 6" />
-              <img src={logos7} alt="Logo 7" />
-              <img src={logos8} alt="Logo 8" />
-              <img src={logos9} alt="Logo 9" />
-              <img src={logos10} alt="Logo 10" />
-              <img src={logos11} alt="Logo 11" />
-            </div>
-  
-            <div className="header-right">
-              <img src={userIcon} alt="User Icon" className="user-icon-img" />
-              <span className="username">
-                <b>{username}</b>
-                {isAdmin && <span className="admin-badge"> (Admin)</span>}
-              </span>
-              
-              <div
-                className="admin-section"
-                onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
-              >
-                <span className="arrow-icon">
-                  {isAdminMenuOpen ? <FaChevronDown /> : <FaChevronRight />}
-                </span>
-              </div>
-              <div className="admin-dropdown-section">
-              <button
-                className="logout-btn"
-                onClick={handleLogout}
-              >
-                {text[language].logout}
-              </button>
-            </div>
-            </div>
-          </div> */}
-
-<div className="newcontainer">
+      <div className="newcontainer">
 
         <header id="header">
                 <div className="container-fluid22">
@@ -251,7 +214,7 @@ useEffect(() => {
                       
                         <div className="portal-header">
                             <div className="icon" aria-hidden="true"></div>
-                            <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>FOREST PATROLLING & MONITORING SYSTEM</b></h2>
+                            <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>{text[language].forestPatrollingSystem}</b></h2>
                         </div>  </div>
                       
                         <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', paddingRight:'45px'}}>
@@ -293,7 +256,14 @@ useEffect(() => {
             className={`menu-item ${isActiveLink("/geo") ? "active" : ""}`}
             onClick={handleLinkClick}
           >
-            Admin Dashboard
+            {text[language].coupeDashboard}
+          </NavLink>
+          <NavLink
+            to="/UploadPatrolBoundary"
+            className={`menu-item ${isActiveLink("/UploadPatrolBoundary") ? "active" : ""}`}
+            onClick={handleLinkClick}
+          >
+            {text[language].patrolBoundary}
           </NavLink>
            </div>
          <div className="header-right">
@@ -338,10 +308,10 @@ useEffect(() => {
         <b>{username}</b>
         {isAdmin && <span className="admin-badge"> (Admin)</span>}
       </div>
-      <a href="/changepassword">Change Password</a>
+      <a href="/changepassword">{text[language].changePassword}</a>
 
       <div className="language-section">
-      <div className="language-label">Change Language</div>
+      <div className="language-label">{text[language].changeLanguage}</div>
       <div className="language-buttons">
   <label className={`lang-radio ${language === "en" ? "active" : ""}`}>
     <input
@@ -354,7 +324,7 @@ useEffect(() => {
         // setIsDropdownOpen(false);
       }}
     />
-    <span className="radio-label">English</span>
+    <span className="radio-label">{text[language].english}</span>
   </label>
   
   <label className={`lang-radio ${language === "gu" ? "active" : ""}`}>
@@ -368,7 +338,7 @@ useEffect(() => {
         // setIsDropdownOpen(false);
       }}
     />
-    <span className="radio-label">ગુજરાતી</span>
+    <span className="radio-label">{text[language].gujarati}</span>
   </label>
 </div>
     </div>
@@ -377,7 +347,7 @@ useEffect(() => {
              className="logout-btn dropdown-item"
              onClick={handleLogout}
            >
-             Logout
+             {text[language].logout}
            </button>
          </div>
        )}

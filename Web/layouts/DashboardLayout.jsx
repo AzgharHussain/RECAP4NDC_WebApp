@@ -57,7 +57,7 @@ export default function DashboardLayout() {
       english: "English",
       gujarati: "Gujarati",
       NDVIDashboard: "NDVI Dashboard",           // Added
-      PatrolCoverageAnalysis: "Patrol Coverage Analysis"
+      PatrolCoverageAnalysis: "Plantation Coverage Analysis"
     },
     gu: {
       overview: "સારાંશ",
