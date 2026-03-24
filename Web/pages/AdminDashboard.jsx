@@ -57,7 +57,38 @@ function AdminDashboard() {
       systemHealth: "System Health",
       database: "Database",
       geoserver: "GeoServer",
-      api: "API"
+      api: "API",
+      selectDivision: "Select Division:",
+      chooseDivision: "-- Choose a division --",
+      loadingDivisions: "Loading divisions...",
+      errorDivisions: "Error loading divisions",
+      noDivisions: "No divisions available",
+      editing: "Editing:",
+      cancel: "Cancel",
+      dragDrop: "Drag & Drop or Click to Upload",
+      fileHint: "Select .shp, .shx, .dbf files (and optionally .prj)",
+      filesSelected: "files selected",
+      clearSelection: "Clear Selection",
+      chooseLayerColor: "Choose Layer Color",
+      processing: "Processing...",
+      replace: "Replace",
+      uploadButton: "Upload & Publish Shapefile",
+      success: "Success!",
+      errorMessage: "Error!",
+      uploadProcess: "Upload Process",
+      selectFiles: "Select Files",
+      importDatabase: "Import to Database",
+      publishGeoserver: "Publish to GeoServer",
+      actions: "Actions",
+      status: "Status",
+      edit: "Edit",
+      delete: "Delete",
+      noCoupes: "No coupes found. Upload your first shapefile!",
+      uploadFailed: "Upload failed: ",
+      fileValidation: "Select shapefile components (.shp .shx .dbf [ .prj ]) before upload.",
+      coupeName: "Coupe Name",
+      publishedStatus: "Published",
+      pendingStatus: "Pending"
     },
     gu: {
       title: "એડમિન ડેશબોર્ડ",
@@ -77,9 +108,42 @@ function AdminDashboard() {
       systemHealth: "સિસ્ટમ સ્વાસ્થ્ય",
       database: "ડેટાબેઝ",
       geoserver: "જીઓસર્વર",
-      api: "API"
+      api: "API",
+      selectDivision: "વિભાગ પસંદ કરો:",
+      chooseDivision: "-- વિભાગ પસંદ કરો --",
+      loadingDivisions: "વિભાગો લોડ થઈ રહ્યા છે...",
+      errorDivisions: "વિભાગો લોડ કરવામાં ભૂલ",
+      noDivisions: "કોઈ વિભાગ ઉપલબ્ધ નથી",
+      editing: "સંપાદન કરી રહ્યા છે:",
+      cancel: "રદ કરો",
+      dragDrop: "ખેંચો અને છોડો અથવા અપલોડ કરવા ક્લિક કરો",
+      fileHint: ".shp, .shx, .dbf ફાઇલો પસંદ કરો (વૈકલ્પિક .prj)",
+      filesSelected: "ફાઇલો પસંદ કરી",
+      clearSelection: "પસંદગી સાફ કરો",
+      chooseLayerColor: "લેયર રંગ પસંદ કરો",
+      processing: "પ્રક્રિયા કરી રહ્યા છે...",
+      replace: "બદલો",
+      uploadButton: "શેપફાઇલ અપલોડ અને પ્રકાશિત કરો",
+      success: "સફળતા!",
+      errorMessage: "ભૂલ!",
+      uploadProcess: "અપલોડ પ્રક્રિયા",
+      selectFiles: "ફાઇલો પસંદ કરો",
+      importDatabase: "ડેટાબેઝમાં આયાત કરો",
+      publishGeoserver: "જીઓસર્વર પર પ્રકાશિત કરો",
+      actions: "ક્રિયાઓ",
+      status: "સ્થિતિ",
+      edit: "સંપાદન કરો",
+      delete: "કાઢી નાખો",
+      noCoupes: "કોઈ કૂપ મળ્યા નથી. તમારી પ્રથમ શેપફાઇલ અપલોડ કરો!",
+      uploadFailed: "અપલોડ નિષ્ફળ: ",
+      fileValidation: "અપલોડ કરતા પહેલા શેપફાઇલ ઘટકો (.shp .shx .dbf [ .prj ]) પસંદ કરો.",
+      coupeName: "કૂપ નામ",
+      publishedStatus: "પ્રકાશિત",
+      pendingStatus: "બાકી"
     }
   };
+
+  const t = text[language];
 
   // Fetch coupes from API
   useEffect(() => {
@@ -162,6 +226,7 @@ function AdminDashboard() {
         console.error("Error response:", err.response.data);
         console.error("Error status:", err.response.status);
       }
+      setDivisionsError(t.errorDivisions);
     } finally {
       setDivisionsLoading(false);
     }
@@ -178,7 +243,7 @@ function AdminDashboard() {
     if (!files || files.length === 0) {
       setUploadStatus({
         success: false,
-        message: "Select shapefile components (.shp .shx .dbf [ .prj ]) before upload."
+        message: t.fileValidation
       });
       return;
     }
@@ -228,7 +293,7 @@ function AdminDashboard() {
       console.error(err);
       setUploadStatus({
         success: false,
-        message: "Upload failed: " + (err.response?.data?.message || err.message)
+        message: t.uploadFailed + (err.response?.data?.message || err.message)
       });
     } finally {
       setLoading(false);
@@ -237,28 +302,28 @@ function AdminDashboard() {
 
   // Color options with better names
   const colorOptions = [
-    { name: "Emerald", value: "#10b981", icon: "🟢" },
-    { name: "Sapphire", value: "#3b82f6", icon: "🔵" },
-    { name: "Ruby", value: "#ef4444", icon: "🔴" },
-    { name: "Amber", value: "#f59e0b", icon: "🟠" },
-    { name: "Violet", value: "#8b5cf6", icon: "🟣" },
-    { name: "Graphite", value: "#374151", icon: "⚫" },
-    { name: "Rose", value: "#f472b6", icon: "🌸" }
+    { nameEn: "Emerald", nameGu: "પન્ના", value: "#10b981", icon: "🟢" },
+    { nameEn: "Sapphire", nameGu: "નીલમ", value: "#3b82f6", icon: "🔵" },
+    { nameEn: "Ruby", nameGu: "માણેક", value: "#ef4444", icon: "🔴" },
+    { nameEn: "Amber", nameGu: "એમ્બર", value: "#f59e0b", icon: "🟠" },
+    { nameEn: "Violet", nameGu: "વાયોલેટ", value: "#8b5cf6", icon: "🟣" },
+    { nameEn: "Graphite", nameGu: "ગ્રેફાઇટ", value: "#374151", icon: "⚫" },
+    { nameEn: "Rose", nameGu: "ગુલાબી", value: "#f472b6", icon: "🌸" }
   ];
 
-  // Mock recent activity
+  // Mock recent activity with translations
   const recentActivity = [
-    { id: 1, action: "Shapefile Upload", name: "Forest_Coupe_01.shp", time: "2 min ago", status: "success" },
-    { id: 2, action: "Database Update", name: "Coupe metadata", time: "15 min ago", status: "success" },
-    { id: 3, action: "GeoServer Publish", name: "Layer: coupes_2024", time: "1 hour ago", status: "success" },
-    { id: 4, action: "Shapefile Upload", name: "Water_Bodies.shp", time: "2 hours ago", status: "pending" }
+    { id: 1, actionEn: "Shapefile Upload", actionGu: "શેપફાઇલ અપલોડ", name: "Forest_Coupe_01.shp", time: "2 min ago", timeGu: "2 મિનિટ પહેલા", status: "success" },
+    { id: 2, actionEn: "Database Update", actionGu: "ડેટાબેઝ અપડેટ", name: "Coupe metadata", time: "15 min ago", timeGu: "15 મિનિટ પહેલા", status: "success" },
+    { id: 3, actionEn: "GeoServer Publish", actionGu: "જીઓસર્વર પ્રકાશન", name: "Layer: coupes_2024", time: "1 hour ago", timeGu: "1 કલાક પહેલા", status: "success" },
+    { id: 4, actionEn: "Shapefile Upload", actionGu: "શેપફાઇલ અપલોડ", name: "Water_Bodies.shp", time: "2 hours ago", timeGu: "2 કલાક પહેલા", status: "pending" }
   ];
 
-  // System health status
+  // System health status with translations
   const systemHealth = [
-    { service: "Database", status: "healthy", icon: <FiDatabase />, color: "#10b981" },
-    { service: "GeoServer", status: "healthy", icon: <FiServer />, color: "#10b981" },
-    { service: "API", status: "degraded", icon: <FiSettings />, color: "#f59e0b" }
+    { serviceEn: "Database", serviceGu: "ડેટાબેઝ", status: "healthy", icon: <FiDatabase />, color: "#10b981" },
+    { serviceEn: "GeoServer", serviceGu: "જીઓસર્વર", status: "healthy", icon: <FiServer />, color: "#10b981" },
+    { serviceEn: "API", serviceGu: "API", status: "degraded", icon: <FiSettings />, color: "#f59e0b" }
   ];
 
   return (
@@ -270,7 +335,7 @@ function AdminDashboard() {
             <div className="column">
               <div className="card">
                 <div className="card-header">
-                  <h3><FiMap /> {text[language].coupeList}</h3>
+                  <h3><FiMap /> {t.coupeList}</h3>
                   <div className="card-actions">
                     <FiFilter />
                     <FiCopy />
@@ -281,22 +346,22 @@ function AdminDashboard() {
                   {loading ? (
                     <div className="loading-state">
                       <div className="spinner"></div>
-                      <p>{text[language].loading}</p>
+                      <p>{t.loading}</p>
                     </div>
                   ) : error ? (
                     <div className="error-state">
                       <FiAlertCircle />
-                      <p>{text[language].error}</p>
+                      <p>{t.error}</p>
                       <button onClick={fetchCoupes} className="btn-retry">
-                        <FiRefreshCw /> {text[language].retry}
+                        <FiRefreshCw /> {t.retry}
                       </button>
                     </div>
                   ) : (
                     <div className="coupe-table">
                       <div className="table-header">
-                        <span>Coupe Name</span>
-                        <span>Status</span>
-                        <span>Actions</span>
+                        <span>{t.coupeName}</span>
+                        <span>{t.status}</span>
+                        <span>{t.actions}</span>
                       </div>
                       <div className="table-body">
                         {coupes.slice(0, 16).map((coupe, index) => (
@@ -307,17 +372,17 @@ function AdminDashboard() {
                               <span className="coupe-name">{coupe}</span>
                             </div>
                             <div className="status-cell">
-                              <span className="status-badge published">Published</span>
+                              <span className="status-badge published">{t.publishedStatus}</span>
                             </div>
                             <div className="actions-cell">
                               <button 
                                 className="btn-action edit" 
-                                title="Edit"
+                                title={t.edit}
                                 onClick={() => handleEditCoupe(coupe)}
                               >
                                 <FiEdit />
                               </button>
-                              <button className="btn-action delete" title="Delete">
+                              <button className="btn-action delete" title={t.delete}>
                                 <FiTrash2 />
                               </button>
                             </div>
@@ -329,7 +394,7 @@ function AdminDashboard() {
                   {coupes.length === 0 && !loading && (
                     <div className="empty-state">
                       <FiMap />
-                      <p>No coupes found. Upload your first shapefile!</p>
+                      <p>{t.noCoupes}</p>
                     </div>
                   )}
                 </div>
@@ -340,22 +405,22 @@ function AdminDashboard() {
             <div className="column">
               <div className="card upload-card">
                 <div className="card-header">
-                  <h3><FiUpload /> {text[language].uploadTitle}</h3>
+                  <h3><FiUpload /> {t.uploadTitle}</h3>
                 </div>
 
-                <div className="division-selector">
-                  <label htmlFor="division-dropdown">Select Division:</label>
+                {/* <div className="division-selector">
+                  <label htmlFor="division-dropdown">{t.selectDivision}</label>
                   <select 
                     id="division-dropdown"
                     className="dropdown-select"
                     value={selectedOption}
                     onChange={(e) => setSelectedOption(e.target.value)}
                   >
-                    <option value="">-- Choose a division --</option>
+                    <option value="">{t.chooseDivision}</option>
                     {divisionsLoading ? (
-                      <option disabled>Loading divisions...</option>
+                      <option disabled>{t.loadingDivisions}</option>
                     ) : divisionsError ? (
-                      <option disabled>Error: {divisionsError}</option>
+                      <option disabled>{t.errorDivisions}</option>
                     ) : divisions.length > 0 ? (
                       divisions.map((division, index) => {
                         const divisionName = division.division || Object.values(division)[0] || "Unknown";
@@ -366,20 +431,20 @@ function AdminDashboard() {
                         );
                       })
                     ) : (
-                      <option disabled>No divisions available</option>
+                      <option disabled>{t.noDivisions}</option>
                     )}
                   </select>
-                </div>
+                </div> */}
 
                 {/* Edit mode indicator */}
                 {selectedCoupe && (
                   <div className="edit-mode-indicator">
-                    <FiEdit /> Editing: <strong>{selectedCoupe.name}</strong>
+                    <FiEdit /> {t.editing} <strong>{selectedCoupe.name}</strong>
                     <button 
                       className="btn-clear-selection"
                       onClick={() => setSelectedCoupe(null)}
                     >
-                      Cancel
+                      {t.cancel}
                     </button>
                   </div>
                 )}
@@ -404,7 +469,7 @@ function AdminDashboard() {
                   {files.length > 0 ? (
                     <div className="files-selected">
                       <FiCheckCircle className="success-icon" />
-                      <h4>{files.length} files selected</h4>
+                      <h4>{files.length} {t.filesSelected}</h4>
                       <div className="file-list">
                         {Array.from(files).map((file, index) => (
                           <div key={index} className="file-item">
@@ -420,7 +485,7 @@ function AdminDashboard() {
                           setFiles([]);
                         }}
                       >
-                        Clear Selection
+                        {t.clearSelection}
                       </button>
                     </div>
                   ) : (
@@ -428,9 +493,9 @@ function AdminDashboard() {
                       <div className="upload-icon">
                         <FiUpload />
                       </div>
-                      <h4>Drag & Drop or Click to Upload</h4>
+                      <h4>{t.dragDrop}</h4>
                       <p className="upload-hint">
-                        Select .shp, .shx, .dbf files (and optionally .prj)
+                        {t.fileHint}
                       </p>
                     </>
                   )}
@@ -438,7 +503,7 @@ function AdminDashboard() {
 
                 {/* Color Selection */}
                 <div className="color-selection">
-                  <h4>Choose Layer Color</h4>
+                  <h4>{t.chooseLayerColor}</h4>
                   <div className="color-grid">
                     {colorOptions.map((color, index) => (
                       <button
@@ -446,7 +511,7 @@ function AdminDashboard() {
                         className={`color-option ${selectedColor === color.value ? "selected" : ""}`}
                         style={{ backgroundColor: color.value }}
                         onClick={() => setSelectedColor(color.value)}
-                        title={`${color.name} (${color.value})`}
+                        title={language === 'gu' ? color.nameGu : color.nameEn}
                       >
                         {selectedColor === color.value && <FiCheckCircle />}
                         <span className="color-name">{color.icon}</span>
@@ -481,11 +546,11 @@ function AdminDashboard() {
                   {loading ? (
                     <>
                       <div className="spinner-small"></div>
-                      Processing...
+                      {t.processing}
                     </>
                   ) : (
                     <>
-                      <FiUpload /> {selectedCoupe ? `Replace ${selectedCoupe.name}` : text[language].uploadTitle}
+                      <FiUpload /> {selectedCoupe ? `${t.replace} ${selectedCoupe.name}` : t.uploadTitle}
                     </>
                   )}
                 </button>
@@ -497,7 +562,7 @@ function AdminDashboard() {
                       {uploadStatus.success ? <FiCheckCircle /> : <FiAlertCircle />}
                     </div>
                     <div className="status-content">
-                      <h4>{uploadStatus.success ? "Success!" : "Error!"}</h4>
+                      <h4>{uploadStatus.success ? t.success : t.errorMessage}</h4>
                       <p>{uploadStatus.message}</p>
                     </div>
                   </div>
@@ -505,21 +570,21 @@ function AdminDashboard() {
 
                 {/* Process Steps */}
                 <div className="process-steps">
-                  <h4>Upload Process</h4>
+                  <h4>{t.uploadProcess}</h4>
                   <div className="steps">
                     <div className="step active">
                       <div className="step-number">1</div>
-                      <div className="step-text">Select Files</div>
+                      <div className="step-text">{t.selectFiles}</div>
                     </div>
                     <div className="step-line" />
                     <div className="step">
                       <div className="step-number">2</div>
-                      <div className="step-text">Import to Database</div>
+                      <div className="step-text">{t.importDatabase}</div>
                     </div>
                     <div className="step-line" />
                     <div className="step">
                       <div className="step-number">3</div>
-                      <div className="step-text">Publish to GeoServer</div>
+                      <div className="step-text">{t.publishGeoserver}</div>
                     </div>
                   </div>
                 </div>
@@ -528,8 +593,6 @@ function AdminDashboard() {
           </div>
         </main>
       </div>
-
-      <UploadPatrolBoundary />
     </div>
   );
 }

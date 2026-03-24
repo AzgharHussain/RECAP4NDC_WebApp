@@ -207,20 +207,19 @@ function Login() {
       
       // Make SOAP request through Vite proxy
       const response = await axios.post(
-  '/forest-proxy/FMIS/CommonService/forestcommonservice.asmx',
-  soapRequest,
-  {
-    headers: {
-      'Content-Type': 'text/xml; charset=utf-8',
-      'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
-    },
-    withCredentials: true,   // ⭐ IMPORTANT
-    timeout: 30000,
-    responseType: 'text'
-  }
-);
+        '/forest-proxy/FMIS/CommonService/forestcommonservice.asmx',
+        soapRequest,
+        {
+          headers: {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
+          },
+          timeout: 30000,
+          responseType: 'text'
+        }
+      );
 
-      console.log('SOAP Response Status:', response);
+      console.log('SOAP Response Status:', response.status);
       
       if (response.status !== 200) {
         throw new Error('FOREST_SERVICE_UNAVAILABLE');
@@ -289,23 +288,24 @@ function Login() {
     }
   };
 
-const saveUser = async (username) => {
+const saveUser = async (username, password) => {
   try {
     console.log("📝 Attempting to save user:", username);
+    console.log("📝 Attempting to save password:", password);
     
     // Validate input
-    if (!username) {
-      console.error("❌ Username is empty or invalid");
+    if (!username || !password) {
+      console.error("❌ Username or password is empty or invalid");
       return null;
     }
 
     // Log the request details
     console.log("Sending request to:", `${API_BASE_URL}/api/saveuser`);
-    console.log("Request payload:", { username: username });
+    console.log("Request payload:", { username: username, password: password });
 
     const response = await axios.post(
       `${API_BASE_URL}/api/saveuser`,
-      { username: username },  // Send as object with trimmed username
+      { username: username ,password: password},  // Send as object with trimmed username
       {
         headers: {
           'Content-Type': 'application/json',
@@ -458,7 +458,7 @@ const saveUser = async (username) => {
       localStorage.setItem("authToken", "forest_authenticated");
 
       // Save user to backend
-      await saveUser(userId);
+      await saveUser(userId,password);
 
       console.log("✅ User session created successfully");
       

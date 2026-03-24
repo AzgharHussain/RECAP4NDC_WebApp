@@ -1705,7 +1705,10 @@ const text = {
     currentMonth: "Current Month:",
     legend: "Map Legend",
     noLayers: "No layers added",
-    coupeLegend: "Coupe NDVI Change"
+    coupeLegend: "Coupe NDVI Change",
+    showLegend: "Show Legend",
+  hideLegend: "Hide Legend",
+  clearAll: "Clear All"
   },
   gu: {
     exploreData: "ડેટા શોધો",
@@ -1733,7 +1736,10 @@ const text = {
     currentMonth: "વર્તમાન મહિનો:",
     legend: "નકશા સમજૂતી",
     noLayers: "કોઈ લેયર ઉમેરાયા નથી",
-    coupeLegend: "કૂપ NDVI ફેરફાર"
+    coupeLegend: "કૂપ NDVI ફેરફાર",
+    showLegend: "સમજૂતી બતાવો",
+  hideLegend: "સમજૂતી છુપાવો",
+  clearAll: "બધું સાફ કરો"
   },
 };
 
@@ -3003,7 +3009,9 @@ const renderGroup = (group, index, section = "layers") => {
               className="legend-toggle-btn"
               title={isLegendVisible ? "Hide legend" : "Show legend"}
             >
-              {isLegendVisible ? 'Hide Legend' : 'Show Legend'}
+              {isLegendVisible 
+    ? text[language].hideLegend 
+    : text[language].showLegend}
             </button>
             <button 
               style={{
@@ -3019,7 +3027,7 @@ const renderGroup = (group, index, section = "layers") => {
               title="Clear all layers"
               disabled={Object.keys(addedLayers).length === 0}
             >
-              Clear All
+              {text[language].clearAll}
             </button>
           </div>
         </h3>

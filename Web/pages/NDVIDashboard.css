@@ -15,3 +15,15 @@ body {
 .ant-menu {
   font-family: arial !important;
 }
+
+.css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root.Mui-error{
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.css-1hgcujo-MuiPickersInputBase-root-MuiPickersOutlinedInput-root.Mui-error .MuiPickersOutlinedInput-notchedOutline{
+  border-color: rgba(0, 0, 0, 0.23) !important;
+}
+
+.css-1hgcujo-MuiPickersInputBase-root-MuiPickersOutlinedInput-root.Mui-error .MuiPickersOutlinedInput-notchedOutline:hover{
+  border-color: black !important;
+}

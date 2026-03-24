@@ -12,10 +12,65 @@ import {
   FiCheckCircle,
   FiAlertCircle
 } from "react-icons/fi";
-
+import { useLanguage } from "../context/LanguageContext";
 import "./AdminDashboard.css";
 
 const UploadPatrolBoundary = () => {
+  const { language } = useLanguage();
+
+  // Translations
+  const translations = {
+    en: {
+      title: "Patrol Boundary List",
+      uploadTitle: "Upload Patrol Boundary",
+      loading: "Loading patrol boundaries...",
+      errorLoading: "Error loading patrol boundaries",
+      retry: "Retry",
+      boundaryName: "Boundary Name",
+      status: "Status",
+      actions: "Actions",
+      published: "Published",
+      noBoundaries: "No patrol boundaries found.",
+      selectFiles: "Please select shapefile components",
+      uploadSuccess: "Patrol Boundary Uploaded Successfully",
+      uploadFailed: "Upload failed",
+      dragDrop: "Drag & Drop or Click to Upload",
+      fileHint: "Select .kml .shp, .shx, .dbf files (optional .prj)",
+      filesSelected: "files selected",
+      clearSelection: "Clear Selection",
+      boundaryColor: "Boundary Color",
+      processing: "Processing...",
+      uploadButton: "Upload Patrol Boundary",
+      success: "Success!",
+      error: "Error!"
+    },
+    gu: {
+      title: "પેટ્રોલ બાઉન્ડ્રી સૂચિ",
+      uploadTitle: "પેટ્રોલ બાઉન્ડ્રી અપલોડ કરો",
+      loading: "પેટ્રોલ બાઉન્ડ્રીઓ લોડ થઈ રહી છે...",
+      errorLoading: "પેટ્રોલ બાઉન્ડ્રીઓ લોડ કરવામાં ભૂલ",
+      retry: "ફરી પ્રયાસ કરો",
+      boundaryName: "બાઉન્ડ્રી નામ",
+      status: "સ્થિતિ",
+      actions: "ક્રિયાઓ",
+      published: "પ્રકાશિત",
+      noBoundaries: "કોઈ પેટ્રોલ બાઉન્ડ્રી મળી નથી.",
+      selectFiles: "કૃપા કરીને શેપફાઇલ ઘટકો પસંદ કરો",
+      uploadSuccess: "પેટ્રોલ બાઉન્ડ્રી સફળતાપૂર્વક અપલોડ થઈ",
+      uploadFailed: "અપલોડ નિષ્ફળ",
+      dragDrop: "ખેંચો અને છોડો અથવા અપલોડ કરવા ક્લિક કરો",
+      fileHint: ".kml .shp, .shx, .dbf ફાઇલો પસંદ કરો (વૈકલ્પિક .prj)",
+      filesSelected: "ફાઇલો પસંદ કરી",
+      clearSelection: "પસંદગી સાફ કરો",
+      boundaryColor: "બાઉન્ડ્રી રંગ",
+      processing: "પ્રક્રિયા કરી રહ્યા છે...",
+      uploadButton: "પેટ્રોલ બાઉન્ડ્રી અપલોડ કરો",
+      success: "સફળતા!",
+      error: "ભૂલ!"
+    }
+  };
+
+  const t = translations[language] || translations.en;
 
   const [files, setFiles] = useState([]);
   const [color, setColor] = useState("#ff0000");
@@ -78,7 +133,7 @@ const UploadPatrolBoundary = () => {
 
     if (files.length === 0) {
       setMessageType("error");
-      setMessage("Please select shapefile components");
+      setMessage(t.selectFiles);
       return;
     }
 
@@ -111,7 +166,7 @@ const UploadPatrolBoundary = () => {
       if (res.data.success) {
 
         setMessageType("success");
-        setMessage("Patrol Boundary Uploaded Successfully");
+        setMessage(t.uploadSuccess);
 
         setFiles([]);
 
@@ -123,7 +178,7 @@ const UploadPatrolBoundary = () => {
       } else {
 
         setMessageType("error");
-        setMessage(res.data.message || "Upload failed");
+        setMessage(res.data.message || t.uploadFailed);
 
       }
 
@@ -132,7 +187,7 @@ const UploadPatrolBoundary = () => {
       console.error(err);
 
       setMessageType("error");
-      setMessage(err.response?.data?.message || "Upload failed");
+      setMessage(err.response?.data?.message || t.uploadFailed);
 
     } finally {
 
@@ -152,11 +207,11 @@ const UploadPatrolBoundary = () => {
           <div className="card">
 
             <div className="card-header">
-              <h3><FiMap /> Patrol Boundary List</h3>
+              <h3><FiMap /> {t.title}</h3>
 
               <div className="card-actions">
                 <FiFilter />
-                <FiRefreshCw onClick={fetchPatrolBoundaries} />
+                <FiRefreshCw onClick={fetchPatrolBoundaries} style={{ cursor: "pointer" }} />
               </div>
             </div>
 
@@ -165,27 +220,27 @@ const UploadPatrolBoundary = () => {
               {loading ? (
                 <div className="loading-state">
                   <div className="spinner"></div>
-                  <p>Loading patrol boundaries...</p>
+                  <p>{t.loading}</p>
                 </div>
               ) : error ? (
                 <div className="error-state">
                   <FiAlertCircle />
-                  <p>Error loading patrol boundaries</p>
+                  <p>{t.errorLoading}</p>
 
                   <button
                     onClick={fetchPatrolBoundaries}
                     className="btn-retry"
                   >
-                    <FiRefreshCw /> Retry
+                    <FiRefreshCw /> {t.retry}
                   </button>
                 </div>
               ) : (
                 <div className="coupe-table">
 
                   <div className="table-header">
-                    <span>Boundary Name</span>
-                    <span>Status</span>
-                    <span>Actions</span>
+                    <span>{t.boundaryName}</span>
+                    <span>{t.status}</span>
+                    <span>{t.actions}</span>
                   </div>
 
                   <div className="table-body">
@@ -204,26 +259,24 @@ const UploadPatrolBoundary = () => {
                           />
 
                           <span className="coupe-name">
-                            {boundary.name || `Boundary ${index + 1}`}
+                            {boundary.name || `${t.boundaryName} ${index + 1}`}
                           </span>
 
                         </div>
 
                         <div className="status-cell">
                           <span className="status-badge published">
-                            Published
+                            {t.published}
                           </span>
                         </div>
 
                         <div className="actions-cell">
 
-                         
-
-                          <button className="btn-action edit">
+                          <button className="btn-action edit" title={t.actions}>
                             <FiEdit />
                           </button>
 
-                          <button className="btn-action delete">
+                          <button className="btn-action delete" title={t.actions}>
                             <FiTrash2 />
                           </button>
 
@@ -240,7 +293,7 @@ const UploadPatrolBoundary = () => {
               {boundaries.length === 0 && !loading && (
                 <div className="empty-state">
                   <FiMap />
-                  <p>No patrol boundaries found.</p>
+                  <p>{t.noBoundaries}</p>
                 </div>
               )}
 
@@ -256,7 +309,7 @@ const UploadPatrolBoundary = () => {
           <div className="card upload-card">
 
             <div className="card-header">
-              <h3><FiUpload /> Upload Patrol Boundary</h3>
+              <h3><FiUpload /> {t.uploadTitle}</h3>
             </div>
 
 
@@ -288,7 +341,7 @@ const UploadPatrolBoundary = () => {
 
                   <FiCheckCircle className="success-icon" />
 
-                  <h4>{files.length} files selected</h4>
+                  <h4>{files.length} {t.filesSelected}</h4>
 
                   <div className="file-list">
 
@@ -313,7 +366,7 @@ const UploadPatrolBoundary = () => {
                       setFiles([]);
                     }}
                   >
-                    Clear Selection
+                    {t.clearSelection}
                   </button>
 
                 </div>
@@ -325,10 +378,10 @@ const UploadPatrolBoundary = () => {
                     <FiUpload />
                   </div>
 
-                  <h4>Drag & Drop or Click to Upload</h4>
+                  <h4>{t.dragDrop}</h4>
 
                   <p className="upload-hint">
-                    Select .shp, .shx, .dbf files (optional .prj)
+                    {t.fileHint}
                   </p>
                 </>
 
@@ -340,9 +393,9 @@ const UploadPatrolBoundary = () => {
             {/* Color Picker */}
             <div className="color-selection">
 
-              <h4>Boundary Color</h4>
+              <h4>{t.boundaryColor}</h4>
 
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
 
                 <input
                   type="color"
@@ -351,7 +404,9 @@ const UploadPatrolBoundary = () => {
                   style={{
                     width: "60px",
                     height: "40px",
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    borderRadius: "6px",
+                    border: "2px solid #e2e8f0"
                   }}
                 />
 
@@ -372,11 +427,11 @@ const UploadPatrolBoundary = () => {
               {uploading ? (
                 <>
                   <div className="spinner-small"></div>
-                  Processing...
+                  {t.processing}
                 </>
               ) : (
                 <>
-                  <FiUpload /> Upload Patrol Boundary
+                  <FiUpload /> {t.uploadButton}
                 </>
               )}
 
@@ -403,8 +458,8 @@ const UploadPatrolBoundary = () => {
                 <div className="status-content">
                   <h4>
                     {messageType === "success"
-                      ? "Success!"
-                      : "Error!"}
+                      ? t.success
+                      : t.error}
                   </h4>
 
                   <p>{message}</p>

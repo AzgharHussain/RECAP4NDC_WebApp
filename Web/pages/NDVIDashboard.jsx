@@ -89,6 +89,7 @@ import {
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { useLanguage } from "../context/LanguageContext"; // Add this import
+import "./NDVIDashboard.css";
 
 // Register ChartJS components
 ChartJS.register(

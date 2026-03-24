@@ -23,6 +23,7 @@ const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Homepage = lazy(() => import("./pages/Homepage"));
 const BeatPatrolCoverage = lazy(() => import("./pages/BeatPatrolCoverage"));
 const ChangePassword = lazy(() => import("./pages/changepassword"));
+const UploadPatrolBoundary = lazy(() => import("./pages/UploadPatrolBoundary"));
 
 
 const LoadingFallback = () => (
@@ -68,6 +69,7 @@ export default function App() {
             }
           >
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/UploadPatrolBoundary" element={<UploadPatrolBoundary />} />
             <Route path="/changepassword" element={<ChangePassword />} />
           </Route>
 

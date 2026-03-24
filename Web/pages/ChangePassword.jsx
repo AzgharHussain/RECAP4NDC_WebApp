@@ -9,7 +9,7 @@ import {
 import "./Changepassword.css";
 
 function ChangePassword() {
-  const { t } = useLanguage();
+  const { language } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
@@ -35,6 +35,114 @@ function ChangePassword() {
     hasSpecial: false,
     minLength: false
   });
+
+  // Translations
+  const translations = {
+    en: {
+      title: "Change Password",
+      description: "Update your account password. Choose a strong password that you don't use elsewhere.",
+      errorTitle: "Error",
+      successTitle: "Success",
+      username: "Username",
+      currentPassword: "Current Password",
+      currentPasswordPlaceholder: "Enter your current password",
+      newPassword: "New Password",
+      newPasswordPlaceholder: "Enter new password",
+      confirmPassword: "Confirm New Password",
+      confirmPasswordPlaceholder: "Confirm new password",
+      passwordStrength: "Password Strength",
+      weak: "Weak",
+      medium: "Medium",
+      strong: "Strong",
+      passwordRequirements: "Password must contain:",
+      minLength: "At least 6 characters",
+      lowercase: "One lowercase letter",
+      uppercase: "One uppercase letter",
+      number: "One number",
+      specialChar: "One special character (!@#$%^&*)",
+      passwordMismatch: "Passwords do not match",
+      changePassword: "Change Password",
+      clear: "Clear",
+      changingPassword: "Changing Password...",
+      passwordGuidelines: "Password Guidelines",
+      requirements: "Requirements:",
+      recommendations: "Recommendations:",
+      uniquePassword: "Use a unique password",
+      avoidCommon: "Avoid common words or phrases",
+      dontReuse: "Don't reuse passwords from other sites",
+      usePasswordManager: "Consider using a password manager",
+      infoNote: "After changing your password, you'll need to use the new password for your next login.",
+      userNotIdentified: "User not identified. Please log in again.",
+      currentPasswordRequired: "Current password is required",
+      newPasswordRequired: "New password is required",
+      passwordMinLength: "New password must be at least 6 characters long",
+      passwordComplexity: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+      passwordMatch: "New passwords do not match",
+      passwordSame: "New password must be different from current password",
+      noToken: "No authentication token found. Please log in again.",
+      successMessage: "Password changed successfully!",
+      failedToChange: "Failed to change password",
+      currentPasswordIncorrect: "Current password is incorrect",
+      noPermission: "You don't have permission to change this password",
+      invalidFormat: "Invalid password format",
+      serverError: "Server error occurred",
+      connectionError: "No response from server. Please check your connection.",
+      tryAgain: "Failed to change password. Please try again."
+    },
+    gu: {
+      title: "પાસવર્ડ બદલો",
+      description: "તમારા એકાઉન્ટનો પાસવર્ડ અપડેટ કરો. એક મજબૂત પાસવર્ડ પસંદ કરો જેનો તમે બીજે ક્યાંય ઉપયોગ કરતા નથી.",
+      errorTitle: "ભૂલ",
+      successTitle: "સફળતા",
+      username: "યૂઝરનામ",
+      currentPassword: "વર્તમાન પાસવર્ડ",
+      currentPasswordPlaceholder: "તમારો વર્તમાન પાસવર્ડ દાખલ કરો",
+      newPassword: "નવો પાસવર્ડ",
+      newPasswordPlaceholder: "નવો પાસવર્ડ દાખલ કરો",
+      confirmPassword: "નવો પાસવર્ડ ચકાસો",
+      confirmPasswordPlaceholder: "નવો પાસવર્ડ ચકાસો",
+      passwordStrength: "પાસવર્ડની મજબૂતાઈ",
+      weak: "નબળો",
+      medium: "મધ્યમ",
+      strong: "મજબૂત",
+      passwordRequirements: "પાસવર્ડમાં આ હોવું જરૂરી છે:",
+      minLength: "ઓછામાં ઓછા 6 અક્ષરો",
+      lowercase: "એક નાનો અક્ષર (a-z)",
+      uppercase: "એક મોટો અક્ષર (A-Z)",
+      number: "એક આંકડો (0-9)",
+      specialChar: "એક વિશેષ અક્ષર (!@#$%^&*)",
+      passwordMismatch: "પાસવર્ડ મેળ ખાતા નથી",
+      changePassword: "પાસવર્ડ બદલો",
+      clear: "સાફ કરો",
+      changingPassword: "પાસવર્ડ બદલાઈ રહ્યો છે...",
+      passwordGuidelines: "પાસવર્ડ માર્ગદર્શિકા",
+      requirements: "જરૂરીયાતો:",
+      recommendations: "ભલામણો:",
+      uniquePassword: "અનોખો પાસવર્ડ ઉપયોગ કરો",
+      avoidCommon: "સામાન્ય શબ્દો અથવા શબ્દસમૂહો ટાળો",
+      dontReuse: "અન્ય સાઇટ્સના પાસવર્ડનો પુનઃઉપયોગ કરશો નહીં",
+      usePasswordManager: "પાસવર્ડ મેનેજરનો ઉપયોગ કરવાનું વિચારો",
+      infoNote: "પાસવર્ડ બદલ્યા પછી, તમારે આગામી લોગિન માટે નવા પાસવર્ડનો ઉપયોગ કરવો પડશે.",
+      userNotIdentified: "યુઝર ઓળખી શકાયો નથી. કૃપા કરીને ફરીથી લોગિન કરો.",
+      currentPasswordRequired: "વર્તમાન પાસવર્ડ જરૂરી છે",
+      newPasswordRequired: "નવો પાસવર્ડ જરૂરી છે",
+      passwordMinLength: "નવો પાસવર્ડ ઓછામાં ઓછા 6 અક્ષરોનો હોવો જોઈએ",
+      passwordComplexity: "પાસવર્ડમાં ઓછામાં ઓછો એક મોટો અક્ષર, એક નાનો અક્ષર, એક આંકડો અને એક વિશેષ અક્ષર હોવો જોઈએ",
+      passwordMatch: "નવા પાસવર્ડ મેળ ખાતા નથી",
+      passwordSame: "નવો પાસવર્ડ વર્તમાન પાસવર્ડથી અલગ હોવો જોઈએ",
+      noToken: "પ્રમાણીકરણ ટોકન મળ્યું નથી. કૃપા કરીને ફરીથી લોગિન કરો.",
+      successMessage: "પાસવર્ડ સફળતાપૂર્વક બદલાઈ ગયો!",
+      failedToChange: "પાસવર્ડ બદલવામાં નિષ્ફળતા",
+      currentPasswordIncorrect: "વર્તમાન પાસવર્ડ ખોટો છે",
+      noPermission: "આ પાસવર્ડ બદલવાની તમારી પાસે પરવાનગી નથી",
+      invalidFormat: "અમાન્ય પાસવર્ડ ફોર્મેટ",
+      serverError: "સર્વર ભૂલ આવી",
+      connectionError: "સર્વર તરફથી કોઈ પ્રતિસાદ નથી. કૃપા કરીને તમારું કનેક્શન ચેક કરો.",
+      tryAgain: "પાસવર્ડ બદલવામાં નિષ્ફળતા. કૃપા કરીને ફરીથી પ્રયાસ કરો."
+    }
+  };
+
+  const t = translations[language] || translations.en;
 
   useEffect(() => {
     // Get username from token or localStorage
@@ -83,16 +191,16 @@ function ChangePassword() {
         }
         
         console.warn("Could not find username in session");
-        setError("Unable to identify user. Please log in again.");
+        setError(t.userNotIdentified);
         
       } catch (error) {
         console.error("Error parsing user data:", error);
-        setError("Error loading user information");
+        setError(t.userNotIdentified);
       }
     };
 
     getUserFromToken();
-  }, []);
+  }, [t.userNotIdentified]);
 
   // Check password strength in real-time
   useEffect(() => {
@@ -137,22 +245,22 @@ function ChangePassword() {
 
   const validateForm = () => {
     if (!userData.username) {
-      setError("User not identified. Please log in again.");
+      setError(t.userNotIdentified);
       return false;
     }
     
     if (!userData.currentPassword) {
-      setError("Current password is required");
+      setError(t.currentPasswordRequired);
       return false;
     }
     
     if (!userData.newPassword) {
-      setError("New password is required");
+      setError(t.newPasswordRequired);
       return false;
     }
     
     if (userData.newPassword.length < 6) {
-      setError("New password must be at least 6 characters long");
+      setError(t.passwordMinLength);
       return false;
     }
     
@@ -163,17 +271,17 @@ function ChangePassword() {
     const hasSpecial = /[!@#$%^&*]/.test(userData.newPassword);
     
     if (!(hasLower && hasUpper && hasNumber && hasSpecial)) {
-      setError("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character");
+      setError(t.passwordComplexity);
       return false;
     }
     
     if (userData.newPassword !== userData.confirmPassword) {
-      setError("New passwords do not match");
+      setError(t.passwordMatch);
       return false;
     }
     
     if (userData.currentPassword === userData.newPassword) {
-      setError("New password must be different from current password");
+      setError(t.passwordSame);
       return false;
     }
     
@@ -195,7 +303,7 @@ function ChangePassword() {
       const token = localStorage.getItem('token');
       
       if (!token) {
-        setError("No authentication token found. Please log in again.");
+        setError(t.noToken);
         setLoading(false);
         return;
       }
@@ -221,7 +329,7 @@ function ChangePassword() {
       console.log("Password change response:", response.data);
       
       if (response.data.success) {
-        setSuccess(response.data.message || "Password changed successfully!");
+        setSuccess(t.successMessage);
         // Clear password fields
         setUserData(prev => ({
           ...prev,
@@ -237,7 +345,7 @@ function ChangePassword() {
           // window.location.href = '/login';
         }, 3000);
       } else {
-        setError(response.data.error || "Failed to change password");
+        setError(response.data.error || t.failedToChange);
       }
     } catch (err) {
       console.error("Error changing password:", err);
@@ -249,22 +357,22 @@ function ChangePassword() {
         console.error("Error status:", err.response.status);
         
         if (err.response.status === 401) {
-          setError(err.response.data.error || "Current password is incorrect");
+          setError(err.response.data.error || t.currentPasswordIncorrect);
         } else if (err.response.status === 403) {
-          setError(err.response.data.error || "You don't have permission to change this password");
+          setError(err.response.data.error || t.noPermission);
         } else if (err.response.status === 400) {
-          setError(err.response.data.error || "Invalid password format");
+          setError(err.response.data.error || t.invalidFormat);
         } else {
-          setError(err.response.data.error || "Server error occurred");
+          setError(err.response.data.error || t.serverError);
         }
       } else if (err.request) {
         // The request was made but no response was received
         console.error("No response received:", err.request);
-        setError("No response from server. Please check your connection.");
+        setError(t.connectionError);
       } else {
         // Something happened in setting up the request that triggered an Error
         console.error("Error setting up request:", err.message);
-        setError("Failed to change password. Please try again.");
+        setError(t.tryAgain);
       }
     } finally {
       setLoading(false);
@@ -287,8 +395,15 @@ function ChangePassword() {
     const criteria = [hasLower, hasUpper, hasNumber, hasSpecial, minLength];
     const metCount = criteria.filter(Boolean).length;
     
-    if (metCount <= 2) return "weak";
-    if (metCount <= 4) return "medium";
+    if (metCount <= 2) return t.weak;
+    if (metCount <= 4) return t.medium;
+    return t.strong;
+  };
+
+  const getStrengthClass = () => {
+    const strength = calculateStrengthScore();
+    if (strength === t.weak) return "weak";
+    if (strength === t.medium) return "medium";
     return "strong";
   };
 
@@ -297,10 +412,10 @@ function ChangePassword() {
       <div className="page-header">
         <h2>
           <FiLock className="page-icon" />
-          Change Password
+          {t.title}
         </h2>
         <p className="page-description">
-          Update your account password. Choose a strong password that you don't use elsewhere.
+          {t.description}
         </p>
       </div>
 
@@ -324,7 +439,7 @@ function ChangePassword() {
             <div className="form-group">
               <label>
                 <FiUser className="field-icon" />
-                Username
+                {t.username}
               </label>
               <input
                 type="text"
@@ -338,7 +453,7 @@ function ChangePassword() {
             <div className="form-group">
               <label>
                 <FiKey className="field-icon" />
-                Current Password
+                {t.currentPassword}
               </label>
               <div className="password-input-wrapper">
                 <input
@@ -346,7 +461,7 @@ function ChangePassword() {
                   name="currentPassword"
                   value={userData.currentPassword}
                   onChange={handleInputChange}
-                  placeholder="Enter your current password"
+                  placeholder={t.currentPasswordPlaceholder}
                   className="password-input"
                   autoComplete="current-password"
                 />
@@ -364,7 +479,7 @@ function ChangePassword() {
             <div className="form-group">
               <label>
                 <FiShield className="field-icon" />
-                New Password
+                {t.newPassword}
               </label>
               <div className="password-input-wrapper">
                 <input
@@ -372,7 +487,7 @@ function ChangePassword() {
                   name="newPassword"
                   value={userData.newPassword}
                   onChange={handleInputChange}
-                  placeholder="Enter new password"
+                  placeholder={t.newPasswordPlaceholder}
                   className="password-input"
                   autoComplete="new-password"
                 />
@@ -395,29 +510,29 @@ function ChangePassword() {
                     <div className={`strength-bar ${passwordStrength.hasNumber ? 'met' : ''}`} />
                     <div className={`strength-bar ${passwordStrength.hasSpecial ? 'met' : ''}`} />
                   </div>
-                  <span className={`strength-text strength-${calculateStrengthScore()}`}>
-                    Password Strength: {calculateStrengthScore()}
+                  <span className={`strength-text strength-${getStrengthClass()}`}>
+                    {t.passwordStrength}: {calculateStrengthScore()}
                   </span>
                 </div>
               )}
 
               <div className="password-requirements">
-                <p>Password must contain:</p>
+                <p>{t.passwordRequirements}</p>
                 <ul>
                   <li className={passwordStrength.minLength ? 'requirement-met' : ''}>
-                    ✓ At least 6 characters
+                    ✓ {t.minLength}
                   </li>
                   <li className={passwordStrength.hasLower ? 'requirement-met' : ''}>
-                    ✓ One lowercase letter
+                    ✓ {t.lowercase}
                   </li>
                   <li className={passwordStrength.hasUpper ? 'requirement-met' : ''}>
-                    ✓ One uppercase letter
+                    ✓ {t.uppercase}
                   </li>
                   <li className={passwordStrength.hasNumber ? 'requirement-met' : ''}>
-                    ✓ One number
+                    ✓ {t.number}
                   </li>
                   <li className={passwordStrength.hasSpecial ? 'requirement-met' : ''}>
-                    ✓ One special character (!@#$%^&*)
+                    ✓ {t.specialChar}
                   </li>
                 </ul>
               </div>
@@ -426,7 +541,7 @@ function ChangePassword() {
             <div className="form-group">
               <label>
                 <FiLock className="field-icon" />
-                Confirm New Password
+                {t.confirmPassword}
               </label>
               <div className="password-input-wrapper">
                 <input
@@ -434,7 +549,7 @@ function ChangePassword() {
                   name="confirmPassword"
                   value={userData.confirmPassword}
                   onChange={handleInputChange}
-                  placeholder="Confirm new password"
+                  placeholder={t.confirmPasswordPlaceholder}
                   className="password-input"
                   autoComplete="new-password"
                 />
@@ -448,7 +563,7 @@ function ChangePassword() {
                 </button>
               </div>
               {userData.confirmPassword && userData.newPassword !== userData.confirmPassword && (
-                <small className="password-mismatch">Passwords do not match</small>
+                <small className="password-mismatch">{t.passwordMismatch}</small>
               )}
             </div>
 
@@ -461,12 +576,12 @@ function ChangePassword() {
                 {loading ? (
                   <>
                     <FiRefreshCw className="spin" />
-                    Changing Password...
+                    {t.changingPassword}
                   </>
                 ) : (
                   <>
                     <FiSave />
-                    Change Password
+                    {t.changePassword}
                   </>
                 )}
               </button>
@@ -478,41 +593,38 @@ function ChangePassword() {
                 disabled={loading}
               >
                 <FiX />
-                Clear
+                {t.clear}
               </button>
             </div>
           </form>
         </div>
 
         <div className="password-info-panel">
-          <h3>Password Guidelines</h3>
+          <h3>{t.passwordGuidelines}</h3>
           <div className="info-section">
-            <h4>Requirements:</h4>
+            <h4>{t.requirements}</h4>
             <ul>
-              <li>Minimum 6 characters</li>
-              <li>At least one uppercase letter (A-Z)</li>
-              <li>At least one lowercase letter (a-z)</li>
-              <li>At least one number (0-9)</li>
-              <li>At least one special character (!@#$%^&*)</li>
+              <li>{t.minLength}</li>
+              <li>{t.uppercase}</li>
+              <li>{t.lowercase}</li>
+              <li>{t.number}</li>
+              <li>{t.specialChar}</li>
             </ul>
           </div>
           
           <div className="info-section">
-            <h4>Recommendations:</h4>
+            <h4>{t.recommendations}</h4>
             <ul>
-              <li>Use a unique password</li>
-              <li>Avoid common words or phrases</li>
-              <li>Don't reuse passwords from other sites</li>
-              <li>Consider using a password manager</li>
+              <li>{t.uniquePassword}</li>
+              <li>{t.avoidCommon}</li>
+              <li>{t.dontReuse}</li>
+              <li>{t.usePasswordManager}</li>
             </ul>
           </div>
           
           <div className="info-note">
             <FiAlertCircle />
-            <p>
-              After changing your password, you'll need to use the new password 
-              for your next login.
-            </p>
+            <p>{t.infoNote}</p>
           </div>
         </div>
       </div>
