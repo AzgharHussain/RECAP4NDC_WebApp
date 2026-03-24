@@ -1,0 +1,9 @@
+[2026-03-23T12:30:23.805410] Not first day, exiting
+[2026-03-23T12:32:28.544302] Earth Engine initialized
+[2026-03-23T12:32:29.009496] Processing chhotaudepur
+[2026-03-23T12:36:43.980353] Starting continuous monitoring - will check every 28800 seconds
+[2026-03-23T12:36:43.981590] Will run analysis on day 1 of each month
+[2026-03-23T12:36:43.982589] Checking for analysis run on 2026-03-23
+[2026-03-23T12:36:43.983526] Not day 1 of month, skipping processing
+[2026-03-24T12:18:58.958764] Checking for analysis run on 2026-03-24
+[2026-03-24T12:18:58.975872] Not day 1 of month, skipping processing
