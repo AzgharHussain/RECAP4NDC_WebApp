@@ -627,15 +627,10 @@ body{
 /* Large screens */
 @media only screen and (min-width: 1131px) {
   .newcontainer {
-    height: 18vh;
+    height: 21vh;
   }
 }
-/* Large screens */
-@media only screen and (min-width: 1131px) {
-  .newcontainer {
-    height: 18vh;
-  }
-}
+
  
 /* Extra large screens */
 @media only screen and (min-width: 1500px) {

@@ -63,6 +63,13 @@ padding-top: 110px;
     padding-top: 50px;
 }
 
+.hero-overlay3{
+    color: white;
+    font-size: 12px;
+    padding-left: 50px;
+    padding-top: 50px;
+}
+
 .hero-overlay h1{
 font-size:36px;
 margin-bottom:15px;
@@ -155,7 +162,10 @@ color:#555;
 /* MODULE CARDS */
 
 .modules-section{
-padding:60px 3%;
+  padding-top: 60px;
+  padding-left: 3%;
+  padding-right: 3%;
+/* padding:60px 3%; */
 }
 
 .modules-grid{
@@ -208,11 +218,10 @@ text-align: left;
 /* FOOTER */
 
 .footer{
-background: #1B75BA;
-color:white;
+/* background: #1B75BA; */
+color:black;
 text-align:center;
 padding:15px;
-margin-top:40px;
 display: flex;
 justify-content: space-around;
 align-items: center;

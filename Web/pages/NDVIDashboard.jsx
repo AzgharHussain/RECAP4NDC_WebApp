@@ -17,6 +17,8 @@ import {
 } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 
+import gisfylogo from "../assets/gisfylogo.png";
+
 import {
   Card,
   CardContent,
@@ -3319,7 +3321,29 @@ const handleExportToPDF = () => {
           {t.footerNote}
         </Typography>
       </Box>
+
+          <footer className="footer" style={{color:'black',
+          textAlign:'center',
+          padding:'15px',
+          display: 'flex',
+          justifyContent: 'space-around',
+          alignItems: 'center'}}>
+              <p> © 2026 Gujarat Forest Department | RECAP4NDC Initiative    </p>
+              <div style={{display:'flex', alignItems:'center'}}>
+                    <p>Powered by  </p>
+          <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+              <img 
+                src={gisfylogo} 
+                alt="logo picture" 
+                style={{ width: '100px', height: '40px' }} 
+              /></a>    </div>
+          
+          </footer>
     </Container>
+
+
+
+    
   );
 };
 

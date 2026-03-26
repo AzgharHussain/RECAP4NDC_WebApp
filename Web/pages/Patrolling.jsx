@@ -29,6 +29,8 @@ const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
 import vector from '../assets/Vector.png';
 import Analyze_patrolling from '../assets/Analyze_patroll.png';
 
+import gisfylogo from "../assets/gisfylogo.png";
+
 import {
   MapContainer,
   TileLayer,
@@ -141,7 +143,20 @@ function PatrolMap({ patrol }) {
 }
 
 // Patrol Analysis Dashboard Component
-const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
+const PatrolAnalysisDashboard = ({ 
+  patrolData, 
+  language, 
+  isLoading,
+  showBeatCoverage = false,
+  coverageData = null,
+  coveragePatrols = [],
+  beatFilter = null,
+  rangeFilter = null,
+  divisionFilter = null,
+  startFilter = null,
+  endFilter = null,
+  exportCoverageToExcel = null
+}) => {
   if (isLoading) {
     return (
       <div style={{
@@ -247,8 +262,8 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
   const getTypeColor = (type) => {
     switch (type) {
       case "Day patrolling": return "#0084ffff";
-      case "Night patrolling": return "#6a00ffff";
-      case "Beat checking": return "#55ff00ff";
+      case "Night patrolling": return "#55ff00ff";
+      case "Beat checking": return "#6a00ffff";
       default: return "#d9d9d9";
     }
   };
@@ -297,92 +312,303 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
       </Title>
       
       {/* Overall Statistics */}
-      <Row gutter={[8, 8]} style={{ marginBottom: 24 }}>
-        {[
-          {
-            key: 'total',
-            value: totalPatrols,
-            title: language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols",
-            icon: <CalendarOutlined />,
-            color: 'rgba(56, 189, 248, 0.3)',
-            borderColor: 'rgba(56, 189, 248, 0.5)',
-          },
-          {
-            key: 'distance',
-            value: avgDistanceOverall,
-            title: language === "gu" ? "સરેરાશ અંતર" : "Average Distance",
-            suffix: "km",
-            icon: <DashboardOutlined />,
-            color: 'rgba(0, 255, 162, 0.3)',
-            borderColor: 'rgba(0, 255, 162, 1)'
-          },
-          {
-            key: 'officers',
-            value: uniqueOfficers.length,
-            title: language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers",
-            icon: <TeamOutlined />,
-            color: 'rgba(64, 0, 255, 0.3)',
-            borderColor: 'rgba(64, 0, 255, 1)'
-          }
-        ].map((item, index) => (
-          <Col xs={24} sm={12} md={6} lg={8}key={item.key}>
-            <div style={{
-              background: item.color,
-              backdropFilter: 'blur(12px)',
-              borderRadius: 12,
-              padding: 16,
-              border: `1px solid ${item.borderColor}`,
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-              height: '80%',
-              transition: 'transform 0.2s',
-              ':hover': {
-                transform: 'translateY(-4px)'
-              }
+      {/* Overall Statistics */}
+{/* Overall Statistics */}
+<Row gutter={[8, 8]} style={{ marginBottom: 24 }}>
+  {[
+    {
+      key: 'total',
+      value: totalPatrols,
+      title: language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols",
+      icon: <CalendarOutlined />,
+      color: 'rgba(56, 189, 248, 0.3)',
+      borderColor: 'rgba(56, 189, 248, 0.5)',
+    },
+    {
+      key: 'distance',
+      value: avgDistanceOverall,
+      title: language === "gu" ? "સરેરાશ અંતર" : "Average Distance",
+      suffix: "km",
+      icon: <DashboardOutlined />,
+      color: 'rgba(0, 255, 162, 0.3)',
+      borderColor: 'rgba(0, 255, 162, 1)'
+    },
+    {
+      key: 'officers',
+      value: uniqueOfficers.length,
+      title: language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers",
+      icon: <TeamOutlined />,
+      color: 'rgba(64, 0, 255, 0.3)',
+      borderColor: 'rgba(64, 0, 255, 1)'
+    },
+
+    // NEW CARDS 👇 - ADDED NULL CHECKS
+    {
+      key: 'area',
+      value: coverageData && coverageData.coupe_area_sq_m 
+        ? (Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2) 
+        : '0.00',
+      title: language === "gu"
+        ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર")
+        : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area"),
+      suffix: "km²",
+      color: 'rgba(56, 189, 248, 0.3)',
+      isGradient: true
+    },
+    {
+      key: 'covered',
+      value: coverageData && coverageData.patrol_area_sq_m 
+        ? (Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2) 
+        : '0.00',
+      title: language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area",
+      suffix: "km²",
+      color: 'rgba(0, 255, 162, 0.3)',
+      isGradient: true
+    },
+    {
+      key: 'percentage',
+      value: coverageData && coverageData.coverage_percentage 
+        ? Number(coverageData.coverage_percentage).toFixed(2) 
+        : '0.00',
+      title: language === "gu" ? "કવરેજ %" : "Coverage %",
+      suffix: "%",
+      color: 'rgba(64, 0, 255, 0.3)',
+      isGradient: true
+    }
+  ].map((item) => (
+    // Change this line to span={4} for all screen sizes to get 6 cards in a row
+    <Col xs={24} sm={12} md={8} lg={4} xl={4} xxl={4} key={item.key}>
+      <div style={{
+        background: item.isGradient ? item.color : item.color,
+        backdropFilter: item.isGradient ? 'none' : 'blur(12px)',
+        borderRadius: 12,
+        paddingTop: 16,
+        border: item.isGradient ? 'none' : `1px solid ${item.borderColor}`,
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        height: '100%',
+        textAlign: 'center'
+      }}>
+        <Statistic
+          title={
+            <span style={{
+              color: 'rgba(0, 0, 0, 0.9)',
+              fontSize: '16px',
+              fontWeight: 500
             }}>
-              <Statistic
-                title={
-                  <span style={{ 
-                    color: 'rgba(0, 0, 0, 0.9)',
-                    fontSize: '20px',
-                    fontWeight: 500
-                  }}>
-                    {item.title}
-                  </span>
-                }
-                value={item.value}
-                prefix={
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    marginRight: 8,
-                    border: '1px solid rgba(0, 0, 0, 0.3)',
-                    marginLeft: '140px'
-                  }}>
-                    {React.cloneElement(item.icon, { 
-                      style: { 
-                        color: 'white',
-                        fontSize: '20px',
-                      } 
-                    })}
-                  </div>
-                }
-                suffix={item.suffix}
-                valueStyle={{ 
-                  color: '#000000ff',
-                  fontSize: '24px',
-                  fontWeight: 600,
-                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
-                }}
+              {item.title}
+            </span>
+          }
+          value={item.value}
+          suffix={item.suffix}
+          prefix={
+            !item.isGradient && (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: 'rgba(0, 0, 0, 0.2)',
+                marginRight: 8,
+              }}>
+                {item.icon &&
+                  React.cloneElement(item.icon, {
+                    style: { color: 'white', fontSize: '18px' }
+                  })}
+              </div>
+            )
+          }
+          valueStyle={{
+            color: '#000',
+            fontSize: '22px',
+            fontWeight: 600
+          }}
+        />
+      </div>
+    </Col>
+  ))}
+</Row>
+
+      {/* Beat Coverage Analysis Section - Moved Here */}
+      {/* {showBeatCoverage && coverageData && (beatFilter || rangeFilter || divisionFilter) && (
+        <div style={{
+          marginTop: '16px',
+          marginBottom: '24px',
+          borderRadius: '8px',
+          overflow: 'hidden',
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            padding: '12px 16px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '8px 8px 0 0',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <img 
+                src={Analyze_patrolling} 
+                alt="Coverage" 
+                style={{ width: '18px', height: '18px' }} 
               />
+              <p style={{ color: '#115F22', margin: 0, fontWeight: 700 }}>
+                {(() => {
+                  // Get the selected location name
+                  let locationName = '';
+                  if (beatFilter) {
+                    locationName = beatFilter;
+                  } else if (rangeFilter) {
+                    locationName = rangeFilter;
+                  } else if (divisionFilter) {
+                    locationName = divisionFilter;
+                  }
+                  
+                  // Get the date range text
+                  const startDateText = startFilter ? startFilter.format('MMMM, YYYY') : '';
+                  const endDateText = endFilter ? endFilter.format('MMMM, YYYY') : '';
+                  
+                  // Format the date range for display
+                  let dateRangeText = '';
+                  if (startDateText && endDateText) {
+                    if (startDateText === endDateText) {
+                      dateRangeText = startDateText;
+                    } else {
+                      dateRangeText = `${startDateText} - ${endDateText}`;
+                    }
+                  } else if (startDateText) {
+                    dateRangeText = startDateText;
+                  } else if (endDateText) {
+                    dateRangeText = endDateText;
+                  } else {
+                    dateRangeText = '';
+                  }
+                  
+                  // Generate the analysis text based on language
+                  if (language === "gu") {
+                    if (beatFilter) {
+                      return dateRangeText ? `બીટ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `બીટ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
+                    } else if (rangeFilter) {
+                      return dateRangeText ? `રેંજ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `રેંજ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
+                    } else if (divisionFilter) {
+                      return dateRangeText ? `વિભાગ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `વિભાગ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
+                    }
+                  } else {
+                    // English
+                    if (beatFilter) {
+                      return dateRangeText ? `Analyzing patrolling coverage for Beat: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Beat: ${locationName}`;
+                    } else if (rangeFilter) {
+                      return dateRangeText ? `Analyzing patrolling coverage for Range: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Range: ${locationName}`;
+                    } else if (divisionFilter) {
+                      return dateRangeText ? `Analyzing patrolling coverage for Division: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Division: ${locationName}`;
+                    }
+                  }
+                  
+                  // Fallback
+                  return language === "gu" ? "પેટ્રોલિંગ કવરેજનું વિશ્લેષણ" : "Analyzing patrolling coverage";
+                })()}
+              </p>
             </div>
-          </Col>
-        ))}
-      </Row>
+            {exportCoverageToExcel && (
+              <Button
+                onClick={exportCoverageToExcel}
+                style={{
+                  background: 'rgb(0, 166, 81)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  padding: '18px 22px',
+                  height: '32px'
+                }}
+                size="small"
+              >
+                <img src={vector} alt="Export" style={{ width: '16px', height: '16px' }} />
+                {language === "gu" ? "એક્સેલ" : "Export"}
+              </Button>
+            )}
+          </div>
+          <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.03)' }}>
+            <Row gutter={[24, 24]}>
+              <Col span={8}>
+                <div style={{
+                  background: 'linear-gradient(180deg, #034C17 0%, #4CAF50 50%, #034106 100%)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  color: 'white',
+                  textAlign: 'center',
+                  height: '70px',
+                }}>
+                  <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
+                    {language === "gu" ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર") : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area")}
+                  </p>
+                  <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
+                    {(Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
+                  </h4>
+                </div>
+              </Col>
+              <Col span={8}>
+                <div style={{
+                  background: 'linear-gradient(180deg, #05385E 0%, #1B75BA 50%, #05385E 100%)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  color: 'white',
+                  textAlign: 'center',
+                  height: '70px',
+                }}>
+                  <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
+                    {language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area"}
+                  </p>
+                  <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
+                    {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
+                  </h4>
+                </div>
+              </Col>
+              <Col span={8}>
+                <div style={{
+                  background: 'linear-gradient(180deg, #603605 0%, #F5911E 50%, #603605 100%)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  color: 'white',
+                  textAlign: 'center',
+                  height: '70px',
+                }}>
+                  <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
+                    {language === "gu" ? "કવરેજ %" : "Coverage %"}
+                  </p>
+                  <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
+                    {Number(coverageData.coverage_percentage).toFixed(2)}%
+                  </h4>
+                </div>
+              </Col>
+            </Row>
+
+            {coveragePatrols.length === 0 && (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '16px', 
+                marginTop: '16px',
+                background: '#f7fafc', 
+                borderRadius: '6px',
+                fontSize: '12px',
+                color: '#718096'
+              }}>
+                {language === "gu" 
+                  ? (beatFilter ? "આ બીટની અંદર કોઈ પેટ્રોલ મળ્યા નથી" 
+                      : rangeFilter ? "આ રેંજની અંદર કોઈ પેટ્રોલ મળ્યા નથી"
+                      : "આ વિભાગની અંદર કોઈ પેટ્રોલ મળ્યા નથી")
+                  : (beatFilter ? "No patrols found inside this beat" 
+                      : rangeFilter ? "No patrols found inside this range"
+                      : "No patrols found inside this division")}
+              </div>
+            )}
+          </div>
+        </div>
+      )} */}
 
       {/* Patrol Distribution */}
       <div style={{ 
@@ -406,8 +632,8 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
         <Row gutter={8}>
           {[
             { type: "Day patrolling", percent: dayPercentage, color: '#00b3ffff' },
-            { type: "Night patrolling", percent: nightPercentage, color: '#4000ffff' },
-            { type: "Beat checking", percent: beatPercentage, color: '#00ffa2ff' }
+            { type: "Night patrolling", percent: nightPercentage, color: '#00ffa2ff' },
+            { type: "Beat checking", percent: beatPercentage, color: '#4000ffff' }
           ].map((item) => (
             <Col span={8} key={item.type}>
               <div style={{ textAlign: 'center', padding: '0 8px' }}>
@@ -465,8 +691,8 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
       <Row gutter={[16, 16]}>
         {[
           { stats: dayStats, type: "Day patrolling", color: '#00b3ffff' },
-          { stats: nightStats, type: "Night patrolling", color: '#4000ffff' },
-          { stats: beatStats, type: "Beat checking", color: '#00ffa2ff' }
+          { stats: nightStats, type: "Night patrolling", color: '#00ffa2ff' },
+          { stats: beatStats, type: "Beat checking", color: '#4000ffff' }
         ].map(({ stats, type, color }, index) => {
           const hasData = stats !== null;
           
@@ -578,7 +804,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
                           </div>
                           <div style={{ 
                             color: '#000000ff',
-                            fontSize: '18px',
+                            fontSize: '25px',
                             fontWeight: 600
                           }}>
                             {item.value}
@@ -1213,6 +1439,7 @@ const PatrolIncidentLogs = () => {
 
       if (response.data.success) {
         const data = response.data.data;
+        console.log(data);
         setCoverageData(data);
         setCoveragePatrols(data.patrols_covering_coupe || []);
         message.success(language === "gu" ? "કવરેજ ડેટા સફળતાપૂર્વક લોડ થયો" : "Coverage data loaded successfully");
@@ -1300,8 +1527,8 @@ const PatrolIncidentLogs = () => {
   const getTypeColor = (type) => {
     switch (type) {
       case "Day patrolling": return "blue";
-      case "Night patrolling": return "purple";
-      case "Beat checking": return "green";
+      case "Night patrolling": return "green";
+      case "Beat checking": return "purple";
       default: return "default";
     }
   };
@@ -1606,216 +1833,6 @@ const PatrolIncidentLogs = () => {
           </Button>
         </div>
 
-        {/* Beat Coverage Analysis Section - Now automatically analyzes when location and dates are selected */}
-        {(beatFilter || rangeFilter || divisionFilter) && (
-          <div style={{ marginTop: 16, marginBottom: 16 }}>
-            {/* <div style={{ 
-              padding: '16px',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0'
-            }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>
-                  {language === "gu" 
-                    ? (beatFilter ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ" 
-                        : rangeFilter ? "રેંજ પેટ્રોલ કવરેજ વિશ્લેષણ"
-                        : "વિભાગ પેટ્રોલ કવરેજ વિશ્લેષણ")
-                    : (beatFilter ? "Beat Patrol Coverage Analysis" 
-                        : rangeFilter ? "Range Patrol Coverage Analysis"
-                        : "Division Patrol Coverage Analysis")}
-                </label>
-                {(!startFilter || !endFilter) && (
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#ff9800' }}>
-                    {language === "gu" 
-                      ? "કૃપા કરીને કવરેજ વિશ્લેષણ માટે ઉપર શરૂઆત અને સમાપ્તિ તારીખ પસંદ કરો" 
-                      : "Please select start and end date above for coverage analysis"}
-                  </div>
-                )}
-                {isAnalyzingCoverage && (
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#00a651' }}>
-                    {language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing coverage..."}
-                  </div>
-                )}
-              </div>
-            </div> */}
-
-           {showBeatCoverage && coverageData && (beatFilter || rangeFilter || divisionFilter) && (
-  <div style={{
-    marginTop: '16px',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    marginLeft: '20px',
-  }}>
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center',
-      padding: '12px 16px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <img 
-          src={Analyze_patrolling} 
-          alt="Coverage" 
-          style={{ width: '18px', height: '18px' }} 
-        />
-        <p style={{ color: '#115F22', margin: 0, fontWeight: 700 }}>
-          {(() => {
-            // Get the selected location name
-            let locationName = '';
-            if (beatFilter) {
-              locationName = beatFilter;
-            } else if (rangeFilter) {
-              locationName = rangeFilter;
-            } else if (divisionFilter) {
-              locationName = divisionFilter;
-            }
-            
-            // Get the date range text
-            const startDateText = startFilter ? startFilter.format('MMMM, YYYY') : '';
-            const endDateText = endFilter ? endFilter.format('MMMM, YYYY') : '';
-            
-            // Format the date range for display
-            let dateRangeText = '';
-            if (startDateText && endDateText) {
-              if (startDateText === endDateText) {
-                dateRangeText = startDateText;
-              } else {
-                dateRangeText = `${startDateText} - ${endDateText}`;
-              }
-            } else if (startDateText) {
-              dateRangeText = startDateText;
-            } else if (endDateText) {
-              dateRangeText = endDateText;
-            } else {
-              dateRangeText = '';
-            }
-            
-            // Generate the analysis text based on language
-            if (language === "gu") {
-              if (beatFilter) {
-                return dateRangeText ? `બીટ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `બીટ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
-              } else if (rangeFilter) {
-                return dateRangeText ? `રેંજ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `રેંજ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
-              } else if (divisionFilter) {
-                return dateRangeText ? `વિભાગ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `વિભાગ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
-              }
-            } else {
-              // English
-              if (beatFilter) {
-                return dateRangeText ? `Analyzing patrolling coverage for Beat: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Beat: ${locationName}`;
-              } else if (rangeFilter) {
-                return dateRangeText ? `Analyzing patrolling coverage for Range: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Range: ${locationName}`;
-              } else if (divisionFilter) {
-                return dateRangeText ? `Analyzing patrolling coverage for Division: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Division: ${locationName}`;
-              }
-            }
-            
-            // Fallback
-            return language === "gu" ? "પેટ્રોલિંગ કવરેજનું વિશ્લેષણ" : "Analyzing patrolling coverage";
-          })()}
-        </p>
-      </div>
-      <Button
-        onClick={exportCoverageToExcel}
-        style={{
-          background: 'rgb(0, 166, 81)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '4px',
-          padding: '18px 22px',
-          height: '32px'
-        }}
-        size="small"
-      >
-        <img src={vector} alt="Export" style={{ width: '16px', height: '16px' }} />
-        {language === "gu" ? "એક્સેલ" : "Export"}
-      </Button>
-    </div>
-    <div style={{ padding: '16px' }}>
-      <Row gutter={[24, 24]}>
-        <Col span={3}>
-          <div style={{
-            background: 'linear-gradient(180deg, #034C17 0%, #4CAF50 50%, #034106 100%)',
-            padding: '12px',
-            borderRadius: '8px',
-            color: 'white',
-            textAlign: 'center',
-            height: '70px',
-          }}>
-            <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
-              {language === "gu" ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર") : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area")}
-            </p>
-            <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
-              {(Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
-            </h4>
-          </div>
-        </Col>
-        <Col span={3}>
-          <div style={{
-            background: 'linear-gradient(180deg, #05385E 0%, #1B75BA 50%, #05385E 100%)',
-            padding: '12px',
-            borderRadius: '8px',
-            color: 'white',
-            textAlign: 'center',
-            height: '70px',
-          }}>
-            <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
-              {language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area"}
-            </p>
-            <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
-              {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
-            </h4>
-          </div>
-        </Col>
-        <Col span={3}>
-          <div style={{
-            background: 'linear-gradient(180deg, #603605 0%, #F5911E 50%, #603605 100%)',
-            padding: '12px',
-            borderRadius: '8px',
-            color: 'white',
-            textAlign: 'center',
-            height: '70px',
-          }}>
-            <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
-              {language === "gu" ? "કવરેજ %" : "Coverage %"}
-            </p>
-            <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
-              {Number(coverageData.coverage_percentage).toFixed(2)}%
-            </h4>
-          </div>
-        </Col>
-      </Row>
-
-      {coveragePatrols.length === 0 && (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '16px', 
-          marginTop: '16px',
-          background: '#f7fafc', 
-          borderRadius: '6px',
-          fontSize: '12px',
-          color: '#718096'
-        }}>
-          {language === "gu" 
-            ? (beatFilter ? "આ બીટની અંદર કોઈ પેટ્રોલ મળ્યા નથી" 
-                : rangeFilter ? "આ રેંજની અંદર કોઈ પેટ્રોલ મળ્યા નથી"
-                : "આ વિભાગની અંદર કોઈ પેટ્રોલ મળ્યા નથી")
-            : (beatFilter ? "No patrols found inside this beat" 
-                : rangeFilter ? "No patrols found inside this range"
-                : "No patrols found inside this division")}
-        </div>
-      )}
-    </div>
-  </div>
-)}
-          </div>
-        )}
-        
         <Table
           className="transparent-table"
           columns={columns}
@@ -1840,8 +1857,21 @@ const PatrolIncidentLogs = () => {
 
       </div>
       
-      {/* Patrol Analysis Dashboard - Uses dashboardData which updates with filters */}
-      <PatrolAnalysisDashboard patrolData={dashboardData} language={language} isLoading={isDashboardLoading} />
+      {/* Patrol Analysis Dashboard - Now includes coverage section */}
+      <PatrolAnalysisDashboard 
+        patrolData={dashboardData} 
+        language={language} 
+        isLoading={isDashboardLoading}
+        showBeatCoverage={showBeatCoverage}
+        coverageData={coverageData}
+        coveragePatrols={coveragePatrols}
+        beatFilter={beatFilter}
+        rangeFilter={rangeFilter}
+        divisionFilter={divisionFilter}
+        startFilter={startFilter}
+        endFilter={endFilter}
+        exportCoverageToExcel={exportCoverageToExcel}
+      />
       
       <Modal
         open={isModalVisible}
@@ -1981,6 +2011,26 @@ const PatrolIncidentLogs = () => {
           <BeatPatrolCoverage showmaproute={showmaproute} language={language} setShowMapRoute={setShowMapRoute} />
         </Suspense>
       )}
+
+      {/* FOOTER */}
+      <footer className="footer" style={{color:'black',
+        textAlign:'center',
+        padding:'15px',
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center'}}>
+        <p> © 2026 Gujarat Forest Department | RECAP4NDC Initiative    </p>
+        <div style={{display:'flex', alignItems:'center'}}>
+          <p>Powered by  </p>
+          <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+            <img 
+              src={gisfylogo} 
+              alt="logo picture" 
+              style={{ width: '100px', height: '40px' }} 
+            />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };

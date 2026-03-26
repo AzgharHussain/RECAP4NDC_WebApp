@@ -11,6 +11,7 @@ import {
 import { RiAdminFill } from "react-icons/ri";
 import "./AdminDashboard.css";
 import UploadPatrolBoundary from "./UploadPatrolBoundary";
+import gisfylogo from "../assets/gisfylogo.png";
 
 function AdminDashboard() {
   const { language } = useLanguage();
@@ -593,6 +594,23 @@ function AdminDashboard() {
           </div>
         </main>
       </div>
+      <footer className="footer" style={{color:'black',
+            textAlign:'center',
+            padding:'15px',
+            display: 'flex',
+            justifyContent: 'space-around',
+            alignItems: 'center'}}>
+                <p> © 2026 Gujarat Forest Department | RECAP4NDC Initiative    </p>
+                <div style={{display:'flex', alignItems:'center'}}>
+                      <p>Powered by  </p>
+            <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+                <img 
+                  src={gisfylogo} 
+                  alt="logo picture" 
+                  style={{ width: '100px', height: '40px' }} 
+                /></a>    </div>
+            
+            </footer>
     </div>
   );
 }

@@ -120,7 +120,7 @@ const Homepage = () => {
                              
                          </div>
                      </div>
-                     <div style={{textAlign: 'center', paddingTop: '20px'}}>
+                     <div style={{textAlign: 'end', paddingTop: '20px', paddingRight:'70px'}}>
                     <a href="/login" style={{ color: 'white'}}>Login</a>
                  </div>
                  </div>
@@ -148,6 +148,11 @@ The WebGIS dashboard integrates spatial data services and field intelligence for
 <p>Implemented by: Gujarat Forest Department</p>
     <p>Supported by: GIZ | ICIMOD | IKI | IUCN | TERI</p>
     <p>Programme: RECAP4NDC – Restore to Prosper</p>
+                        <a href="/login" style={{ color: 'white'}}>Login</a>
+
+</div >
+<div className="hero-overlay3">
+  <a href="/login" style={{ color: 'white'}}>Login</a>
 </div >
 </section>
 
@@ -229,14 +234,23 @@ The WebGIS dashboard integrates spatial data services and field intelligence for
 
 
 {/* FOOTER */}
-<footer className="footer">
-    <p> © 2026 Gujarat Forest Department | RECAP4NDC Initiative    </p>
-    <div style={{display:'flex', alignItems:'center'}}>
-          <p>Powered by  </p>
-          <img src={gisfylogo} alt="logo picture" style={{width:'100px', height:'40px'}}></img>
-    </div>
-
-</footer>
+<footer className="footer" style={{color:'black',
+            textAlign:'center',
+            padding:'15px',
+            display: 'flex',
+            justifyContent: 'space-around',
+            alignItems: 'center'}}>
+                <p> © 2026 Gujarat Forest Department | RECAP4NDC Initiative    </p>
+                <div style={{display:'flex', alignItems:'center'}}>
+                      <p>Powered by  </p>
+            <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+                <img 
+                  src={gisfylogo} 
+                  alt="logo picture" 
+                  style={{ width: '100px', height: '40px' }} 
+                /></a>    </div>
+            
+            </footer>
 
     </>
   );

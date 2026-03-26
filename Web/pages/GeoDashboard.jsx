@@ -24,7 +24,8 @@ import LatLngDisplay from "./LatLngDisplay";
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
-
+// import "./Homepage.css";
+import gisfylogo from "../assets/gisfylogo.png";
 
 const Loader = () => {
   console.log("loading");
@@ -953,6 +954,8 @@ const handleLayerToggle = (layerType, isChecked) => {
           </Suspense>
         )}
       </div>
+      
     </div>
+    
   );
 }

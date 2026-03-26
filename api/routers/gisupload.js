@@ -1168,7 +1168,7 @@ router.get("/patrol-boundaries/check-name", verifyJwt, async (req, res) => {
 // --- Get all patrol boundaries ---
 router.get("/patrol-boundaries", verifyJwt, async (req, res) => {
   try {
-    const result = await sequelize.query(
+    const boundaries = await sequelize.query(
       `
       SELECT
         id,
@@ -1181,13 +1181,41 @@ router.get("/patrol-boundaries", verifyJwt, async (req, res) => {
       FROM patrol_boundaries
       ORDER BY created_at DESC
       `,
-      { type: sequelize.QueryTypes.SELECT },
+      { type: sequelize.QueryTypes.SELECT }
+    );
+
+    const dataWithGeom = await Promise.all(
+      boundaries.map(async (item) => {
+        try {
+          const geomResult = await sequelize.query(
+            `SELECT geom FROM ${item.table_name} LIMIT 1`,
+            { type: sequelize.QueryTypes.SELECT }
+          );
+
+          return {
+  ...item,
+  geom: geomResult.length
+    ? {
+        ...geomResult[0].geom,
+        coordinates: geomResult[0].geom.coordinates[0]
+      }
+    : null,
+};
+        } catch (err) {
+          console.error(`Error fetching geom from ${item.table_name}:`, err);
+          return {
+            ...item,
+            geom: null,
+          };
+        }
+      })
     );
 
     res.json({
       success: true,
-      data: result,
+      data: dataWithGeom,
     });
+
   } catch (error) {
     console.error("Error fetching patrol boundaries:", error);
     res.status(500).json({
