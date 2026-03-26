@@ -155,7 +155,7 @@ body {
 .transparent-table .ant-table-column-sorter,
 .transparent-table .ant-table-column-sorter-up,
 .transparent-table .ant-table-column-sorter-down {
-  color: #000 !important;
+  color: white !important;
 }
 
 /* === Force filter placeholders to light blue === */

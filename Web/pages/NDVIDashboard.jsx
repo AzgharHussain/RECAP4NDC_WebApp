@@ -119,14 +119,14 @@ const dashboardText = {
     
     // Date Range Selection
     selectDateRange: "Select Date Range",
-    allDivisionsMaxMonths: "(Maximum 6 months for All Divisions)",
+    allDivisionsMaxMonths: "(Maximum 3 months for All Divisions)",
     maxMonths: "(Maximum 12 months)",
     startDate: "Start Date",
     endDate: "End Date",
     submit: "Submit",
     
     // Error messages
-    errorAllDivisionsRange: 'For "All Divisions", date range cannot exceed 6 months. Please select a shorter range.',
+    errorAllDivisionsRange: 'For "All Divisions", date range cannot exceed 3 months. Please select a shorter range.',
     errorRangeExceed: 'Date range cannot exceed 12 months. Please select a shorter range.',
     
     // Loading states
@@ -252,49 +252,49 @@ const dashboardText = {
     
     // Date Range Selection
     selectDateRange: "તારીખ શ્રેણી પસંદ કરો",
-    allDivisionsMaxMonths: "(બધા વિભાગો માટે મહત્તમ 6 મહિના)",
+    allDivisionsMaxMonths: "(બધા વિભાગો માટે મહત્તમ 3 મહિના)",
     maxMonths: "(મહત્તમ 12 મહિના)",
     startDate: "પ્રારંભ તારીખ",
     endDate: "અંતિમ તારીખ",
     submit: "સબમિટ કરો",
     
     // Error messages
-    errorAllDivisionsRange: '"બધા વિભાગો" માટે, તારીખ શ્રેણી 6 મહિનાથી વધુ ન હોઈ શકે. કૃપા કરીને ટૂંકી શ્રેણી પસંદ કરો.',
-    errorRangeExceed: 'તારીખ શ્રેણી 12 મહિનાથી વધુ ન હોઈ શકે. કૃપા કરીને ટૂંકી શ્રેણી પસંદ કરો.',
+    errorAllDivisionsRange: '"બધા વિભાગો" માટે, તારીખ શ્રેણી 3 મહિનાથી વધુ ન હોઈ શકે. કૃપા કરીને ટૂંકી શ્રેણી પસંદ કરો.',
+    errorRangeExceed: 'તારીખ શ્રેણી 12 મહિનાથી વધુ ન હોઈ શકે. કૃપા કરीને ટૂંકી શ્રેણી પસંદ કરો.',
     
     // Loading states
-    loadingData: "ડેટા લોડ થઈ રહ્યો છે...",
-    fetchingCoupeArea: "કૂપ વિસ્તાર મેળવી રહ્યા છે...",
-    calculatingDegradedArea: "ડિગ્રેડેડ વિસ્તાર ગણતરી કરી રહ્યા છે...",
-    loadingNDVIChange: "બહુવિધ મહિનાઓ માટે NDVI ફેરફાર ડેટા લોડ થઈ રહ્યો છે...",
+    loadingData: "ડેટa લોડ થઈ રહ્యો છે...",
+    fetchingCoupeArea: "કೂಪ ವಿಸ್ತಾರ ಮುಂದುವರಿಸುತ್ತಿದೆ...",
+    calculatingDegradedArea: "ಡಿಗ್ರೇಡೆಡ್ ವಿಸ್ತಾರ ಗಣನೆಯಲ್ಲಿ ಮುಂದುವರಿಸುತ್ತಿದೆ...",
+    loadingNDVIChange: "ಬಹುವಿದ ಮಹಿನಗಳಲ್ಲಿ NDVI ಬದಲಾವನೆಯ ಡೇಟಾ ಲೋಡ್ ಮಾಡಲಾಗತಕದಕ...",
     
     // Area Analysis
     areaAnalysis: "વિસ્તાર વિશ્લેષણ",
     totalArea: "કુલ વિસ્તાર",
     afforestedArea: "વનીકૃત વિસ્તાર",
-    degradedArea: "અધોગતિ વિસ્તાર",
-    latest: "(નવીનતમ)",
+    degradedArea: "અધોગતિ વિસ્ાર",
+    latest: "(નવીਨતમ)",
     
     // Summary Cards
     degradedAreaLatest: "અધોગતિ વિસ્તાર (નવીનતમ)",
     afforestedAreaLatest: "વનીકૃત વિસ્તાર (નવીનતમ)",
     recordsWithNotes: "નોંધો સાથે રેકોર્ડ્સ",
-    recordsWithImages: "છબીઓ સાથે રેકોર્ડ્સ",
+    recordsWithImages: "છબીઓ સાથે રેકોર્ડ્స",
     
     // Division-wise Breakdown
-    divisionWiseBreakdown: "વિભાગ-વાર વિભાજન",
+    divisionWiseBreakdown: "વિભાગ-વાર વિભಾજನ",
     
     // Data Table Section
     detailedDataTable: "૧. વિગતવાર ડેટા ટેબલ",
     searchPlaceholder: "ID, સ્થિતિ, સ્થાન, નોંધો, વિભાગ દ્વારા શોધો...",
-    showDivisionColumn: "વિભાગ કૉલમ બતાવો",
-    onlyWithNotes: "માત્ર નોંધો સાથે",
-    onlyWithImages: "માત્ર છબીઓ સાથે",
-    clearFilters: "ફિલ્ટર સાફ કરો",
+    showDivisionColumn: "વિభாக காலம் காண்பி",
+    onlyWithNotes: "మాత్రమే నోంధులతో",
+    onlyWithImages: "మాత్రమే చిత్రాలతో",
+    clearFilters: "ఫిల్టర్లను కలుపు",
     
     // Table Headers
     division: "વિભાગ",
-    range: "રेंज",
+    range: "રેંજ",
     round: "રાઉન્ડ",
     beat: "બીટ",
     status: "સ્થિતિ",
@@ -2376,39 +2376,36 @@ const handleExportToPDF = () => {
     <Container maxWidth="xl" sx={{ py: 3, minHeight: '100vh' }}>
       {/* Header */}
       <Card sx={{ mb: 4, bgcolor: 'transparent', color: 'black', borderRadius: 3, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
-        <CardContent>
-          <Grid container alignItems="center" spacing={3}>
-            <Grid item>
-              <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Forest sx={{ fontSize: 48 }} />
-              </Box>
-            </Grid>
-            <Grid item xs>
-              <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-                {t.forestCoverMonitoring}
-              </Typography>
-              <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
-                {t.realTimeAnalysis}
-              </Typography>
-            </Grid>
-            <Grid item>
-              <Stack direction="row" spacing={2}>
-                <Button
-                  variant="contained"
-                  color="error"
-                  startIcon={<PictureAsPdf />}
-                  onClick={handleExportToPDF}
-                  disabled={Object.keys(monthlyData).length === 0}
-                  sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                >
-                  {t.exportPDF}
-                </Button>
-                
-              </Stack>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+  <CardContent>
+    <Grid container alignItems="center" spacing={3}>
+      <Grid item>
+        <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Forest sx={{ fontSize: 48 }} />
+        </Box>
+      </Grid>
+      <Grid item xs>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
+          {t.forestCoverMonitoring}
+        </Typography>
+        <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
+          {t.realTimeAnalysis}
+        </Typography>
+      </Grid>
+        <Grid item xs={12} md="auto">
+        <Button
+          variant="contained"
+          color="error"
+          startIcon={<PictureAsPdf />}
+          onClick={handleExportToPDF}
+          disabled={Object.keys(monthlyData).length === 0}
+          sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', ml: { xs: 0, md: 2, lg: 50 } }}
+        >
+          {t.exportPDF}
+        </Button>
+      </Grid>
+    </Grid>
+  </CardContent>
+</Card>
 
       {/* Hierarchy Navigation */}
       <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.05)', bgcolor: "transparent" }}>
@@ -2444,7 +2441,7 @@ const handleExportToPDF = () => {
       minDate={new Date(2020, 0, 1)}
       maxDate={endDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
-        new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 5 : 11), 1).getTime()
+        new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 2 : 11), 1).getTime()
       )) : new Date(2030, 11, 31)}
       slotProps={{
         textField: {
@@ -2469,7 +2466,7 @@ const handleExportToPDF = () => {
       minDate={startDate || new Date(2020, 0, 1)}
       maxDate={startDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
-        new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 5 : 11), 1).getTime()
+        new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 2 : 11), 1).getTime()
       )) : new Date(2030, 11, 31)}
       slotProps={{
         textField: {
@@ -2495,7 +2492,7 @@ const handleExportToPDF = () => {
       if (!startDate || !endDate) return true;
       const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
                         (endDate.getMonth() - startDate.getMonth());
-      const maxAllowed = selectedDivision === 'all' ? 6 : 12;
+      const maxAllowed = selectedDivision === 'all' ? 3 : 12;
       return monthsDiff > maxAllowed;
     })()}
     sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
@@ -2509,7 +2506,7 @@ const handleExportToPDF = () => {
   const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
                     (endDate.getMonth() - startDate.getMonth());
   
-  const maxAllowed = selectedDivision === 'all' ? 6 : 12;
+  const maxAllowed = selectedDivision === 'all' ? 3 : 12;
   
   if (monthsDiff > maxAllowed) {
     return (

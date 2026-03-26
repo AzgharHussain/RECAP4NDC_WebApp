@@ -192,18 +192,27 @@ GROUP BY b.beat_area_sq_m, u.union_geom;
 
 router.post("/coupe-patrol-coverage", verifyJwt, async (req, res) => {
 
-  let { coupe_table, month, division, range } = req.body;
+  let { coupe_table, start_date, end_date, division, range } = req.body;
 
-  if (!month) {
+  // Validate date range
+  if (!start_date || !end_date) {
     return res.status(400).json({
       success: false,
-      message: "Month is required"
+      message: "Start date and end date are required"
     });
   }
 
   try {
-
-    const month_start = `${month}-01`;
+    // Validate date format
+    const startDateObj = new Date(start_date);
+    const endDateObj = new Date(end_date);
+    
+    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid date format. Please use YYYY-MM-DD format"
+      });
+    }
 
     // Clean division name by removing "Forest Division" if present
     let cleanDivision = division;
@@ -270,6 +279,12 @@ patrol_lines AS (
         p.division,
         p.range,
         p.beat,
+        p.start_time,
+        p.end_time,
+        p.patrol_officer_name,
+        p.distance_kms,
+        p.start_location,
+        p.end_location,
         ST_MakeLine(
             ARRAY(
                 SELECT
@@ -286,8 +301,8 @@ patrol_lines AS (
     FROM public.patrols p
     WHERE p.geom IS NOT NULL
       AND p.geom LIKE '%,%'
-      AND p.start_time >= :month_start
-      AND p.start_time < (:month_start::date + INTERVAL '1 month')
+      AND p.start_time >= :start_date::date
+      AND p.start_time <= :end_date::date + INTERVAL '1 day' - INTERVAL '1 second'
       ${patrolWhereClause}
 ),
 
@@ -298,6 +313,12 @@ patrol_buffers AS (
         division,
         range,
         beat,
+        start_time,
+        end_time,
+        patrol_officer_name,
+        distance_kms,
+        start_location,
+        end_location,
         ST_Buffer(line_geom::geography, 30)::geometry AS buffer_geom
     FROM patrol_lines
 ),
@@ -309,6 +330,12 @@ clipped_buffers AS (
         pb.division,
         pb.range,
         pb.beat,
+        pb.start_time,
+        pb.end_time,
+        pb.patrol_officer_name,
+        pb.distance_kms,
+        pb.start_location,
+        pb.end_location,
         ST_Intersection(pb.buffer_geom, c.coupe_geom) AS clipped_geom
     FROM patrol_buffers pb
     CROSS JOIN coupe c
@@ -344,12 +371,12 @@ SELECT
             'division', cb.division,
             'range', cb.range,
             'beat', cb.beat,
-            'start_time', (SELECT start_time FROM public.patrols WHERE patrol_id = cb.patrol_id),
-            'end_time', (SELECT end_time FROM public.patrols WHERE patrol_id = cb.patrol_id),
-            'patrol_officer_name', (SELECT patrol_officer_name FROM public.patrols WHERE patrol_id = cb.patrol_id),
-            'distance_kms', (SELECT distance_kms FROM public.patrols WHERE patrol_id = cb.patrol_id),
-            'start_location', (SELECT start_location FROM public.patrols WHERE patrol_id = cb.patrol_id),
-            'end_location', (SELECT end_location FROM public.patrols WHERE patrol_id = cb.patrol_id)
+            'start_time', cb.start_time,
+            'end_time', cb.end_time,
+            'patrol_officer_name', cb.patrol_officer_name,
+            'distance_kms', cb.distance_kms,
+            'start_location', cb.start_location,
+            'end_location', cb.end_location
         )
     ) FILTER (WHERE cb.patrol_id IS NOT NULL) AS patrols_covering_coupe
 FROM coverage_calc cc
@@ -359,7 +386,8 @@ GROUP BY cc.coupe_area, cc.patrol_area;
 
     // Prepare replacements object
     const replacements = {
-      month_start,
+      start_date,
+      end_date,
       ...coupeReplacements,
       ...patrolReplacements
     };
@@ -367,6 +395,7 @@ GROUP BY cc.coupe_area, cc.patrol_area;
     console.log("Query replacements:", replacements);
     console.log("Coupe WHERE clause:", coupeWhereClause);
     console.log("Patrol WHERE clause:", patrolWhereClause);
+    console.log("Date range:", start_date, "to", end_date);
 
     const result = await sequelize.query(query, {
       replacements,
@@ -376,9 +405,18 @@ GROUP BY cc.coupe_area, cc.patrol_area;
     // Log the result to debug
     console.log("Query result:", JSON.stringify(result, null, 2));
 
+    // Check if any results were returned
+    if (!result || result.length === 0) {
+      return res.json({
+        success: true,
+        data: null,
+        message: "No coverage data found for the selected criteria"
+      });
+    }
+
     res.json({
       success: true,
-      data: result[0] || null
+      data: result[0]
     });
 
   } catch (error) {
@@ -394,6 +432,8 @@ GROUP BY cc.coupe_area, cc.patrol_area;
   }
 
 });
+
+
           
 router.post("/boundary-patrol-coverage", verifyJwt, async (req, res) => {
 

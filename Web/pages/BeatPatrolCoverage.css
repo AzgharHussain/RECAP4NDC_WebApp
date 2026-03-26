@@ -29,6 +29,8 @@ align-items:end;
 
 .glow-button{
 background:linear-gradient(135deg,#6ea24b,#4f7a33);
+background: #00A651;
+
 color:white;
 border:none;
 padding:10px 18px;

@@ -51,7 +51,7 @@ export default function DashboardLayoutAdmin() {
       coupeLog: "Coupe Observation Log",
       patrollingIncident: "Patrolling",
       coupeDashboard: "Coupe Dashboard",
-      patrolBoundary: "Patrol Boundary",
+      plantationBoundary: "Plantation Boundary",
       changePassword: "Change Password",
       changeLanguage: "Change Language",
       english: "English",
@@ -70,7 +70,7 @@ export default function DashboardLayoutAdmin() {
       coupeLog: "કૂપ અવલોકન લોગ",
       patrollingIncident: "પેટ્રોલિંગ",
       coupeDashboard: "કૂપ ડેશબોર્ડ",
-      patrolBoundary: "પેટ્રોલ બાઉન્ડરી",
+      plantationBoundary: "પ્લાન્ટેશન બાઉન્ડરી",
       changePassword: "પાસવર્ડ બદલો",
       changeLanguage: "ભાષા બદલો",
       english: "English",
@@ -263,7 +263,7 @@ useEffect(() => {
             className={`menu-item ${isActiveLink("/UploadPatrolBoundary") ? "active" : ""}`}
             onClick={handleLinkClick}
           >
-            {text[language].patrolBoundary}
+            {text[language].plantationBoundary}
           </NavLink>
            </div>
          <div className="header-right">

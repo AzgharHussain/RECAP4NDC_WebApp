@@ -27,3 +27,11 @@ body {
 .css-1hgcujo-MuiPickersInputBase-root-MuiPickersOutlinedInput-root.Mui-error .MuiPickersOutlinedInput-notchedOutline:hover{
   border-color: black !important;
 }
+
+.css-phs6im.Mui-error{
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.css-18qp6qv.Mui-error .MuiPickersOutlinedInput-notchedOutline{
+    border-color: rgba(0, 0, 0, 0.23) !important;
+}

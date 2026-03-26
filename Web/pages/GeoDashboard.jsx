@@ -818,7 +818,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
               <WMSTileLayer
                 key="gujarat-difference"
-                url="http://68.178.167.216:8081/geoserver/cite/wms"
+                url="/geoserver/cite/wms"
                 layers="cite:Gujarat_difference"
                 format="image/png"
                 transparent={true}
@@ -839,7 +839,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
               <WMSTileLayer
                 key="tblIndia"
-                url="http://68.178.167.216:8081/geoserver/Recap4NDC/wms"
+                url="/geoserver/Recap4NDC/wms"
                 layers="Recap4NDC:tblIndia"
                 format="image/png"
                 transparent={true}

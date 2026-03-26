@@ -26,6 +26,9 @@ import DOMPurify from 'dompurify';
 
 const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
 
+import vector from '../assets/Vector.png';
+import Analyze_patrolling from '../assets/Analyze_patroll.png';
+
 import {
   MapContainer,
   TileLayer,
@@ -794,7 +797,6 @@ const PatrolIncidentLogs = () => {
   // Beat coverage analysis states
   const [selectedBeatForCoverage, setSelectedBeatForCoverage] = useState(null);
   const [showBeatCoverage, setShowBeatCoverage] = useState(false);
-  const [coverageMonth, setCoverageMonth] = useState("");
   const [isAnalyzingCoverage, setIsAnalyzingCoverage] = useState(false);
   const [coverageData, setCoverageData] = useState(null);
   const [coveragePatrols, setCoveragePatrols] = useState([]);
@@ -1004,6 +1006,27 @@ const PatrolIncidentLogs = () => {
     };
   }, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId, handleSearch]);
 
+  // AUTO-ANALYZE EFFECT - This automatically analyzes coverage when beat/range/division AND both dates are selected
+  useEffect(() => {
+    // Check if we have location filter (beat, range, or division) AND both dates
+    const hasLocationFilter = (beatFilter || rangeFilter || divisionFilter);
+    const hasDates = (startFilter && endFilter);
+    
+    if (hasLocationFilter && hasDates) {
+      // Small delay to ensure all states are updated
+      const timer = setTimeout(() => {
+        fetchBeatCoverageData();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else if (!hasLocationFilter || !hasDates) {
+      // Clear coverage data when filters are cleared
+      setShowBeatCoverage(false);
+      setCoverageData(null);
+      setCoveragePatrols([]);
+    }
+  }, [beatFilter, rangeFilter, divisionFilter, startFilter, endFilter]);
+
   // Clear all filters
   const clearAllFilters = () => {
     setSearchText("");
@@ -1023,7 +1046,6 @@ const PatrolIncidentLogs = () => {
     setShowBeatCoverage(false);
     setCoverageData(null);
     setCoveragePatrols([]);
-    setCoverageMonth("");
     setCurrentPage(1);
     fetchAllData(1, pageSize);
   };
@@ -1160,21 +1182,24 @@ const PatrolIncidentLogs = () => {
     return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
   };
 
-  // Fetch beat coverage data
+  // Fetch beat coverage data using existing startFilter and endFilter
   const fetchBeatCoverageData = async () => {
     if (!beatFilter && !rangeFilter && !divisionFilter) {
       message.warning(language === "gu" ? "કૃપા કરીને બીટ, રેંજ અથવા વિભાગ પસંદ કરો" : "Please select a beat, range or division");
       return;
     }
-    if (!coverageMonth) {
-      message.warning(language === "gu" ? "કૃપા કરીને મહિનો પસંદ કરો" : "Please select a month");
+    if (!startFilter || !endFilter) {
+      message.warning(language === "gu" ? "કૃપા કરીને શરૂઆત અને સમાપ્તિ તારીખ પસંદ કરો" : "Please select start and end date from the filters above");
       return;
     }
 
     setIsAnalyzingCoverage(true);
     try {
       const token = localStorage.getItem("token");
-      const requestPayload = { month: coverageMonth };
+      const requestPayload = { 
+        start_date: startFilter.format('YYYY-MM-DD'),
+        end_date: endFilter.format('YYYY-MM-DD')
+      };
       
       if (beatFilter) requestPayload.coupe_table = beatFilter.toUpperCase();
       else if (rangeFilter) {
@@ -1232,6 +1257,7 @@ const PatrolIncidentLogs = () => {
       "Area (sq m)": coverageData.coupe_area_sq_m,
       "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
       "Coverage %": coverageData.coverage_percentage,
+      "Date Range": `${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}`
     }];
 
     const patrolsData = coveragePatrols.map((patrol) => ({
@@ -1255,7 +1281,7 @@ const PatrolIncidentLogs = () => {
     }
 
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
-    const fileName = `${filterValue}_patrol_coverage.xlsx`;
+    const fileName = `${filterValue}_patrol_coverage_${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'}_to_${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}.xlsx`;
     saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
   };
 
@@ -1320,7 +1346,7 @@ const PatrolIncidentLogs = () => {
       align: "center",
     },
     {
-      title: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date",
+      title: language === "gu" ? "શરૂઆતની તારીખ" : "Search by Start Date",
       key: "start_date",
       align: "center",
       render: (record) => formatDateTime(record.start_time).date,
@@ -1434,6 +1460,13 @@ const PatrolIncidentLogs = () => {
         <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px", marginLeft: "20px"}}>
           {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Detail Level Patrolling Logs"}
         </h3>
+
+        <div style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(17, 95, 34)', marginLeft: "20px" }}>
+          {language === "gu" 
+    ? "કવરેજ વિશ્લેષણ કરવા માટે વિભાગ માટે શરૂઆત અને સમાપ્તિ તારીખો પસંદ કરો" 
+    : "Select the start and end dates for the division to perform coverage analysis"}
+        </div>
+
         <div className="heading-container" style={{height:"50px"}}>
           <Input
             placeholder={language === "gu" ? "અધિકારીના નામ પ્રમાણે શોધો" : "Search by Officer Name"}
@@ -1536,7 +1569,7 @@ const PatrolIncidentLogs = () => {
           </Select>
 
           <DatePicker
-            placeholder={language === "gu" ? "શરૂઆતની તારીખથી શોધો" : "Search by Start Date"}
+            placeholder={language === "gu" ? "શરૂઆતની તારીખ" : "Search By Start Date"}
             style={{ width: "150px", border: "1px solid #d9d9d9", borderRadius: "4px", background: "#fff" }}
             value={startFilter}
             onChange={(date) => setStartFilter(date)}
@@ -1544,7 +1577,7 @@ const PatrolIncidentLogs = () => {
           />
 
           <DatePicker
-            placeholder={language === "gu" ? "શરૂઆતની તારીખથી શોધો" : "Search by End Date"}
+            placeholder={language === "gu" ? "સમાપ્તિ તારીખ" : "Search By End Date"}
             style={{ width: "150px", border: "1px solid #d9d9d9", borderRadius: "4px", background: "#fff" }}
             value={endFilter}
             onChange={(date) => setEndFilter(date)}
@@ -1552,7 +1585,7 @@ const PatrolIncidentLogs = () => {
           />
           
           <Select
-            placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકારથી શોધો" : "Search by Patrolling Type"}
+            placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrolling Type"}
             style={{ width: "150px", borderRadius: "0px", background: "#fff" }}
             value={typeFilter}
             onChange={(value) => setTypeFilter(value)}
@@ -1573,180 +1606,213 @@ const PatrolIncidentLogs = () => {
           </Button>
         </div>
 
-        {/* Month Picker for Beat Coverage */}
+        {/* Beat Coverage Analysis Section - Now automatically analyzes when location and dates are selected */}
         {(beatFilter || rangeFilter || divisionFilter) && (
-          <div style={{ 
-            marginTop: 16, 
-            marginBottom: 16, 
-            display: 'flex',
-            alignItems: 'stretch',
-            gap: '0',
-            flexWrap: 'nowrap'
-          }}>
-            <div style={{ 
-              flex: 1,
+          <div style={{ marginTop: 16, marginBottom: 16 }}>
+            {/* <div style={{ 
               padding: '16px',
-              borderRadius: '8px 0 0 8px',
-              border: '1px solid #e2e8f0',
-              borderRight: 'none'
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0'
             }}>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
-                <div>
-                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>
+                  {language === "gu" 
+                    ? (beatFilter ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ" 
+                        : rangeFilter ? "રેંજ પેટ્રોલ કવરેજ વિશ્લેષણ"
+                        : "વિભાગ પેટ્રોલ કવરેજ વિશ્લેષણ")
+                    : (beatFilter ? "Beat Patrol Coverage Analysis" 
+                        : rangeFilter ? "Range Patrol Coverage Analysis"
+                        : "Division Patrol Coverage Analysis")}
+                </label>
+                {(!startFilter || !endFilter) && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#ff9800' }}>
                     {language === "gu" 
-                      ? (beatFilter ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ માટે મહિનો પસંદ કરો" 
-                          : rangeFilter ? "રેંજ પેટ્રોલ કવરેજ વિશ્લેષણ માટે મહિનો પસંદ કરો"
-                          : "વિભાગ પેટ્રોલ કવરેજ વિશ્લેષણ માટે મહિનો પસંદ કરો")
-                      : (beatFilter ? "Select Month for Beat Patrol Coverage Analysis"
-                          : rangeFilter ? "Select Month for Range Patrol Coverage Analysis"
-                          : "Select Month for Division Patrol Coverage Analysis")}
-                  </label>
-                  <input
-                    type="month"
-                    value={coverageMonth}
-                    onChange={(e) => setCoverageMonth(e.target.value)}
-                    style={{
-                      width: '200px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      backgroundColor: 'white',
-                      border: '1px solid #d9d9d9'
-                    }}
-                  />
-                </div>
-                <Button
-                  onClick={fetchBeatCoverageData}
-                  disabled={isAnalyzingCoverage || !coverageMonth}
-                  style={{
-                    background: '#00a651',
-                    border: 'none',
-                    padding: '8px 24px',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    color: 'white'
-                  }}
-                >
-                  {isAnalyzingCoverage ? (
-                    <span>{language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing..."}</span>
-                  ) : (
-                    <span>{language === "gu" ? "કવરેજ વિશ્લેષણ કરો" : "Analyze Coverage"}</span>
-                  )}
-                </Button>
+                      ? "કૃપા કરીને કવરેજ વિશ્લેષણ માટે ઉપર શરૂઆત અને સમાપ્તિ તારીખ પસંદ કરો" 
+                      : "Please select start and end date above for coverage analysis"}
+                  </div>
+                )}
+                {isAnalyzingCoverage && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#00a651' }}>
+                    {language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing coverage..."}
+                  </div>
+                )}
               </div>
-            </div>
+            </div> */}
 
-            {showBeatCoverage && coverageData && (beatFilter || rangeFilter || divisionFilter) && (
-              <div style={{
-                flex: 1,
-                borderRadius: '0 8px 8px 0',
-                border: '1px solid #e2e8f0',
-                borderLeft: 'none',
-                overflow: 'hidden'
-              }}>
-                <div style={{ padding: '12px' }}>
-                  <Row gutter={[6, 6]}>
-                    <Col span={6}>
-                      <div style={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        color: 'white',
-                        textAlign: 'center'
-                      }}>
-                        <p style={{ fontSize: '10px', opacity: 0.9, marginBottom: '4px' }}>
-                          {language === "gu" ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર") : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area")}
-                        </p>
-                        <h4 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>
-                          {(Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
-                        </h4>
-                      </div>
-                    </Col>
-                    <Col span={6}>
-                      <div style={{
-                        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        color: 'white',
-                        textAlign: 'center'
-                      }}>
-                        <p style={{ fontSize: '10px', opacity: 0.9, marginBottom: '4px' }}>
-                          {language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area"}
-                        </p>
-                        <h4 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>
-                          {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
-                        </h4>
-                      </div>
-                    </Col>
-                    <Col span={6}>
-                      <div style={{
-                        background: coverageData.coverage_percentage > 70 
-                          ? 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-                          : coverageData.coverage_percentage > 40 
-                          ? 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
-                          : 'linear-gradient(135deg, #ff6a00 0%, #ee0979 100%)',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        color: 'white',
-                        textAlign: 'center'
-                      }}>
-                        <p style={{ fontSize: '10px', opacity: 0.9, marginBottom: '4px' }}>
-                          {language === "gu" ? "કવરેજ %" : "Coverage %"}
-                        </p>
-                        <h4 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>
-                          {Number(coverageData.coverage_percentage).toFixed(2)}%
-                        </h4>
-                      </div>
-                    </Col>
-                    <Col span={6}>
-                      <Button
-                        onClick={exportCoverageToExcel}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          background: '#48bb78',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px'
-                        }}
-                        icon={<DownloadOutlined style={{ fontSize: '12px' }} />}
-                        size="small"
-                      >
-                        {language === "gu" ? "એક્સેલ" : "Export"}
-                      </Button>
-                    </Col>
-                  </Row>
+           {showBeatCoverage && coverageData && (beatFilter || rangeFilter || divisionFilter) && (
+  <div style={{
+    marginTop: '16px',
+    borderRadius: '8px',
+    overflow: 'hidden',
+    marginLeft: '20px',
+  }}>
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center',
+      padding: '12px 16px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <img 
+          src={Analyze_patrolling} 
+          alt="Coverage" 
+          style={{ width: '18px', height: '18px' }} 
+        />
+        <p style={{ color: '#115F22', margin: 0, fontWeight: 700 }}>
+          {(() => {
+            // Get the selected location name
+            let locationName = '';
+            if (beatFilter) {
+              locationName = beatFilter;
+            } else if (rangeFilter) {
+              locationName = rangeFilter;
+            } else if (divisionFilter) {
+              locationName = divisionFilter;
+            }
+            
+            // Get the date range text
+            const startDateText = startFilter ? startFilter.format('MMMM, YYYY') : '';
+            const endDateText = endFilter ? endFilter.format('MMMM, YYYY') : '';
+            
+            // Format the date range for display
+            let dateRangeText = '';
+            if (startDateText && endDateText) {
+              if (startDateText === endDateText) {
+                dateRangeText = startDateText;
+              } else {
+                dateRangeText = `${startDateText} - ${endDateText}`;
+              }
+            } else if (startDateText) {
+              dateRangeText = startDateText;
+            } else if (endDateText) {
+              dateRangeText = endDateText;
+            } else {
+              dateRangeText = '';
+            }
+            
+            // Generate the analysis text based on language
+            if (language === "gu") {
+              if (beatFilter) {
+                return dateRangeText ? `બીટ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `બીટ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
+              } else if (rangeFilter) {
+                return dateRangeText ? `રેંજ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `રેંજ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
+              } else if (divisionFilter) {
+                return dateRangeText ? `વિભાગ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `વિભાગ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
+              }
+            } else {
+              // English
+              if (beatFilter) {
+                return dateRangeText ? `Analyzing patrolling coverage for Beat: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Beat: ${locationName}`;
+              } else if (rangeFilter) {
+                return dateRangeText ? `Analyzing patrolling coverage for Range: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Range: ${locationName}`;
+              } else if (divisionFilter) {
+                return dateRangeText ? `Analyzing patrolling coverage for Division: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Division: ${locationName}`;
+              }
+            }
+            
+            // Fallback
+            return language === "gu" ? "પેટ્રોલિંગ કવરેજનું વિશ્લેષણ" : "Analyzing patrolling coverage";
+          })()}
+        </p>
+      </div>
+      <Button
+        onClick={exportCoverageToExcel}
+        style={{
+          background: 'rgb(0, 166, 81)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '4px',
+          padding: '18px 22px',
+          height: '32px'
+        }}
+        size="small"
+      >
+        <img src={vector} alt="Export" style={{ width: '16px', height: '16px' }} />
+        {language === "gu" ? "એક્સેલ" : "Export"}
+      </Button>
+    </div>
+    <div style={{ padding: '16px' }}>
+      <Row gutter={[24, 24]}>
+        <Col span={3}>
+          <div style={{
+            background: 'linear-gradient(180deg, #034C17 0%, #4CAF50 50%, #034106 100%)',
+            padding: '12px',
+            borderRadius: '8px',
+            color: 'white',
+            textAlign: 'center',
+            height: '70px',
+          }}>
+            <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
+              {language === "gu" ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર") : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area")}
+            </p>
+            <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
+              {(Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
+            </h4>
+          </div>
+        </Col>
+        <Col span={3}>
+          <div style={{
+            background: 'linear-gradient(180deg, #05385E 0%, #1B75BA 50%, #05385E 100%)',
+            padding: '12px',
+            borderRadius: '8px',
+            color: 'white',
+            textAlign: 'center',
+            height: '70px',
+          }}>
+            <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
+              {language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area"}
+            </p>
+            <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
+              {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
+            </h4>
+          </div>
+        </Col>
+        <Col span={3}>
+          <div style={{
+            background: 'linear-gradient(180deg, #603605 0%, #F5911E 50%, #603605 100%)',
+            padding: '12px',
+            borderRadius: '8px',
+            color: 'white',
+            textAlign: 'center',
+            height: '70px',
+          }}>
+            <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
+              {language === "gu" ? "કવરેજ %" : "Coverage %"}
+            </p>
+            <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
+              {Number(coverageData.coverage_percentage).toFixed(2)}%
+            </h4>
+          </div>
+        </Col>
+      </Row>
 
-                  {coveragePatrols.length === 0 && (
-                    <div style={{ 
-                      textAlign: 'center', 
-                      padding: '12px', 
-                      marginTop: '12px',
-                      background: '#f7fafc', 
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      color: '#718096'
-                    }}>
-                      {language === "gu" 
-                        ? (beatFilter ? "આ બીટની અંદર કોઈ પેટ્રોલ મળ્યા નથી" 
-                            : rangeFilter ? "આ રેંજની અંદર કોઈ પેટ્રોલ મળ્યા નથી"
-                            : "આ વિભાગની અંદર કોઈ પેટ્રોલ મળ્યા નથી")
-                        : (beatFilter ? "No patrols found inside this beat" 
-                            : rangeFilter ? "No patrols found inside this range"
-                            : "No patrols found inside this division")}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+      {coveragePatrols.length === 0 && (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '16px', 
+          marginTop: '16px',
+          background: '#f7fafc', 
+          borderRadius: '6px',
+          fontSize: '12px',
+          color: '#718096'
+        }}>
+          {language === "gu" 
+            ? (beatFilter ? "આ બીટની અંદર કોઈ પેટ્રોલ મળ્યા નથી" 
+                : rangeFilter ? "આ રેંજની અંદર કોઈ પેટ્રોલ મળ્યા નથી"
+                : "આ વિભાગની અંદર કોઈ પેટ્રોલ મળ્યા નથી")
+            : (beatFilter ? "No patrols found inside this beat" 
+                : rangeFilter ? "No patrols found inside this range"
+                : "No patrols found inside this division")}
+        </div>
+      )}
+    </div>
+  </div>
+)}
           </div>
         )}
         
@@ -1771,6 +1837,7 @@ const PatrolIncidentLogs = () => {
         />
         
         {totalItems > 0 && <CustomPagination />}
+
       </div>
       
       {/* Patrol Analysis Dashboard - Uses dashboardData which updates with filters */}
@@ -1841,7 +1908,7 @@ const PatrolIncidentLogs = () => {
                               src={`data:${image.image_type};base64,${image.image_data}`}
                               alt={getImageLabel()}
                               style={{ 
-                                width: '100%',
+                                width: 170,
                                 height: 150,
                                 objectFit: 'cover',
                                 borderRadius: 2
