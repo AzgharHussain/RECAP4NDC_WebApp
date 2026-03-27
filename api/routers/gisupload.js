@@ -1125,7 +1125,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
   },
 );
 
-router.get("/patrol-boundaries/check-name", verifyJwt, async (req, res) => {
+router.post("/patrol-boundaries/check-name", verifyJwt, async (req, res) => {
   try {
     const { name } = req.body;
     

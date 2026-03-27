@@ -347,7 +347,7 @@ const PatrolAnalysisDashboard = ({
       key: 'area',
       value: coverageData && coverageData.coupe_area_sq_m 
         ? (Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2) 
-        : '0.00',
+        : 'N/A',
       title: language === "gu"
         ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર")
         : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area"),
@@ -359,7 +359,7 @@ const PatrolAnalysisDashboard = ({
       key: 'covered',
       value: coverageData && coverageData.patrol_area_sq_m 
         ? (Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2) 
-        : '0.00',
+        : 'N/A',
       title: language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area",
       suffix: "km²",
       color: 'rgba(0, 255, 162, 0.3)',
@@ -369,7 +369,7 @@ const PatrolAnalysisDashboard = ({
       key: 'percentage',
       value: coverageData && coverageData.coverage_percentage 
         ? Number(coverageData.coverage_percentage).toFixed(2) 
-        : '0.00',
+        : 'N/A',
       title: language === "gu" ? "કવરેજ %" : "Coverage %",
       suffix: "%",
       color: 'rgba(64, 0, 255, 0.3)',
