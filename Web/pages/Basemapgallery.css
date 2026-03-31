@@ -14,11 +14,11 @@
   and (max-width: 1024px) {
   
   .basemap-deck {
-    left: 56%;
+    left: 62%;
   }
 }
 
-@media (min-width: 1560px) {
+@media (min-width: 1800px) {
   .basemap-deck {
     left: 34%;
   }

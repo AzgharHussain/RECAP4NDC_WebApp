@@ -41,10 +41,11 @@ RETRY_DELAY = 5
 
 
 
-first_month_START = "2026-01-01"
-first_month_END   = "2026-01-30"
-second_month_START = "2026-02-01"
-second_month_END   = "2026-02-28"
+first_month_START = "2025-02-01"
+first_month_END   = "2025-02-28"
+
+second_month_START = "2025-03-01"
+second_month_END   = "2025-03-31"
 
 PROJECT_ID = "giz-gujarat"
 
@@ -799,14 +800,14 @@ def process_all_coupes():
             
             # Step 2: Create degradation table
             log(f"Step 2/5: Creating degradation table")
-            table_name = f"2026-02-01_{coupe}_coupe_NDVI_Change"
+            table_name = f"2025-03-01_{coupe}_coupe_NDVI_Change"
             create_degradation_table(cur, table_name)
             conn.commit()
             
             # Step 3: Get polygons for this coupe
             log(f"Step 3/5: Fetching polygons")
             cur.execute(f"""SELECT id as fid, ST_AsGeoJSON(geom), village, coupe_no 
-                          FROM "{coupe}_coupe" ORDER BY fid LIMIT 2""")
+                          FROM "{coupe}_coupe" ORDER BY fid""")
             polys = cur.fetchall()
             log(f"  Found {len(polys)} polygons in {coupe}_coupe")
             

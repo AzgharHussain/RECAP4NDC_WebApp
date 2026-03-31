@@ -1,862 +1,316 @@
-[2026-03-16T16:12:10.209209] 
+[2026-03-30T18:01:24.203523] 
 ============================================================
-[2026-03-16T16:12:10.209934] STARTING DEGRADATION ANALYSIS PROCESS
-[2026-03-16T16:12:10.210418] ============================================================
-[2026-03-16T16:12:13.946383] Earth Engine initialized
-[2026-03-16T16:12:13.947280] Initializing GeoServer...
-[2026-03-16T16:12:14.391212] GeoServer connection successful
-[2026-03-16T16:12:14.392459] GeoServer connection verified
-[2026-03-16T16:12:14.816676] Found 16 coupes to process
-[2026-03-16T16:12:14.817492] Already processed 0 coupes
-[2026-03-16T16:12:14.818083] 
+[2026-03-30T18:01:24.204085] STARTING DEGRADATION ANALYSIS PROCESS
+[2026-03-30T18:01:24.204550] ============================================================
+[2026-03-30T18:01:28.903315] Earth Engine initialized
+[2026-03-30T18:01:28.904063] Initializing GeoServer...
+[2026-03-30T18:01:29.409613] GeoServer connection successful
+[2026-03-30T18:01:29.410825] GeoServer connection verified
+[2026-03-30T18:01:29.852435] Found 16 coupes to process
+[2026-03-30T18:01:29.853054] Already processed 0 coupes
+[2026-03-30T18:01:29.853400] 
 ============================================================
-[2026-03-16T16:12:14.818756] Starting processing for coupe: chhotaudepur
-[2026-03-16T16:12:14.819631] ============================================================
-[2026-03-16T16:12:14.820243] Step 1/5: Fixing geometry for chhotaudepur
-[2026-03-16T16:12:14.820871] Starting comprehensive geometry fixing for chhotaudepur_coupe
-[2026-03-16T16:12:14.948588]   Step 1: Fixed invalid geometries
-[2026-03-16T16:12:15.259075]   Step 2: Extracted polygon collections
-[2026-03-16T16:12:15.373432]   Step 3: Buffered invalid geometries
-[2026-03-16T16:12:15.435204]   Step 4: Set SRID to 4326
-[2026-03-16T16:12:15.493040]   Step 5: Transformed to 4326
-[2026-03-16T16:12:15.589437]   Step 6: Simplified geometries
-[2026-03-16T16:12:15.701522]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:12:15.773001]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:12:16.135974]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:12:16.222285] chhotaudepur_coupe geometry fixing completed. 1993 valid geometries remaining
-[2026-03-16T16:12:16.277864] Step 2/5: Creating degradation table
-[2026-03-16T16:12:16.671544] Table 2026-02-01_chhotaudepur_coupe_NDVI_Change created with indexes
-[2026-03-16T16:12:16.750453] Step 3/5: Fetching polygons
-[2026-03-16T16:12:17.390597]   Found 2 polygons in chhotaudepur_coupe
-[2026-03-16T16:12:17.391664] Step 4/5: Processing polygons
-[2026-03-16T16:13:14.777267] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:13:14.777895] Fatal error processing coupe chhotaudepur: name 'layer_name' is not defined
-[2026-03-16T16:13:14.778306] Will skip this coupe and continue with next
-[2026-03-16T16:13:14.778760] 
+[2026-03-30T18:01:29.853889] Starting processing for coupe: chhotaudepur
+[2026-03-30T18:01:29.854589] ============================================================
+[2026-03-30T18:01:29.854937] Step 1/5: Fixing geometry for chhotaudepur
+[2026-03-30T18:01:29.855198] Starting comprehensive geometry fixing for chhotaudepur_coupe
+[2026-03-30T18:01:30.049855]   Step 1: Fixed invalid geometries
+[2026-03-30T18:01:30.328792]   Step 2: Extracted polygon collections
+[2026-03-30T18:01:30.442988]   Step 3: Buffered invalid geometries
+[2026-03-30T18:01:30.530294]   Step 4: Set SRID to 4326
+[2026-03-30T18:01:30.599109]   Step 5: Transformed to 4326
+[2026-03-30T18:01:30.685110]   Step 6: Simplified geometries
+[2026-03-30T18:01:30.781693]   Step 7: Removed remaining invalid geometries
+[2026-03-30T18:01:30.839683]   Step 8: Cleaned very complex geometries
+[2026-03-30T18:01:31.130245]   Step 9: Removed geometries with area < 1 sqm
+[2026-03-30T18:01:31.208820] chhotaudepur_coupe geometry fixing completed. 1993 valid geometries remaining
+[2026-03-30T18:01:31.271109] Step 2/5: Creating degradation table
+[2026-03-30T18:01:31.616969] Table 2026-02-01_chhotaudepur_coupe_NDVI_Change created with indexes
+[2026-03-30T18:01:31.668722] Step 3/5: Fetching polygons
+[2026-03-30T18:01:31.849118]   Found 2 polygons in chhotaudepur_coupe
+[2026-03-30T18:01:31.849709] Step 4/5: Processing polygons
+[2026-03-30T18:01:33.254645]   Error getting imagery: name 'second_month_START' is not defined
+[2026-03-30T18:01:46.632271] 
 ============================================================
-[2026-03-16T16:13:14.779131] Starting processing for coupe: banaskantha
-[2026-03-16T16:13:14.779532] ============================================================
-[2026-03-16T16:13:14.779906] Step 1/5: Fixing geometry for banaskantha
-[2026-03-16T16:13:14.780229] Starting comprehensive geometry fixing for banaskantha_coupe
-[2026-03-16T16:13:14.894307]   Step 1: Fixed invalid geometries
-[2026-03-16T16:13:15.394119]   Step 2: Extracted polygon collections
-[2026-03-16T16:13:15.518881]   Step 3: Buffered invalid geometries
-[2026-03-16T16:13:15.570524]   Step 4: Set SRID to 4326
-[2026-03-16T16:13:15.622875]   Step 5: Transformed to 4326
-[2026-03-16T16:13:16.330889]   Step 6: Simplified geometries
-[2026-03-16T16:13:16.432604]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:13:16.486581]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:13:16.765496]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:13:16.821400] banaskantha_coupe geometry fixing completed. 2472 valid geometries remaining
-[2026-03-16T16:13:16.886833] Step 2/5: Creating degradation table
-[2026-03-16T16:13:17.250325] Table 2026-02-01_banaskantha_coupe_NDVI_Change created with indexes
-[2026-03-16T16:13:17.302862] Step 3/5: Fetching polygons
-[2026-03-16T16:13:17.413900]   Found 2 polygons in banaskantha_coupe
-[2026-03-16T16:13:17.414529] Step 4/5: Processing polygons
-[2026-03-16T16:15:17.386027] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:15:17.387456] Fatal error processing coupe banaskantha: name 'layer_name' is not defined
-[2026-03-16T16:15:17.388080] Will skip this coupe and continue with next
-[2026-03-16T16:15:17.388741] 
+[2026-03-30T18:01:46.632803] PROCESS INTERRUPTED BY USER
+[2026-03-30T18:01:46.633010] Checkpoint has been saved
+[2026-03-30T18:01:46.633290] ============================================================
+[2026-03-30T18:02:25.570482] 
 ============================================================
-[2026-03-16T16:15:17.389577] Starting processing for coupe: surat
-[2026-03-16T16:15:17.390107] ============================================================
-[2026-03-16T16:15:17.390539] Step 1/5: Fixing geometry for surat
-[2026-03-16T16:15:17.391008] Starting comprehensive geometry fixing for surat_coupe
-[2026-03-16T16:15:17.480152]   Step 1: Fixed invalid geometries
-[2026-03-16T16:15:17.597905]   Step 2: Extracted polygon collections
-[2026-03-16T16:15:17.670077]   Step 3: Buffered invalid geometries
-[2026-03-16T16:15:17.726019]   Step 4: Set SRID to 4326
-[2026-03-16T16:15:17.776497]   Step 5: Transformed to 4326
-[2026-03-16T16:15:17.836801]   Step 6: Simplified geometries
-[2026-03-16T16:15:17.906107]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:15:17.962045]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:15:18.105155]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:15:18.165401] surat_coupe geometry fixing completed. 902 valid geometries remaining
-[2026-03-16T16:15:18.272780] Step 2/5: Creating degradation table
-[2026-03-16T16:15:18.677521] Table 2026-02-01_surat_coupe_NDVI_Change created with indexes
-[2026-03-16T16:15:18.736162] Step 3/5: Fetching polygons
-[2026-03-16T16:15:18.863692]   Found 2 polygons in surat_coupe
-[2026-03-16T16:15:18.864404] Step 4/5: Processing polygons
-[2026-03-16T16:15:36.242281] 
+[2026-03-30T18:02:25.570992] STARTING DEGRADATION ANALYSIS PROCESS
+[2026-03-30T18:02:25.571226] ============================================================
+[2026-03-30T18:02:29.483538] Earth Engine initialized
+[2026-03-30T18:02:29.484076] Initializing GeoServer...
+[2026-03-30T18:02:30.645475] GeoServer connection successful
+[2026-03-30T18:02:30.646319] GeoServer connection verified
+[2026-03-30T18:02:31.207719] Found 16 coupes to process
+[2026-03-30T18:02:31.208705] Already processed 15 coupes
+[2026-03-30T18:02:31.209108] Skipping already processed coupe: chhotaudepur
+[2026-03-30T18:02:31.210000] Skipping already processed coupe: banaskantha
+[2026-03-30T18:02:31.210414] Skipping already processed coupe: surat
+[2026-03-30T18:02:31.210882] Skipping already processed coupe: baria
+[2026-03-30T18:02:31.211213] Skipping already processed coupe: aravalli
+[2026-03-30T18:02:31.211519] Skipping already processed coupe: jamnagar
+[2026-03-30T18:02:31.211770] Skipping already processed coupe: narmada
+[2026-03-30T18:02:31.212054] Skipping already processed coupe: bhavnagar
+[2026-03-30T18:02:31.212327] Skipping already processed coupe: morbi
+[2026-03-30T18:02:31.212560] Skipping already processed coupe: vyara
+[2026-03-30T18:02:31.212819] Skipping already processed coupe: godhara
+[2026-03-30T18:02:31.213116] 
 ============================================================
-[2026-03-16T16:15:36.243180] PROCESS INTERRUPTED BY USER
-[2026-03-16T16:15:36.243937] Checkpoint has been saved
-[2026-03-16T16:15:36.244622] ============================================================
-[2026-03-16T16:16:56.454104] 
-============================================================
-[2026-03-16T16:16:56.454782] STARTING DEGRADATION ANALYSIS PROCESS
-[2026-03-16T16:16:56.455278] ============================================================
-[2026-03-16T16:17:00.490239] Earth Engine initialized
-[2026-03-16T16:17:00.491253] Initializing GeoServer...
-[2026-03-16T16:17:00.905995] GeoServer connection successful
-[2026-03-16T16:17:00.909560] GeoServer connection verified
-[2026-03-16T16:17:01.372606] Found 16 coupes to process
-[2026-03-16T16:17:01.373244] Already processed 0 coupes
-[2026-03-16T16:17:01.373651] 
-============================================================
-[2026-03-16T16:17:01.374028] Starting processing for coupe: chhotaudepur
-[2026-03-16T16:17:01.374376] ============================================================
-[2026-03-16T16:17:01.374736] Step 1/5: Fixing geometry for chhotaudepur
-[2026-03-16T16:17:01.375111] Starting comprehensive geometry fixing for chhotaudepur_coupe
-[2026-03-16T16:17:01.516028]   Step 1: Fixed invalid geometries
-[2026-03-16T16:17:01.833251]   Step 2: Extracted polygon collections
-[2026-03-16T16:17:01.943121]   Step 3: Buffered invalid geometries
-[2026-03-16T16:17:01.996548]   Step 4: Set SRID to 4326
-[2026-03-16T16:17:02.049203]   Step 5: Transformed to 4326
-[2026-03-16T16:17:02.619589]   Step 6: Simplified geometries
-[2026-03-16T16:17:02.737055]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:17:02.791044]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:17:03.132781]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:17:03.194208] chhotaudepur_coupe geometry fixing completed. 1993 valid geometries remaining
-[2026-03-16T16:17:03.250028] Step 2/5: Creating degradation table
-[2026-03-16T16:17:03.623227] Table 2026-02-01_chhotaudepur_coupe_NDVI_Change created with indexes
-[2026-03-16T16:17:03.676616] Step 3/5: Fetching polygons
-[2026-03-16T16:17:03.787041]   Found 2 polygons in chhotaudepur_coupe
-[2026-03-16T16:17:03.787981] Step 4/5: Processing polygons
-[2026-03-16T16:18:00.370995] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:18:00.491556] Publishing layer: 2026-02-01_chhotaudepur_coupe_NDVI_Change (from table: 2026-02-01_chhotaudepur_coupe_NDVI_Change)
-[2026-03-16T16:18:00.605444] Creating new feature type: 2026-02-01_chhotaudepur_coupe_NDVI_Change
-[2026-03-16T16:18:00.606561] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:18:00.946295] Response status: 201
-[2026-03-16T16:18:00.947385] Feature type '2026-02-01_chhotaudepur_coupe_NDVI_Change' created successfully
-[2026-03-16T16:18:02.948513] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_chhotaudepur_coupe_NDVI_Change'
-[2026-03-16T16:18:03.119160] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_chhotaudepur_coupe_NDVI_Change'
-[2026-03-16T16:18:03.120525]   Successfully published layer '2026-02-01_chhotaudepur_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:18:03.121332]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_chhotaudepur_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:18:03.123376] 
-Coupe chhotaudepur completed:
-[2026-03-16T16:18:03.124026]   Processed polygons: 2
-[2026-03-16T16:18:03.124520]   Skipped polygons: 0
-[2026-03-16T16:18:03.124883]   Total polygons: 2
-[2026-03-16T16:18:03.125291]   Table created: 2026-02-01_chhotaudepur_coupe_NDVI_Change
-[2026-03-16T16:18:03.125708]   GeoServer layer: 2026-02-01_chhotaudepur_coupe_NDVI_Change
-[2026-03-16T16:18:03.126179] 
-============================================================
-[2026-03-16T16:18:03.126730] Starting processing for coupe: banaskantha
-[2026-03-16T16:18:03.127092] ============================================================
-[2026-03-16T16:18:03.127649] Step 1/5: Fixing geometry for banaskantha
-[2026-03-16T16:18:03.128038] Starting comprehensive geometry fixing for banaskantha_coupe
-[2026-03-16T16:18:03.327584]   Step 1: Fixed invalid geometries
-[2026-03-16T16:18:03.568647]   Step 2: Extracted polygon collections
-[2026-03-16T16:18:03.666770]   Step 3: Buffered invalid geometries
-[2026-03-16T16:18:03.722693]   Step 4: Set SRID to 4326
-[2026-03-16T16:18:03.777341]   Step 5: Transformed to 4326
-[2026-03-16T16:18:03.888973]   Step 6: Simplified geometries
-[2026-03-16T16:18:04.014544]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:18:04.078121]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:18:04.362834]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:18:04.419241] banaskantha_coupe geometry fixing completed. 2472 valid geometries remaining
-[2026-03-16T16:18:04.473236] Step 2/5: Creating degradation table
-[2026-03-16T16:18:04.865561] Table 2026-02-01_banaskantha_coupe_NDVI_Change created with indexes
-[2026-03-16T16:18:04.926035] Step 3/5: Fetching polygons
-[2026-03-16T16:18:05.057842]   Found 2 polygons in banaskantha_coupe
-[2026-03-16T16:18:05.058576] Step 4/5: Processing polygons
-[2026-03-16T16:20:07.012935] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:20:07.147976] Publishing layer: 2026-02-01_banaskantha_coupe_NDVI_Change (from table: 2026-02-01_banaskantha_coupe_NDVI_Change)
-[2026-03-16T16:20:07.264423] Creating new feature type: 2026-02-01_banaskantha_coupe_NDVI_Change
-[2026-03-16T16:20:07.265061] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:20:07.551675] Response status: 201
-[2026-03-16T16:20:07.552211] Feature type '2026-02-01_banaskantha_coupe_NDVI_Change' created successfully
-[2026-03-16T16:20:09.552859] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_banaskantha_coupe_NDVI_Change'
-[2026-03-16T16:20:09.704391] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_banaskantha_coupe_NDVI_Change'
-[2026-03-16T16:20:09.705569]   Successfully published layer '2026-02-01_banaskantha_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:20:09.706072]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_banaskantha_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:20:09.707346] 
-Coupe banaskantha completed:
-[2026-03-16T16:20:09.707850]   Processed polygons: 2
-[2026-03-16T16:20:09.708280]   Skipped polygons: 0
-[2026-03-16T16:20:09.708712]   Total polygons: 2
-[2026-03-16T16:20:09.709134]   Table created: 2026-02-01_banaskantha_coupe_NDVI_Change
-[2026-03-16T16:20:09.709515]   GeoServer layer: 2026-02-01_banaskantha_coupe_NDVI_Change
-[2026-03-16T16:20:09.709922] 
-============================================================
-[2026-03-16T16:20:09.710423] Starting processing for coupe: surat
-[2026-03-16T16:20:09.710843] ============================================================
-[2026-03-16T16:20:09.711277] Step 1/5: Fixing geometry for surat
-[2026-03-16T16:20:09.711660] Starting comprehensive geometry fixing for surat_coupe
-[2026-03-16T16:20:09.796769]   Step 1: Fixed invalid geometries
-[2026-03-16T16:20:09.880379]   Step 2: Extracted polygon collections
-[2026-03-16T16:20:09.950013]   Step 3: Buffered invalid geometries
-[2026-03-16T16:20:10.002842]   Step 4: Set SRID to 4326
-[2026-03-16T16:20:10.052939]   Step 5: Transformed to 4326
-[2026-03-16T16:20:10.119213]   Step 6: Simplified geometries
-[2026-03-16T16:20:10.191625]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:20:10.244902]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:20:10.376963]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:20:10.710697] surat_coupe geometry fixing completed. 902 valid geometries remaining
-[2026-03-16T16:20:10.759524] Step 2/5: Creating degradation table
-[2026-03-16T16:20:11.105952] Table 2026-02-01_surat_coupe_NDVI_Change created with indexes
-[2026-03-16T16:20:11.185798] Step 3/5: Fetching polygons
-[2026-03-16T16:20:11.287600]   Found 2 polygons in surat_coupe
-[2026-03-16T16:20:11.288401] Step 4/5: Processing polygons
-[2026-03-16T16:24:02.817646] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:24:02.947684] Publishing layer: 2026-02-01_surat_coupe_NDVI_Change (from table: 2026-02-01_surat_coupe_NDVI_Change)
-[2026-03-16T16:24:03.071994] Creating new feature type: 2026-02-01_surat_coupe_NDVI_Change
-[2026-03-16T16:24:03.072774] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:24:03.412812] Response status: 201
-[2026-03-16T16:24:03.413560] Feature type '2026-02-01_surat_coupe_NDVI_Change' created successfully
-[2026-03-16T16:24:05.414535] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_surat_coupe_NDVI_Change'
-[2026-03-16T16:24:05.700708] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_surat_coupe_NDVI_Change'
-[2026-03-16T16:24:05.702261]   Successfully published layer '2026-02-01_surat_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:24:05.703498]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_surat_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:24:05.705386] 
-Coupe surat completed:
-[2026-03-16T16:24:05.706177]   Processed polygons: 2
-[2026-03-16T16:24:05.706684]   Skipped polygons: 0
-[2026-03-16T16:24:05.707150]   Total polygons: 2
-[2026-03-16T16:24:05.707536]   Table created: 2026-02-01_surat_coupe_NDVI_Change
-[2026-03-16T16:24:05.707905]   GeoServer layer: 2026-02-01_surat_coupe_NDVI_Change
-[2026-03-16T16:24:05.708320] 
-============================================================
-[2026-03-16T16:24:05.708776] Starting processing for coupe: baria
-[2026-03-16T16:24:05.709234] ============================================================
-[2026-03-16T16:24:05.709646] Step 1/5: Fixing geometry for baria
-[2026-03-16T16:24:05.710033] Starting comprehensive geometry fixing for baria_coupe
-[2026-03-16T16:24:05.839804]   Step 1: Fixed invalid geometries
-[2026-03-16T16:24:06.301266]   Step 2: Extracted polygon collections
-[2026-03-16T16:24:06.427892]   Step 3: Buffered invalid geometries
-[2026-03-16T16:24:06.479690]   Step 4: Set SRID to 4326
-[2026-03-16T16:24:06.532601]   Step 5: Transformed to 4326
-[2026-03-16T16:24:06.691458]   Step 6: Simplified geometries
-[2026-03-16T16:24:06.830375]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:24:06.890566]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:24:07.351547]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:24:07.412943] baria_coupe geometry fixing completed. 2957 valid geometries remaining
-[2026-03-16T16:24:07.463060] Step 2/5: Creating degradation table
-[2026-03-16T16:24:07.883642] Table 2026-02-01_baria_coupe_NDVI_Change created with indexes
-[2026-03-16T16:24:07.942495] Step 3/5: Fetching polygons
-[2026-03-16T16:24:08.064101]   Found 2 polygons in baria_coupe
-[2026-03-16T16:24:08.065617] Step 4/5: Processing polygons
-[2026-03-16T16:26:05.466398]   Successfully inserted 2 pixels
-[2026-03-16T16:27:19.438026] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:27:19.553381] Publishing layer: 2026-02-01_baria_coupe_NDVI_Change (from table: 2026-02-01_baria_coupe_NDVI_Change)
-[2026-03-16T16:27:19.671290] Creating new feature type: 2026-02-01_baria_coupe_NDVI_Change
-[2026-03-16T16:27:19.672899] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:27:20.167693] Response status: 201
-[2026-03-16T16:27:20.169477] Feature type '2026-02-01_baria_coupe_NDVI_Change' created successfully
-[2026-03-16T16:27:22.171231] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_baria_coupe_NDVI_Change'
-[2026-03-16T16:27:22.368857] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_baria_coupe_NDVI_Change'
-[2026-03-16T16:27:22.374432]   Successfully published layer '2026-02-01_baria_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:27:22.376048]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_baria_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:27:22.379294] 
-Coupe baria completed:
-[2026-03-16T16:27:22.380836]   Processed polygons: 2
-[2026-03-16T16:27:22.381881]   Skipped polygons: 0
-[2026-03-16T16:27:22.382734]   Total polygons: 2
-[2026-03-16T16:27:22.383358]   Table created: 2026-02-01_baria_coupe_NDVI_Change
-[2026-03-16T16:27:22.384143]   GeoServer layer: 2026-02-01_baria_coupe_NDVI_Change
-[2026-03-16T16:27:22.384782] 
-============================================================
-[2026-03-16T16:27:22.385578] Starting processing for coupe: aravalli
-[2026-03-16T16:27:22.386784] ============================================================
-[2026-03-16T16:27:22.387688] Step 1/5: Fixing geometry for aravalli
-[2026-03-16T16:27:22.388457] Starting comprehensive geometry fixing for aravalli_coupe
-[2026-03-16T16:27:22.562570]   Step 1: Fixed invalid geometries
-[2026-03-16T16:27:22.707853]   Step 2: Extracted polygon collections
-[2026-03-16T16:27:22.791343]   Step 3: Buffered invalid geometries
-[2026-03-16T16:27:22.848210]   Step 4: Set SRID to 4326
-[2026-03-16T16:27:22.903501]   Step 5: Transformed to 4326
-[2026-03-16T16:27:22.984112]   Step 6: Simplified geometries
-[2026-03-16T16:27:23.066268]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:27:23.123007]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:27:23.312660]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:27:23.365429] aravalli_coupe geometry fixing completed. 1245 valid geometries remaining
-[2026-03-16T16:27:23.419259] Step 2/5: Creating degradation table
-[2026-03-16T16:27:23.720148] Table 2026-02-01_aravalli_coupe_NDVI_Change created with indexes
-[2026-03-16T16:27:23.793970] Step 3/5: Fetching polygons
-[2026-03-16T16:27:23.922435]   Found 2 polygons in aravalli_coupe
-[2026-03-16T16:27:23.924230] Step 4/5: Processing polygons
-[2026-03-16T16:29:20.489791]   Successfully inserted 1 pixels
-[2026-03-16T16:30:11.197927] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:30:11.349966] Publishing layer: 2026-02-01_aravalli_coupe_NDVI_Change (from table: 2026-02-01_aravalli_coupe_NDVI_Change)
-[2026-03-16T16:30:11.466266] Creating new feature type: 2026-02-01_aravalli_coupe_NDVI_Change
-[2026-03-16T16:30:11.467851] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:30:11.829019] Response status: 201
-[2026-03-16T16:30:11.830836] Feature type '2026-02-01_aravalli_coupe_NDVI_Change' created successfully
-[2026-03-16T16:30:13.832777] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_aravalli_coupe_NDVI_Change'
-[2026-03-16T16:30:14.018352] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_aravalli_coupe_NDVI_Change'
-[2026-03-16T16:30:14.022482]   Successfully published layer '2026-02-01_aravalli_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:30:14.023068]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_aravalli_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:30:14.024166] 
-Coupe aravalli completed:
-[2026-03-16T16:30:14.024703]   Processed polygons: 2
-[2026-03-16T16:30:14.025130]   Skipped polygons: 0
-[2026-03-16T16:30:14.025626]   Total polygons: 2
-[2026-03-16T16:30:14.026012]   Table created: 2026-02-01_aravalli_coupe_NDVI_Change
-[2026-03-16T16:30:14.026338]   GeoServer layer: 2026-02-01_aravalli_coupe_NDVI_Change
-[2026-03-16T16:30:14.026771] 
-============================================================
-[2026-03-16T16:30:14.027373] Starting processing for coupe: jamnagar
-[2026-03-16T16:30:14.027754] ============================================================
-[2026-03-16T16:30:14.028186] Step 1/5: Fixing geometry for jamnagar
-[2026-03-16T16:30:14.028624] Starting comprehensive geometry fixing for jamnagar_coupe
-[2026-03-16T16:30:14.115444]   Step 1: Fixed invalid geometries
-[2026-03-16T16:30:14.328233]   Step 2: Extracted polygon collections
-[2026-03-16T16:30:14.434382]   Step 3: Buffered invalid geometries
-[2026-03-16T16:30:14.503765]   Step 4: Set SRID to 4326
-[2026-03-16T16:30:14.571006]   Step 5: Transformed to 4326
-[2026-03-16T16:30:14.690148]   Step 6: Simplified geometries
-[2026-03-16T16:30:14.790098]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:30:14.867579]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:30:15.079132]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:30:15.153346] jamnagar_coupe geometry fixing completed. 1680 valid geometries remaining
-[2026-03-16T16:30:15.835256] Step 2/5: Creating degradation table
-[2026-03-16T16:30:16.549766] Table 2026-02-01_jamnagar_coupe_NDVI_Change created with indexes
-[2026-03-16T16:30:16.601189] Step 3/5: Fetching polygons
-[2026-03-16T16:30:16.708053]   Found 2 polygons in jamnagar_coupe
-[2026-03-16T16:30:16.708871] Step 4/5: Processing polygons
-[2026-03-16T16:31:07.383520]   Successfully inserted 16 pixels
-[2026-03-16T16:32:04.090622] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:32:04.208163] Publishing layer: 2026-02-01_jamnagar_coupe_NDVI_Change (from table: 2026-02-01_jamnagar_coupe_NDVI_Change)
-[2026-03-16T16:32:04.348145] Creating new feature type: 2026-02-01_jamnagar_coupe_NDVI_Change
-[2026-03-16T16:32:04.350001] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:32:04.735780] Response status: 201
-[2026-03-16T16:32:04.737398] Feature type '2026-02-01_jamnagar_coupe_NDVI_Change' created successfully
-[2026-03-16T16:32:06.739465] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_jamnagar_coupe_NDVI_Change'
-[2026-03-16T16:32:06.900879] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_jamnagar_coupe_NDVI_Change'
-[2026-03-16T16:32:06.905398]   Successfully published layer '2026-02-01_jamnagar_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:32:06.906461]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_jamnagar_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:32:06.909114] 
-Coupe jamnagar completed:
-[2026-03-16T16:32:06.910746]   Processed polygons: 2
-[2026-03-16T16:32:06.912312]   Skipped polygons: 0
-[2026-03-16T16:32:06.913741]   Total polygons: 2
-[2026-03-16T16:32:06.915306]   Table created: 2026-02-01_jamnagar_coupe_NDVI_Change
-[2026-03-16T16:32:06.916854]   GeoServer layer: 2026-02-01_jamnagar_coupe_NDVI_Change
-[2026-03-16T16:32:06.917762] 
-============================================================
-[2026-03-16T16:32:06.918942] Starting processing for coupe: narmada
-[2026-03-16T16:32:06.920212] ============================================================
-[2026-03-16T16:32:06.921510] Step 1/5: Fixing geometry for narmada
-[2026-03-16T16:32:06.922586] Starting comprehensive geometry fixing for narmada_coupe
-[2026-03-16T16:32:07.110785]   Step 1: Fixed invalid geometries
-[2026-03-16T16:32:08.297091]   Step 2: Extracted polygon collections
-[2026-03-16T16:32:08.454105]   Step 3: Buffered invalid geometries
-[2026-03-16T16:32:08.539898]   Step 4: Set SRID to 4326
-[2026-03-16T16:32:08.622780]   Step 5: Transformed to 4326
-[2026-03-16T16:32:09.120306]   Step 6: Simplified geometries
-[2026-03-16T16:32:09.255628]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:32:09.318075]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:32:09.791383]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:32:09.860339] narmada_coupe geometry fixing completed. 8623 valid geometries remaining
-[2026-03-16T16:32:09.915891] Step 2/5: Creating degradation table
-[2026-03-16T16:32:10.239379] Table 2026-02-01_narmada_coupe_NDVI_Change created with indexes
-[2026-03-16T16:32:10.292183] Step 3/5: Fetching polygons
-[2026-03-16T16:32:10.423210]   Found 2 polygons in narmada_coupe
-[2026-03-16T16:32:10.424696] Step 4/5: Processing polygons
-[2026-03-16T16:38:17.317315]   Successfully inserted 18 pixels
-[2026-03-16T16:44:21.802171]   Successfully inserted 18 pixels
-[2026-03-16T16:44:21.858972] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:44:22.011618] Publishing layer: 2026-02-01_narmada_coupe_NDVI_Change (from table: 2026-02-01_narmada_coupe_NDVI_Change)
-[2026-03-16T16:44:22.127283] Creating new feature type: 2026-02-01_narmada_coupe_NDVI_Change
-[2026-03-16T16:44:22.128346] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:44:22.530253] Response status: 201
-[2026-03-16T16:44:22.531834] Feature type '2026-02-01_narmada_coupe_NDVI_Change' created successfully
-[2026-03-16T16:44:24.533903] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_narmada_coupe_NDVI_Change'
-[2026-03-16T16:44:24.730323] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_narmada_coupe_NDVI_Change'
-[2026-03-16T16:44:24.732104]   Successfully published layer '2026-02-01_narmada_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:44:24.733095]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_narmada_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:44:24.735476] 
-Coupe narmada completed:
-[2026-03-16T16:44:24.736528]   Processed polygons: 2
-[2026-03-16T16:44:24.737233]   Skipped polygons: 0
-[2026-03-16T16:44:24.737866]   Total polygons: 2
-[2026-03-16T16:44:24.738855]   Table created: 2026-02-01_narmada_coupe_NDVI_Change
-[2026-03-16T16:44:24.739426]   GeoServer layer: 2026-02-01_narmada_coupe_NDVI_Change
-[2026-03-16T16:44:24.740639] 
-============================================================
-[2026-03-16T16:44:24.742022] Starting processing for coupe: bhavnagar
-[2026-03-16T16:44:24.743333] ============================================================
-[2026-03-16T16:44:24.744562] Step 1/5: Fixing geometry for bhavnagar
-[2026-03-16T16:44:24.746054] Starting comprehensive geometry fixing for bhavnagar_coupe
-[2026-03-16T16:44:24.878325]   Step 1: Fixed invalid geometries
-[2026-03-16T16:44:25.009052]   Step 2: Extracted polygon collections
-[2026-03-16T16:44:25.086451]   Step 3: Buffered invalid geometries
-[2026-03-16T16:44:25.147652]   Step 4: Set SRID to 4326
-[2026-03-16T16:44:25.213219]   Step 5: Transformed to 4326
-[2026-03-16T16:44:25.287886]   Step 6: Simplified geometries
-[2026-03-16T16:44:25.352383]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:44:25.403011]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:44:25.495746]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:44:25.547239] bhavnagar_coupe geometry fixing completed. 855 valid geometries remaining
-[2026-03-16T16:44:25.599115] Step 2/5: Creating degradation table
-[2026-03-16T16:44:25.901244] Table 2026-02-01_bhavnagar_coupe_NDVI_Change created with indexes
-[2026-03-16T16:44:25.952636] Step 3/5: Fetching polygons
-[2026-03-16T16:44:26.087531]   Found 2 polygons in bhavnagar_coupe
-[2026-03-16T16:44:26.088543] Step 4/5: Processing polygons
-[2026-03-16T16:45:30.774985] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:45:30.907141] Publishing layer: 2026-02-01_bhavnagar_coupe_NDVI_Change (from table: 2026-02-01_bhavnagar_coupe_NDVI_Change)
-[2026-03-16T16:45:31.042014] Creating new feature type: 2026-02-01_bhavnagar_coupe_NDVI_Change
-[2026-03-16T16:45:31.043741] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:45:31.488722] Response status: 201
-[2026-03-16T16:45:31.489388] Feature type '2026-02-01_bhavnagar_coupe_NDVI_Change' created successfully
-[2026-03-16T16:45:33.490410] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_bhavnagar_coupe_NDVI_Change'
-[2026-03-16T16:45:33.683335] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_bhavnagar_coupe_NDVI_Change'
-[2026-03-16T16:45:33.687632]   Successfully published layer '2026-02-01_bhavnagar_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:45:33.689340]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_bhavnagar_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:45:33.692367] 
-Coupe bhavnagar completed:
-[2026-03-16T16:45:33.694247]   Processed polygons: 2
-[2026-03-16T16:45:33.695572]   Skipped polygons: 0
-[2026-03-16T16:45:33.696543]   Total polygons: 2
-[2026-03-16T16:45:33.698102]   Table created: 2026-02-01_bhavnagar_coupe_NDVI_Change
-[2026-03-16T16:45:33.699657]   GeoServer layer: 2026-02-01_bhavnagar_coupe_NDVI_Change
-[2026-03-16T16:45:33.701585] 
-============================================================
-[2026-03-16T16:45:33.702889] Starting processing for coupe: morbi
-[2026-03-16T16:45:33.703656] ============================================================
-[2026-03-16T16:45:33.704459] Step 1/5: Fixing geometry for morbi
-[2026-03-16T16:45:33.705604] Starting comprehensive geometry fixing for morbi_coupe
-[2026-03-16T16:45:33.842127]   Step 1: Fixed invalid geometries
-[2026-03-16T16:45:34.472564]   Step 2: Extracted polygon collections
-[2026-03-16T16:45:34.598597]   Step 3: Buffered invalid geometries
-[2026-03-16T16:45:34.653531]   Step 4: Set SRID to 4326
-[2026-03-16T16:45:34.708043]   Step 5: Transformed to 4326
-[2026-03-16T16:45:35.085239]   Step 6: Simplified geometries
-[2026-03-16T16:45:35.208622]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:45:35.276132]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:45:35.684140]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:45:35.749026] morbi_coupe geometry fixing completed. 5210 valid geometries remaining
-[2026-03-16T16:45:35.805071] Step 2/5: Creating degradation table
-[2026-03-16T16:45:36.187631] Table 2026-02-01_morbi_coupe_NDVI_Change created with indexes
-[2026-03-16T16:45:36.246171] Step 3/5: Fetching polygons
-[2026-03-16T16:45:36.380597]   Found 2 polygons in morbi_coupe
-[2026-03-16T16:45:36.381374] Step 4/5: Processing polygons
-[2026-03-16T16:46:14.069694]   Successfully inserted 43 pixels
-[2026-03-16T16:46:40.672173]   Successfully inserted 43 pixels
-[2026-03-16T16:46:40.728384] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:46:40.847800] Publishing layer: 2026-02-01_morbi_coupe_NDVI_Change (from table: 2026-02-01_morbi_coupe_NDVI_Change)
-[2026-03-16T16:46:41.019430] Creating new feature type: 2026-02-01_morbi_coupe_NDVI_Change
-[2026-03-16T16:46:41.021111] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:46:41.632224] Response status: 201
-[2026-03-16T16:46:41.634085] Feature type '2026-02-01_morbi_coupe_NDVI_Change' created successfully
-[2026-03-16T16:46:43.636065] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_morbi_coupe_NDVI_Change'
-[2026-03-16T16:46:43.787994] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_morbi_coupe_NDVI_Change'
-[2026-03-16T16:46:43.790457]   Successfully published layer '2026-02-01_morbi_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:46:43.791878]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_morbi_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:46:43.794563] 
-Coupe morbi completed:
-[2026-03-16T16:46:43.796297]   Processed polygons: 2
-[2026-03-16T16:46:43.797660]   Skipped polygons: 0
-[2026-03-16T16:46:43.798963]   Total polygons: 2
-[2026-03-16T16:46:43.800418]   Table created: 2026-02-01_morbi_coupe_NDVI_Change
-[2026-03-16T16:46:43.801754]   GeoServer layer: 2026-02-01_morbi_coupe_NDVI_Change
-[2026-03-16T16:46:43.802532] 
-============================================================
-[2026-03-16T16:46:43.803688] Starting processing for coupe: vyara
-[2026-03-16T16:46:43.805090] ============================================================
-[2026-03-16T16:46:43.806487] Step 1/5: Fixing geometry for vyara
-[2026-03-16T16:46:43.807988] Starting comprehensive geometry fixing for vyara_coupe
-[2026-03-16T16:46:44.056931]   Step 1: Fixed invalid geometries
-[2026-03-16T16:46:44.999760]   Step 2: Extracted polygon collections
-[2026-03-16T16:46:45.176327]   Step 3: Buffered invalid geometries
-[2026-03-16T16:46:45.246395]   Step 4: Set SRID to 4326
-[2026-03-16T16:46:45.334905]   Step 5: Transformed to 4326
-[2026-03-16T16:46:45.831521]   Step 6: Simplified geometries
-[2026-03-16T16:46:46.019087]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:46:46.083400]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:46:47.203447]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:46:47.285645] vyara_coupe geometry fixing completed. 4084 valid geometries remaining
-[2026-03-16T16:46:47.342327] Step 2/5: Creating degradation table
-[2026-03-16T16:46:47.649772] Table 2026-02-01_vyara_coupe_NDVI_Change created with indexes
-[2026-03-16T16:46:47.704362] Step 3/5: Fetching polygons
-[2026-03-16T16:46:47.837429]   Found 2 polygons in vyara_coupe
-[2026-03-16T16:46:47.839263] Step 4/5: Processing polygons
-[2026-03-16T16:49:11.866092] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:49:11.993597] Publishing layer: 2026-02-01_vyara_coupe_NDVI_Change (from table: 2026-02-01_vyara_coupe_NDVI_Change)
-[2026-03-16T16:49:12.120808] Creating new feature type: 2026-02-01_vyara_coupe_NDVI_Change
-[2026-03-16T16:49:12.122600] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:49:12.426636] Response status: 201
-[2026-03-16T16:49:12.428229] Feature type '2026-02-01_vyara_coupe_NDVI_Change' created successfully
-[2026-03-16T16:49:14.430325] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_vyara_coupe_NDVI_Change'
-[2026-03-16T16:49:14.590747] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_vyara_coupe_NDVI_Change'
-[2026-03-16T16:49:14.594878]   Successfully published layer '2026-02-01_vyara_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:49:14.596373]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_vyara_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:49:14.599624] 
-Coupe vyara completed:
-[2026-03-16T16:49:14.601324]   Processed polygons: 2
-[2026-03-16T16:49:14.602646]   Skipped polygons: 0
-[2026-03-16T16:49:14.603609]   Total polygons: 2
-[2026-03-16T16:49:14.604754]   Table created: 2026-02-01_vyara_coupe_NDVI_Change
-[2026-03-16T16:49:14.606284]   GeoServer layer: 2026-02-01_vyara_coupe_NDVI_Change
-[2026-03-16T16:49:14.607761] 
-============================================================
-[2026-03-16T16:49:14.609151] Starting processing for coupe: godhara
-[2026-03-16T16:49:14.610378] ============================================================
-[2026-03-16T16:49:14.611368] Step 1/5: Fixing geometry for godhara
-[2026-03-16T16:49:14.612125] Starting comprehensive geometry fixing for godhara_coupe
-[2026-03-16T16:49:14.702209]   Step 1: Fixed invalid geometries
-[2026-03-16T16:49:14.899716]   Step 2: Extracted polygon collections
-[2026-03-16T16:49:14.983596]   Step 3: Buffered invalid geometries
-[2026-03-16T16:49:15.041484]   Step 4: Set SRID to 4326
-[2026-03-16T16:49:15.096440]   Step 5: Transformed to 4326
-[2026-03-16T16:49:15.210385]   Step 6: Simplified geometries
-[2026-03-16T16:49:15.314843]   Step 7: Removed remaining invalid geometries
-[2026-03-16T16:49:15.404035]   Step 8: Cleaned very complex geometries
-[2026-03-16T16:49:15.673337]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-16T16:49:15.746999] godhara_coupe geometry fixing completed. 2880 valid geometries remaining
-[2026-03-16T16:49:15.834407] Step 2/5: Creating degradation table
-[2026-03-16T16:49:16.204128] Table 2026-02-01_godhara_coupe_NDVI_Change created with indexes
-[2026-03-16T16:49:16.256670] Step 3/5: Fetching polygons
-[2026-03-16T16:49:16.362487]   Found 2 polygons in godhara_coupe
-[2026-03-16T16:49:16.364036] Step 4/5: Processing polygons
-[2026-03-16T16:50:29.078390]   Successfully inserted 14 pixels
-[2026-03-16T16:51:19.338163]   Successfully inserted 5 pixels
-[2026-03-16T16:51:19.393610] Step 5/5: Publishing to GeoServer
-[2026-03-16T16:51:19.518636] Publishing layer: 2026-02-01_godhara_coupe_NDVI_Change (from table: 2026-02-01_godhara_coupe_NDVI_Change)
-[2026-03-16T16:51:19.680788] Creating new feature type: 2026-02-01_godhara_coupe_NDVI_Change
-[2026-03-16T16:51:19.682751] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-16T16:51:20.029183] Response status: 201
-[2026-03-16T16:51:20.030925] Feature type '2026-02-01_godhara_coupe_NDVI_Change' created successfully
-[2026-03-16T16:51:22.033089] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_godhara_coupe_NDVI_Change'
-[2026-03-16T16:51:22.222445] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_godhara_coupe_NDVI_Change'
-[2026-03-16T16:51:22.224979]   Successfully published layer '2026-02-01_godhara_coupe_NDVI_Change' to GeoServer
-[2026-03-16T16:51:22.226189]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_godhara_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-16T16:51:22.229188] 
-Coupe godhara completed:
-[2026-03-16T16:51:22.230824]   Processed polygons: 2
-[2026-03-16T16:51:22.232191]   Skipped polygons: 0
-[2026-03-16T16:51:22.233827]   Total polygons: 2
-[2026-03-16T16:51:22.234943]   Table created: 2026-02-01_godhara_coupe_NDVI_Change
-[2026-03-16T16:51:22.236282]   GeoServer layer: 2026-02-01_godhara_coupe_NDVI_Change
-[2026-03-16T16:51:22.237546] 
-============================================================
-[2026-03-16T16:51:22.239216] Starting processing for coupe: surendranagarforestdivision
-[2026-03-16T16:51:22.240580] ============================================================
-[2026-03-16T16:51:22.241877] Step 1/5: Fixing geometry for surendranagarforestdivision
-[2026-03-16T16:51:22.242804] Starting comprehensive geometry fixing for surendranagarforestdivision_coupe
-[2026-03-16T16:51:22.349145] Fatal error processing coupe surendranagarforestdivision: relation "surendranagarforestdivision_coupe" does not exist
-LINE 2:         UPDATE "surendranagarforestdivision_coupe"
-                       ^
-
-[2026-03-16T16:51:22.353344] Will skip this coupe and continue with next
-[2026-03-16T16:51:22.354822] 
-============================================================
-[2026-03-16T16:51:22.356286] Starting processing for coupe: sabarkantha
-[2026-03-16T16:51:22.357728] ============================================================
-[2026-03-16T16:51:22.359196] Step 1/5: Fixing geometry for sabarkantha
-[2026-03-16T16:51:22.360571] Starting comprehensive geometry fixing for sabarkantha_coupe
-[2026-03-16T16:51:22.413647] Fatal error processing coupe sabarkantha: current transaction is aborted, commands ignored until end of transaction block
-
-[2026-03-16T16:51:22.414962] Will skip this coupe and continue with next
-[2026-03-16T16:51:22.415482] 
-============================================================
-[2026-03-16T16:51:22.416139] Starting processing for coupe: gandhinagar
-[2026-03-16T16:51:22.416577] ============================================================
-[2026-03-16T16:51:22.417081] Step 1/5: Fixing geometry for gandhinagar
-[2026-03-16T16:51:22.417695] Starting comprehensive geometry fixing for gandhinagar_coupe
-[2026-03-16T16:51:22.474632] Fatal error processing coupe gandhinagar: current transaction is aborted, commands ignored until end of transaction block
-
-[2026-03-16T16:51:22.475479] Will skip this coupe and continue with next
-[2026-03-16T16:51:22.482891] 
-============================================================
-[2026-03-16T16:51:22.483573] Starting processing for coupe: bharuchsubdivision
-[2026-03-16T16:51:22.484119] ============================================================
-[2026-03-16T16:51:22.484588] Step 1/5: Fixing geometry for bharuchsubdivision
-[2026-03-16T16:51:22.485069] Starting comprehensive geometry fixing for bharuchsubdivision_coupe
-[2026-03-16T16:51:22.546885] Fatal error processing coupe bharuchsubdivision: current transaction is aborted, commands ignored until end of transaction block
-
-[2026-03-16T16:51:22.548488] Will skip this coupe and continue with next
-[2026-03-16T16:51:22.549842] 
-============================================================
-[2026-03-16T16:51:22.551209] Starting processing for coupe: junagadh
-[2026-03-16T16:51:22.552392] ============================================================
-[2026-03-16T16:51:22.553905] Step 1/5: Fixing geometry for junagadh
-[2026-03-16T16:51:22.554792] Starting comprehensive geometry fixing for junagadh_coupe
-[2026-03-16T16:51:22.646672] Fatal error processing coupe junagadh: current transaction is aborted, commands ignored until end of transaction block
-
-[2026-03-16T16:51:22.648684] Will skip this coupe and continue with next
-[2026-03-16T16:51:22.650608] 
-============================================================
-[2026-03-16T16:51:22.651997] ALL COUPES PROCESSING COMPLETED
-[2026-03-16T16:51:22.653448] ============================================================
-[2026-03-17T11:01:29.483395] 
-============================================================
-[2026-03-17T11:01:29.484993] STARTING DEGRADATION ANALYSIS PROCESS
-[2026-03-17T11:01:29.485878] ============================================================
-[2026-03-17T11:01:33.552132] Earth Engine initialized
-[2026-03-17T11:01:33.553066] Initializing GeoServer...
-[2026-03-17T11:02:03.625922] Error connecting to GeoServer: HTTPConnectionPool(host='68.178.167.216', port=8081): Read timed out. (read timeout=30)
-[2026-03-17T11:02:03.627920] WARNING: Could not connect to GeoServer. Will still process data.
-[2026-03-17T11:02:04.061189] Found 16 coupes to process
-[2026-03-17T11:02:04.063449] Already processed 11 coupes
-[2026-03-17T11:02:04.064800] Skipping already processed coupe: chhotaudepur
-[2026-03-17T11:02:04.066180] 
-============================================================
-[2026-03-17T11:02:04.067815] Starting processing for coupe: Surendranagar
-[2026-03-17T11:02:04.069194] ============================================================
-[2026-03-17T11:02:04.070499] Step 1/5: Fixing geometry for Surendranagar
-[2026-03-17T11:02:04.071815] Starting comprehensive geometry fixing for Surendranagar_coupe
-[2026-03-17T11:02:04.124220] Fatal error processing coupe Surendranagar: relation "Surendranagar_coupe" does not exist
-LINE 2:         UPDATE "Surendranagar_coupe"
-                       ^
-
-[2026-03-17T11:02:04.125621] Will skip this coupe and continue with next
-[2026-03-17T11:02:04.126591] Skipping already processed coupe: banaskantha
-[2026-03-17T11:02:04.127501] Skipping already processed coupe: surat
-[2026-03-17T11:02:04.128520] Skipping already processed coupe: baria
-[2026-03-17T11:02:04.129304] Skipping already processed coupe: aravalli
-[2026-03-17T11:02:04.130114] Skipping already processed coupe: jamnagar
-[2026-03-17T11:02:04.130863] Skipping already processed coupe: narmada
-[2026-03-17T11:02:04.131704] Skipping already processed coupe: bhavnagar
-[2026-03-17T11:02:04.132333] Skipping already processed coupe: morbi
-[2026-03-17T11:02:04.132707] Skipping already processed coupe: vyara
-[2026-03-17T11:02:04.133305] Skipping already processed coupe: godhara
-[2026-03-17T11:02:04.133823] 
-============================================================
-[2026-03-17T11:02:04.134329] Starting processing for coupe: sabarkantha
-[2026-03-17T11:02:04.134775] ============================================================
-[2026-03-17T11:02:04.135141] Step 1/5: Fixing geometry for sabarkantha
-[2026-03-17T11:02:04.135410] Starting comprehensive geometry fixing for sabarkantha_coupe
-[2026-03-17T11:02:04.211543] Fatal error processing coupe sabarkantha: current transaction is aborted, commands ignored until end of transaction block
-
-[2026-03-17T11:02:04.212796] Will skip this coupe and continue with next
-[2026-03-17T11:02:04.213403] 
-============================================================
-[2026-03-17T11:02:04.213902] Starting processing for coupe: gandhinagar
-[2026-03-17T11:02:04.214463] ============================================================
-[2026-03-17T11:02:04.215288] Step 1/5: Fixing geometry for gandhinagar
-[2026-03-17T11:02:04.215958] Starting comprehensive geometry fixing for gandhinagar_coupe
-[2026-03-17T11:02:04.266528] Fatal error processing coupe gandhinagar: current transaction is aborted, commands ignored until end of transaction block
-
-[2026-03-17T11:02:04.267584] Will skip this coupe and continue with next
-[2026-03-17T11:02:04.268387] 
-============================================================
-[2026-03-17T11:02:04.269440] Starting processing for coupe: bharuchsubdivision
-[2026-03-17T11:02:04.270123] ============================================================
-[2026-03-17T11:02:04.270688] Step 1/5: Fixing geometry for bharuchsubdivision
-[2026-03-17T11:02:04.271263] Starting comprehensive geometry fixing for bharuchsubdivision_coupe
-[2026-03-17T11:02:04.339341] Fatal error processing coupe bharuchsubdivision: current transaction is aborted, commands ignored until end of transaction block
-
-[2026-03-17T11:02:04.340881] Will skip this coupe and continue with next
-[2026-03-17T11:02:04.342129] 
-============================================================
-[2026-03-17T11:02:04.343356] Starting processing for coupe: junagadh
-[2026-03-17T11:02:04.344216] ============================================================
-[2026-03-17T11:02:04.344891] Step 1/5: Fixing geometry for junagadh
-[2026-03-17T11:02:04.345715] Starting comprehensive geometry fixing for junagadh_coupe
-[2026-03-17T11:02:04.418430] Fatal error processing coupe junagadh: current transaction is aborted, commands ignored until end of transaction block
-
-[2026-03-17T11:02:04.422265] Will skip this coupe and continue with next
-[2026-03-17T11:02:04.423312] 
-============================================================
-[2026-03-17T11:02:04.424016] ALL COUPES PROCESSING COMPLETED
-[2026-03-17T11:02:04.424589] ============================================================
-[2026-03-17T11:46:12.903120] 
-============================================================
-[2026-03-17T11:46:12.904680] STARTING DEGRADATION ANALYSIS PROCESS
-[2026-03-17T11:46:12.905402] ============================================================
-[2026-03-17T11:46:15.610391] Earth Engine initialized
-[2026-03-17T11:46:15.611083] Initializing GeoServer...
-[2026-03-17T11:46:16.038081] GeoServer connection successful
-[2026-03-17T11:46:16.040067] GeoServer connection verified
-[2026-03-17T11:46:16.484106] Found 16 coupes to process
-[2026-03-17T11:46:16.486442] Already processed 11 coupes
-[2026-03-17T11:46:16.487757] Skipping already processed coupe: chhotaudepur
-[2026-03-17T11:46:16.489224] Skipping already processed coupe: banaskantha
-[2026-03-17T11:46:16.490450] Skipping already processed coupe: surat
-[2026-03-17T11:46:16.491524] Skipping already processed coupe: baria
-[2026-03-17T11:46:16.492449] Skipping already processed coupe: aravalli
-[2026-03-17T11:46:16.493236] Skipping already processed coupe: jamnagar
-[2026-03-17T11:46:16.494039] Skipping already processed coupe: narmada
-[2026-03-17T11:46:16.494905] Skipping already processed coupe: bhavnagar
-[2026-03-17T11:46:16.495637] Skipping already processed coupe: morbi
-[2026-03-17T11:46:16.496203] Skipping already processed coupe: vyara
-[2026-03-17T11:46:16.496750] Skipping already processed coupe: godhara
-[2026-03-17T11:46:16.497078] 
-============================================================
-[2026-03-17T11:46:16.497552] Starting processing for coupe: sabarkantha
-[2026-03-17T11:46:16.498060] ============================================================
-[2026-03-17T11:46:16.498789] Step 1/5: Fixing geometry for sabarkantha
-[2026-03-17T11:46:16.499434] Starting comprehensive geometry fixing for sabarkantha_coupe
-[2026-03-17T11:46:16.931974]   Step 1: Fixed invalid geometries
-[2026-03-17T11:46:17.186273]   Step 2: Extracted polygon collections
-[2026-03-17T11:46:17.308264]   Step 3: Buffered invalid geometries
-[2026-03-17T11:46:17.362801]   Step 4: Set SRID to 4326
-[2026-03-17T11:46:17.417424]   Step 5: Transformed to 4326
-[2026-03-17T11:46:17.542032]   Step 6: Simplified geometries
-[2026-03-17T11:46:17.657597]   Step 7: Removed remaining invalid geometries
-[2026-03-17T11:46:17.716335]   Step 8: Cleaned very complex geometries
-[2026-03-17T11:46:18.088872]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-17T11:46:18.143638] sabarkantha_coupe geometry fixing completed. 1652 valid geometries remaining
-[2026-03-17T11:46:18.202850] Step 2/5: Creating degradation table
-[2026-03-17T11:46:18.720221] Table 2026-02-01_sabarkantha_coupe_NDVI_Change created with indexes
-[2026-03-17T11:46:18.773768] Step 3/5: Fetching polygons
-[2026-03-17T11:46:18.885633]   Found 2 polygons in sabarkantha_coupe
-[2026-03-17T11:46:18.887359] Step 4/5: Processing polygons
-[2026-03-17T11:48:20.799518]   Successfully inserted 6 pixels
-[2026-03-17T11:48:20.852375] Step 5/5: Publishing to GeoServer
-[2026-03-17T11:48:21.038511] Publishing layer: 2026-02-01_sabarkantha_coupe_NDVI_Change (from table: 2026-02-01_sabarkantha_coupe_NDVI_Change)
-[2026-03-17T11:48:21.157714] Creating new feature type: 2026-02-01_sabarkantha_coupe_NDVI_Change
-[2026-03-17T11:48:21.159376] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-17T11:48:21.613066] Response status: 201
-[2026-03-17T11:48:21.614681] Feature type '2026-02-01_sabarkantha_coupe_NDVI_Change' created successfully
-[2026-03-17T11:48:23.616815] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_sabarkantha_coupe_NDVI_Change'
-[2026-03-17T11:48:23.830611] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_sabarkantha_coupe_NDVI_Change'
-[2026-03-17T11:48:23.832799]   Successfully published layer '2026-02-01_sabarkantha_coupe_NDVI_Change' to GeoServer
-[2026-03-17T11:48:23.834068]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_sabarkantha_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-17T11:48:23.836952] 
+[2026-03-30T18:02:31.213640] Starting processing for coupe: sabarkantha
+[2026-03-30T18:02:31.213904] ============================================================
+[2026-03-30T18:02:31.214340] Step 1/5: Fixing geometry for sabarkantha
+[2026-03-30T18:02:31.214607] Starting comprehensive geometry fixing for sabarkantha_coupe
+[2026-03-30T18:02:31.368640]   Step 1: Fixed invalid geometries
+[2026-03-30T18:02:31.605562]   Step 2: Extracted polygon collections
+[2026-03-30T18:02:31.718578]   Step 3: Buffered invalid geometries
+[2026-03-30T18:02:31.783128]   Step 4: Set SRID to 4326
+[2026-03-30T18:02:31.839709]   Step 5: Transformed to 4326
+[2026-03-30T18:02:31.931516]   Step 6: Simplified geometries
+[2026-03-30T18:02:32.053790]   Step 7: Removed remaining invalid geometries
+[2026-03-30T18:02:32.121624]   Step 8: Cleaned very complex geometries
+[2026-03-30T18:02:32.424966]   Step 9: Removed geometries with area < 1 sqm
+[2026-03-30T18:02:32.496939] sabarkantha_coupe geometry fixing completed. 1652 valid geometries remaining
+[2026-03-30T18:02:32.563272] Step 2/5: Creating degradation table
+[2026-03-30T18:02:32.835946] Table 2026-02-01_sabarkantha_coupe_NDVI_Change created with indexes
+[2026-03-30T18:02:32.891720] Step 3/5: Fetching polygons
+[2026-03-30T18:02:33.009152]   Found 2 polygons in sabarkantha_coupe
+[2026-03-30T18:02:33.009681] Step 4/5: Processing polygons
+[2026-03-30T18:03:28.377525]   Error calculating NDVI or reduceRegions: Image.normalizedDifference: No band named 'B8'. Available band names: [].
+[2026-03-30T18:05:04.506936]   Error calculating NDVI or reduceRegions: Image.normalizedDifference: No band named 'B8'. Available band names: [].
+[2026-03-30T18:05:04.508993] Step 5/5: Publishing to GeoServer
+[2026-03-30T18:05:05.074548]   Layer '2026-02-01_sabarkantha_coupe_NDVI_Change' already exists in GeoServer
+[2026-03-30T18:05:05.075002]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_sabarkantha_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
+[2026-03-30T18:05:05.075557] 
 Coupe sabarkantha completed:
-[2026-03-17T11:48:23.838731]   Processed polygons: 2
-[2026-03-17T11:48:23.840009]   Skipped polygons: 0
-[2026-03-17T11:48:23.841271]   Total polygons: 2
-[2026-03-17T11:48:23.842590]   Table created: 2026-02-01_sabarkantha_coupe_NDVI_Change
-[2026-03-17T11:48:23.843879]   GeoServer layer: 2026-02-01_sabarkantha_coupe_NDVI_Change
-[2026-03-17T11:48:23.845277] 
+[2026-03-30T18:05:05.075923]   Processed polygons: 2
+[2026-03-30T18:05:05.076263]   Skipped polygons: 0
+[2026-03-30T18:05:05.076590]   Total polygons: 2
+[2026-03-30T18:05:05.076865]   Table created: 2026-02-01_sabarkantha_coupe_NDVI_Change
+[2026-03-30T18:05:05.077172]   GeoServer layer: 2026-02-01_sabarkantha_coupe_NDVI_Change
+[2026-03-30T18:05:05.077456] Skipping already processed coupe: gandhinagar
+[2026-03-30T18:05:05.077772] Skipping already processed coupe: surendranagar
+[2026-03-30T18:05:05.078029] Skipping already processed coupe: bharuchsubdivision
+[2026-03-30T18:05:05.078336] Skipping already processed coupe: junagadh
+[2026-03-30T18:05:05.078715] 
 ============================================================
-[2026-03-17T11:48:23.846756] Starting processing for coupe: gandhinagar
-[2026-03-17T11:48:23.848198] ============================================================
-[2026-03-17T11:48:23.849482] Step 1/5: Fixing geometry for gandhinagar
-[2026-03-17T11:48:23.851003] Starting comprehensive geometry fixing for gandhinagar_coupe
-[2026-03-17T11:48:24.009580]   Step 1: Fixed invalid geometries
-[2026-03-17T11:48:24.125174]   Step 2: Extracted polygon collections
-[2026-03-17T11:48:24.212827]   Step 3: Buffered invalid geometries
-[2026-03-17T11:48:24.322740]   Step 4: Set SRID to 4326
-[2026-03-17T11:48:24.390566]   Step 5: Transformed to 4326
-[2026-03-17T11:48:24.457098]   Step 6: Simplified geometries
-[2026-03-17T11:48:24.518421]   Step 7: Removed remaining invalid geometries
-[2026-03-17T11:48:24.568429]   Step 8: Cleaned very complex geometries
-[2026-03-17T11:48:24.659509]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-17T11:48:24.711430] gandhinagar_coupe geometry fixing completed. 425 valid geometries remaining
-[2026-03-17T11:48:24.770771] Step 2/5: Creating degradation table
-[2026-03-17T11:48:25.234693] Table 2026-02-01_gandhinagar_coupe_NDVI_Change created with indexes
-[2026-03-17T11:48:25.288333] Step 3/5: Fetching polygons
-[2026-03-17T11:48:25.392016]   Found 2 polygons in gandhinagar_coupe
-[2026-03-17T11:48:25.393720] Step 4/5: Processing polygons
-[2026-03-17T11:50:54.639328] Step 5/5: Publishing to GeoServer
-[2026-03-17T11:50:54.759913] Publishing layer: 2026-02-01_gandhinagar_coupe_NDVI_Change (from table: 2026-02-01_gandhinagar_coupe_NDVI_Change)
-[2026-03-17T11:50:54.868084] Creating new feature type: 2026-02-01_gandhinagar_coupe_NDVI_Change
-[2026-03-17T11:50:54.869653] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-17T11:50:55.256687] Response status: 201
-[2026-03-17T11:50:55.257391] Feature type '2026-02-01_gandhinagar_coupe_NDVI_Change' created successfully
-[2026-03-17T11:50:57.259094] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_gandhinagar_coupe_NDVI_Change'
-[2026-03-17T11:50:57.424510] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_gandhinagar_coupe_NDVI_Change'
-[2026-03-17T11:50:57.426954]   Successfully published layer '2026-02-01_gandhinagar_coupe_NDVI_Change' to GeoServer
-[2026-03-17T11:50:57.428237]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_gandhinagar_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-17T11:50:57.431024] 
-Coupe gandhinagar completed:
-[2026-03-17T11:50:57.432504]   Processed polygons: 2
-[2026-03-17T11:50:57.433959]   Skipped polygons: 0
-[2026-03-17T11:50:57.435366]   Total polygons: 2
-[2026-03-17T11:50:57.436667]   Table created: 2026-02-01_gandhinagar_coupe_NDVI_Change
-[2026-03-17T11:50:57.438012]   GeoServer layer: 2026-02-01_gandhinagar_coupe_NDVI_Change
-[2026-03-17T11:50:57.439263] 
+[2026-03-30T18:05:05.079064] ALL COUPES PROCESSING COMPLETED
+[2026-03-30T18:05:05.079369] ============================================================
+[2026-03-30T18:05:46.109759] 
 ============================================================
-[2026-03-17T11:50:57.440864] Starting processing for coupe: surendranagar
-[2026-03-17T11:50:57.442271] ============================================================
-[2026-03-17T11:50:57.443743] Step 1/5: Fixing geometry for surendranagar
-[2026-03-17T11:50:57.444935] Starting comprehensive geometry fixing for surendranagar_coupe
-[2026-03-17T11:50:57.541838]   Step 1: Fixed invalid geometries
-[2026-03-17T11:50:57.779204]   Step 2: Extracted polygon collections
-[2026-03-17T11:50:57.914209]   Step 3: Buffered invalid geometries
-[2026-03-17T11:50:57.971902]   Step 4: Set SRID to 4326
-[2026-03-17T11:50:58.024347]   Step 5: Transformed to 4326
-[2026-03-17T11:50:58.128839]   Step 6: Simplified geometries
-[2026-03-17T11:50:58.216480]   Step 7: Removed remaining invalid geometries
-[2026-03-17T11:50:58.272475]   Step 8: Cleaned very complex geometries
-[2026-03-17T11:50:58.463877]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-17T11:50:58.516516] surendranagar_coupe geometry fixing completed. 2154 valid geometries remaining
-[2026-03-17T11:50:58.567388] Step 2/5: Creating degradation table
-[2026-03-17T11:50:58.861948] Table 2026-02-01_surendranagar_coupe_NDVI_Change created with indexes
-[2026-03-17T11:50:58.916825] Step 3/5: Fetching polygons
-[2026-03-17T11:50:59.018778]   Found 2 polygons in surendranagar_coupe
-[2026-03-17T11:50:59.020303] Step 4/5: Processing polygons
-[2026-03-17T11:53:17.048805] Step 5/5: Publishing to GeoServer
-[2026-03-17T11:53:17.156066] Publishing layer: 2026-02-01_surendranagar_coupe_NDVI_Change (from table: 2026-02-01_surendranagar_coupe_NDVI_Change)
-[2026-03-17T11:53:17.273898] Creating new feature type: 2026-02-01_surendranagar_coupe_NDVI_Change
-[2026-03-17T11:53:17.275554] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-17T11:53:17.634046] Response status: 201
-[2026-03-17T11:53:17.635527] Feature type '2026-02-01_surendranagar_coupe_NDVI_Change' created successfully
-[2026-03-17T11:53:19.637336] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_surendranagar_coupe_NDVI_Change'
-[2026-03-17T11:53:19.828672] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_surendranagar_coupe_NDVI_Change'
-[2026-03-17T11:53:19.829883]   Successfully published layer '2026-02-01_surendranagar_coupe_NDVI_Change' to GeoServer
-[2026-03-17T11:53:19.830416]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_surendranagar_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-17T11:53:19.832174] 
-Coupe surendranagar completed:
-[2026-03-17T11:53:19.833157]   Processed polygons: 2
-[2026-03-17T11:53:19.834010]   Skipped polygons: 0
-[2026-03-17T11:53:19.834657]   Total polygons: 2
-[2026-03-17T11:53:19.835234]   Table created: 2026-02-01_surendranagar_coupe_NDVI_Change
-[2026-03-17T11:53:19.835844]   GeoServer layer: 2026-02-01_surendranagar_coupe_NDVI_Change
-[2026-03-17T11:53:19.836432] 
+[2026-03-30T18:05:46.110401] STARTING DEGRADATION ANALYSIS PROCESS
+[2026-03-30T18:05:46.110840] ============================================================
+[2026-03-30T18:05:51.151657] Earth Engine initialized
+[2026-03-30T18:05:51.155482] Initializing GeoServer...
+[2026-03-30T18:05:51.635347] GeoServer connection successful
+[2026-03-30T18:05:51.636442] GeoServer connection verified
+[2026-03-30T18:05:52.179022] Found 16 coupes to process
+[2026-03-30T18:05:52.181983] Already processed 15 coupes
+[2026-03-30T18:05:52.183735] Skipping already processed coupe: chhotaudepur
+[2026-03-30T18:05:52.184939] Skipping already processed coupe: banaskantha
+[2026-03-30T18:05:52.185487] Skipping already processed coupe: surat
+[2026-03-30T18:05:52.186435] Skipping already processed coupe: baria
+[2026-03-30T18:05:52.186927] Skipping already processed coupe: aravalli
+[2026-03-30T18:05:52.187414] Skipping already processed coupe: jamnagar
+[2026-03-30T18:05:52.187870] Skipping already processed coupe: narmada
+[2026-03-30T18:05:52.188186] Skipping already processed coupe: bhavnagar
+[2026-03-30T18:05:52.188522] Skipping already processed coupe: morbi
+[2026-03-30T18:05:52.188874] Skipping already processed coupe: vyara
+[2026-03-30T18:05:52.189496] Skipping already processed coupe: godhara
+[2026-03-30T18:05:52.189918] 
 ============================================================
-[2026-03-17T11:53:19.837004] Starting processing for coupe: bharuchsubdivision
-[2026-03-17T11:53:19.837614] ============================================================
-[2026-03-17T11:53:19.838103] Step 1/5: Fixing geometry for bharuchsubdivision
-[2026-03-17T11:53:19.838724] Starting comprehensive geometry fixing for bharuchsubdivision_coupe
-[2026-03-17T11:53:19.911263]   Step 1: Fixed invalid geometries
-[2026-03-17T11:53:20.039308]   Step 2: Extracted polygon collections
-[2026-03-17T11:53:20.124350]   Step 3: Buffered invalid geometries
-[2026-03-17T11:53:20.176276]   Step 4: Set SRID to 4326
-[2026-03-17T11:53:20.228029]   Step 5: Transformed to 4326
-[2026-03-17T11:53:20.309167]   Step 6: Simplified geometries
-[2026-03-17T11:53:20.382005]   Step 7: Removed remaining invalid geometries
-[2026-03-17T11:53:20.435477]   Step 8: Cleaned very complex geometries
-[2026-03-17T11:53:20.590933]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-17T11:53:20.644476] bharuchsubdivision_coupe geometry fixing completed. 1298 valid geometries remaining
-[2026-03-17T11:53:20.699797] Step 2/5: Creating degradation table
-[2026-03-17T11:53:21.013212] Table 2026-02-01_bharuchsubdivision_coupe_NDVI_Change created with indexes
-[2026-03-17T11:53:21.067007] Step 3/5: Fetching polygons
-[2026-03-17T11:53:21.179502]   Found 2 polygons in bharuchsubdivision_coupe
-[2026-03-17T11:53:21.181089] Step 4/5: Processing polygons
-[2026-03-17T11:55:14.422503] Step 5/5: Publishing to GeoServer
-[2026-03-17T11:55:14.562425] Publishing layer: 2026-02-01_bharuchsubdivision_coupe_NDVI_Change (from table: 2026-02-01_bharuchsubdivision_coupe_NDVI_Change)
-[2026-03-17T11:55:14.728876] Creating new feature type: 2026-02-01_bharuchsubdivision_coupe_NDVI_Change
-[2026-03-17T11:55:14.730440] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-17T11:55:15.128118] Response status: 201
-[2026-03-17T11:55:15.129795] Feature type '2026-02-01_bharuchsubdivision_coupe_NDVI_Change' created successfully
-[2026-03-17T11:55:17.131167] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_bharuchsubdivision_coupe_NDVI_Change'
-[2026-03-17T11:55:17.357171] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_bharuchsubdivision_coupe_NDVI_Change'
-[2026-03-17T11:55:17.359328]   Successfully published layer '2026-02-01_bharuchsubdivision_coupe_NDVI_Change' to GeoServer
-[2026-03-17T11:55:17.360589]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_bharuchsubdivision_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-17T11:55:17.363258] 
-Coupe bharuchsubdivision completed:
-[2026-03-17T11:55:17.364905]   Processed polygons: 2
-[2026-03-17T11:55:17.366154]   Skipped polygons: 0
-[2026-03-17T11:55:17.367408]   Total polygons: 2
-[2026-03-17T11:55:17.368839]   Table created: 2026-02-01_bharuchsubdivision_coupe_NDVI_Change
-[2026-03-17T11:55:17.369985]   GeoServer layer: 2026-02-01_bharuchsubdivision_coupe_NDVI_Change
-[2026-03-17T11:55:17.371385] 
+[2026-03-30T18:05:52.190814] Starting processing for coupe: sabarkantha
+[2026-03-30T18:05:52.191251] ============================================================
+[2026-03-30T18:05:52.191706] Step 1/5: Fixing geometry for sabarkantha
+[2026-03-30T18:05:52.191990] Starting comprehensive geometry fixing for sabarkantha_coupe
+[2026-03-30T18:05:52.328602]   Step 1: Fixed invalid geometries
+[2026-03-30T18:05:52.791412]   Step 2: Extracted polygon collections
+[2026-03-30T18:05:53.193848]   Step 3: Buffered invalid geometries
+[2026-03-30T18:05:53.254597]   Step 4: Set SRID to 4326
+[2026-03-30T18:05:53.319418]   Step 5: Transformed to 4326
+[2026-03-30T18:05:53.418966]   Step 6: Simplified geometries
+[2026-03-30T18:05:53.544007]   Step 7: Removed remaining invalid geometries
+[2026-03-30T18:05:53.913187]   Step 8: Cleaned very complex geometries
+[2026-03-30T18:05:54.231324]   Step 9: Removed geometries with area < 1 sqm
+[2026-03-30T18:05:54.303615] sabarkantha_coupe geometry fixing completed. 1652 valid geometries remaining
+[2026-03-30T18:05:54.378157] Step 2/5: Creating degradation table
+[2026-03-30T18:05:54.945807] Table 2025-03-01_sabarkantha_coupe_NDVI_Change created with indexes
+[2026-03-30T18:05:54.999104] Step 3/5: Fetching polygons
+[2026-03-30T18:05:55.115799]   Found 2 polygons in sabarkantha_coupe
+[2026-03-30T18:05:55.119287] Step 4/5: Processing polygons
+[2026-03-30T18:07:06.985882]   Error calculating NDVI or reduceRegions: Image.normalizedDifference: No band named 'B8'. Available band names: [].
+[2026-03-30T18:08:41.597958] 
 ============================================================
-[2026-03-17T11:55:17.372940] Starting processing for coupe: junagadh
-[2026-03-17T11:55:17.374404] ============================================================
-[2026-03-17T11:55:17.375744] Step 1/5: Fixing geometry for junagadh
-[2026-03-17T11:55:17.377080] Starting comprehensive geometry fixing for junagadh_coupe
-[2026-03-17T11:55:17.469098]   Step 1: Fixed invalid geometries
-[2026-03-17T11:55:17.607208]   Step 2: Extracted polygon collections
-[2026-03-17T11:55:17.703741]   Step 3: Buffered invalid geometries
-[2026-03-17T11:55:17.781517]   Step 4: Set SRID to 4326
-[2026-03-17T11:55:17.858837]   Step 5: Transformed to 4326
-[2026-03-17T11:55:17.955448]   Step 6: Simplified geometries
-[2026-03-17T11:55:18.043384]   Step 7: Removed remaining invalid geometries
-[2026-03-17T11:55:18.126789]   Step 8: Cleaned very complex geometries
-[2026-03-17T11:55:18.261584]   Step 9: Removed geometries with area < 1 sqm
-[2026-03-17T11:55:18.337194] junagadh_coupe geometry fixing completed. 1142 valid geometries remaining
-[2026-03-17T11:55:18.430268] Step 2/5: Creating degradation table
-[2026-03-17T11:55:18.816722] Table 2026-02-01_junagadh_coupe_NDVI_Change created with indexes
-[2026-03-17T11:55:18.890281] Step 3/5: Fetching polygons
-[2026-03-17T11:55:19.036800]   Found 2 polygons in junagadh_coupe
-[2026-03-17T11:55:19.038535] Step 4/5: Processing polygons
-[2026-03-17T11:55:38.298764]   Successfully inserted 6 pixels
-[2026-03-17T11:55:56.365825]   Successfully inserted 6 pixels
-[2026-03-17T11:55:56.440627] Step 5/5: Publishing to GeoServer
-[2026-03-17T11:55:56.595660] Publishing layer: 2026-02-01_junagadh_coupe_NDVI_Change (from table: 2026-02-01_junagadh_coupe_NDVI_Change)
-[2026-03-17T11:55:56.757558] Creating new feature type: 2026-02-01_junagadh_coupe_NDVI_Change
-[2026-03-17T11:55:56.759257] POST to: http://68.178.167.216:8081/geoserver/rest/workspaces/Recap4NDC/datastores/Recap4NDC_NEW1/featuretypes
-[2026-03-17T11:55:57.152605] Response status: 201
-[2026-03-17T11:55:57.154195] Feature type '2026-02-01_junagadh_coupe_NDVI_Change' created successfully
-[2026-03-17T11:55:59.155912] Applying style 'NDVI_CHANGE_NEW2222' to layer '2026-02-01_junagadh_coupe_NDVI_Change'
-[2026-03-17T11:55:59.368322] Style 'NDVI_CHANGE_NEW2222' applied successfully to layer '2026-02-01_junagadh_coupe_NDVI_Change'
-[2026-03-17T11:55:59.370431]   Successfully published layer '2026-02-01_junagadh_coupe_NDVI_Change' to GeoServer
-[2026-03-17T11:55:59.371867]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2026-02-01_junagadh_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
-[2026-03-17T11:55:59.374855] 
-Coupe junagadh completed:
-[2026-03-17T11:55:59.376411]   Processed polygons: 2
-[2026-03-17T11:55:59.377759]   Skipped polygons: 0
-[2026-03-17T11:55:59.379056]   Total polygons: 2
-[2026-03-17T11:55:59.380497]   Table created: 2026-02-01_junagadh_coupe_NDVI_Change
-[2026-03-17T11:55:59.381859]   GeoServer layer: 2026-02-01_junagadh_coupe_NDVI_Change
-[2026-03-17T11:55:59.383837] 
+[2026-03-30T18:08:41.599256] PROCESS INTERRUPTED BY USER
+[2026-03-30T18:08:41.600150] Checkpoint has been saved
+[2026-03-30T18:08:41.600548] ============================================================
+[2026-03-30T18:09:16.202258] 
 ============================================================
-[2026-03-17T11:55:59.384869] ALL COUPES PROCESSING COMPLETED
-[2026-03-17T11:55:59.386036] ============================================================
+[2026-03-30T18:09:16.202850] STARTING DEGRADATION ANALYSIS PROCESS
+[2026-03-30T18:09:16.203210] ============================================================
+[2026-03-30T18:09:23.736710] Earth Engine initialized
+[2026-03-30T18:09:23.737222] Initializing GeoServer...
+[2026-03-30T18:09:25.039014] GeoServer connection successful
+[2026-03-30T18:09:25.039762] GeoServer connection verified
+[2026-03-30T18:09:25.569353] Found 16 coupes to process
+[2026-03-30T18:09:25.570245] Already processed 15 coupes
+[2026-03-30T18:09:25.571130] Skipping already processed coupe: chhotaudepur
+[2026-03-30T18:09:25.571541] Skipping already processed coupe: banaskantha
+[2026-03-30T18:09:25.571908] Skipping already processed coupe: surat
+[2026-03-30T18:09:25.572289] Skipping already processed coupe: baria
+[2026-03-30T18:09:25.572666] Skipping already processed coupe: aravalli
+[2026-03-30T18:09:25.573018] Skipping already processed coupe: jamnagar
+[2026-03-30T18:09:25.573360] Skipping already processed coupe: narmada
+[2026-03-30T18:09:25.573705] Skipping already processed coupe: bhavnagar
+[2026-03-30T18:09:25.574035] Skipping already processed coupe: morbi
+[2026-03-30T18:09:25.581614] Skipping already processed coupe: vyara
+[2026-03-30T18:09:25.582472] Skipping already processed coupe: godhara
+[2026-03-30T18:09:25.582938] 
+============================================================
+[2026-03-30T18:09:25.583505] Starting processing for coupe: sabarkantha
+[2026-03-30T18:09:25.583843] ============================================================
+[2026-03-30T18:09:25.584243] Step 1/5: Fixing geometry for sabarkantha
+[2026-03-30T18:09:25.584585] Starting comprehensive geometry fixing for sabarkantha_coupe
+[2026-03-30T18:09:25.724860]   Step 1: Fixed invalid geometries
+[2026-03-30T18:09:26.004466]   Step 2: Extracted polygon collections
+[2026-03-30T18:09:26.149842]   Step 3: Buffered invalid geometries
+[2026-03-30T18:09:26.224129]   Step 4: Set SRID to 4326
+[2026-03-30T18:09:26.314871]   Step 5: Transformed to 4326
+[2026-03-30T18:09:26.660084]   Step 6: Simplified geometries
+[2026-03-30T18:09:26.774785]   Step 7: Removed remaining invalid geometries
+[2026-03-30T18:09:26.844169]   Step 8: Cleaned very complex geometries
+[2026-03-30T18:09:27.150926]   Step 9: Removed geometries with area < 1 sqm
+[2026-03-30T18:09:27.224934] sabarkantha_coupe geometry fixing completed. 1652 valid geometries remaining
+[2026-03-30T18:09:27.302247] Step 2/5: Creating degradation table
+[2026-03-30T18:09:27.688672] Table 2025-03-01_sabarkantha_coupe_NDVI_Change created with indexes
+[2026-03-30T18:09:27.741297] Step 3/5: Fetching polygons
+[2026-03-30T18:09:27.871174]   Found 2 polygons in sabarkantha_coupe
+[2026-03-30T18:09:27.871962] Step 4/5: Processing polygons
+[2026-03-30T18:11:40.664071] 
+============================================================
+[2026-03-30T18:11:40.664897] PROCESS INTERRUPTED BY USER
+[2026-03-30T18:11:40.665264] Checkpoint has been saved
+[2026-03-30T18:11:40.665705] ============================================================
+[2026-03-30T18:18:34.430061] 
+============================================================
+[2026-03-30T18:18:34.430844] STARTING DEGRADATION ANALYSIS PROCESS
+[2026-03-30T18:18:34.431155] ============================================================
+[2026-03-30T18:18:38.523819] Earth Engine initialized
+[2026-03-30T18:18:38.525069] Initializing GeoServer...
+[2026-03-30T18:18:38.975881] GeoServer connection successful
+[2026-03-30T18:18:38.976852] GeoServer connection verified
+[2026-03-30T18:18:39.466654] Found 16 coupes to process
+[2026-03-30T18:18:39.467252] Already processed 15 coupes
+[2026-03-30T18:18:39.468009] Skipping already processed coupe: chhotaudepur
+[2026-03-30T18:18:39.468329] Skipping already processed coupe: banaskantha
+[2026-03-30T18:18:39.468620] Skipping already processed coupe: surat
+[2026-03-30T18:18:39.468897] Skipping already processed coupe: baria
+[2026-03-30T18:18:39.469187] Skipping already processed coupe: aravalli
+[2026-03-30T18:18:39.469468] Skipping already processed coupe: jamnagar
+[2026-03-30T18:18:39.469725] Skipping already processed coupe: narmada
+[2026-03-30T18:18:39.470027] Skipping already processed coupe: bhavnagar
+[2026-03-30T18:18:39.470259] Skipping already processed coupe: morbi
+[2026-03-30T18:18:39.470540] Skipping already processed coupe: vyara
+[2026-03-30T18:18:39.470811] Skipping already processed coupe: godhara
+[2026-03-30T18:18:39.471061] 
+============================================================
+[2026-03-30T18:18:39.471431] Starting processing for coupe: sabarkantha
+[2026-03-30T18:18:39.471980] ============================================================
+[2026-03-30T18:18:39.472743] Step 1/5: Fixing geometry for sabarkantha
+[2026-03-30T18:18:39.473185] Starting comprehensive geometry fixing for sabarkantha_coupe
+[2026-03-30T18:18:39.603070]   Step 1: Fixed invalid geometries
+[2026-03-30T18:18:39.817577]   Step 2: Extracted polygon collections
+[2026-03-30T18:18:39.921531]   Step 3: Buffered invalid geometries
+[2026-03-30T18:18:39.977941]   Step 4: Set SRID to 4326
+[2026-03-30T18:18:40.042340]   Step 5: Transformed to 4326
+[2026-03-30T18:18:40.149301]   Step 6: Simplified geometries
+[2026-03-30T18:18:40.266101]   Step 7: Removed remaining invalid geometries
+[2026-03-30T18:18:40.336351]   Step 8: Cleaned very complex geometries
+[2026-03-30T18:18:40.672210]   Step 9: Removed geometries with area < 1 sqm
+[2026-03-30T18:18:40.743240] sabarkantha_coupe geometry fixing completed. 1652 valid geometries remaining
+[2026-03-30T18:18:40.799528] Step 2/5: Creating degradation table
+[2026-03-30T18:18:41.168669] Table 2025-03-01_sabarkantha_coupe_NDVI_Change created with indexes
+[2026-03-30T18:18:41.219719] Step 3/5: Fetching polygons
+[2026-03-30T18:18:41.331663]   Found 2 polygons in sabarkantha_coupe
+[2026-03-30T18:18:41.332169] Step 4/5: Processing polygons
+[2026-03-30T18:21:22.513106]   Successfully inserted 14 pixels
+[2026-03-30T18:21:22.577719] Step 5/5: Publishing to GeoServer
+[2026-03-30T18:21:22.793068]   Layer '2025-03-01_sabarkantha_coupe_NDVI_Change' already exists in GeoServer
+[2026-03-30T18:21:22.793968]   Layer URL: http://68.178.167.216:8081/geoserver/Recap4NDC/wms?service=WMS&version=1.1.0&request=GetMap&layers=Recap4NDC:2025-03-01_sabarkantha_coupe_NDVI_Change&styles=&bbox=-180,-90,180,90&width=768&height=330&srs=EPSG:4326&format=application/openlayers
+[2026-03-30T18:21:22.794489] 
+Coupe sabarkantha completed:
+[2026-03-30T18:21:22.794918]   Processed polygons: 2
+[2026-03-30T18:21:22.795126]   Skipped polygons: 0
+[2026-03-30T18:21:22.795315]   Total polygons: 2
+[2026-03-30T18:21:22.795495]   Table created: 2025-03-01_sabarkantha_coupe_NDVI_Change
+[2026-03-30T18:21:22.795669]   GeoServer layer: 2025-03-01_sabarkantha_coupe_NDVI_Change
+[2026-03-30T18:21:22.795843] Skipping already processed coupe: gandhinagar
+[2026-03-30T18:21:22.796249] Skipping already processed coupe: surendranagar
+[2026-03-30T18:21:22.796754] Skipping already processed coupe: bharuchsubdivision
+[2026-03-30T18:21:22.797115] Skipping already processed coupe: junagadh
+[2026-03-30T18:21:22.797530] 
+============================================================
+[2026-03-30T18:21:22.797983] ALL COUPES PROCESSING COMPLETED
+[2026-03-30T18:21:22.798338] ============================================================
+[2026-03-30T20:34:25.302813] 
+============================================================
+[2026-03-30T20:34:25.303876] STARTING DEGRADATION ANALYSIS PROCESS
+[2026-03-30T20:34:25.304284] ============================================================
+[2026-03-30T20:34:30.593764] Earth Engine initialized
+[2026-03-30T20:34:30.594306] Initializing GeoServer...
+[2026-03-30T20:34:30.994360] GeoServer connection successful
+[2026-03-30T20:34:30.995154] GeoServer connection verified
+[2026-03-30T20:34:31.417854] Found 16 coupes to process
+[2026-03-30T20:34:31.419726] Already processed 15 coupes
+[2026-03-30T20:34:31.419998] Skipping already processed coupe: chhotaudepur
+[2026-03-30T20:34:31.420323] Skipping already processed coupe: banaskantha
+[2026-03-30T20:34:31.420741] Skipping already processed coupe: surat
+[2026-03-30T20:34:31.421090] Skipping already processed coupe: baria
+[2026-03-30T20:34:31.421420] Skipping already processed coupe: aravalli
+[2026-03-30T20:34:31.421681] Skipping already processed coupe: jamnagar
+[2026-03-30T20:34:31.422220] Skipping already processed coupe: narmada
+[2026-03-30T20:34:31.422541] Skipping already processed coupe: bhavnagar
+[2026-03-30T20:34:31.422972] Skipping already processed coupe: morbi
+[2026-03-30T20:34:31.423338] Skipping already processed coupe: vyara
+[2026-03-30T20:34:31.423833] Skipping already processed coupe: godhara
+[2026-03-30T20:34:31.428479] 
+============================================================
+[2026-03-30T20:34:31.431934] Starting processing for coupe: sabarkantha
+[2026-03-30T20:34:31.433077] ============================================================
+[2026-03-30T20:34:31.433953] Step 1/5: Fixing geometry for sabarkantha
+[2026-03-30T20:34:31.434452] Starting comprehensive geometry fixing for sabarkantha_coupe
+[2026-03-30T20:34:31.548956]   Step 1: Fixed invalid geometries
+[2026-03-30T20:34:31.738892]   Step 2: Extracted polygon collections
+[2026-03-30T20:34:31.837663]   Step 3: Buffered invalid geometries
+[2026-03-30T20:34:31.892615]   Step 4: Set SRID to 4326
+[2026-03-30T20:34:31.951295]   Step 5: Transformed to 4326
+[2026-03-30T20:34:32.046665]   Step 6: Simplified geometries
+[2026-03-30T20:34:32.143358]   Step 7: Removed remaining invalid geometries
+[2026-03-30T20:34:32.196462]   Step 8: Cleaned very complex geometries
+[2026-03-30T20:34:32.513709]   Step 9: Removed geometries with area < 1 sqm
+[2026-03-30T20:34:32.569136] sabarkantha_coupe geometry fixing completed. 1652 valid geometries remaining
+[2026-03-30T20:34:32.621217] Step 2/5: Creating degradation table
+[2026-03-30T20:34:32.958658] Table 2025-03-01_sabarkantha_coupe_NDVI_Change created with indexes
+[2026-03-30T20:34:33.011865] Step 3/5: Fetching polygons
+[2026-03-30T20:34:34.084212]   Found 1652 polygons in sabarkantha_coupe
+[2026-03-30T20:34:34.084927] Step 4/5: Processing polygons
+[2026-03-30T20:36:43.030455]   Successfully inserted 14 pixels
+[2026-03-30T20:38:22.461264]   Successfully inserted 36 pixels
+[2026-03-30T20:39:17.449367]   Successfully inserted 54 pixels
+[2026-03-30T20:40:31.504255]   Successfully inserted 45 pixels
+[2026-03-30T20:41:34.410083]   Successfully inserted 14 pixels
+[2026-03-30T20:42:13.856583]   Successfully inserted 15 pixels
+[2026-03-30T20:43:39.772981]   Successfully inserted 20 pixels
+[2026-03-30T20:46:48.609698]   Successfully inserted 157 pixels
+[2026-03-30T20:48:02.496459]   Successfully inserted 13 pixels
+[2026-03-30T20:53:46.545311]   Successfully inserted 136 pixels
+[2026-03-30T20:54:49.710461]   Successfully inserted 55 pixels
+[2026-03-30T20:56:29.946208]   Successfully inserted 14 pixels
+[2026-03-30T20:58:25.858136]   Successfully inserted 24 pixels
+[2026-03-30T20:59:31.966219]   Successfully inserted 5 pixels
+[2026-03-30T21:03:09.680254] 
+============================================================
+[2026-03-30T21:03:09.681242] PROCESS INTERRUPTED BY USER
+[2026-03-30T21:03:09.681918] Checkpoint has been saved
+[2026-03-30T21:03:09.682358] ============================================================

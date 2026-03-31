@@ -28,6 +28,8 @@ import gisfylogo from "../assets/gisfylogo.png";
 import noDataImage from "../assets/no-data.png";
 import startIconImg from "../assets/marker-icon.png";
 import endIconImg from "../assets/marker-icon-end.png";
+import gujaratlogo from "../assets/FOREST DEPT.jpg";
+
 import L from "leaflet";
 import {
   MapContainer,
@@ -875,7 +877,7 @@ const BeatPatrolCoverage = ({ language }) => {
     const summaryData = [
       {
         [selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel]: selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
-        "Area (sq m)": selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.boundary_area_sq_m,
+        "Boundary Area (sq m)": selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m,
         "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
         "Coverage %": coverageData.coverage_percentage,
       },
@@ -1374,15 +1376,27 @@ const BeatPatrolCoverage = ({ language }) => {
         )}
       </div>
 
-      <footer className="footer" style={{ color: 'black', textAlign: 'center', padding: '15px', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-        <p>© 2026 Gujarat Forest Department | RECAP4NDC Initiative</p>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <p>Powered by</p>
-          <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
-            <img src={gisfylogo} alt="logo" style={{ width: '100px', height: '40px' }} />
-          </a>
-        </div>
-      </footer>
+      <footer className="footer" style={{color:'black',
+              textAlign:'center',
+              padding:'15px',
+              display: 'flex',
+              justifyContent: 'space-around',
+              alignItems: 'center'}}>
+                <div>
+              <p style={{display: 'flex',alignItems: 'center',gap: '6px' }}> © 2026 Gujarat Forest Department <img src={gujaratlogo} alt="logo picture" style={{width:'40px'}}></img> </p>
+      
+                </div>
+              <div style={{display:'flex', alignItems:'center',gap: '6px'}}>
+                <p>Powered by  </p>
+                <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+                  <img 
+                    src={gisfylogo} 
+                    alt="logo picture" 
+                    style={{ width: '100px', height: '40px' }} 
+                  />
+                </a>
+              </div>
+            </footer>
     </div>
   );
 };

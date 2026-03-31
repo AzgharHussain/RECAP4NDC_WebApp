@@ -537,7 +537,7 @@ const saveUser = async (username, password) => {
                             <div className="l_3">
                                 {/* <a href="#!" target="_blank">
                                     </a> */}
-                                    <img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img>
+                                     <a href="/" ><img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img></a>
                             </div>
                             {/* <div>
 <button

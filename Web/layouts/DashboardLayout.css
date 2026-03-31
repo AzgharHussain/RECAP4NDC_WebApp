@@ -620,20 +620,26 @@ body{
 /* iPad / small laptops */
 @media only screen and (min-width: 835px) and (max-width: 1130px) {
   .newcontainer {
-    height: 19vh;
+    height: 13vh;
+  }
+}
+
+@media only screen and (min-width: 835px) and (max-width: 1130px) {
+  .header-bottom2 {
+    padding-left: 13%;
   }
 }
  
 /* Large screens */
-@media only screen and (min-width: 1131px) {
+@media only screen and (min-width: 1131px) and (max-width: 1500px) {
   .newcontainer {
-    height: 21vh;
+    height: 15vh;
   }
 }
 
  
 /* Extra large screens */
-@media only screen and (min-width: 1500px) {
+@media only screen and (min-width: 1500px) and (max-width: 1700px) {
   .newcontainer {
     height: 18vh;
   }

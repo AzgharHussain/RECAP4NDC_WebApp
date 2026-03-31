@@ -1378,6 +1378,29 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
   }
 
   try {
+    // Check if boundary name already exists
+    const nameCheckResult = await sequelize.query(
+      `
+      SELECT EXISTS(
+        SELECT 1 
+        FROM patrol_boundaries 
+        WHERE boundary_name = :name
+      ) as exists
+      `,
+      {
+        type: sequelize.QueryTypes.SELECT,
+        replacements: { name },
+      },
+    );
+
+    if (nameCheckResult[0].exists) {
+      return res.status(409).json({
+        success: false,
+        message: `Boundary with name '${name}' already exists. Please use a different name.`,
+      });
+    }
+
+
     // Parse geometry string to array
     let parsedCoordinates;
 

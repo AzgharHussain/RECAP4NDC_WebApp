@@ -12,6 +12,8 @@ import { RiAdminFill } from "react-icons/ri";
 import "./AdminDashboard.css";
 import UploadPatrolBoundary from "./UploadPatrolBoundary";
 import gisfylogo from "../assets/gisfylogo.png";
+import gujaratlogo from "../assets/FOREST DEPT.jpg";
+
 
 function AdminDashboard() {
   const { language } = useLanguage();
@@ -595,21 +597,25 @@ function AdminDashboard() {
         </main>
       </div>
       <footer className="footer" style={{color:'black',
-            textAlign:'center',
-            padding:'15px',
-            display: 'flex',
-            justifyContent: 'space-around',
-            alignItems: 'center'}}>
-                <p> © 2026 Gujarat Forest Department | RECAP4NDC Initiative    </p>
-                <div style={{display:'flex', alignItems:'center'}}>
-                      <p>Powered by  </p>
-            <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
-                <img 
-                  src={gisfylogo} 
-                  alt="logo picture" 
-                  style={{ width: '100px', height: '40px' }} 
-                /></a>    </div>
-            
+              textAlign:'center',
+              padding:'15px',
+              display: 'flex',
+              justifyContent: 'space-around',
+              alignItems: 'center'}}>
+                <div>
+              <p style={{display: 'flex',alignItems: 'center',gap: '6px' }}> © 2026 Gujarat Forest Department <img src={gujaratlogo} alt="logo picture" style={{width:'40px'}}></img> </p>
+      
+                </div>
+              <div style={{display:'flex', alignItems:'center',gap: '6px'}}>
+                <p>Powered by  </p>
+                <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+                  <img 
+                    src={gisfylogo} 
+                    alt="logo picture" 
+                    style={{ width: '100px', height: '40px' }} 
+                  />
+                </a>
+              </div>
             </footer>
     </div>
   );
