@@ -535,8 +535,8 @@ body{
 
 .dropdown-menu {
   position: absolute;
-  top: 100%;
-  right: 0;
+    top: 136px;
+    right: 59px;
   margin-top: 8px;
 
   background: white;
@@ -544,7 +544,7 @@ body{
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   min-width: 180px;
-  z-index: 9999;
+  z-index: 99999999999999;
 }
 
 .dropdown-menu a{

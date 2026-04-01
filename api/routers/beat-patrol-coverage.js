@@ -361,9 +361,12 @@ SELECT
     ROUND(COALESCE(cc.coupe_area::numeric, 0), 2) AS coupe_area_sq_m,
     ROUND(COALESCE(cc.patrol_area::numeric, 0), 2) AS patrol_area_sq_m,
     ROUND(
-        (cc.patrol_area / NULLIF(cc.coupe_area, 0) * 100)::numeric,
-        2
-    ) AS coverage_percentage,
+    COALESCE(
+        (cc.patrol_area / NULLIF(cc.coupe_area, 0) * 100),
+        0
+    )::numeric,
+    2
+) AS coverage_percentage,
     json_agg(
         DISTINCT jsonb_build_object(
             'patrol_id', cb.patrol_id,
