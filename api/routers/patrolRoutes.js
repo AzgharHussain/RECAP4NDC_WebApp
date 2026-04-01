@@ -334,17 +334,20 @@ if (officer_name) {
       paramIndex++;
     }
 
-    if (start_date) {
-      conditions.push(`DATE(p.start_time) >= $${paramIndex}`);
-      values.push(start_date);
-      paramIndex++;
-    }
+   // In your backend, when receiving date filters
+if (start_date) {
+  // start_date might be "2026-03-17 00:00:00"
+  conditions.push(`p.start_time >= $${paramIndex}`);
+  values.push(start_date);
+  paramIndex++;
+}
 
-    if (end_date) {
-      conditions.push(`DATE(p.end_time) <= $${paramIndex}`);
-      values.push(end_date);
-      paramIndex++;
-    }
+if (end_date) {
+  // end_date might be "2026-03-17 23:59:59"
+  conditions.push(`p.end_time <= $${paramIndex}`);
+  values.push(end_date);
+  paramIndex++;
+}
 
     if (type_name) {
       conditions.push(`pt.type_name = $${paramIndex}`);

@@ -25,7 +25,7 @@ import recap4NDC from "../assets/RE.png";
 import Geospacial from "../assets/Geospacial.png";
 import Vegetation from "../assets/vegetation.jpg";
 import Incident from "../assets/incident-monitoring.png";
-import forestmonitoring from "../assets/forest-m.png";
+import forestmonitoring from "../assets/p1.jpg";
 import pm from "../assets/p-m.png";
 import fm from "../assets/f-m.png";
 import nv from "../assets/n-v.png";

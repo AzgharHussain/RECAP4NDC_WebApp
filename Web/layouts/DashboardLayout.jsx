@@ -38,6 +38,8 @@ export default function DashboardLayout() {
   const navigate = useNavigate(); // Add useNavigate hook
   const { language, toggleLanguage } = useLanguage();
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const headerRef = useRef(null);
+const [contentHeight, setContentHeight] = useState(0);
 
   // Language Texts
   const text = {
@@ -110,6 +112,20 @@ export default function DashboardLayout() {
       setIsPatrollingOpen(true);
     }
   }, [location]);
+
+
+
+useEffect(() => {
+  const updateHeight = () => {
+    if (headerRef.current) {
+      setContentHeight(window.innerHeight - headerRef.current.offsetHeight);
+    }
+  };
+
+  updateHeight();
+  window.addEventListener("resize", updateHeight);
+  return () => window.removeEventListener("resize", updateHeight);
+}, []);
 
   const handleLinkClick = () => {
     setIsSidebarOpen(false);
@@ -201,7 +217,7 @@ useEffect(() => {
   return (
     <div className="layout">
       {/* Header */}
-      <header className="header">
+      <header className="header" ref={headerRef}>
         {/* ===== TOP ROW ===== */}
         {/* <div className="header-top">
           <div className="header-left">
@@ -346,7 +362,7 @@ useEffect(() => {
           </NavLink>
            </div>
          <div className="header-right">
-  <div className="user-dropdown">
+  <div className="user-dropdown" ref={dropdownRef}>
     {/* User icon and username as dropdown trigger */}
     <div 
       className="dropdown-trigger"
@@ -368,7 +384,7 @@ useEffect(() => {
       
       </header>
 
-      <main className="content">
+      <main className="content" style={{ height: contentHeight }}>
         <Outlet />
       </main>
 

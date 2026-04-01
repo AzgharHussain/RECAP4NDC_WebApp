@@ -186,6 +186,22 @@ export default function DashboardLayoutAdmin() {
 const dropdownRef = useRef(null);
 const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+const headerRef = useRef(null);
+const [contentHeight, setContentHeight] = useState(0);
+
+useEffect(() => {
+  const updateHeight = () => {
+    if (headerRef.current) {
+      setContentHeight(window.innerHeight - headerRef.current.offsetHeight);
+    }
+  };
+
+  updateHeight();
+  window.addEventListener("resize", updateHeight);
+
+  return () => window.removeEventListener("resize", updateHeight);
+}, []);
+
 // Close dropdown when clicking outside
 useEffect(() => {
   const handleClickOutside = (event) => {
@@ -201,6 +217,7 @@ useEffect(() => {
 }, []);
   return (
     <div className="layout">
+      
       {/* Header */}
       <div className="newcontainer">
 

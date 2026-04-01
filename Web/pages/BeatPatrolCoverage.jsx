@@ -786,6 +786,7 @@ const BeatPatrolCoverage = ({ language }) => {
     setImageScale(1);
     setSelectedMonth("");
     setCurrentPage(1);
+    setSelectedBoundary(null);
   };
 
   // Fetch coverage data
@@ -1360,7 +1361,7 @@ const BeatPatrolCoverage = ({ language }) => {
                 <p style={{ fontSize: "14px", marginBottom: "8px", opacity: 0.9 }}>{t.patrolCoveredArea}</p>
                 <h3 style={{ fontSize: "28px", margin: 0 }}>{(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} {t.areaUnit}</h3>
               </div>
-              <div className="stats-card" style={{ background: "linear-gradient(180deg, #F9A825 0%, #FDD835 100%)" }}>
+              <div className="stats-card" style={{ background: "rgba(255, 152, 0, 0.2)"}}>
                 <p style={{ fontSize: "14px", marginBottom: "8px", opacity: 0.9 }}>{t.coverage}</p>
                 <h3 style={{ fontSize: "36px", margin: 0 }}>{Number(coverageData.coverage_percentage).toFixed(2)}%</h3>
               </div>

@@ -339,10 +339,7 @@ function AdminDashboard() {
               <div className="card">
                 <div className="card-header">
                   <h3><FiMap /> {t.coupeList}</h3>
-                  <div className="card-actions">
-                    <FiFilter />
-                    <FiCopy />
-                  </div>
+                  
                 </div>
                 
                 <div className="coupe-list-container">
@@ -378,13 +375,7 @@ function AdminDashboard() {
                               <span className="status-badge published">{t.publishedStatus}</span>
                             </div>
                             <div className="actions-cell">
-                              <button 
-                                className="btn-action edit" 
-                                title={t.edit}
-                                onClick={() => handleEditCoupe(coupe)}
-                              >
-                                <FiEdit />
-                              </button>
+                              
                               <button className="btn-action delete" title={t.delete}>
                                 <FiTrash2 />
                               </button>

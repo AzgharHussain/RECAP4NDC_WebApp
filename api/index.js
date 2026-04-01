@@ -482,9 +482,9 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
         username: admin.username
       },
       SECRET_KEY,
-      {
-        expiresIn: "24h"
-      }
+      // {
+      //   expiresIn: "24h"
+      // }
     );
 
     return res.json({

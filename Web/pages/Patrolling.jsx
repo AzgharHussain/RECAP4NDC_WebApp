@@ -1041,121 +1041,53 @@ const PatrolIncidentLogs = () => {
   
   const filterTimeoutRef = useRef(null);
 
-  // Build filter object helper
-  const buildFilters = useCallback(() => {
-    const filters = {};
-    if (searchText?.trim()) filters.officer_name = searchText.trim();
-    if (startFilter) filters.start_date = startFilter.format('YYYY-MM-DD');
-    if (endFilter) filters.end_date = endFilter.format('YYYY-MM-DD');
-    if (typeFilter) filters.type_name = typeFilter;
-    if (divisionFilter) filters.division = divisionFilter;
-    if (rangeFilter) filters.range = rangeFilter;
-    if (roundFilter) filters.round = roundFilter;
-    if (beatFilter) filters.beat = beatFilter;
-    if (forestId) filters.forest_id = forestId;
-    return filters;
-  }, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
+  // In your buildFilters function in PatrolIncidentLogs.js
+const buildFilters = useCallback(() => {
+  const filters = {};
+  if (searchText?.trim()) filters.officer_name = searchText.trim();
+  
+  // Fix date handling
+  if (startFilter) {
+    // Send start date with time 00:00:00
+    filters.start_date = startFilter.format('YYYY-MM-DD') + ' 00:00:00';
+  }
+  
+  if (endFilter) {
+    // Send end date with time 23:59:59
+    filters.end_date = endFilter.format('YYYY-MM-DD') + ' 23:59:59';
+  }
+  
+  if (typeFilter) filters.type_name = typeFilter;
+  if (divisionFilter) filters.division = divisionFilter;
+  if (rangeFilter) filters.range = rangeFilter;
+  if (roundFilter) filters.round = roundFilter;
+  if (beatFilter) filters.beat = beatFilter;
+  if (forestId) filters.forest_id = forestId;
+  
+  return filters;
+}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
 
   // Fetch filtered data for dashboard (all records without pagination)
-  const fetchDashboardData = useCallback(async () => {
-    const filters = buildFilters();
-    const hasActiveFilters = Object.keys(filters).length > 0;
+  // In fetchDashboardData function, add the same filtering logic
+const fetchDashboardData = useCallback(async () => {
+  const filters = buildFilters();
+  const hasActiveFilters = Object.keys(filters).length > 0;
+  
+  setIsDashboardLoading(true);
+  try {
+    const token = localStorage.getItem("token");
     
-    setIsDashboardLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      
-      if (!hasActiveFilters) {
-        // Fetch all patrol data without filters
-        const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        
-        let formattedData = Array.isArray(data.data) ? data.data : [];
-        formattedData = formattedData.map((item, index) => ({
-          key: item.patrol_id || `patrol-${index}`,
-          ...item,
-          patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-          division: stripHtmlTags(item.division),
-          range: stripHtmlTags(item.range),
-          beat: stripHtmlTags(item.beat),
-          start_location: stripHtmlTags(item.start_location),
-          end_location: stripHtmlTags(item.end_location)
-        }));
-        
-        setDashboardData(formattedData);
-      } else {
-        // Fetch filtered data for dashboard
-        const queryParams = new URLSearchParams({
-          page: '1',
-          limit: '10000',
-          ...filters
-        });
-        
-        const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${queryParams}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        
-        let formattedData = Array.isArray(data.data) ? data.data : [];
-        formattedData = formattedData.map((item, index) => ({
-          key: item.patrol_id || `patrol-filtered-${index}`,
-          ...item,
-          patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-          division: stripHtmlTags(item.division),
-          range: stripHtmlTags(item.range),
-          beat: stripHtmlTags(item.beat),
-          start_location: stripHtmlTags(item.start_location),
-          end_location: stripHtmlTags(item.end_location)
-        }));
-        
-        setDashboardData(formattedData);
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setIsDashboardLoading(false);
-    }
-  }, [buildFilters]);
-
-  // Fetch patrol data with pagination
-  const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
-    const filters = buildFilters();
-    const hasActiveFilters = Object.keys(filters).length > 0;
-    
-    setIsLoading(true);
-    setPaginationLoading(true);
-    setIsFiltering(hasActiveFilters);
-    
-    try {
-      const token = localStorage.getItem("token");
-      
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        ...filters
-      });
-      
-      const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+    if (!hasActiveFilters) {
+      // Fetch all patrol data without filters
+      const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
+
+      console.log("Dashboard API response status:", response.status);
       
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
@@ -1172,27 +1104,164 @@ const PatrolIncidentLogs = () => {
         end_location: stripHtmlTags(item.end_location)
       }));
       
-      setPatrolData(formattedData);
-      setFilteredData(formattedData);
+      // ========== ADD SAME DATE FILTER HERE ==========
+      if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
+        const selectedDate = startFilter.format('YYYY-MM-DD');
+        formattedData = formattedData.filter(item => {
+          const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
+          const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+          return itemStartDate === selectedDate || itemEndDate === selectedDate;
+        });
+      }
+      // ========== END OF ADDED CODE ==========
       
+      setDashboardData(formattedData);
+    } else {
+      // Similar filtering for filtered data
+      const queryParams = new URLSearchParams({
+        page: '1',
+        limit: '10000',
+        ...filters
+      });
+
+      console.log("Fetching dashboard data with filters:", queryParams.toString());
+      
+      const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${queryParams}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("Dashboard API response status with filters:", response.status);
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      
+      let formattedData = Array.isArray(data.data) ? data.data : [];
+      formattedData = formattedData.map((item, index) => ({
+        key: item.patrol_id || `patrol-filtered-${index}`,
+        ...item,
+        patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+        division: stripHtmlTags(item.division),
+        range: stripHtmlTags(item.range),
+        beat: stripHtmlTags(item.beat),
+        start_location: stripHtmlTags(item.start_location),
+        end_location: stripHtmlTags(item.end_location)
+      }));
+      
+      // ========== ADD SAME DATE FILTER HERE ==========
+      if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
+        const selectedDate = startFilter.format('YYYY-MM-DD');
+        formattedData = formattedData.filter(item => {
+          const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
+          const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+          return itemStartDate === selectedDate || itemEndDate === selectedDate;
+        });
+      }
+      // ========== END OF ADDED CODE ==========
+      
+      setDashboardData(formattedData);
+    }
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+  } finally {
+    setIsDashboardLoading(false);
+  }
+}, [buildFilters, startFilter, endFilter]); // Add dependencies
+
+  // Fetch patrol data with pagination
+  // Fetch patrol data with pagination
+const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
+  const filters = buildFilters();
+  const hasActiveFilters = Object.keys(filters).length > 0;
+  
+  setIsLoading(true);
+  setPaginationLoading(true);
+  setIsFiltering(hasActiveFilters);
+  
+  try {
+    const token = localStorage.getItem("token");
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...filters
+    });
+    
+    console.log("Fetching patrol data with params:", params.toString());
+    const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    console.log("Patrol data API response status:", response.status);
+    
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    
+    let formattedData = Array.isArray(data.data) ? data.data : [];
+    console.log(formattedData);
+    formattedData = formattedData.map((item, index) => ({
+      key: item.patrol_id || `patrol-${index}`,
+      ...item,
+      patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+      division: stripHtmlTags(item.division),
+      range: stripHtmlTags(item.range),
+      beat: stripHtmlTags(item.beat),
+      start_location: stripHtmlTags(item.start_location),
+      end_location: stripHtmlTags(item.end_location)
+    }));
+    
+    // ========== ADD THE DATE FILTER HERE ==========
+    // Filter for same date selection
+    if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
+      const selectedDate = startFilter.format('YYYY-MM-DD');
+      const originalLength = formattedData.length;
+      
+      formattedData = formattedData.filter(item => {
+        const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
+        const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+        return itemStartDate === selectedDate || itemEndDate === selectedDate;
+      });
+      
+      console.log(`Date filter applied: ${selectedDate}, filtered from ${originalLength} to ${formattedData.length} records`);
+      
+      // Update pagination counts based on filtered data
+      if (data.pagination) {
+        setTotalItems(formattedData.length);
+        setTotalPages(Math.ceil(formattedData.length / pageSize));
+      }
+    } else {
+      // Use original pagination from backend for date ranges
       if (data.pagination) {
         setCurrentPage(data.pagination.currentPage);
         setPageSize(data.pagination.pageSize);
         setTotalItems(data.pagination.totalItems);
         setTotalPages(data.pagination.totalPages);
       }
-    } catch (error) {
-      console.error("Error fetching Patrol data:", error);
-      setPatrolData([]);
-      setFilteredData([]);
-      setTotalItems(0);
-      setTotalPages(0);
-    } finally {
-      setIsLoading(false);
-      setPaginationLoading(false);
-      setIsFiltering(false);
     }
-  }, [buildFilters]);
+    // ========== END OF ADDED CODE ==========
+    
+    setPatrolData(formattedData);
+    setFilteredData(formattedData);
+    
+  } catch (error) {
+    console.error("Error fetching Patrol data:", error);
+    setPatrolData([]);
+    setFilteredData([]);
+    setTotalItems(0);
+    setTotalPages(0);
+  } finally {
+    setIsLoading(false);
+    setPaginationLoading(false);
+    setIsFiltering(false);
+  }
+}, [buildFilters, startFilter, endFilter, pageSize]); // IMPORTANT: Add startFilter and endFilter to dependencies
 
   // Combined fetch function that updates both table and dashboard
   const fetchAllData = useCallback(async (page = 1, limit = 5) => {
@@ -1400,14 +1469,15 @@ const PatrolIncidentLogs = () => {
   };
 
   const formatDateTime = (datetime) => {
-    const date = new Date(datetime);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
-  };
+  const date = new Date(datetime);
+  // Use UTC methods to display the date exactly as stored in the database
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
+};
 
   // Fetch beat coverage data using existing startFilter and endFilter
   const fetchBeatCoverageData = async () => {

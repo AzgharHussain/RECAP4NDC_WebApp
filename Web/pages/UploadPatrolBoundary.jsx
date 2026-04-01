@@ -287,13 +287,7 @@ const UploadPatrolBoundary = () => {
           <div className="card">
             <div className="card-header">
               <h3><FiMap /> {t.title}</h3>
-              <div className="card-actions">
-                <FiFilter />
-                <FiRefreshCw 
-                  onClick={fetchPatrolBoundaries} 
-                  style={{ cursor: "pointer" }} 
-                />
-              </div>
+              
             </div>
 
             <div className="coupe-list-container">
@@ -343,13 +337,7 @@ const UploadPatrolBoundary = () => {
                         </div>
 
                         <div className="actions-cell">
-                          <button 
-                            className="btn-action edit" 
-                            title={t.edit}
-                            onClick={() => handleEditBoundary(boundary)}
-                          >
-                            <FiEdit />
-                          </button>
+                          
                           <button 
                             className="btn-action delete" 
                             title={t.delete}

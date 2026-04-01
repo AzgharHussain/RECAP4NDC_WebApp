@@ -42,13 +42,14 @@ body {
 
 
 .hero-section{
-    height: 715px;
-background-image:url("../assets/login-background1.png");
+    height: 700px;
 background-size:cover;
 background-position:center;
 justify-content:center;
 position:relative;
   z-index: 1;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.26) 0%, rgba(0, 0, 0, 0.26) 100%), url("../assets/b3.png") lightgray 50% / cover no-repeat;
+ 
 }
 
 .hero-overlay{
