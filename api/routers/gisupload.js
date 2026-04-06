@@ -908,7 +908,7 @@ router.post(
           const cleanName = originalName
             .replace(/[^a-zA-Z0-9_]/g, "_")
             .toLowerCase();
-          tableName = `patrol_boundary_${cleanName}_${Date.now()}`;
+          tableName = `patrol_boundary_${cleanName}`;
         } else {
           const shpFile = req.files.find((f) =>
             f.originalname.toLowerCase().endsWith(".shp"),
@@ -917,7 +917,7 @@ router.post(
           const cleanName = originalName
             .replace(/[^a-zA-Z0-9_]/g, "_")
             .toLowerCase();
-          tableName = `patrol_boundary_${cleanName}_${Date.now()}`;
+          tableName = `patrol_boundary_${cleanName}`;
         }
         console.log("Creating new boundary:", tableName);
       }
