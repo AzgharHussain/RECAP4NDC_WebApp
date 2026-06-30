@@ -21,10 +21,16 @@ import axios from "axios";
 
 import startIconImg from "../assets/marker-icon.png";
 import endIconImg from "../assets/marker-icon-end.png";
+import gujaratlogo from "../assets/FOREST DEPT.jpg";
 
 import DOMPurify from 'dompurify';
 
 const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
+
+import vector from '../assets/Vector.png';
+import Analyze_patrolling from '../assets/Analyze_patroll.png';
+
+import gisfylogo from "../assets/gisfylogo.png";
 
 import {
   MapContainer,
@@ -138,7 +144,20 @@ function PatrolMap({ patrol }) {
 }
 
 // Patrol Analysis Dashboard Component
-const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
+const PatrolAnalysisDashboard = ({ 
+  patrolData, 
+  language, 
+  isLoading,
+  showBeatCoverage = false,
+  coverageData = null,
+  coveragePatrols = [],
+  beatFilter = null,
+  rangeFilter = null,
+  divisionFilter = null,
+  startFilter = null,
+  endFilter = null,
+  exportCoverageToExcel = null
+}) => {
   if (isLoading) {
     return (
       <div style={{
@@ -244,8 +263,8 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
   const getTypeColor = (type) => {
     switch (type) {
       case "Day patrolling": return "#0084ffff";
-      case "Night patrolling": return "#6a00ffff";
-      case "Beat checking": return "#55ff00ff";
+      case "Night patrolling": return "#55ff00ff";
+      case "Beat checking": return "#6a00ffff";
       default: return "#d9d9d9";
     }
   };
@@ -294,92 +313,236 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
       </Title>
       
       {/* Overall Statistics */}
-      <Row gutter={[8, 8]} style={{ marginBottom: 24 }}>
-        {[
-          {
-            key: 'total',
-            value: totalPatrols,
-            title: language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols",
-            icon: <CalendarOutlined />,
-            color: 'rgba(56, 189, 248, 0.3)',
-            borderColor: 'rgba(56, 189, 248, 0.5)',
-          },
-          {
-            key: 'distance',
-            value: avgDistanceOverall,
-            title: language === "gu" ? "સરેરાશ અંતર" : "Average Distance",
-            suffix: "km",
-            icon: <DashboardOutlined />,
-            color: 'rgba(0, 255, 162, 0.3)',
-            borderColor: 'rgba(0, 255, 162, 1)'
-          },
-          {
-            key: 'officers',
-            value: uniqueOfficers.length,
-            title: language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers",
-            icon: <TeamOutlined />,
-            color: 'rgba(64, 0, 255, 0.3)',
-            borderColor: 'rgba(64, 0, 255, 1)'
-          }
-        ].map((item, index) => (
-          <Col xs={24} sm={12} md={6} lg={8}key={item.key}>
-            <div style={{
-              background: item.color,
-              backdropFilter: 'blur(12px)',
-              borderRadius: 12,
-              padding: 16,
-              border: `1px solid ${item.borderColor}`,
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-              height: '80%',
-              transition: 'transform 0.2s',
-              ':hover': {
-                transform: 'translateY(-4px)'
-              }
+      {/* Overall Statistics */}
+{/* Overall Statistics */}
+<Row gutter={[8, 8]} style={{ marginBottom: 24 }}>
+  {[
+    {
+      key: 'total',
+      value: totalPatrols,
+      title: language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols",
+      icon: <CalendarOutlined />,
+      color: 'rgba(56, 189, 248, 0.3)',
+      borderColor: 'rgba(56, 189, 248, 0.5)',
+    },
+    {
+      key: 'distance',
+      value: avgDistanceOverall,
+      title: language === "gu" ? "સરેરાશ અંતર" : "Average Distance",
+      suffix: "km",
+      icon: <DashboardOutlined />,
+      color: 'rgba(0, 255, 162, 0.3)',
+      borderColor: 'rgba(0, 255, 162, 1)'
+    },
+    {
+      key: 'officers',
+      value: uniqueOfficers.length,
+      title: language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers",
+      icon: <TeamOutlined />,
+      color: 'rgba(64, 0, 255, 0.3)',
+      borderColor: 'rgba(64, 0, 255, 1)'
+    },
+
+    // NEW CARDS 👇 - ADDED NULL CHECKS
+    {
+      key: 'area',
+      value: coverageData && coverageData.coupe_area_sq_m 
+        ? (Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2) 
+        : 'N/A',
+      title: language === "gu"
+        ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર")
+        : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area"),
+      suffix: "km²",
+      color: 'rgba(56, 189, 248, 0.3)',
+      isGradient: true
+    },
+    {
+      key: 'covered',
+      value: coverageData && coverageData.patrol_area_sq_m 
+        ? (Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2) 
+        : 'N/A',
+      title: language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area",
+      suffix: "km²",
+      color: 'rgba(0, 255, 162, 0.3)',
+      isGradient: true
+    },
+    {
+      key: 'percentage',
+      value: coverageData && coverageData.coverage_percentage 
+        ? (Number(coverageData.coverage_percentage)).toFixed(2) 
+        : 'N/A',
+      title: language === "gu" ? "કવરેજ %" : "Coverage %",
+      suffix: (() => {
+        if (!coverageData) return '';
+        const percentValue = Number(coverageData.coverage_percentage);
+        if (coverageData.coverage_percentage === null || coverageData.coverage_percentage === undefined || percentValue === 0) {
+          return '';
+        }
+        return "%";
+      })(),
+      color: 'rgba(64, 0, 255, 0.3)',
+      isGradient: true
+    }
+  ].map((item) => (
+    // Change this line to span={4} for all screen sizes to get 6 cards in a row
+    <Col xs={24} sm={12} md={8} lg={4} xl={4} xxl={4} key={item.key}>
+      <div style={{
+        background: item.isGradient ? item.color : item.color,
+        backdropFilter: item.isGradient ? 'none' : 'blur(12px)',
+        borderRadius: 12,
+        paddingTop: 16,
+        border: item.isGradient ? 'none' : `1px solid ${item.borderColor}`,
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        height: '100%',
+        textAlign: 'center'
+      }}>
+        <Statistic
+          title={
+            <span style={{
+              color: 'rgba(0, 0, 0, 0.9)',
+              fontSize: '16px',
+              fontWeight: 500
             }}>
-              <Statistic
-                title={
-                  <span style={{ 
-                    color: 'rgba(0, 0, 0, 0.9)',
-                    fontSize: '20px',
-                    fontWeight: 500
-                  }}>
-                    {item.title}
-                  </span>
-                }
-                value={item.value}
-                prefix={
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    marginRight: 8,
-                    border: '1px solid rgba(0, 0, 0, 0.3)',
-                    marginLeft: '140px'
-                  }}>
-                    {React.cloneElement(item.icon, { 
-                      style: { 
-                        color: 'white',
-                        fontSize: '20px',
-                      } 
-                    })}
-                  </div>
-                }
-                suffix={item.suffix}
-                valueStyle={{ 
-                  color: '#000000ff',
-                  fontSize: '24px',
-                  fontWeight: 600,
-                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
-                }}
+              {item.title}
+            </span>
+          }
+          value={item.value}
+          suffix={item.suffix}
+          prefix={
+            !item.isGradient && (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: 'rgba(0, 0, 0, 0.2)',
+                marginRight: 8,
+              }}>
+                {item.icon &&
+                  React.cloneElement(item.icon, {
+                    style: { color: 'white', fontSize: '18px' }
+                  })}
+              </div>
+            )
+          }
+          valueStyle={{
+            color: '#000',
+            fontSize: '22px',
+            fontWeight: 600
+          }}
+        />
+      </div>
+    </Col>
+  ))}
+</Row>
+
+      {/* Beat Coverage Analysis Section - Moved Here */}
+      {/* {showBeatCoverage && coverageData && (beatFilter || rangeFilter || divisionFilter) && (
+        <div style={{
+          marginTop: '16px',
+          marginBottom: '24px',
+          borderRadius: '8px',
+          overflow: 'hidden',
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            padding: '12px 16px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '8px 8px 0 0',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <img 
+                src={Analyze_patrolling} 
+                alt="Coverage" 
+                style={{ width: '18px', height: '18px' }} 
               />
+              <p style={{ color: '#115F22', margin: 0, fontWeight: 700 }}>
+                {(() => {
+                  // Get the selected location name
+                  let locationName = '';
+                  if (beatFilter) {
+                    locationName = beatFilter;
+                  } else if (rangeFilter) {
+                    locationName = rangeFilter;
+                  } else if (divisionFilter) {
+                    locationName = divisionFilter;
+                  }
+                  
+                  // Get the date range text
+                  const startDateText = startFilter ? startFilter.format('MMMM, YYYY') : '';
+                  const endDateText = endFilter ? endFilter.format('MMMM, YYYY') : '';
+                  
+                  // Format the date range for display
+                  let dateRangeText = '';
+                  if (startDateText && endDateText) {
+                    if (startDateText === endDateText) {
+                      dateRangeText = startDateText;
+                    } else {
+                      dateRangeText = `${startDateText} - ${endDateText}`;
+                    }
+                  } else if (startDateText) {
+                    dateRangeText = startDateText;
+                  } else if (endDateText) {
+                    dateRangeText = endDateText;
+                  } else {
+                    dateRangeText = '';
+                  }
+                  
+                  // Generate the analysis text based on language
+                  if (language === "gu") {
+                    if (beatFilter) {
+                      return dateRangeText ? `બીટ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `બીટ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
+                    } else if (rangeFilter) {
+                      return dateRangeText ? `રેંજ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `રેંજ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
+                    } else if (divisionFilter) {
+                      return dateRangeText ? `વિભાગ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName} - ${dateRangeText}` : `વિભાગ પેટ્રોલિંગ કવરેજનું વિશ્લેષણ: ${locationName}`;
+                    }
+                  } else {
+                    // English
+                    if (beatFilter) {
+                      return dateRangeText ? `Analyzing patrolling coverage for Beat: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Beat: ${locationName}`;
+                    } else if (rangeFilter) {
+                      return dateRangeText ? `Analyzing patrolling coverage for Range: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Range: ${locationName}`;
+                    } else if (divisionFilter) {
+                      return dateRangeText ? `Analyzing patrolling coverage for Division: ${locationName} - ${dateRangeText}` : `Analyzing patrolling coverage for Division: ${locationName}`;
+                    }
+                  }
+                  
+                  // Fallback
+                  return language === "gu" ? "પેટ્રોલિંગ કવરેજનું વિશ્લેષણ" : "Analyzing patrolling coverage";
+                })()}
+              </p>
             </div>
-          </Col>
-        ))}
-      </Row>
+            {exportCoverageToExcel && (
+              <Button
+                onClick={exportCoverageToExcel}
+                style={{
+                  background: 'rgb(0, 166, 81)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  padding: '18px 22px',
+                  height: '32px'
+                }}
+                size="small"
+              >
+                <img src={vector} alt="Export" style={{ width: '16px', height: '16px' }} />
+                {language === "gu" ? "એક્સેલ" : "Export"}
+              </Button>
+            )}
+          </div>
+         
+        </div>
+      )} */}
 
       {/* Patrol Distribution */}
       <div style={{ 
@@ -402,9 +565,9 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
         </Text>
         <Row gutter={8}>
           {[
-            { type: "Day patrolling", percent: dayPercentage, color: '#00b3ffff' },
-            { type: "Night patrolling", percent: nightPercentage, color: '#4000ffff' },
-            { type: "Beat checking", percent: beatPercentage, color: '#00ffa2ff' }
+            { type: "Day Patrolling", percent: dayPercentage, color: '#00b3ffff' },
+            { type: "Night Patrolling", percent: nightPercentage, color: '#00ffa2ff' },
+            { type: "Beat Checking", percent: beatPercentage, color: '#4000ffff' }
           ].map((item) => (
             <Col span={8} key={item.type}>
               <div style={{ textAlign: 'center', padding: '0 8px' }}>
@@ -461,9 +624,9 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
       {/* Detailed Type Analysis */}
       <Row gutter={[16, 16]}>
         {[
-          { stats: dayStats, type: "Day patrolling", color: '#00b3ffff' },
-          { stats: nightStats, type: "Night patrolling", color: '#4000ffff' },
-          { stats: beatStats, type: "Beat checking", color: '#00ffa2ff' }
+          { stats: dayStats, type: "Day Patrolling", color: '#00b3ffff' },
+          { stats: nightStats, type: "Night Patrolling", color: '#00ffa2ff' },
+          { stats: beatStats, type: "Beat Checking", color: '#4000ffff' }
         ].map(({ stats, type, color }, index) => {
           const hasData = stats !== null;
           
@@ -575,7 +738,7 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
                           </div>
                           <div style={{ 
                             color: '#000000ff',
-                            fontSize: '18px',
+                            fontSize: '25px',
                             fontWeight: 600
                           }}>
                             {item.value}
@@ -663,9 +826,9 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
                   </div>
                   {(() => {
                     const types = [
-                      { name: "Day patrolling", count: dayStats?.totalPatrols || 0 },
-                      { name: "Night patrolling", count: nightStats?.totalPatrols || 0 },
-                      { name: "Beat checking", count: beatStats?.totalPatrols || 0 }
+                      { name: "Day Patrolling", count: dayStats?.totalPatrols || 0 },
+                      { name: "Night Patrolling", count: nightStats?.totalPatrols || 0 },
+                      { name: "Beat Checking", count: beatStats?.totalPatrols || 0 }
                     ];
                     const mostActive = types.reduce((prev, current) => 
                       prev.count > current.count ? prev : current
@@ -716,9 +879,9 @@ const PatrolAnalysisDashboard = ({ patrolData, language, isLoading }) => {
                   </div>
                   {(() => {
                     const types = [
-                      { name: "Day patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
-                      { name: "Night patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
-                      { name: "Beat checking", distance: parseFloat(beatStats?.totalDistance || 0) }
+                      { name: "Day Patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
+                      { name: "Night Patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
+                      { name: "Beat Checking", distance: parseFloat(beatStats?.totalDistance || 0) }
                     ];
                     const longestDistance = types.reduce((prev, current) => 
                       prev.distance > current.distance ? prev : current
@@ -794,7 +957,6 @@ const PatrolIncidentLogs = () => {
   // Beat coverage analysis states
   const [selectedBeatForCoverage, setSelectedBeatForCoverage] = useState(null);
   const [showBeatCoverage, setShowBeatCoverage] = useState(false);
-  const [coverageMonth, setCoverageMonth] = useState("");
   const [isAnalyzingCoverage, setIsAnalyzingCoverage] = useState(false);
   const [coverageData, setCoverageData] = useState(null);
   const [coveragePatrols, setCoveragePatrols] = useState([]);
@@ -812,121 +974,53 @@ const PatrolIncidentLogs = () => {
   
   const filterTimeoutRef = useRef(null);
 
-  // Build filter object helper
-  const buildFilters = useCallback(() => {
-    const filters = {};
-    if (searchText?.trim()) filters.officer_name = searchText.trim();
-    if (startFilter) filters.start_date = startFilter.format('YYYY-MM-DD');
-    if (endFilter) filters.end_date = endFilter.format('YYYY-MM-DD');
-    if (typeFilter) filters.type_name = typeFilter;
-    if (divisionFilter) filters.division = divisionFilter;
-    if (rangeFilter) filters.range = rangeFilter;
-    if (roundFilter) filters.round = roundFilter;
-    if (beatFilter) filters.beat = beatFilter;
-    if (forestId) filters.forest_id = forestId;
-    return filters;
-  }, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
+  // In your buildFilters function in PatrolIncidentLogs.js
+const buildFilters = useCallback(() => {
+  const filters = {};
+  if (searchText?.trim()) filters.officer_name = searchText.trim();
+  
+  // Fix date handling
+  if (startFilter) {
+    // Send start date with time 00:00:00
+    filters.start_date = startFilter.format('YYYY-MM-DD') + ' 00:00:00';
+  }
+  
+  if (endFilter) {
+    // Send end date with time 23:59:59
+    filters.end_date = endFilter.format('YYYY-MM-DD') + ' 23:59:59';
+  }
+  
+  if (typeFilter) filters.type_name = typeFilter;
+  if (divisionFilter) filters.division = divisionFilter;
+  if (rangeFilter) filters.range = rangeFilter;
+  if (roundFilter) filters.round = roundFilter;
+  if (beatFilter) filters.beat = beatFilter;
+  if (forestId) filters.forest_id = forestId;
+  
+  return filters;
+}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
 
   // Fetch filtered data for dashboard (all records without pagination)
-  const fetchDashboardData = useCallback(async () => {
-    const filters = buildFilters();
-    const hasActiveFilters = Object.keys(filters).length > 0;
+  // In fetchDashboardData function, add the same filtering logic
+const fetchDashboardData = useCallback(async () => {
+  const filters = buildFilters();
+  const hasActiveFilters = Object.keys(filters).length > 0;
+  
+  setIsDashboardLoading(true);
+  try {
+    const token = localStorage.getItem("token");
     
-    setIsDashboardLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      
-      if (!hasActiveFilters) {
-        // Fetch all patrol data without filters
-        const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        
-        let formattedData = Array.isArray(data.data) ? data.data : [];
-        formattedData = formattedData.map((item, index) => ({
-          key: item.patrol_id || `patrol-${index}`,
-          ...item,
-          patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-          division: stripHtmlTags(item.division),
-          range: stripHtmlTags(item.range),
-          beat: stripHtmlTags(item.beat),
-          start_location: stripHtmlTags(item.start_location),
-          end_location: stripHtmlTags(item.end_location)
-        }));
-        
-        setDashboardData(formattedData);
-      } else {
-        // Fetch filtered data for dashboard
-        const queryParams = new URLSearchParams({
-          page: '1',
-          limit: '10000',
-          ...filters
-        });
-        
-        const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${queryParams}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        
-        let formattedData = Array.isArray(data.data) ? data.data : [];
-        formattedData = formattedData.map((item, index) => ({
-          key: item.patrol_id || `patrol-filtered-${index}`,
-          ...item,
-          patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-          division: stripHtmlTags(item.division),
-          range: stripHtmlTags(item.range),
-          beat: stripHtmlTags(item.beat),
-          start_location: stripHtmlTags(item.start_location),
-          end_location: stripHtmlTags(item.end_location)
-        }));
-        
-        setDashboardData(formattedData);
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setIsDashboardLoading(false);
-    }
-  }, [buildFilters]);
-
-  // Fetch patrol data with pagination
-  const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
-    const filters = buildFilters();
-    const hasActiveFilters = Object.keys(filters).length > 0;
-    
-    setIsLoading(true);
-    setPaginationLoading(true);
-    setIsFiltering(hasActiveFilters);
-    
-    try {
-      const token = localStorage.getItem("token");
-      
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        ...filters
-      });
-      
-      const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+    if (!hasActiveFilters) {
+      // Fetch all patrol data without filters
+      const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
+
+      console.log("Dashboard API response status:", response.status);
       
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
@@ -943,27 +1037,164 @@ const PatrolIncidentLogs = () => {
         end_location: stripHtmlTags(item.end_location)
       }));
       
-      setPatrolData(formattedData);
-      setFilteredData(formattedData);
+      // ========== ADD SAME DATE FILTER HERE ==========
+      if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
+        const selectedDate = startFilter.format('YYYY-MM-DD');
+        formattedData = formattedData.filter(item => {
+          const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
+          const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+          return itemStartDate === selectedDate || itemEndDate === selectedDate;
+        });
+      }
+      // ========== END OF ADDED CODE ==========
       
+      setDashboardData(formattedData);
+    } else {
+      // Similar filtering for filtered data
+      const queryParams = new URLSearchParams({
+        page: '1',
+        limit: '10000',
+        ...filters
+      });
+
+      console.log("Fetching dashboard data with filters:", queryParams.toString());
+      
+      const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${queryParams}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("Dashboard API response status with filters:", response.status);
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      
+      let formattedData = Array.isArray(data.data) ? data.data : [];
+      formattedData = formattedData.map((item, index) => ({
+        key: item.patrol_id || `patrol-filtered-${index}`,
+        ...item,
+        patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+        division: stripHtmlTags(item.division),
+        range: stripHtmlTags(item.range),
+        beat: stripHtmlTags(item.beat),
+        start_location: stripHtmlTags(item.start_location),
+        end_location: stripHtmlTags(item.end_location)
+      }));
+      
+      // ========== ADD SAME DATE FILTER HERE ==========
+      if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
+        const selectedDate = startFilter.format('YYYY-MM-DD');
+        formattedData = formattedData.filter(item => {
+          const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
+          const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+          return itemStartDate === selectedDate || itemEndDate === selectedDate;
+        });
+      }
+      // ========== END OF ADDED CODE ==========
+      
+      setDashboardData(formattedData);
+    }
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+  } finally {
+    setIsDashboardLoading(false);
+  }
+}, [buildFilters, startFilter, endFilter]); // Add dependencies
+
+  // Fetch patrol data with pagination
+  // Fetch patrol data with pagination
+const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
+  const filters = buildFilters();
+  const hasActiveFilters = Object.keys(filters).length > 0;
+  
+  setIsLoading(true);
+  setPaginationLoading(true);
+  setIsFiltering(hasActiveFilters);
+  
+  try {
+    const token = localStorage.getItem("token");
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...filters
+    });
+    
+    console.log("Fetching patrol data with params:", params.toString());
+    const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    console.log("Patrol data API response status:", response.status);
+    
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    
+    let formattedData = Array.isArray(data.data) ? data.data : [];
+    console.log(formattedData);
+    formattedData = formattedData.map((item, index) => ({
+      key: item.patrol_id || `patrol-${index}`,
+      ...item,
+      patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+      division: stripHtmlTags(item.division),
+      range: stripHtmlTags(item.range),
+      beat: stripHtmlTags(item.beat),
+      start_location: stripHtmlTags(item.start_location),
+      end_location: stripHtmlTags(item.end_location)
+    }));
+    
+    // ========== ADD THE DATE FILTER HERE ==========
+    // Filter for same date selection
+    if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
+      const selectedDate = startFilter.format('YYYY-MM-DD');
+      const originalLength = formattedData.length;
+      
+      formattedData = formattedData.filter(item => {
+        const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
+        const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+        return itemStartDate === selectedDate || itemEndDate === selectedDate;
+      });
+      
+      console.log(`Date filter applied: ${selectedDate}, filtered from ${originalLength} to ${formattedData.length} records`);
+      
+      // Update pagination counts based on filtered data
+      if (data.pagination) {
+        setTotalItems(formattedData.length);
+        setTotalPages(Math.ceil(formattedData.length / pageSize));
+      }
+    } else {
+      // Use original pagination from backend for date ranges
       if (data.pagination) {
         setCurrentPage(data.pagination.currentPage);
         setPageSize(data.pagination.pageSize);
         setTotalItems(data.pagination.totalItems);
         setTotalPages(data.pagination.totalPages);
       }
-    } catch (error) {
-      console.error("Error fetching Patrol data:", error);
-      setPatrolData([]);
-      setFilteredData([]);
-      setTotalItems(0);
-      setTotalPages(0);
-    } finally {
-      setIsLoading(false);
-      setPaginationLoading(false);
-      setIsFiltering(false);
     }
-  }, [buildFilters]);
+    // ========== END OF ADDED CODE ==========
+    
+    setPatrolData(formattedData);
+    setFilteredData(formattedData);
+    
+  } catch (error) {
+    console.error("Error fetching Patrol data:", error);
+    setPatrolData([]);
+    setFilteredData([]);
+    setTotalItems(0);
+    setTotalPages(0);
+  } finally {
+    setIsLoading(false);
+    setPaginationLoading(false);
+    setIsFiltering(false);
+  }
+}, [buildFilters, startFilter, endFilter, pageSize]); // IMPORTANT: Add startFilter and endFilter to dependencies
 
   // Combined fetch function that updates both table and dashboard
   const fetchAllData = useCallback(async (page = 1, limit = 5) => {
@@ -1004,6 +1235,27 @@ const PatrolIncidentLogs = () => {
     };
   }, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId, handleSearch]);
 
+  // AUTO-ANALYZE EFFECT - This automatically analyzes coverage when beat/range/division AND both dates are selected
+  useEffect(() => {
+    // Check if we have location filter (beat, range, or division) AND both dates
+    const hasLocationFilter = (beatFilter || rangeFilter || divisionFilter);
+    const hasDates = (startFilter && endFilter);
+    
+    if (hasLocationFilter && hasDates) {
+      // Small delay to ensure all states are updated
+      const timer = setTimeout(() => {
+        fetchBeatCoverageData();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else if (!hasLocationFilter || !hasDates) {
+      // Clear coverage data when filters are cleared
+      setShowBeatCoverage(false);
+      setCoverageData(null);
+      setCoveragePatrols([]);
+    }
+  }, [beatFilter, rangeFilter, divisionFilter, startFilter, endFilter]);
+
   // Clear all filters
   const clearAllFilters = () => {
     setSearchText("");
@@ -1023,7 +1275,6 @@ const PatrolIncidentLogs = () => {
     setShowBeatCoverage(false);
     setCoverageData(null);
     setCoveragePatrols([]);
-    setCoverageMonth("");
     setCurrentPage(1);
     fetchAllData(1, pageSize);
   };
@@ -1151,30 +1402,34 @@ const PatrolIncidentLogs = () => {
   };
 
   const formatDateTime = (datetime) => {
-    const date = new Date(datetime);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
-  };
+  const date = new Date(datetime);
+  // Use UTC methods to display the date exactly as stored in the database
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
+};
 
-  // Fetch beat coverage data
+  // Fetch beat coverage data using existing startFilter and endFilter
   const fetchBeatCoverageData = async () => {
     if (!beatFilter && !rangeFilter && !divisionFilter) {
       message.warning(language === "gu" ? "કૃપા કરીને બીટ, રેંજ અથવા વિભાગ પસંદ કરો" : "Please select a beat, range or division");
       return;
     }
-    if (!coverageMonth) {
-      message.warning(language === "gu" ? "કૃપા કરીને મહિનો પસંદ કરો" : "Please select a month");
+    if (!startFilter || !endFilter) {
+      message.warning(language === "gu" ? "કૃપા કરીને શરૂઆત અને સમાપ્તિ તારીખ પસંદ કરો" : "Please select start and end date from the filters above");
       return;
     }
 
     setIsAnalyzingCoverage(true);
     try {
       const token = localStorage.getItem("token");
-      const requestPayload = { month: coverageMonth };
+      const requestPayload = { 
+        start_date: startFilter.format('YYYY-MM-DD'),
+        end_date: endFilter.format('YYYY-MM-DD')
+      };
       
       if (beatFilter) requestPayload.coupe_table = beatFilter.toUpperCase();
       else if (rangeFilter) {
@@ -1187,17 +1442,34 @@ const PatrolIncidentLogs = () => {
       });
 
       if (response.data.success) {
-        const data = response.data.data;
-        setCoverageData(data);
-        setCoveragePatrols(data.patrols_covering_coupe || []);
-        message.success(language === "gu" ? "કવરેજ ડેટા સફળતાપૂર્વક લોડ થયો" : "Coverage data loaded successfully");
-        setShowBeatCoverage(true);
-      } else {
-        message.warning(response.data.message || (language === "gu" ? "કોઈ કવરેજ ડેટા મળ્યો નથી" : "No coverage data found"));
-        setCoverageData(null);
-        setCoveragePatrols([]);
-        setShowBeatCoverage(false);
-      }
+  const data = response.data.data;
+  console.log(data);
+  
+  // Check if we have actual data or zeros
+  const hasValidData = data.coupe_area_sq_m && Number(data.coupe_area_sq_m) > 0;
+  
+  setCoverageData(data);
+  setCoveragePatrols(data.patrols_covering_coupe || []);
+  
+  if (hasValidData) {
+    message.success(language === "gu" ? "કવરેજ ડેટા સફળતાપૂર્વક લોડ થયો" : "Coverage data loaded successfully");
+  } else {
+    message.info(language === "gu" ? "આ સમયગાળા માટે કોઈ કવરેજ ડેટા ઉપલબ્ધ નથી" : "No coverage data available for this period");
+  }
+  
+  setShowBeatCoverage(true);
+} else {
+  message.warning(response.data.message || (language === "gu" ? "કોઈ કવરેજ ડેટા મળ્યો નથી" : "No coverage data found"));
+  // Set to null values to show N/A
+  setCoverageData({
+    coupe_area_sq_m: null,
+    patrol_area_sq_m: null,
+    coverage_percentage: null,
+    patrols_covering_coupe: []
+  });
+  setCoveragePatrols([]);
+  setShowBeatCoverage(true);
+}
     } catch (err) {
       console.error("Error fetching coverage data:", err);
       message.error(language === "gu" ? "કવરેજ ડેટા લોડ કરવામાં નિષ્ફળ" : "Failed to load coverage data");
@@ -1232,6 +1504,7 @@ const PatrolIncidentLogs = () => {
       "Area (sq m)": coverageData.coupe_area_sq_m,
       "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
       "Coverage %": coverageData.coverage_percentage,
+      "Date Range": `${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}`
     }];
 
     const patrolsData = coveragePatrols.map((patrol) => ({
@@ -1255,7 +1528,7 @@ const PatrolIncidentLogs = () => {
     }
 
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
-    const fileName = `${filterValue}_patrol_coverage.xlsx`;
+    const fileName = `${filterValue}_patrol_coverage_${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'}_to_${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}.xlsx`;
     saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
   };
 
@@ -1274,8 +1547,8 @@ const PatrolIncidentLogs = () => {
   const getTypeColor = (type) => {
     switch (type) {
       case "Day patrolling": return "blue";
-      case "Night patrolling": return "purple";
-      case "Beat checking": return "green";
+      case "Night patrolling": return "green";
+      case "Beat checking": return "purple";
       default: return "default";
     }
   };
@@ -1308,7 +1581,7 @@ const PatrolIncidentLogs = () => {
       align: "center",
     },
     {
-      title: language === "gu" ? "રંગ" : "Range",
+      title: language === "gu" ? "રેન્જ" : "Range",
       dataIndex: "range",
       key: "range",
       align: "center",
@@ -1320,7 +1593,7 @@ const PatrolIncidentLogs = () => {
       align: "center",
     },
     {
-      title: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date",
+      title: language === "gu" ? "શરૂઆતની તારીખ" : "Search by Start Date",
       key: "start_date",
       align: "center",
       render: (record) => formatDateTime(record.start_time).date,
@@ -1427,13 +1700,273 @@ const PatrolIncidentLogs = () => {
     </div>
   );
 
+  // Add this function after your existing exportCoverageToExcel function
+// Add this function after your existing exportCoverageToExcel function
+const exportTableToExcel = () => {
+  if (!filteredData || filteredData.length === 0) {
+    message.warning(language === "gu" ? "કોઈ ડેટા નિકાસ કરવા માટે ઉપલબ્ધ નથી" : "No data available to export");
+    return;
+  }
+
+  const formatDateForExport = (datetime) => {
+    if (!datetime) return "N/A";
+    const date = new Date(datetime);
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const year = date.getUTCFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const formatTimeForExport = (datetime) => {
+    if (!datetime) return "N/A";
+    const date = new Date(datetime);
+    const hours = String(date.getUTCHours()).padStart(2, "0");
+    const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
+  // Sheet 1: Patrol Logs Data (with separate date and time columns)
+  const patrolLogsData = filteredData.map((item, index) => ({
+    [language === "gu" ? "ક્રમાંક" : "Sr. No."]: index + 1,
+    [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: getTypeDisplayName(item.type_name),
+    [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "N/A",
+    [language === "gu" ? "વિભાગ" : "Division"]: item.division || "N/A",
+    [language === "gu" ? "રેન્જ" : "Range"]: item.range || "N/A",
+    [language === "gu" ? "બીટ" : "Beat"]: item.beat || "N/A",
+    [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExport(item.start_time),
+    [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExport(item.start_time),
+    [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExport(item.end_time),
+    [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExport(item.end_time),
+    [language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location"]: item.start_location || "N/A",
+    [language === "gu" ? "અંતિમ સ્થાન" : "End Location"]: item.end_location || "N/A",
+    [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: item.distance_kms || "0",
+  }));
+
+  // Sheet 2: Patrol Analysis Dashboard Summary
+  const calculateTypeStatsForExport = (type) => {
+    const filtered = dashboardData.filter(item => item.type_name === type);
+    if (filtered.length === 0) return null;
+    
+    const totalPatrols = filtered.length;
+    const totalDistance = filtered.reduce((sum, item) => sum + parseFloat(item.distance_kms || 0), 0);
+    const totalStaff = filtered.reduce((sum, item) => sum + (item.number_of_staff || 1), 0);
+    const avgDistance = totalDistance / totalPatrols;
+    
+    const totalHours = filtered.reduce((sum, item) => {
+      const start = new Date(item.start_time);
+      const end = new Date(item.end_time);
+      const hours = (end - start) / (1000 * 60 * 60);
+      return sum + hours;
+    }, 0);
+    const avgHours = totalHours / totalPatrols;
+    
+    return {
+      type: getTypeDisplayName(type),
+      totalPatrols,
+      totalDistance: totalDistance.toFixed(1),
+      avgDistance: avgDistance.toFixed(1),
+      avgHours: avgHours.toFixed(1),
+      avgStaff: (totalStaff / totalPatrols).toFixed(1),
+    };
+  };
+
+  const dayStatsExport = calculateTypeStatsForExport("Day patrolling");
+  const nightStatsExport = calculateTypeStatsForExport("Night patrolling");
+  const beatStatsExport = calculateTypeStatsForExport("Beat checking");
+
+  const analysisSummary = [
+    {
+      [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols",
+      [language === "gu" ? "મૂલ્ય" : "Value"]: dashboardData.length,
+    },
+    {
+      [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers",
+      [language === "gu" ? "મૂલ્ય" : "Value"]: [...new Set(dashboardData.map(item => item.patrol_officer_name))].length,
+    },
+    {
+      [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કુલ અંતર (કિ.મી.)" : "Total Distance (km)",
+      [language === "gu" ? "મૂલ્ય" : "Value"]: dashboardData.reduce((sum, item) => sum + parseFloat(item.distance_kms || 0), 0).toFixed(1),
+    },
+    {
+      [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "સરેરાશ અંતર (કિ.મી.)" : "Average Distance (km)",
+      [language === "gu" ? "મૂલ્ય" : "Value"]: (dashboardData.reduce((sum, item) => sum + parseFloat(item.distance_kms || 0), 0) / (dashboardData.length || 1)).toFixed(1),
+    },
+  ];
+
+  // Sheet 3: Patrol Type-wise Breakdown
+  const typeBreakdownData = [
+    dayStatsExport && {
+      [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: language === "gu" ? "દિવસ પેટ્રોલિંગ" : "Day Patrolling",
+      [language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"]: dayStatsExport.totalPatrols,
+      [language === "gu" ? "કુલ અંતર (કિ.મી.)" : "Total Distance (km)"]: dayStatsExport.totalDistance,
+      [language === "gu" ? "સરેરાશ અંતર (કિ.મી.)" : "Avg Distance (km)"]: dayStatsExport.avgDistance,
+      [language === "gu" ? "સરેરાશ સમય (કલાક)" : "Avg Time (hours)"]: dayStatsExport.avgHours,
+      [language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff"]: dayStatsExport.avgStaff,
+    },
+    nightStatsExport && {
+      [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: language === "gu" ? "રાત પેટ્રોલિંગ" : "Night Patrolling",
+      [language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"]: nightStatsExport.totalPatrols,
+      [language === "gu" ? "કુલ અંતર (કિ.મી.)" : "Total Distance (km)"]: nightStatsExport.totalDistance,
+      [language === "gu" ? "સરેરાશ અંતર (કિ.મી.)" : "Avg Distance (km)"]: nightStatsExport.avgDistance,
+      [language === "gu" ? "સરેરાશ સમય (કલાક)" : "Avg Time (hours)"]: nightStatsExport.avgHours,
+      [language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff"]: nightStatsExport.avgStaff,
+    },
+    beatStatsExport && {
+      [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: language === "gu" ? "બીટ ચેકિંગ" : "Beat Checking",
+      [language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"]: beatStatsExport.totalPatrols,
+      [language === "gu" ? "કુલ અંતર (કિ.મી.)" : "Total Distance (km)"]: beatStatsExport.totalDistance,
+      [language === "gu" ? "સરેરાશ અંતર (કિ.મી.)" : "Avg Distance (km)"]: beatStatsExport.avgDistance,
+      [language === "gu" ? "સરેરાશ સમય (કલાક)" : "Avg Time (hours)"]: beatStatsExport.avgHours,
+      [language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff"]: beatStatsExport.avgStaff,
+    },
+  ].filter(Boolean);
+
+  // Sheet 4: Filter Criteria Applied
+  const filterCriteria = [
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "અધિકારીનું નામ" : "Officer Name", [language === "gu" ? "મૂલ્ય" : "Value"]: searchText || "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "વિભાગ" : "Division", [language === "gu" ? "મૂલ્ય" : "Value"]: divisionFilter || "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "રેન્જ" : "Range", [language === "gu" ? "મૂલ્ય" : "Value"]: rangeFilter || "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "બીટ" : "Beat", [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type", [language === "gu" ? "મૂલ્ય" : "Value"]: typeFilter ? getTypeDisplayName(typeFilter) : "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date", [language === "gu" ? "મૂલ્ય" : "Value"]: startFilter ? startFilter.format('YYYY-MM-DD') : "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date", [language === "gu" ? "મૂલ્ય" : "Value"]: endFilter ? endFilter.format('YYYY-MM-DD') : "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "કુલ રેકોર્ડ" : "Total Records", [language === "gu" ? "મૂલ્ય" : "Value"]: filteredData.length },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "નિકાસ તારીખ" : "Export Date", [language === "gu" ? "મૂલ્ય" : "Value"]: new Date().toLocaleString() },
+  ];
+
+  // Sheet 5: Coverage Analysis Data (if available)
+  let coverageDataSheet = [];
+  if (coverageData && showBeatCoverage) {
+    coverageDataSheet = [
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: beatFilter ? (language === "gu" ? "બીટ" : "Beat") : (rangeFilter ? (language === "gu" ? "રેન્જ" : "Range") : (language === "gu" ? "વિભાગ" : "Division")),
+        [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || rangeFilter || divisionFilter || "N/A",
+      },
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "વિસ્તાર (ચો.મી.)" : "Area (sq m)",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coupe_area_sq_m ? Number(coverageData.coupe_area_sq_m).toLocaleString() : "N/A",
+      },
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કવરેજ વિસ્તાર (ચો.મી.)" : "Covered Area (sq m)",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.patrol_area_sq_m ? Number(coverageData.patrol_area_sq_m).toLocaleString() : "N/A",
+      },
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કવરેજ ટકાવારી" : "Coverage Percentage",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coverage_percentage ? `${Number(coverageData.coverage_percentage).toFixed(2)}%` : "N/A",
+      },
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "તારીખ શ્રેણી" : "Date Range",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: `${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}`,
+      },
+    ];
+  }
+
+  // Create workbook with multiple sheets
+  const workbook = XLSX.utils.book_new();
+  
+  // Sheet 1: Patrol Logs (with separate date and time columns)
+  const patrolSheet = XLSX.utils.json_to_sheet(patrolLogsData);
+  XLSX.utils.book_append_sheet(workbook, patrolSheet, "Patrol Logs");
+  
+  // Sheet 2: Analysis Summary
+  const analysisSheet = XLSX.utils.json_to_sheet(analysisSummary);
+  XLSX.utils.book_append_sheet(workbook, analysisSheet, "Analysis Summary");
+  
+  // Sheet 3: Type Breakdown
+  if (typeBreakdownData.length > 0) {
+    const typeSheet = XLSX.utils.json_to_sheet(typeBreakdownData);
+    XLSX.utils.book_append_sheet(workbook, typeSheet, "Patrol Type Breakdown");
+  }
+  
+  // Sheet 4: Filter Criteria
+  const filterSheet = XLSX.utils.json_to_sheet(filterCriteria);
+  XLSX.utils.book_append_sheet(workbook, filterSheet, "Filter Criteria");
+  
+  // Sheet 5: Coverage Analysis (if available)
+  if (coverageDataSheet.length > 0) {
+    const coverageSheet = XLSX.utils.json_to_sheet(coverageDataSheet);
+    XLSX.utils.book_append_sheet(workbook, coverageSheet, "Coverage Analysis");
+    
+    // Sheet 6: Covering Patrols (if available)
+    if (coveragePatrols && coveragePatrols.length > 0) {
+      const formatDateForExportCoverage = (datetime) => {
+        if (!datetime) return "N/A";
+        const date = new Date(datetime);
+        const day = String(date.getUTCDate()).padStart(2, "0");
+        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const year = date.getUTCFullYear();
+        return `${day}-${month}-${year}`;
+      };
+
+      const formatTimeForExportCoverage = (datetime) => {
+        if (!datetime) return "N/A";
+        const date = new Date(datetime);
+        const hours = String(date.getUTCHours()).padStart(2, "0");
+        const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+        return `${hours}:${minutes}`;
+      };
+
+      const coveringPatrolsData = coveragePatrols.map((patrol, idx) => ({
+        [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
+        [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_id || "N/A",
+        [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "N/A",
+        [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExportCoverage(patrol.start_time),
+        [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExportCoverage(patrol.start_time),
+        [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExportCoverage(patrol.end_time),
+        [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExportCoverage(patrol.end_time),
+        [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: patrol.distance_kms || "0",
+      }));
+      const coveringSheet = XLSX.utils.json_to_sheet(coveringPatrolsData);
+      XLSX.utils.book_append_sheet(workbook, coveringSheet, "Covering Patrols");
+    }
+  }
+  
+  // Auto-size columns for all sheets
+  const sheets = ['Patrol Logs', 'Analysis Summary', 'Patrol Type Breakdown', 'Filter Criteria', 'Coverage Analysis', 'Covering Patrols'];
+  sheets.forEach(sheetName => {
+    const sheet = workbook.Sheets[sheetName];
+    if (sheet) {
+      const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
+      const colWidths = {};
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = sheet[cellAddress];
+          if (cell && cell.v) {
+            const value = cell.v.toString();
+            const width = Math.min(value.length, 50);
+            if (!colWidths[C] || width > colWidths[C]) {
+              colWidths[C] = width;
+            }
+          }
+        }
+      }
+      sheet['!cols'] = Object.keys(colWidths).map(c => ({ wch: Math.max(colWidths[c] + 2, 12) }));
+    }
+  });
+
+  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const fileName = `patrol_complete_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+  saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
+  
+  message.success(language === "gu" ? "સંપૂર્ણ રિપોર્ટ સફળતાપૂર્વક નિકાસ થયો" : "Complete report exported successfully");
+};
+
+
   return (
     <div className="container">
       {isLoading && <Loader />}
       <div className="section">
-        <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px", marginLeft: "20px"}}>
+        <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px", fontSize: '25px',marginLeft: "20px", marginBottom: "10px"}}>
           {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Detail Level Patrolling Logs"}
         </h3>
+
+        <div style={{ fontSize: '12px', color: 'rgb(17, 95, 34)', marginLeft: "20px" }}>
+          {language === "gu" 
+    ? "કવરેજ વિશ્લેષણ કરવા માટે વિભાગ માટે શરૂઆત અને સમાપ્તિ તારીખો પસંદ કરો" 
+    : "Select the start and end dates for the division to perform coverage analysis"}
+        </div>
+
         <div className="heading-container" style={{height:"50px"}}>
           <Input
             placeholder={language === "gu" ? "અધિકારીના નામ પ્રમાણે શોધો" : "Search by Officer Name"}
@@ -1536,7 +2069,7 @@ const PatrolIncidentLogs = () => {
           </Select>
 
           <DatePicker
-            placeholder={language === "gu" ? "શરૂઆતની તારીખથી શોધો" : "Search by Start Date"}
+            placeholder={language === "gu" ? "શરૂઆતની તારીખ" : "Search By Start Date"}
             style={{ width: "150px", border: "1px solid #d9d9d9", borderRadius: "4px", background: "#fff" }}
             value={startFilter}
             onChange={(date) => setStartFilter(date)}
@@ -1544,7 +2077,7 @@ const PatrolIncidentLogs = () => {
           />
 
           <DatePicker
-            placeholder={language === "gu" ? "શરૂઆતની તારીખથી શોધો" : "Search by End Date"}
+            placeholder={language === "gu" ? "સમાપ્તિ તારીખ" : "Search By End Date"}
             style={{ width: "150px", border: "1px solid #d9d9d9", borderRadius: "4px", background: "#fff" }}
             value={endFilter}
             onChange={(date) => setEndFilter(date)}
@@ -1552,7 +2085,7 @@ const PatrolIncidentLogs = () => {
           />
           
           <Select
-            placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકારથી શોધો" : "Search by Patrolling Type"}
+            placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrolling Type"}
             style={{ width: "150px", borderRadius: "0px", background: "#fff" }}
             value={typeFilter}
             onChange={(value) => setTypeFilter(value)}
@@ -1569,187 +2102,24 @@ const PatrolIncidentLogs = () => {
             icon={<ReloadOutlined />}
             style={{ marginRight: "10px", background: "#f5f5f5", borderColor: "#d9d9d9", color: "#000" }}
           >
-            {language === "gu" ? "ફિલ્ટર સાફ કરો" : "Clear Filters"}
+            {language === "gu" ? "ફિલ્ટર દૂર કરો" : "Clear Filters"}
           </Button>
+
+          <Button 
+    onClick={exportTableToExcel}
+    style={{ 
+      background: "linear-gradient(135deg, #28a745 0%, #218838 100%)", 
+      borderColor: "#28a745", 
+      color: "#fff",
+      fontWeight: 500
+    }}
+  >
+    <img src={vector} alt="Export" style={{ width: '16px', height: '16px' }} />
+    {language === "gu" ? "નિકાસ" : "Export"}
+  </Button>
+          
         </div>
 
-        {/* Month Picker for Beat Coverage */}
-        {(beatFilter || rangeFilter || divisionFilter) && (
-          <div style={{ 
-            marginTop: 16, 
-            marginBottom: 16, 
-            display: 'flex',
-            alignItems: 'stretch',
-            gap: '0',
-            flexWrap: 'nowrap'
-          }}>
-            <div style={{ 
-              flex: 1,
-              padding: '16px',
-              borderRadius: '8px 0 0 8px',
-              border: '1px solid #e2e8f0',
-              borderRight: 'none'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
-                <div>
-                  <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>
-                    {language === "gu" 
-                      ? (beatFilter ? "બીટ પેટ્રોલ કવરેજ વિશ્લેષણ માટે મહિનો પસંદ કરો" 
-                          : rangeFilter ? "રેંજ પેટ્રોલ કવરેજ વિશ્લેષણ માટે મહિનો પસંદ કરો"
-                          : "વિભાગ પેટ્રોલ કવરેજ વિશ્લેષણ માટે મહિનો પસંદ કરો")
-                      : (beatFilter ? "Select Month for Beat Patrol Coverage Analysis"
-                          : rangeFilter ? "Select Month for Range Patrol Coverage Analysis"
-                          : "Select Month for Division Patrol Coverage Analysis")}
-                  </label>
-                  <input
-                    type="month"
-                    value={coverageMonth}
-                    onChange={(e) => setCoverageMonth(e.target.value)}
-                    style={{
-                      width: '200px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      backgroundColor: 'white',
-                      border: '1px solid #d9d9d9'
-                    }}
-                  />
-                </div>
-                <Button
-                  onClick={fetchBeatCoverageData}
-                  disabled={isAnalyzingCoverage || !coverageMonth}
-                  style={{
-                    background: '#00a651',
-                    border: 'none',
-                    padding: '8px 24px',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    color: 'white'
-                  }}
-                >
-                  {isAnalyzingCoverage ? (
-                    <span>{language === "gu" ? "વિશ્લેષણ કરી રહ્યા છીએ..." : "Analyzing..."}</span>
-                  ) : (
-                    <span>{language === "gu" ? "કવરેજ વિશ્લેષણ કરો" : "Analyze Coverage"}</span>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {showBeatCoverage && coverageData && (beatFilter || rangeFilter || divisionFilter) && (
-              <div style={{
-                flex: 1,
-                borderRadius: '0 8px 8px 0',
-                border: '1px solid #e2e8f0',
-                borderLeft: 'none',
-                overflow: 'hidden'
-              }}>
-                <div style={{ padding: '12px' }}>
-                  <Row gutter={[6, 6]}>
-                    <Col span={6}>
-                      <div style={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        color: 'white',
-                        textAlign: 'center'
-                      }}>
-                        <p style={{ fontSize: '10px', opacity: 0.9, marginBottom: '4px' }}>
-                          {language === "gu" ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર") : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area")}
-                        </p>
-                        <h4 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>
-                          {(Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
-                        </h4>
-                      </div>
-                    </Col>
-                    <Col span={6}>
-                      <div style={{
-                        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        color: 'white',
-                        textAlign: 'center'
-                      }}>
-                        <p style={{ fontSize: '10px', opacity: 0.9, marginBottom: '4px' }}>
-                          {language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area"}
-                        </p>
-                        <h4 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>
-                          {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
-                        </h4>
-                      </div>
-                    </Col>
-                    <Col span={6}>
-                      <div style={{
-                        background: coverageData.coverage_percentage > 70 
-                          ? 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-                          : coverageData.coverage_percentage > 40 
-                          ? 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
-                          : 'linear-gradient(135deg, #ff6a00 0%, #ee0979 100%)',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        color: 'white',
-                        textAlign: 'center'
-                      }}>
-                        <p style={{ fontSize: '10px', opacity: 0.9, marginBottom: '4px' }}>
-                          {language === "gu" ? "કવરેજ %" : "Coverage %"}
-                        </p>
-                        <h4 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0 }}>
-                          {Number(coverageData.coverage_percentage).toFixed(2)}%
-                        </h4>
-                      </div>
-                    </Col>
-                    <Col span={6}>
-                      <Button
-                        onClick={exportCoverageToExcel}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          background: '#48bb78',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px'
-                        }}
-                        icon={<DownloadOutlined style={{ fontSize: '12px' }} />}
-                        size="small"
-                      >
-                        {language === "gu" ? "એક્સેલ" : "Export"}
-                      </Button>
-                    </Col>
-                  </Row>
-
-                  {coveragePatrols.length === 0 && (
-                    <div style={{ 
-                      textAlign: 'center', 
-                      padding: '12px', 
-                      marginTop: '12px',
-                      background: '#f7fafc', 
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      color: '#718096'
-                    }}>
-                      {language === "gu" 
-                        ? (beatFilter ? "આ બીટની અંદર કોઈ પેટ્રોલ મળ્યા નથી" 
-                            : rangeFilter ? "આ રેંજની અંદર કોઈ પેટ્રોલ મળ્યા નથી"
-                            : "આ વિભાગની અંદર કોઈ પેટ્રોલ મળ્યા નથી")
-                        : (beatFilter ? "No patrols found inside this beat" 
-                            : rangeFilter ? "No patrols found inside this range"
-                            : "No patrols found inside this division")}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        
         <Table
           className="transparent-table"
           columns={columns}
@@ -1768,13 +2138,28 @@ const PatrolIncidentLogs = () => {
               </div>
             ),
           }}
+          
         />
         
         {totalItems > 0 && <CustomPagination />}
+
       </div>
       
-      {/* Patrol Analysis Dashboard - Uses dashboardData which updates with filters */}
-      <PatrolAnalysisDashboard patrolData={dashboardData} language={language} isLoading={isDashboardLoading} />
+      {/* Patrol Analysis Dashboard - Now includes coverage section */}
+      <PatrolAnalysisDashboard 
+        patrolData={dashboardData} 
+        language={language} 
+        isLoading={isDashboardLoading}
+        showBeatCoverage={showBeatCoverage}
+        coverageData={coverageData}
+        coveragePatrols={coveragePatrols}
+        beatFilter={beatFilter}
+        rangeFilter={rangeFilter}
+        divisionFilter={divisionFilter}
+        startFilter={startFilter}
+        endFilter={endFilter}
+        exportCoverageToExcel={exportCoverageToExcel}
+      />
       
       <Modal
         open={isModalVisible}
@@ -1841,7 +2226,7 @@ const PatrolIncidentLogs = () => {
                               src={`data:${image.image_type};base64,${image.image_data}`}
                               alt={getImageLabel()}
                               style={{ 
-                                width: '100%',
+                                width: 170,
                                 height: 150,
                                 objectFit: 'cover',
                                 borderRadius: 2
@@ -1914,6 +2299,29 @@ const PatrolIncidentLogs = () => {
           <BeatPatrolCoverage showmaproute={showmaproute} language={language} setShowMapRoute={setShowMapRoute} />
         </Suspense>
       )}
+
+      {/* FOOTER */}
+      <footer className="footer" style={{color:'black',
+        textAlign:'center',
+        padding:'15px',
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center'}}> 
+          <div>
+        <p style={{display: 'flex',alignItems: 'center',gap: '6px' }}> © 2026 Gujarat Forest Department <img src={gujaratlogo} alt="logo picture" style={{width:'40px'}}></img> </p>
+
+          </div>
+        <div style={{display:'flex', alignItems:'center',gap: '6px'}}>
+          <p>Powered by  </p>
+          <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+            <img 
+              src={gisfylogo} 
+              alt="logo picture" 
+              style={{ width: '100px', height: '40px' }} 
+            />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };

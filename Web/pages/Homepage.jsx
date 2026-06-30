@@ -17,8 +17,6 @@ import leftLogos from "../assets/Logo.png";
 import Eyeclose from "../assets/Eyeclose.png";
 import user from "../assets/user.png";
 
-import "../layouts/DashboardLayout.css";
-
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
 import giz from "../assets/giz.png";
@@ -27,7 +25,7 @@ import recap4NDC from "../assets/RE.png";
 import Geospacial from "../assets/Geospacial.png";
 import Vegetation from "../assets/vegetation.jpg";
 import Incident from "../assets/incident-monitoring.png";
-import forestmonitoring from "../assets/forest-m.png";
+import forestmonitoring from "../assets/p1.jpg";
 import pm from "../assets/p-m.png";
 import fm from "../assets/f-m.png";
 import nv from "../assets/n-v.png";
@@ -40,7 +38,7 @@ const Homepage = () => {
 
   const cards = [
     {
-      title: "Geospatial Forest Monitoring Map",
+      title: "GEOSPATIAL FOREST MONITORING MAP",
       img: Geospacial,
       desc: "Interactive WebGIS interface for exploring forest cover changes, administrative boundaries, working plan areas, and field patrol routes across Gujarat.",
       desc1: "The GeoServer integration publishes spatial layers including beat boundaries, patrol routes, and vegetation datasets for visualization and analysis."
@@ -54,11 +52,11 @@ const Homepage = () => {
     {
       title: "INCIDENT & OBSERVATION MONITORING",
       img: Incident,
-      desc: "Overview of field-reported incidents including illegal logging, encroachment, wildlife threats, and ecological observations submitted through the mobile application with geo-tagged multimedia evidenc.",
+      desc: "Overview of field-reported incidents including illegal logging, encroachment, wildlife threats, and ecological observations submitted through the mobile application with geo-tagged multimedia evidence.",
       desc1: "The patrolling module integrates field observations and incident reporting workflows into the monitoring platform."
     },
     {
-      title: "Forest Monitoring Insights",
+      title: "FOREST MONITORING INSIGHTS",
       img: fm,
       desc: "Integrated analytics combining NDVI vegetation trends, patrolling coverage, incident distribution, and working plan status to support restoration planning, enforcement prioritization, and forest protection strategies.",
       desc1: "The application layer delivers analytical dashboards transforming integrated datasets into decision-support insights."
@@ -80,7 +78,7 @@ const Homepage = () => {
   return (
     <>
       {/* HEADER (UNCHANGED) */}
- <header id="header" style={{height:"13vh"}} >
+ <header id="header" >
                  <div className="newcontainer">
                      <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'97%'}}>
                          <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'35px'}}>
@@ -107,7 +105,7 @@ const Homepage = () => {
                              <div className="l_3">
                                  {/* <a href="#!" target="_blank">
                                      </a> */}
-                                     <img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img>
+                                     <a href="/" ><img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img></a>
                              </div>
                              {/* <div>
  <button
@@ -120,9 +118,7 @@ const Homepage = () => {
                              
                          </div>
                      </div>
-                     <div style={{textAlign: 'center', paddingTop: '20px'}}>
-                    <a href="/login" style={{ color: 'white'}}>Login</a>
-                 </div>
+                    
                  </div>
                  
              </header>
@@ -140,15 +136,44 @@ const Homepage = () => {
 <p>
 The WebGIS dashboard integrates spatial data services and field intelligence for operational forest management.
     </p>
-
+<div style={{ 
+  display: 'flex', 
+  justifyContent: 'flex-end', 
+  padding: '1rem 9rem',
+}}>
+  <a 
+    href="/login" 
+    style={{ 
+      color: 'white', 
+      textDecoration: 'none',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontWeight: 500,
+      padding: '1rem 1rem',
+      borderRadius: '14px',
+      transition: 'all 0.3s ease',
+  backgroundImage: 'linear-gradient(180.29deg, #5CFFA9 0.25%, rgba(0, 146, 69, 0.8) 99.75%)'
+    }}
+    onMouseEnter={(e) => {
+      e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+    }}
+    onMouseLeave={(e) => {
+      e.target.style.background = 'linear-gradient(180.29deg, #5CFFA9 0.25%, rgba(0, 146, 69, 0.8) 99.75%)';
+    }}
+  >
+    Launch App
+  </a>
+</div>
     
   </div>
+  
 
   <div className="hero-overlay2">
 <p>Implemented by: Gujarat Forest Department</p>
     <p>Supported by: GIZ | ICIMOD | IKI | IUCN | TERI</p>
     <p>Programme: RECAP4NDC – Restore to Prosper</p>
+
 </div >
+
 </section>
 
 
@@ -229,14 +254,27 @@ The WebGIS dashboard integrates spatial data services and field intelligence for
 
 
 {/* FOOTER */}
-<footer className="footer">
-    <p> © 2026 Gujarat Forest Department | RECAP4NDC Initiative    </p>
-    <div style={{display:'flex', alignItems:'center'}}>
-          <p>Powered by  </p>
-          <img src={gisfylogo} alt="logo picture" style={{width:'100px', height:'40px'}}></img>
-    </div>
+<footer className="footer" style={{color:'black',
+        textAlign:'center',
+        padding:'15px',
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center'}}>
+          <div>
+        <p style={{display: 'flex',alignItems: 'center',gap: '6px' }}> © 2026 Gujarat Forest Department <img src={gujaratlogo} alt="logo picture" style={{width:'40px'}}></img> </p>
 
-</footer>
+          </div>
+        <div style={{display:'flex', alignItems:'center',gap: '6px'}}>
+          <p>Powered by  </p>
+          <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+            <img 
+              src={gisfylogo} 
+              alt="logo picture" 
+              style={{ width: '100px', height: '40px' }} 
+            />
+          </a>
+        </div>
+      </footer>
 
     </>
   );

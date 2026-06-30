@@ -10,11 +10,11 @@
 
 /* Header container */
 .header {
-  height: auto;
   display: flex;
   flex-direction: column;
-  /* background: rgba(255, 255, 255, 0.1); */
-  backdrop-filter: blur(8px);
+  width: 100%;
+  background: transparent;
+  flex-shrink: 0;
 }
 
 /* Top section */
@@ -101,6 +101,7 @@
   font-weight: bold;
   color: #006400;
   margin-right: 16px;
+  position: relative;
 }
 
 
@@ -118,7 +119,6 @@ background: rgb(255, 255, 255);
 .layout-body {
   flex: 1;
   display: flex;
-  min-height: calc(100vh - 65px);
   flex-direction: row;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge *//* Adjust to ensure it takes up full height except for the header */
@@ -159,11 +159,12 @@ background: rgb(255, 255, 255);
 
 .newcontainer {
   background-image: url("../assets/Frame 100.jpg");
-  background-size: 100% 100%;   /* Force fit */
+  background-size: cover; /* or 100% 100% if you want to force fit */
   background-position: center;
   background-repeat: no-repeat;
-  padding: 5px;
-   height: 18vh;
+  padding: 1px 0; /* Adjust padding as needed */
+  /* Remove fixed height: 18vh; */
+  width: 100%;
 }
 
 
@@ -241,7 +242,7 @@ a{
 .content {
   flex: 1;
   overflow-y: auto;
-  
+  min-height: 0;
   background: rgba(255, 255, 255, 0.13);
   box-shadow: 
     -9.048px -9.048px 4.524px -10.556px #B3B3B3 inset,
@@ -339,17 +340,19 @@ a{
   transform: translateX(0);
 }
 
- .layout-body {
-    flex-direction: column;
-    min-height: 100%; /* Prevent shrinking when zoomed out */
-  }
+ .layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden; /* important */
+}
 
   .header {
   height: 65px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 0px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
   margin-top: 0px;
@@ -490,7 +493,7 @@ body{
 
 .dropdown-trigger {
   display: flex;
-  align-items: right;
+  align-items: center;
   gap: 8px;
   padding: 8px 12px;
   cursor: pointer;
@@ -531,17 +534,17 @@ body{
 }
 
 .dropdown-menu {
-  position: fixed;
-  top: 19%;
-  right: 4%;
+  position: absolute;
+    top: 136px;
+    right: 59px;
+  margin-top: 8px;
+
   background: white;
   border: 1px solid #ddd;
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   min-width: 180px;
-  z-index: 2147483647;
-  margin-top: 8px;
-  overflow: hidden;
+  z-index: 99999999999999;
 }
 
 .dropdown-menu a{
@@ -602,52 +605,59 @@ body{
     height: 11vh;
   }
 } */
-
+/* ===== UPDATED MEDIA QUERIES FOR RESPONSIVENESS ===== */
 /* Mobile screens */
 @media only screen and (max-width: 600px) {
   .newcontainer {
-    height: 8vh;
+    padding: 1px 0;
+  }
+  .header-bottom2 {
+    padding-left: 5%;
   }
 }
- 
+
 /* Tablets */
 @media only screen and (min-width: 601px) and (max-width: 834px) {
   .newcontainer {
-    height: 11vh;
+    /* REMOVED: height: 28vh; */
+    padding: 1px 0;
+  }
+  .header-bottom2 {
+    padding-left: 10%;
   }
 }
- 
+
 /* iPad / small laptops */
-@media only screen and (min-width: 835px) and (max-width: 1130px) {
+@media only screen and (min-width: 768px) and (max-width: 1024px) {
   .newcontainer {
-    height: 19vh;
+    /* REMOVED: height: 14vh; */
+    padding: 1px 0;
+  }
+  .header-bottom2 {
+    padding-left: 15%;
   }
 }
- 
+
 /* Large screens */
-@media only screen and (min-width: 1131px) {
+@media only screen and (min-width: 1025px) and (max-width: 1440px) {
   .newcontainer {
-    height: 18vh;
+    /* REMOVED: height: 14vh; */
+    padding: 1px 0;
   }
 }
-/* Large screens */
-@media only screen and (min-width: 1131px) {
-  .newcontainer {
-    height: 18vh;
-  }
-}
- 
+
 /* Extra large screens */
-@media only screen and (min-width: 1500px) {
+/* @media only screen and (min-width: 1441px) and (max-width: 1700px) {
   .newcontainer {
-    height: 18vh;
+    padding: 20px 0;
   }
-}
- 
+} */
+
 /* Ultra wide screens */
 @media only screen and (min-width: 1700px) {
   .newcontainer {
-    height: 14vh;
+    /* REMOVED: height: 14vh; */
+    padding: 1px 0;
   }
 }
 

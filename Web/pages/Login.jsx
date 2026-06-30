@@ -13,7 +13,7 @@ import leftLogos from "../assets/Logo.png";
 import Eyeclose from "../assets/Eyeclose.png";
 import user from "../assets/user.png";
 
-import "../layouts/DashboardLayout.css";
+// import "../layouts/DashboardLayout.css";
 
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
@@ -512,7 +512,7 @@ const saveUser = async (username, password) => {
 
   return (
     <>
-  <header id="header" style={{height:"13vh"}} >
+  <header id="header" >
                 <div className="newcontainer">
                     <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'97%'}}>
                         <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'35px'}}>
@@ -539,7 +539,7 @@ const saveUser = async (username, password) => {
                             <div className="l_3">
                                 {/* <a href="#!" target="_blank">
                                     </a> */}
-                                    <img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img>
+                                     <a href="/" ><img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img></a>
                             </div>
                             {/* <div>
 <button

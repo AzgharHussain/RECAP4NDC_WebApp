@@ -51,7 +51,7 @@ export default function DashboardLayoutAdmin() {
       coupeLog: "Coupe Observation Log",
       patrollingIncident: "Patrolling",
       coupeDashboard: "Coupe Dashboard",
-      patrolBoundary: "Patrol Boundary",
+      plantationBoundary: "Plantation Boundary",
       changePassword: "Change Password",
       changeLanguage: "Change Language",
       english: "English",
@@ -70,7 +70,7 @@ export default function DashboardLayoutAdmin() {
       coupeLog: "કૂપ અવલોકન લોગ",
       patrollingIncident: "પેટ્રોલિંગ",
       coupeDashboard: "કૂપ ડેશબોર્ડ",
-      patrolBoundary: "પેટ્રોલ બાઉન્ડરી",
+      plantationBoundary: "પ્લાન્ટેશન બાઉન્ડરી",
       changePassword: "પાસવર્ડ બદલો",
       changeLanguage: "ભાષા બદલો",
       english: "English",
@@ -186,21 +186,42 @@ export default function DashboardLayoutAdmin() {
 const dropdownRef = useRef(null);
 const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+const headerRef = useRef(null);
+const [contentHeight, setContentHeight] = useState(0);
+
+useEffect(() => {
+  const updateHeight = () => {
+    if (headerRef.current) {
+      setContentHeight(window.innerHeight - headerRef.current.offsetHeight);
+    }
+  };
+
+  updateHeight();
+  window.addEventListener("resize", updateHeight);
+
+  return () => window.removeEventListener("resize", updateHeight);
+}, []);
+
 // Close dropdown when clicking outside
 useEffect(() => {
   const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target)
+    ) {
       setIsDropdownOpen(false);
     }
   };
 
-  document.addEventListener('mousedown', handleClickOutside);
+  document.addEventListener("click", handleClickOutside); // 🔁 use click instead of mousedown
+
   return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
+    document.removeEventListener("click", handleClickOutside);
   };
 }, []);
   return (
     <div className="layout">
+      
       {/* Header */}
       <div className="newcontainer">
 
@@ -263,7 +284,7 @@ useEffect(() => {
             className={`menu-item ${isActiveLink("/UploadPatrolBoundary") ? "active" : ""}`}
             onClick={handleLinkClick}
           >
-            {text[language].patrolBoundary}
+            {text[language].plantationBoundary}
           </NavLink>
            </div>
          <div className="header-right">
@@ -303,7 +324,7 @@ useEffect(() => {
            </div>
          )}
             {isDropdownOpen && (
-      <div className="dropdown-menu">
+      <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
         <div className="username">
         <b>{username}</b>
         {isAdmin && <span className="admin-badge"> (Admin)</span>}

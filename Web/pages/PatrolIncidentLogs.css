@@ -56,9 +56,17 @@ body {
 .transparent-table .ant-table-tbody > tr:hover > td {
   background: rgba(0, 0, 0, 0.05) !important;  /* slight black highlight on hover */
 }
-.section{
-      overflow: auto;
-    max-height: 620px;
+.section {
+  overflow: auto;
+  max-height: 1000px;
+
+  /* Hide scrollbar - Chrome, Safari */
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE and Edge */
+}
+
+.section::-webkit-scrollbar {
+  display: none;                /* Chrome, Safari */
 }
 /* === Filters Section === */
 .filters-section {
@@ -155,7 +163,7 @@ body {
 .transparent-table .ant-table-column-sorter,
 .transparent-table .ant-table-column-sorter-up,
 .transparent-table .ant-table-column-sorter-down {
-  color: #000 !important;
+  color: white !important;
 }
 
 /* === Force filter placeholders to light blue === */

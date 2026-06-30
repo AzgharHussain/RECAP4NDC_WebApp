@@ -275,7 +275,7 @@ const LayerItem = React.memo(({
   );
 });
 
-const AttributePopup = React.memo(({ position, data, onClose }) => {
+const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActive }) => {
   if (!position || !data) return null;
 
   const popupRef = useRef(null);
@@ -285,6 +285,10 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
     const handleClickOutside = (event) => {
       if (popupRef.current && !popupRef.current.contains(event.target)) {
         onClose();
+        // Deactivate the info tool button when popup closes
+        if (setIsInfoToolActive) {
+          setIsInfoToolActive(false);
+        }
       }
     };
 
@@ -292,7 +296,21 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [onClose]);
+  }, [onClose, setIsInfoToolActive]);
+
+  // Prevent event propagation to avoid triggering map clicks
+  const handlePopupClick = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleCloseClick = (e) => {
+    e.stopPropagation(); // Prevent event bubbling to map
+    onClose();
+    // Deactivate the info tool button when close button is clicked
+    if (setIsInfoToolActive) {
+      setIsInfoToolActive(false);
+    }
+  };
 
   const formatValue = (value) => {
     if (value === null || value === undefined) return 'N/A';
@@ -348,6 +366,7 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
     <div
       ref={popupRef}
       className="attribute-popup"
+      onClick={handlePopupClick}
       style={{
         position: 'absolute',
         left: `${position.x}px`,
@@ -362,7 +381,7 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
         maxWidth: '400px',
         maxHeight: '300px',
         overflow: 'auto',
-        fontFamily:'arial'
+        fontFamily: 'arial'
       }}
     >
       <div className="attribute-popup-header" style={{
@@ -377,7 +396,7 @@ const AttributePopup = React.memo(({ position, data, onClose }) => {
           Feature Information
         </h4>
         <button
-          onClick={onClose}
+          onClick={handleCloseClick}
           style={{
             background: 'none',
             border: 'none',
@@ -588,7 +607,7 @@ const layersData = {
                     { Name: "jasadhar", Layer: "Jasadhar" },
                     { Name: "paniya", Layer: "Paniya" },
                     { Name: "sarasiya", Layer: "Sarasiya" },
-                    { Name: "savar_kundla", Layer: "Savar Kundala" },
+                    { Name: "savar_kundlagir", Layer: "Savar Kundala" },
                     { Name: "tulsishyam", Layer: "Tulsishyam" }
                   ]
                 }
@@ -626,8 +645,8 @@ const layersData = {
                   title: "Ranges",
                   type: "group",
                   children: [
-                    { Name: "bhanvad", Layer: "Bhanvad" },
-                    { Name: "ranavav", Layer: "Ranavav" }
+                    { Name: "bhanvadporbandar", Layer: "Bhanvad" },
+                    { Name: "ranavavporbandar", Layer: "Ranavav" }
                   ]
                 }
               ]
@@ -640,7 +659,7 @@ const layersData = {
                   title: "Ranges",
                   type: "group",
                   children: [
-                    { Name: "talaja", Layer: "Talaja" }
+                    { Name: "talajashetranjee", Layer: "Talaja" }
                   ]
                 }
               ]
@@ -675,12 +694,12 @@ const layersData = {
                   title: "Ranges",
                   type: "group",
                   children: [
-                    { Name: "dediyapada", Layer: "Dediyapada" },
+                    { Name: "dediyapadanarmada", Layer: "Dediyapada" },
                     { Name: "fulsar", Layer: "Fulsar" },
                     { Name: "piplod", Layer: "Piplod" },
-                    { Name: "rajpipla", Layer: "Rajpipla" },
+                    { Name: "rajpiplanarmada", Layer: "Rajpipla" },
                     { Name: "sagai", Layer: "Sagai" },
-                    { Name: "sagbara", Layer: "Sagbara" },
+                    { Name: "sagbaranarmada", Layer: "Sagbara" },
                     { Name: "sorapada", Layer: "Sorapada" }
                   ]
                 }
@@ -1670,7 +1689,7 @@ const layersData = {
         { Name: "morbi_coupe", Layer: "Morbi" },
         { Name: "narmada_coupe", Layer: "Narmada" },
         { Name: "sabarkantha_coupe", Layer: "Sabarkantha" },
-        { Name: "aravali_coupe", Layer: "Sabarkantha_South" },
+        { Name: "aravalli_coupe", Layer: "Aravalli" },
         { Name: "surendranagar_coupe", Layer: "Surendranagar" },
       ]
     },
@@ -1739,11 +1758,11 @@ const text = {
     coupeLegend: "કૂપ NDVI ફેરફાર",
     showLegend: "સમજૂતી બતાવો",
   hideLegend: "સમજૂતી છુપાવો",
-  clearAll: "બધું સાફ કરો"
+  clearAll: "બધું ક્લિયર કરો"
   },
 };
 
-const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolSidebar, isInfoToolActive }) => {
+const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolSidebar, isInfoToolActive, setIsInfoToolActive   }) => {
   const { language } = useLanguage();
   const [addedLayers, setAddedLayers] = useState({});
   const [opacity, setOpacity] = useState({});
@@ -2019,87 +2038,105 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
   }, [mapRef]);
 
   // Map click handler for info tool
-  const handleMapClick = useCallback(async (e) => {
-    if (!isInfoToolActive || !mapRef.current) return;
+  // Update the handleMapClick function in LayerTogglePanel.js
+const handleMapClick = useCallback(async (e) => {
+  if (!isInfoToolActive || !mapRef.current) return;
+  
+  // Prevent duplicate clicks
+  if (clickHandlerRef.current?.isProcessing) return;
+  
+  const { latlng } = e;
+  const containerPoint = mapRef.current.latLngToContainerPoint(latlng);
+  
+  // Set processing flag
+  if (clickHandlerRef.current) {
+    clickHandlerRef.current.isProcessing = true;
+  }
+  
+  // Get all visible layers
+  const visibleLayers = Object.values(addedLayers);
+  if (visibleLayers.length === 0) {
+    setAttributeData({ 
+      message: "No visible layers to query.",
+      coordinates: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`
+    });
+    setClickPosition({ x: containerPoint.x, y: containerPoint.y });
     
-    const { latlng } = e;
-    const containerPoint = mapRef.current.latLngToContainerPoint(latlng);
+    // Reset processing flag after delay
+    setTimeout(() => {
+      if (clickHandlerRef.current) {
+        clickHandlerRef.current.isProcessing = false;
+      }
+    }, 500);
+    return;
+  }
+
+  // Query each visible layer
+  const queries = visibleLayers.map(async (layer) => {
+    const layerName = layer._metadata?.name;
+    if (!layerName) return null;
     
-    // Get all visible layers
-    const visibleLayers = Object.values(addedLayers);
-    if (visibleLayers.length === 0) {
-      // No layers to query
+    console.log('Querying layer:', layerName);
+    const featureInfo = await getFeatureInfo(latlng, layerName);
+    if (featureInfo) {
+      return {
+        layerName: layer._metadata?.label || layerName,
+        data: featureInfo
+      };
+    }
+    return null;
+  });
+
+  try {
+    const results = await Promise.all(queries);
+    const validResults = results.filter(result => result !== null);
+    
+    if (validResults.length === 0) {
       setAttributeData({ 
-        message: "No visible layers to query.",
+        message: "No data found at this location.",
         coordinates: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`
       });
-      setClickPosition({ x: containerPoint.x, y: containerPoint.y });
-      return;
-    }
-
-    // Query each visible layer
-    const queries = visibleLayers.map(async (layer) => {
-      const layerName = layer._metadata?.name;
-      if (!layerName) return null;
+    } else {
+      // Combine all results
+      const combinedData = {};
       
-      console.log('Querying layer:', layerName);
-      const featureInfo = await getFeatureInfo(latlng, layerName);
-      if (featureInfo) {
-        return {
-          layerName: layer._metadata?.label || layerName,
-          data: featureInfo
-        };
-      }
-      return null;
-    });
-
-    try {
-      const results = await Promise.all(queries);
-      const validResults = results.filter(result => result !== null);
+      combinedData.coordinates = `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`;
       
-      if (validResults.length === 0) {
-        setAttributeData({ 
-          message: "No data found at this location.",
-          coordinates: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`
-        });
-      } else {
-        // Combine all results
-        const combinedData = {};
+      validResults.forEach((result, index) => {
+        const layerKey = `layer_${index + 1}`;
+        combinedData[`${layerKey}_name`] = result.layerName;
         
-        // Add coordinates first
-        combinedData.coordinates = `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`;
-        
-        // Add layer results
-        validResults.forEach((result, index) => {
-          const layerKey = `layer_${index + 1}`;
-          combinedData[`${layerKey}_name`] = result.layerName;
-          
-          // Add all properties from the feature info
-          Object.entries(result.data).forEach(([key, value]) => {
-            if (key !== 'geometry') {
-              combinedData[`${layerKey}_${key}`] = value;
-            }
-          });
-          
-          // Add geometry if available
-          if (result.data.geometry) {
-            combinedData[`${layerKey}_geometry`] = JSON.stringify(result.data.geometry.coordinates);
+        Object.entries(result.data).forEach(([key, value]) => {
+          if (key !== 'geometry') {
+            combinedData[`${layerKey}_${key}`] = value;
           }
         });
         
-        setAttributeData(combinedData);
-      }
-      
-      setClickPosition({ x: containerPoint.x, y: containerPoint.y });
-    } catch (error) {
-      console.error('Error querying layers:', error);
-      setAttributeData({ 
-        error: "Failed to query layers. Please try again.",
-        coordinates: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`
+        if (result.data.geometry) {
+          combinedData[`${layerKey}_geometry`] = JSON.stringify(result.data.geometry.coordinates);
+        }
       });
-      setClickPosition({ x: containerPoint.x, y: containerPoint.y });
+      
+      setAttributeData(combinedData);
     }
-  }, [isInfoToolActive, mapRef, addedLayers, getFeatureInfo]);
+    
+    setClickPosition({ x: containerPoint.x, y: containerPoint.y });
+  } catch (error) {
+    console.error('Error querying layers:', error);
+    setAttributeData({ 
+      error: "Failed to query layers. Please try again.",
+      coordinates: `Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}`
+    });
+    setClickPosition({ x: containerPoint.x, y: containerPoint.y });
+  } finally {
+    // Reset processing flag after delay
+    setTimeout(() => {
+      if (clickHandlerRef.current) {
+        clickHandlerRef.current.isProcessing = false;
+      }
+    }, 500);
+  }
+}, [isInfoToolActive, mapRef, addedLayers, getFeatureInfo]);
 
   // Setup map click handler
   useEffect(() => {
@@ -3066,13 +3103,14 @@ const renderGroup = (group, index, section = "layers") => {
       </aside>
       
       <AttributePopup
-        position={clickPosition}
-        data={attributeData}
-        onClose={() => {
-          setAttributeData(null);
-          setClickPosition(null);
-        }}
-      />
+  position={clickPosition}
+  data={attributeData}
+  onClose={() => {
+    setAttributeData(null);
+    setClickPosition(null);
+  }}
+  setIsInfoToolActive={setIsInfoToolActive} // Add this prop
+/>
     </>
   );
 };
