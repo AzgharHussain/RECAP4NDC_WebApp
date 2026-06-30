@@ -1,0 +1,355 @@
+/* ============================================================
+   PAGE WRAPPER — all a11y effects target #a11y-page-wrapper
+   (not body/html) so position:fixed on the widget is never
+   broken by a CSS filter creating a new containing block.
+   ============================================================ */
+#a11y-page-wrapper {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ── Bigger Text (4 levels) — zoom scales px, em AND rem universally ── */
+#a11y-page-wrapper.a11y-bigger-1 { zoom: 1.10; }
+#a11y-page-wrapper.a11y-bigger-2 { zoom: 1.22; }
+#a11y-page-wrapper.a11y-bigger-3 { zoom: 1.35; }
+#a11y-page-wrapper.a11y-bigger-4 { zoom: 1.50; }
+
+/* ── Smaller Text (3 levels) ── */
+#a11y-page-wrapper.a11y-smaller-1 { zoom: 0.90; }
+#a11y-page-wrapper.a11y-smaller-2 { zoom: 0.80; }
+#a11y-page-wrapper.a11y-smaller-3 { zoom: 0.70; }
+
+/* ── Text Spacing (3 levels) ── */
+#a11y-page-wrapper.a11y-spacing-1 * { letter-spacing: 0.05em !important; word-spacing: 0.08em !important; }
+#a11y-page-wrapper.a11y-spacing-2 * { letter-spacing: 0.10em !important; word-spacing: 0.16em !important; }
+#a11y-page-wrapper.a11y-spacing-3 * { letter-spacing: 0.18em !important; word-spacing: 0.28em !important; }
+
+/* ── Line Height (3 levels) ── */
+#a11y-page-wrapper.a11y-lh-1 * { line-height: 1.6 !important; }
+#a11y-page-wrapper.a11y-lh-2 * { line-height: 2.0 !important; }
+#a11y-page-wrapper.a11y-lh-3 * { line-height: 2.5 !important; }
+
+/* ── Dyslexia Friendly ── */
+#a11y-page-wrapper.a11y-dyslexia * {
+  font-family: Arial, Verdana, 'Helvetica Neue', sans-serif !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* ── Highlight Links ── */
+#a11y-page-wrapper.a11y-hl-links a,
+#a11y-page-wrapper.a11y-hl-links [role="link"] {
+  background-color: #ffe600 !important;
+  color: #000000 !important;
+  text-decoration: underline !important;
+  border-radius: 3px !important;
+  padding: 1px 4px !important;
+  outline: 1px solid #333 !important;
+}
+
+/* ── Big Cursor ── */
+#a11y-page-wrapper.a11y-big-cursor,
+#a11y-page-wrapper.a11y-big-cursor * {
+  cursor: url("data:image/svg+xml,%3Csvg%20width%3D%2248%22%20height%3D%2248%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M6%202L6%2036L13%2028L18%2042L22%2040L17%2026L28%2026Z%22%20fill%3D%22%23000%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.5%22%2F%3E%3C%2Fsvg%3E") 6 2, auto !important;
+}
+
+/* ── Pause Animations ── */
+#a11y-page-wrapper.a11y-pause *,
+#a11y-page-wrapper.a11y-pause *::before,
+#a11y-page-wrapper.a11y-pause *::after {
+  animation-play-state: paused !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* ── Hide Images ── */
+#a11y-page-wrapper.a11y-hide-img img,
+#a11y-page-wrapper.a11y-hide-img video {
+  visibility: hidden !important;
+}
+
+/* ============================================================
+   ACCESSIBILITY WIDGET — FLOATING TRIGGER BUTTON
+   ============================================================ */
+
+.a11y-trigger-btn {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 10000;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #1a3a5c;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 27px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transition: background 0.2s ease, transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.a11y-trigger-btn:hover {
+  background: #1e4a78;
+  transform: scale(1.08);
+}
+
+.a11y-trigger-btn:focus-visible {
+  outline: 3px solid #7c3aed;
+  outline-offset: 3px;
+}
+
+.a11y-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #e53e3e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  pointer-events: none;
+}
+
+/* ============================================================
+   ACCESSIBILITY WIDGET — BACKDROP
+   ============================================================ */
+
+.a11y-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: transparent;
+}
+
+/* ============================================================
+   ACCESSIBILITY WIDGET — PANEL
+   ============================================================ */
+
+.a11y-panel {
+  position: fixed;
+  bottom: 90px;
+  left: 24px;
+  z-index: 9999;
+  width: 338px;
+  max-height: calc(100vh - 120px);
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(16px) scale(0.97);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.a11y-panel.a11y-panel--open {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Panel Header */
+.a11y-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid #ebebeb;
+  flex-shrink: 0;
+}
+
+.a11y-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+.a11y-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid #e0e0e0;
+  background: #f5f5f5;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.a11y-close-btn:hover {
+  background: #e0e0e0;
+  color: #222;
+}
+
+/* Options Grid — 3 columns */
+.a11y-options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  padding: 14px 14px 10px;
+  overflow-y: auto;
+}
+
+.a11y-option-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 6px 8px;
+  border: 1.5px solid #e2e2e2;
+  border-radius: 12px;
+  background: #fafafa;
+  color: #3a3a4a;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+  font-family: inherit;
+  min-height: 90px;
+}
+
+.a11y-option-btn:hover {
+  background: #f3efff;
+  border-color: #a78bfa;
+  transform: translateY(-1px);
+}
+
+.a11y-option-btn.active {
+  background: #ede9fe;
+  border-color: #7c3aed;
+  color: #4c1d95;
+}
+
+.a11y-option-btn:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+.a11y-option-icon {
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: inherit;
+}
+
+.a11y-option-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.35;
+  color: inherit;
+}
+
+/* Text "AA" icon for bigger/smaller text */
+.a11y-text-aa {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  line-height: 1;
+  color: inherit;
+}
+
+.a11y-text-aa .aa-big {
+  font-size: 22px;
+}
+
+.a11y-text-aa .aa-small {
+  font-size: 14px;
+}
+
+/* ── Level dots (stepped features) ── */
+.a11y-level-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 1px;
+}
+
+.a11y-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  border: 1.5px solid #c4b5fd;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.a11y-option-btn.active .a11y-dot {
+  border-color: #7c3aed;
+}
+
+.a11y-dot.a11y-dot-filled {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+/* Reset Button */
+.a11y-reset-btn {
+  width: calc(100% - 28px);
+  margin: 6px 14px 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: none;
+  background: #ede9fe;
+  color: #4c1d95;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+.a11y-reset-btn:hover {
+  background: #ddd6fe;
+}
+
+.a11y-reset-btn:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   RESPONSIVE — stack to bottom-center on mobile
+   ============================================================ */
+@media (max-width: 480px) {
+  .a11y-panel {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    bottom: 84px;
+  }
+
+  .a11y-trigger-btn {
+    left: 14px;
+    bottom: 14px;
+  }
+}

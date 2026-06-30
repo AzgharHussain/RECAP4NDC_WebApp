@@ -1,6 +1,8 @@
 import React, { Suspense, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "./context/LanguageContext";
+import { AccessibilityProvider, A11yPageWrapper } from "./context/AccessibilityContext";
+import AccessibilityWidget from "./components/AccessibilityWidget";
 import ProtectedRoute from "./pages/components/ProtectedRoute";
 import './fonts.css';
 
@@ -34,9 +36,11 @@ const LoadingFallback = () => (
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <Suspense fallback={<LoadingFallback />}>
-        <Routes>
+    <AccessibilityProvider>
+      <LanguageProvider>
+        <A11yPageWrapper>
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
 
           {/* Public */}
           <Route path="/login" element={<Login />} />
@@ -76,8 +80,11 @@ export default function App() {
           {/* Fallback */}
           <Route path="*" element={<Homepage />} />
 
-        </Routes>
-      </Suspense>
-    </LanguageProvider>
+          </Routes>
+        </Suspense>
+        </A11yPageWrapper>
+        <AccessibilityWidget />
+      </LanguageProvider>
+    </AccessibilityProvider>
   );
 }
