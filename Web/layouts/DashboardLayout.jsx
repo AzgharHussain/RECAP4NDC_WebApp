@@ -76,7 +76,7 @@ const [contentHeight, setContentHeight] = useState(0);
       language: "ભાષા",
       english: "અંગ્રેજી",
       gujarati: "ગુજરાતી",
-      NDVIDashboard: "એનડીવીઆઈ ડેશબોર્ડ",        // Added (Gujarati translation)
+      NDVIDashboard: "NDVI ડેશબોર્ડ",        // Added (Gujarati translation)
       PatrolCoverageAnalysis: "પેટ્રોલ કવરેજ વિશ્લેષણ" 
     },
   };
@@ -132,8 +132,7 @@ useEffect(() => {
   };
 
   const handleLogout = async () => {
-
-      try {
+  try {
     const token = localStorage.getItem("token");
 
     if (token) {
@@ -150,37 +149,31 @@ useEffect(() => {
   } catch (err) {
     console.error("Logout API error:", err);
   }
-    // Clear all session data
-    const itemsToRemove = [
-      'session',
-      'userData',
-      'token',
-      'authToken',
-      'forest_authenticated',
-      'user',
-      'admin_token'
-    ];
 
-    itemsToRemove.forEach(item => {
-      localStorage.removeItem(item);
-      sessionStorage.removeItem(item);
-    });
+  // Clear storage
+  [
+    'session',
+    'userData',
+    'token',
+    'authToken',
+    'forest_authenticated',
+    'user',
+    'admin_token'
+  ].forEach(item => {
+    localStorage.removeItem(item);
+    sessionStorage.removeItem(item);
+  });
 
-    // Clear cookies (if any)
-    document.cookie.split(";").forEach(cookie => {
-      const eqPos = cookie.indexOf("=");
-      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-    });
+  // Clear cookies
+  document.cookie.split(";").forEach(cookie => {
+    document.cookie = cookie
+      .replace(/^ +/, "")
+      .replace(/=.*/, "=;expires=" + new Date(0).toUTCString() + ";path=/");
+  });
 
-    setIsAdminMenuOpen(false);
-    
-    // Navigate to login page
-    navigate("/");
-    
-    // Force reload to ensure clean state
-    window.location.reload();
-  };
+  // Redirect cleanly
+  window.location.href = "/";
+};
 
   const isAdminUser = () => {
     try {
@@ -204,14 +197,18 @@ const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 // Close dropdown when clicking outside
 useEffect(() => {
   const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target)
+    ) {
       setIsDropdownOpen(false);
     }
   };
 
-  document.addEventListener('mousedown', handleClickOutside);
+  document.addEventListener("click", handleClickOutside); // 🔁 use click instead of mousedown
+
   return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
+    document.removeEventListener("click", handleClickOutside);
   };
 }, []);
   return (
@@ -415,7 +412,7 @@ useEffect(() => {
         </div>
       )}
          {isDropdownOpen && (
-      <div className="dropdown-menu">
+      <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
         <div className="username">
         <b>{username}</b>
         {isAdmin && <span className="admin-badge"> (Admin)</span>}

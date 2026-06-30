@@ -252,7 +252,7 @@ const dashboardText = {
     exportPDF: "પીડીએફ એક્સપોર્ટ",
     
     // Hierarchy Navigation
-    forestHierarchy: "વન વંશવેલો નેવિગેશન",
+    forestHierarchy: "વન માળખું નેવિગેશન",
     
     // Date Range Selection
     selectDateRange: "તારીખ શ્રેણી પસંદ કરો",
@@ -267,10 +267,10 @@ const dashboardText = {
     errorRangeExceed: 'તારીખ શ્રેણી 12 મહિનાથી વધુ ન હોઈ શકે. કૃપા કરीને ટૂંકી શ્રેણી પસંદ કરો.',
     
     // Loading states
-    loadingData: "ડેટa લોડ થઈ રહ્యો છે...",
-    fetchingCoupeArea: "કೂಪ ವಿಸ್ತಾರ ಮುಂದುವರಿಸುತ್ತಿದೆ...",
-    calculatingDegradedArea: "ಡಿಗ್ರೇಡೆಡ್ ವಿಸ್ತಾರ ಗಣನೆಯಲ್ಲಿ ಮುಂದುವರಿಸುತ್ತಿದೆ...",
-    loadingNDVIChange: "ಬಹುವಿದ ಮಹಿನಗಳಲ್ಲಿ NDVI ಬದಲಾವನೆಯ ಡೇಟಾ ಲೋಡ್ ಮಾಡಲಾಗತಕದಕ...",
+    loadingData: "ડેટા લોડ થઈ રહ્યો છે...",
+fetchingCoupeArea: "કૂપ વિસ્તાર મેળવાઈ રહ્યો છે...",
+calculatingDegradedArea: "ક્ષતિગ્રસ્ત વિસ્તારની ગણતરી થઈ રહી છે...",
+loadingNDVIChange: "મહિના મુજબ NDVI ફેરફારનો ડેટા લોડ થઈ રહ્યો છે...",
     
     // Area Analysis
     areaAnalysis: "વિસ્તાર વિશ્લેષણ",
@@ -292,9 +292,9 @@ const dashboardText = {
     detailedDataTable: "૧. વિગતવાર ડેટા ટેબલ",
     searchPlaceholder: "ID, સ્થિતિ, સ્થાન, નોંધો, વિભાગ દ્વારા શોધો...",
     showDivisionColumn: "વિభாக காலம் காண்பி",
-    onlyWithNotes: "మాత్రమే నోంధులతో",
-    onlyWithImages: "మాత్రమే చిత్రాలతో",
-    clearFilters: "ఫిల్టర్లను కలుపు",
+    onlyWithNotes: "ફક્ત નોંધો સાથે",
+onlyWithImages: "ફક્ત છબીઓ સાથે",
+clearFilters: "ફિલ્ટર દૂર કરો",
     
     // Table Headers
     division: "વિભાગ",
@@ -368,7 +368,7 @@ const dashboardText = {
     // Area values
     degradedAreaValue: "અધોગતિ વિસ્તાર",
     afforestedAreaValue: "વનીકૃત વિસ્તાર",
-    netChange: "ચોખ્ખો ફેરફાર",
+    netChange: "નેટ ફેરફાર",
     
     // Chart titles
     monthlyNDVIChange: "માસિક NDVI ફેરફાર - વિસ્તાર વિશ્લેષણ",
@@ -920,6 +920,8 @@ const NDVIChangeDashboard = () => {
 
   // Simplified function to fetch data for all divisions separately
 const fetchAllDivisionsData = async (months) => {
+  setShowOnlyWithImages(false);
+  setShowOnlyWithNotes(false);
     try {
       const token = localStorage.getItem("token");
       
@@ -1126,6 +1128,8 @@ const fetchAllDivisionsData = async (months) => {
     setMonthlyData({});
     setCurrentTableData([]);
     setSummaryStats(null);
+    setShowOnlyWithImages(false);
+  setShowOnlyWithNotes(false);
     
     try {
       // Check if "All Divisions" is selected
@@ -2377,7 +2381,11 @@ const handleExportToPDF = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3, minHeight: '100vh' }}>
+    <Container maxWidth="xl" sx={{ py: 3,
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column' }}>
+        <div className="main-content">
       {/* Header */}
       <Card sx={{ mb: 4, bgcolor: 'transparent', color: 'black', borderRadius: 3, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
   <CardContent>
@@ -3323,13 +3331,9 @@ const handleExportToPDF = () => {
           {t.footerNote}
         </Typography>
       </Box>
+      </div>
 
-          <footer className="footer" style={{color:'black',
-                  textAlign:'center',
-                  padding:'15px',
-                  display: 'flex',
-                  justifyContent: 'space-around',
-                  alignItems: 'center'}}>
+          <footer className="footer">
                     <div>
                   <p style={{display: 'flex',alignItems: 'center',gap: '6px' }}> © 2026 Gujarat Forest Department <img src={gujaratlogo} alt="logo picture" style={{width:'40px'}}></img> </p>
           

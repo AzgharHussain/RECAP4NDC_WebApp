@@ -78,7 +78,7 @@ const Homepage = () => {
   return (
     <>
       {/* HEADER (UNCHANGED) */}
- <header id="header" style={{height:"6vh"}} >
+ <header id="header" >
                  <div className="newcontainer">
                      <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'97%'}}>
                          <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'35px'}}>

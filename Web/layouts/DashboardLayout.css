@@ -10,11 +10,10 @@
 
 /* Header container */
 .header {
-  height: auto;
   display: flex;
   flex-direction: column;
-  /* background: rgba(255, 255, 255, 0.1); */
-  backdrop-filter: blur(8px);
+  width: 100%;
+  background: transparent;
   flex-shrink: 0;
 }
 
@@ -160,11 +159,12 @@ background: rgb(255, 255, 255);
 
 .newcontainer {
   background-image: url("../assets/Frame 100.jpg");
-  background-size: 100% 100%;   /* Force fit */
+  background-size: cover; /* or 100% 100% if you want to force fit */
   background-position: center;
   background-repeat: no-repeat;
-  padding: 5px;
-   height: 18vh;
+  padding: 1px 0; /* Adjust padding as needed */
+  /* Remove fixed height: 18vh; */
+  width: 100%;
 }
 
 
@@ -352,7 +352,7 @@ a{
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 0px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
   margin-top: 0px;
@@ -605,53 +605,59 @@ body{
     height: 11vh;
   }
 } */
-
+/* ===== UPDATED MEDIA QUERIES FOR RESPONSIVENESS ===== */
 /* Mobile screens */
 @media only screen and (max-width: 600px) {
   .newcontainer {
-    height: 8vh;
+    padding: 1px 0;
+  }
+  .header-bottom2 {
+    padding-left: 5%;
   }
 }
- 
+
 /* Tablets */
 @media only screen and (min-width: 601px) and (max-width: 834px) {
   .newcontainer {
-    height: 28vh;
+    /* REMOVED: height: 28vh; */
+    padding: 1px 0;
+  }
+  .header-bottom2 {
+    padding-left: 10%;
   }
 }
- 
+
 /* iPad / small laptops */
 @media only screen and (min-width: 768px) and (max-width: 1024px) {
   .newcontainer {
-    height: 14vh;
+    /* REMOVED: height: 14vh; */
+    padding: 1px 0;
+  }
+  .header-bottom2 {
+    padding-left: 15%;
   }
 }
 
-@media only screen and (min-width: 835px) and (max-width: 1024px) {
-  .header-bottom2 {
-    padding-left: 13%;
-  }
-}
- 
 /* Large screens */
 @media only screen and (min-width: 1025px) and (max-width: 1440px) {
   .newcontainer {
-    height: 14vh;
+    /* REMOVED: height: 14vh; */
+    padding: 1px 0;
   }
 }
 
- 
 /* Extra large screens */
-@media only screen and (min-width: 1441px) and (max-width: 1700px) {
+/* @media only screen and (min-width: 1441px) and (max-width: 1700px) {
   .newcontainer {
-    height: 18vh;
+    padding: 20px 0;
   }
-}
- 
+} */
+
 /* Ultra wide screens */
 @media only screen and (min-width: 1700px) {
   .newcontainer {
-    height: 14vh;
+    /* REMOVED: height: 14vh; */
+    padding: 1px 0;
   }
 }
 

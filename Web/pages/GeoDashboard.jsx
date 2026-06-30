@@ -504,16 +504,65 @@ const handleDrawingToolClick = (toolType) => {
     saveAs(file); // FileSaver.js download function
   };
 
-        const [activeToolSidebar, setActiveToolSidebar] = useState('searchIconArea');
+        const [activeToolSidebar, setActiveToolSidebar] = useState(null);
+       const [measurementLayers, setMeasurementLayers] = useState([]);
 
+const clearAllMeasurements = () => {
+  const map = mapRef.current;
+  if (!map) return;
+
+  console.log("Clearing all measurements, layers count:", measurementLayers.length);
+  
+  // Close any open popup first
+  map.closePopup();
+  
+  measurementLayers.forEach(layer => {
+    if (map.hasLayer(layer)) {
+      // Remove any bound popups
+      if (layer.unbindPopup) {
+        layer.unbindPopup();
+      }
+      map.removeLayer(layer);
+    }
+  });
+  
+  setMeasurementLayers([]);
+  
+  // Disable any active drawing tools
+  if (map.pm) {
+    map.pm.disableDraw();
+  }
+  
+  // Remove any drawing tooltips
+  const tooltipElement = document.querySelector('.leaflet-draw-tooltip');
+  if (tooltipElement) {
+    tooltipElement.style.display = 'none';
+  }
+  
+  // Also try to remove any layers with measurement popups
+  map.eachLayer((layer) => {
+    // Check if layer has measurement popup content
+    if (layer.getPopup && layer.getPopup()) {
+      const popupContent = layer.getPopup().getContent();
+      if (popupContent && (popupContent.includes('Distance:') || 
+          popupContent.includes('Area:') || 
+          popupContent.includes('Circle'))) {
+        if (layer.unbindPopup) {
+          layer.unbindPopup();
+        }
+        map.removeLayer(layer);
+      }
+    }
+  });
+};
 const handleToolSidebarClick = (toolName) => {
   setActiveToolSidebar(prevTool => prevTool === toolName ? null : toolName);
 };
 
 const handleInfoToolClick = () => {
-  const newTool = activeToolSidebar === "info" ? null : "info";
-  setActiveToolSidebar(newTool);
-  setIsInfoToolActive(!isInfoToolActive);
+  const newState = !isInfoToolActive;
+  setIsInfoToolActive(newState);
+  setActiveToolSidebar(newState ? "info" : null);
 };
 
   const zoomToLayer = (layerName) => {
@@ -711,27 +760,29 @@ const handleLayerToggle = (layerType, isChecked) => {
   </button>
 
   {/* Measurement Tool */}
-  <button
-    title="Measurement"
-    type="button"
-    onClick={() => {
-      const newTool = activeToolSidebar === "measure" ? null : "measure";
-      setActiveToolSidebar(newTool);
-
-      if (newTool !== "measure" && mapRef.current) {
-        mapRef.current.pm.removeControls();
-      }
-    }}
-    className={activeToolSidebar === "measure" ? "tool-button-active" : "tool-button"}
-  >
-    <span className="material-icons-outlined">straighten</span>
-  </button>
+<button
+  title="Measurement"
+  type="button"
+  onClick={() => {
+    if (activeToolSidebar === "measure") {
+      // Close sidebar AND clear all measurements
+      setActiveToolSidebar(null);
+      clearAllMeasurements(); // Clear all drawn measurements
+    } else {
+      // Open sidebar
+      setActiveToolSidebar("measure");
+    }
+  }}
+  className={activeToolSidebar === "measure" ? "tool-button-active" : "tool-button"}
+>
+  <span className="material-icons-outlined">straighten</span>
+</button>
 
 <button
   title="Attribute Information"
   type="button"
   onClick={handleInfoToolClick}
-  className={activeToolSidebar === "info" ? "tool-button-active" : "tool-button"}
+  className={isInfoToolActive ? "tool-button-active" : "tool-button"}
 >
   <FaInfoCircle />
 </button>
@@ -763,11 +814,17 @@ const handleLayerToggle = (layerType, isChecked) => {
         />
       </Suspense>
 {activeToolSidebar === "measure" && (
-           <Suspense fallback={<div>Loading...</div>}>
-          <RightSidebar mapRef={mapRef}  
-              setActiveToolSidebar={setActiveToolSidebar} />
-        </Suspense>
-        )}
+  <Suspense fallback={<div>Loading...</div>}>
+    <RightSidebar 
+      mapRef={mapRef}  
+      setActiveToolSidebar={setActiveToolSidebar}
+      isActive={activeToolSidebar === "measure"}
+      setMeasurementLayers={setMeasurementLayers} // Pass this to collect layers
+      measurementLayers={measurementLayers} // Pass existing layers
+      clearAllMeasurements={clearAllMeasurements} // Pass clear function
+    />
+  </Suspense>
+)}
 
         <div className="main-container" ref={mapWrapperRef}>
   
@@ -790,12 +847,12 @@ const handleLayerToggle = (layerType, isChecked) => {
          {/* {showLayerTogglePanel && ( */}
             <div>
               <Suspense fallback={<div>Loading...</div>}>
-                <LayerTogglePanel
-                 isInfoToolActive={isInfoToolActive}
-                  mapRef={mapRef}
-                  
-                />
-              </Suspense>
+  <LayerTogglePanel
+    isInfoToolActive={isInfoToolActive}
+    setIsInfoToolActive={setIsInfoToolActive} // Pass this
+    mapRef={mapRef}
+  />
+</Suspense>
             </div>
           {/* )} */}
      <div style={{ display: "flex", width: "auto", height: "auto" }}>

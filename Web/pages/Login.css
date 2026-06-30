@@ -1,10 +1,11 @@
-/* ===== Root ===== */
+/* ===== Root and Global Styles ===== */
 :root {
   overflow-x: hidden;
   overflow-y: hidden;
-  font-family: 'arial';
+  font-family: 'Arial', sans-serif;
 }
 
+/* Hide password toggle icons in password fields */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,
 input[type="password"]::-webkit-contacts-auto-fill-button,
@@ -35,6 +36,61 @@ input[type="password"] {
   appearance: none;
 }
 
+/* ===== Header Styles ===== */
+#header {
+  width: 100%;
+}
+
+.newcontainer {
+  background-image: url("../assets/Frame 100.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 10px 0;
+  width: 100%;
+}
+
+.headAssets {
+  background-color: white;
+  border-radius: 120px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 2px;
+  width: 97%;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 35px;
+}
+
+.portal-header h2 {
+  letter-spacing: 2px;
+  margin: 0;
+}
+
+.portal-header h2 b {
+  font-family: "Arial", sans-serif;
+  font-weight: 700;
+}
+
+.ministryLogo {
+  display: flex;
+  align-items: center;
+  gap: 23px;
+  padding-right: 45px;
+}
+
+.ministryLogo img {
+  width: auto;
+  height: auto;
+}
+
 /* ===== Login Screen Layout ===== */
 .login-screen2222 {
   display: flex;
@@ -42,10 +98,10 @@ input[type="password"] {
   justify-content: space-evenly;
   align-items: center;
   background: linear-gradient(135deg, #eef2f7, #f9fbfd);
-  min-height: calc(100vh - 13vh);
+  min-height: calc(100vh - 11.2vh);
   height: auto;
-  padding: 20px;
   gap: 30px;
+  padding: 20px;
 }
 
 .image22222222 {
@@ -53,24 +109,18 @@ input[type="password"] {
   max-width: 100%;
   height: auto;
   object-fit: cover;
-}
-
-.headAssets {
   background-color: white;
-  border-radius: 120px;
-  margin: auto;
-  margin-top: 3px;
 }
 
 /* ===== Login Card ===== */
 .right-Panel {
   width: 100%;
   max-width: 400px;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
   padding: 40px;
   border-radius: 20px;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
 }
 
 /* ===== Brand ===== */
@@ -89,7 +139,7 @@ input[type="password"] {
   font-weight: 600;
   margin-bottom: 25px;
   color: #2c3e50;
-  font-family: "arial";
+  font-family: "Arial";
 }
 
 /* ===== Labels ===== */
@@ -148,13 +198,13 @@ input[type="password"] {
   cursor: pointer;
   color: #fff;
   background: linear-gradient(135deg, #309059, #4CAF50);
-  font-family: 'arial';
+  font-family: 'Arial';
   transition: 0.3s;
 }
 
 .btn-login:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(48,144,89,0.35);
+  box-shadow: 0 8px 18px rgba(48, 144, 89, 0.35);
 }
 
 .btn-login:disabled {
@@ -185,6 +235,7 @@ input[type="password"] {
   border-left: 4px solid #f44336;
 }
 
+/* ===== Language Toggle ===== */
 .lang-chip {
   padding: 6px 16px;
   border-radius: 20px;
@@ -204,8 +255,12 @@ input[type="password"] {
 
 /* ===== Animations ===== */
 @keyframes fadeIn {
-  from {opacity: 0;}
-  to {opacity: 1;}
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -220,8 +275,12 @@ input[type="password"] {
 }
 
 @keyframes spin {
-  from {transform: rotate(0);}
-  to {transform: rotate(360deg);}
+  from {
+    transform: rotate(0);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ===== Responsive Design ===== */
@@ -231,12 +290,12 @@ input[type="password"] {
   .login-screen2222 {
     padding: 40px;
   }
-  
+
   .right-Panel {
     max-width: 450px;
     padding: 50px;
   }
-  
+
   .image22222222 {
     max-width: 450px;
   }
@@ -245,15 +304,14 @@ input[type="password"] {
 /* Standard laptop screens (1366x768 to 1600x900) */
 @media screen and (min-width: 1366px) and (max-width: 1600px) {
   .login-screen2222 {
-    padding: 20px;
     gap: 20px;
   }
-  
+
   .right-Panel {
     max-width: 380px;
     padding: 35px;
   }
-  
+
   .image22222222 {
     max-width: 350px;
   }
@@ -264,27 +322,27 @@ input[type="password"] {
   .login-screen2222 {
     padding: 15px;
     gap: 15px;
-    min-height: calc(100vh - 13vh);
+    min-height: calc(100vh - 11.2vh);
   }
-  
+
   .right-Panel {
     max-width: 340px;
     padding: 30px;
   }
-  
+
   .image22222222 {
     max-width: 320px;
   }
-  
+
   .login-heading {
     font-size: 24px;
     margin-bottom: 20px;
   }
-  
+
   .field input {
     padding: 10px 45px 10px 12px;
   }
-  
+
   .btn-login {
     padding: 12px;
   }
@@ -298,12 +356,12 @@ input[type="password"] {
     gap: 30px;
     padding: 40px 20px;
   }
-  
+
   .right-Panel {
     max-width: 400px;
     padding: 35px;
   }
-  
+
   .image22222222 {
     max-width: 350px;
     max-height: auto;
@@ -317,7 +375,7 @@ input[type="password"] {
     justify-content: center;
     gap: 30px;
   }
-  
+
   .image22222222 {
     max-width: 300px;
   }
@@ -328,26 +386,26 @@ input[type="password"] {
   .login-screen2222 {
     flex-direction: column;
     padding: 20px;
-    min-height: calc(100vh - 13vh);
+    min-height: calc(100vh - 11.2vh);
   }
-  
+
   .right-Panel {
     max-width: 100%;
     padding: 25px;
   }
-  
+
   .image22222222 {
-    display: none; /* Hide left logo on mobile for better space */
+    display: none;
   }
-  
+
   .login-heading {
     font-size: 22px;
   }
-  
+
   .headAssets h2 {
     font-size: 14px;
   }
-  
+
   .ministryLogo img {
     width: 80px !important;
   }
@@ -358,24 +416,18 @@ input[type="password"] {
   .right-Panel {
     padding: 20px;
   }
-  
+
   .login-heading {
     font-size: 20px;
   }
-  
+
   .brand {
     max-width: 120px;
   }
-  
+
   .field input {
     font-size: 14px;
     padding: 10px 40px 10px 12px;
-  }
-}
-
-@media only screen and (min-width: 1700px) {
-  .newcontainer {
-    height: 10vh !important;
   }
 }
 
@@ -386,21 +438,22 @@ input[type="password"] {
     border-radius: 20px;
     padding: 10px !important;
   }
-  
+
   .headAssets > div {
     padding: 5px !important;
   }
-  
+
   .portal-header h2 {
     font-size: 14px;
   }
-  
+
   .ministryLogo {
     gap: 10px !important;
     padding-right: 10px !important;
   }
-  
+
   .ministryLogo img {
     width: 60px !important;
   }
 }
+

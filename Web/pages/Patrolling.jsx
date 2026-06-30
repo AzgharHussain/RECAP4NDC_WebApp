@@ -369,10 +369,17 @@ const PatrolAnalysisDashboard = ({
     {
       key: 'percentage',
       value: coverageData && coverageData.coverage_percentage 
-        ? Number(coverageData.coverage_percentage).toFixed(2) 
+        ? (Number(coverageData.coverage_percentage)).toFixed(2) 
         : 'N/A',
       title: language === "gu" ? "કવરેજ %" : "Coverage %",
-      suffix: "%",
+      suffix: (() => {
+        if (!coverageData) return '';
+        const percentValue = Number(coverageData.coverage_percentage);
+        if (coverageData.coverage_percentage === null || coverageData.coverage_percentage === undefined || percentValue === 0) {
+          return '';
+        }
+        return "%";
+      })(),
       color: 'rgba(64, 0, 255, 0.3)',
       isGradient: true
     }
@@ -533,81 +540,7 @@ const PatrolAnalysisDashboard = ({
               </Button>
             )}
           </div>
-          <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.03)' }}>
-            <Row gutter={[24, 24]}>
-              <Col span={8}>
-                <div style={{
-                  background: 'linear-gradient(180deg, #034C17 0%, #4CAF50 50%, #034106 100%)',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  color: 'white',
-                  textAlign: 'center',
-                  height: '70px',
-                }}>
-                  <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
-                    {language === "gu" ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર") : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area")}
-                  </p>
-                  <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
-                    {(Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} km²
-                  </h4>
-                </div>
-              </Col>
-              <Col span={8}>
-                <div style={{
-                  background: 'linear-gradient(180deg, #05385E 0%, #1B75BA 50%, #05385E 100%)',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  color: 'white',
-                  textAlign: 'center',
-                  height: '70px',
-                }}>
-                  <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
-                    {language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area"}
-                  </p>
-                  <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
-                    {(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} km²
-                  </h4>
-                </div>
-              </Col>
-              <Col span={8}>
-                <div style={{
-                  background: 'linear-gradient(180deg, #603605 0%, #F5911E 50%, #603605 100%)',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  color: 'white',
-                  textAlign: 'center',
-                  height: '70px',
-                }}>
-                  <p style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
-                    {language === "gu" ? "કવરેજ %" : "Coverage %"}
-                  </p>
-                  <h4 style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '8px'}}>
-                    {Number(coverageData.coverage_percentage).toFixed(2)}%
-                  </h4>
-                </div>
-              </Col>
-            </Row>
-
-            {coveragePatrols.length === 0 && (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '16px', 
-                marginTop: '16px',
-                background: '#f7fafc', 
-                borderRadius: '6px',
-                fontSize: '12px',
-                color: '#718096'
-              }}>
-                {language === "gu" 
-                  ? (beatFilter ? "આ બીટની અંદર કોઈ પેટ્રોલ મળ્યા નથી" 
-                      : rangeFilter ? "આ રેંજની અંદર કોઈ પેટ્રોલ મળ્યા નથી"
-                      : "આ વિભાગની અંદર કોઈ પેટ્રોલ મળ્યા નથી")
-                  : (beatFilter ? "No patrols found inside this beat" 
-                      : rangeFilter ? "No patrols found inside this range"
-                      : "No patrols found inside this division")}
-              </div>
-            )}
-          </div>
+         
         </div>
       )} */}
 
@@ -632,9 +565,9 @@ const PatrolAnalysisDashboard = ({
         </Text>
         <Row gutter={8}>
           {[
-            { type: "Day patrolling", percent: dayPercentage, color: '#00b3ffff' },
-            { type: "Night patrolling", percent: nightPercentage, color: '#00ffa2ff' },
-            { type: "Beat checking", percent: beatPercentage, color: '#4000ffff' }
+            { type: "Day Patrolling", percent: dayPercentage, color: '#00b3ffff' },
+            { type: "Night Patrolling", percent: nightPercentage, color: '#00ffa2ff' },
+            { type: "Beat Checking", percent: beatPercentage, color: '#4000ffff' }
           ].map((item) => (
             <Col span={8} key={item.type}>
               <div style={{ textAlign: 'center', padding: '0 8px' }}>
@@ -691,9 +624,9 @@ const PatrolAnalysisDashboard = ({
       {/* Detailed Type Analysis */}
       <Row gutter={[16, 16]}>
         {[
-          { stats: dayStats, type: "Day patrolling", color: '#00b3ffff' },
-          { stats: nightStats, type: "Night patrolling", color: '#00ffa2ff' },
-          { stats: beatStats, type: "Beat checking", color: '#4000ffff' }
+          { stats: dayStats, type: "Day Patrolling", color: '#00b3ffff' },
+          { stats: nightStats, type: "Night Patrolling", color: '#00ffa2ff' },
+          { stats: beatStats, type: "Beat Checking", color: '#4000ffff' }
         ].map(({ stats, type, color }, index) => {
           const hasData = stats !== null;
           
@@ -893,9 +826,9 @@ const PatrolAnalysisDashboard = ({
                   </div>
                   {(() => {
                     const types = [
-                      { name: "Day patrolling", count: dayStats?.totalPatrols || 0 },
-                      { name: "Night patrolling", count: nightStats?.totalPatrols || 0 },
-                      { name: "Beat checking", count: beatStats?.totalPatrols || 0 }
+                      { name: "Day Patrolling", count: dayStats?.totalPatrols || 0 },
+                      { name: "Night Patrolling", count: nightStats?.totalPatrols || 0 },
+                      { name: "Beat Checking", count: beatStats?.totalPatrols || 0 }
                     ];
                     const mostActive = types.reduce((prev, current) => 
                       prev.count > current.count ? prev : current
@@ -946,9 +879,9 @@ const PatrolAnalysisDashboard = ({
                   </div>
                   {(() => {
                     const types = [
-                      { name: "Day patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
-                      { name: "Night patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
-                      { name: "Beat checking", distance: parseFloat(beatStats?.totalDistance || 0) }
+                      { name: "Day Patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
+                      { name: "Night Patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
+                      { name: "Beat Checking", distance: parseFloat(beatStats?.totalDistance || 0) }
                     ];
                     const longestDistance = types.reduce((prev, current) => 
                       prev.distance > current.distance ? prev : current
@@ -1509,18 +1442,34 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       });
 
       if (response.data.success) {
-        const data = response.data.data;
-        console.log(data);
-        setCoverageData(data);
-        setCoveragePatrols(data.patrols_covering_coupe || []);
-        message.success(language === "gu" ? "કવરેજ ડેટા સફળતાપૂર્વક લોડ થયો" : "Coverage data loaded successfully");
-        setShowBeatCoverage(true);
-      } else {
-        message.warning(response.data.message || (language === "gu" ? "કોઈ કવરેજ ડેટા મળ્યો નથી" : "No coverage data found"));
-        setCoverageData(null);
-        setCoveragePatrols([]);
-        setShowBeatCoverage(false);
-      }
+  const data = response.data.data;
+  console.log(data);
+  
+  // Check if we have actual data or zeros
+  const hasValidData = data.coupe_area_sq_m && Number(data.coupe_area_sq_m) > 0;
+  
+  setCoverageData(data);
+  setCoveragePatrols(data.patrols_covering_coupe || []);
+  
+  if (hasValidData) {
+    message.success(language === "gu" ? "કવરેજ ડેટા સફળતાપૂર્વક લોડ થયો" : "Coverage data loaded successfully");
+  } else {
+    message.info(language === "gu" ? "આ સમયગાળા માટે કોઈ કવરેજ ડેટા ઉપલબ્ધ નથી" : "No coverage data available for this period");
+  }
+  
+  setShowBeatCoverage(true);
+} else {
+  message.warning(response.data.message || (language === "gu" ? "કોઈ કવરેજ ડેટા મળ્યો નથી" : "No coverage data found"));
+  // Set to null values to show N/A
+  setCoverageData({
+    coupe_area_sq_m: null,
+    patrol_area_sq_m: null,
+    coverage_percentage: null,
+    patrols_covering_coupe: []
+  });
+  setCoveragePatrols([]);
+  setShowBeatCoverage(true);
+}
     } catch (err) {
       console.error("Error fetching coverage data:", err);
       message.error(language === "gu" ? "કવરેજ ડેટા લોડ કરવામાં નિષ્ફળ" : "Failed to load coverage data");
@@ -1632,7 +1581,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       align: "center",
     },
     {
-      title: language === "gu" ? "રંગ" : "Range",
+      title: language === "gu" ? "રેન્જ" : "Range",
       dataIndex: "range",
       key: "range",
       align: "center",
@@ -1751,15 +1700,268 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     </div>
   );
 
+  // Add this function after your existing exportCoverageToExcel function
+// Add this function after your existing exportCoverageToExcel function
+const exportTableToExcel = () => {
+  if (!filteredData || filteredData.length === 0) {
+    message.warning(language === "gu" ? "કોઈ ડેટા નિકાસ કરવા માટે ઉપલબ્ધ નથી" : "No data available to export");
+    return;
+  }
+
+  const formatDateForExport = (datetime) => {
+    if (!datetime) return "N/A";
+    const date = new Date(datetime);
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const year = date.getUTCFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const formatTimeForExport = (datetime) => {
+    if (!datetime) return "N/A";
+    const date = new Date(datetime);
+    const hours = String(date.getUTCHours()).padStart(2, "0");
+    const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
+  // Sheet 1: Patrol Logs Data (with separate date and time columns)
+  const patrolLogsData = filteredData.map((item, index) => ({
+    [language === "gu" ? "ક્રમાંક" : "Sr. No."]: index + 1,
+    [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: getTypeDisplayName(item.type_name),
+    [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "N/A",
+    [language === "gu" ? "વિભાગ" : "Division"]: item.division || "N/A",
+    [language === "gu" ? "રેન્જ" : "Range"]: item.range || "N/A",
+    [language === "gu" ? "બીટ" : "Beat"]: item.beat || "N/A",
+    [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExport(item.start_time),
+    [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExport(item.start_time),
+    [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExport(item.end_time),
+    [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExport(item.end_time),
+    [language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location"]: item.start_location || "N/A",
+    [language === "gu" ? "અંતિમ સ્થાન" : "End Location"]: item.end_location || "N/A",
+    [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: item.distance_kms || "0",
+  }));
+
+  // Sheet 2: Patrol Analysis Dashboard Summary
+  const calculateTypeStatsForExport = (type) => {
+    const filtered = dashboardData.filter(item => item.type_name === type);
+    if (filtered.length === 0) return null;
+    
+    const totalPatrols = filtered.length;
+    const totalDistance = filtered.reduce((sum, item) => sum + parseFloat(item.distance_kms || 0), 0);
+    const totalStaff = filtered.reduce((sum, item) => sum + (item.number_of_staff || 1), 0);
+    const avgDistance = totalDistance / totalPatrols;
+    
+    const totalHours = filtered.reduce((sum, item) => {
+      const start = new Date(item.start_time);
+      const end = new Date(item.end_time);
+      const hours = (end - start) / (1000 * 60 * 60);
+      return sum + hours;
+    }, 0);
+    const avgHours = totalHours / totalPatrols;
+    
+    return {
+      type: getTypeDisplayName(type),
+      totalPatrols,
+      totalDistance: totalDistance.toFixed(1),
+      avgDistance: avgDistance.toFixed(1),
+      avgHours: avgHours.toFixed(1),
+      avgStaff: (totalStaff / totalPatrols).toFixed(1),
+    };
+  };
+
+  const dayStatsExport = calculateTypeStatsForExport("Day patrolling");
+  const nightStatsExport = calculateTypeStatsForExport("Night patrolling");
+  const beatStatsExport = calculateTypeStatsForExport("Beat checking");
+
+  const analysisSummary = [
+    {
+      [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols",
+      [language === "gu" ? "મૂલ્ય" : "Value"]: dashboardData.length,
+    },
+    {
+      [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers",
+      [language === "gu" ? "મૂલ્ય" : "Value"]: [...new Set(dashboardData.map(item => item.patrol_officer_name))].length,
+    },
+    {
+      [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કુલ અંતર (કિ.મી.)" : "Total Distance (km)",
+      [language === "gu" ? "મૂલ્ય" : "Value"]: dashboardData.reduce((sum, item) => sum + parseFloat(item.distance_kms || 0), 0).toFixed(1),
+    },
+    {
+      [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "સરેરાશ અંતર (કિ.મી.)" : "Average Distance (km)",
+      [language === "gu" ? "મૂલ્ય" : "Value"]: (dashboardData.reduce((sum, item) => sum + parseFloat(item.distance_kms || 0), 0) / (dashboardData.length || 1)).toFixed(1),
+    },
+  ];
+
+  // Sheet 3: Patrol Type-wise Breakdown
+  const typeBreakdownData = [
+    dayStatsExport && {
+      [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: language === "gu" ? "દિવસ પેટ્રોલિંગ" : "Day Patrolling",
+      [language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"]: dayStatsExport.totalPatrols,
+      [language === "gu" ? "કુલ અંતર (કિ.મી.)" : "Total Distance (km)"]: dayStatsExport.totalDistance,
+      [language === "gu" ? "સરેરાશ અંતર (કિ.મી.)" : "Avg Distance (km)"]: dayStatsExport.avgDistance,
+      [language === "gu" ? "સરેરાશ સમય (કલાક)" : "Avg Time (hours)"]: dayStatsExport.avgHours,
+      [language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff"]: dayStatsExport.avgStaff,
+    },
+    nightStatsExport && {
+      [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: language === "gu" ? "રાત પેટ્રોલિંગ" : "Night Patrolling",
+      [language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"]: nightStatsExport.totalPatrols,
+      [language === "gu" ? "કુલ અંતર (કિ.મી.)" : "Total Distance (km)"]: nightStatsExport.totalDistance,
+      [language === "gu" ? "સરેરાશ અંતર (કિ.મી.)" : "Avg Distance (km)"]: nightStatsExport.avgDistance,
+      [language === "gu" ? "સરેરાશ સમય (કલાક)" : "Avg Time (hours)"]: nightStatsExport.avgHours,
+      [language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff"]: nightStatsExport.avgStaff,
+    },
+    beatStatsExport && {
+      [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: language === "gu" ? "બીટ ચેકિંગ" : "Beat Checking",
+      [language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"]: beatStatsExport.totalPatrols,
+      [language === "gu" ? "કુલ અંતર (કિ.મી.)" : "Total Distance (km)"]: beatStatsExport.totalDistance,
+      [language === "gu" ? "સરેરાશ અંતર (કિ.મી.)" : "Avg Distance (km)"]: beatStatsExport.avgDistance,
+      [language === "gu" ? "સરેરાશ સમય (કલાક)" : "Avg Time (hours)"]: beatStatsExport.avgHours,
+      [language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff"]: beatStatsExport.avgStaff,
+    },
+  ].filter(Boolean);
+
+  // Sheet 4: Filter Criteria Applied
+  const filterCriteria = [
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "અધિકારીનું નામ" : "Officer Name", [language === "gu" ? "મૂલ્ય" : "Value"]: searchText || "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "વિભાગ" : "Division", [language === "gu" ? "મૂલ્ય" : "Value"]: divisionFilter || "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "રેન્જ" : "Range", [language === "gu" ? "મૂલ્ય" : "Value"]: rangeFilter || "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "બીટ" : "Beat", [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type", [language === "gu" ? "મૂલ્ય" : "Value"]: typeFilter ? getTypeDisplayName(typeFilter) : "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date", [language === "gu" ? "મૂલ્ય" : "Value"]: startFilter ? startFilter.format('YYYY-MM-DD') : "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date", [language === "gu" ? "મૂલ્ય" : "Value"]: endFilter ? endFilter.format('YYYY-MM-DD') : "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "કુલ રેકોર્ડ" : "Total Records", [language === "gu" ? "મૂલ્ય" : "Value"]: filteredData.length },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "નિકાસ તારીખ" : "Export Date", [language === "gu" ? "મૂલ્ય" : "Value"]: new Date().toLocaleString() },
+  ];
+
+  // Sheet 5: Coverage Analysis Data (if available)
+  let coverageDataSheet = [];
+  if (coverageData && showBeatCoverage) {
+    coverageDataSheet = [
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: beatFilter ? (language === "gu" ? "બીટ" : "Beat") : (rangeFilter ? (language === "gu" ? "રેન્જ" : "Range") : (language === "gu" ? "વિભાગ" : "Division")),
+        [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || rangeFilter || divisionFilter || "N/A",
+      },
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "વિસ્તાર (ચો.મી.)" : "Area (sq m)",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coupe_area_sq_m ? Number(coverageData.coupe_area_sq_m).toLocaleString() : "N/A",
+      },
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કવરેજ વિસ્તાર (ચો.મી.)" : "Covered Area (sq m)",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.patrol_area_sq_m ? Number(coverageData.patrol_area_sq_m).toLocaleString() : "N/A",
+      },
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કવરેજ ટકાવારી" : "Coverage Percentage",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coverage_percentage ? `${Number(coverageData.coverage_percentage).toFixed(2)}%` : "N/A",
+      },
+      {
+        [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "તારીખ શ્રેણી" : "Date Range",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: `${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}`,
+      },
+    ];
+  }
+
+  // Create workbook with multiple sheets
+  const workbook = XLSX.utils.book_new();
+  
+  // Sheet 1: Patrol Logs (with separate date and time columns)
+  const patrolSheet = XLSX.utils.json_to_sheet(patrolLogsData);
+  XLSX.utils.book_append_sheet(workbook, patrolSheet, "Patrol Logs");
+  
+  // Sheet 2: Analysis Summary
+  const analysisSheet = XLSX.utils.json_to_sheet(analysisSummary);
+  XLSX.utils.book_append_sheet(workbook, analysisSheet, "Analysis Summary");
+  
+  // Sheet 3: Type Breakdown
+  if (typeBreakdownData.length > 0) {
+    const typeSheet = XLSX.utils.json_to_sheet(typeBreakdownData);
+    XLSX.utils.book_append_sheet(workbook, typeSheet, "Patrol Type Breakdown");
+  }
+  
+  // Sheet 4: Filter Criteria
+  const filterSheet = XLSX.utils.json_to_sheet(filterCriteria);
+  XLSX.utils.book_append_sheet(workbook, filterSheet, "Filter Criteria");
+  
+  // Sheet 5: Coverage Analysis (if available)
+  if (coverageDataSheet.length > 0) {
+    const coverageSheet = XLSX.utils.json_to_sheet(coverageDataSheet);
+    XLSX.utils.book_append_sheet(workbook, coverageSheet, "Coverage Analysis");
+    
+    // Sheet 6: Covering Patrols (if available)
+    if (coveragePatrols && coveragePatrols.length > 0) {
+      const formatDateForExportCoverage = (datetime) => {
+        if (!datetime) return "N/A";
+        const date = new Date(datetime);
+        const day = String(date.getUTCDate()).padStart(2, "0");
+        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const year = date.getUTCFullYear();
+        return `${day}-${month}-${year}`;
+      };
+
+      const formatTimeForExportCoverage = (datetime) => {
+        if (!datetime) return "N/A";
+        const date = new Date(datetime);
+        const hours = String(date.getUTCHours()).padStart(2, "0");
+        const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+        return `${hours}:${minutes}`;
+      };
+
+      const coveringPatrolsData = coveragePatrols.map((patrol, idx) => ({
+        [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
+        [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_id || "N/A",
+        [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "N/A",
+        [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExportCoverage(patrol.start_time),
+        [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExportCoverage(patrol.start_time),
+        [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExportCoverage(patrol.end_time),
+        [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExportCoverage(patrol.end_time),
+        [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: patrol.distance_kms || "0",
+      }));
+      const coveringSheet = XLSX.utils.json_to_sheet(coveringPatrolsData);
+      XLSX.utils.book_append_sheet(workbook, coveringSheet, "Covering Patrols");
+    }
+  }
+  
+  // Auto-size columns for all sheets
+  const sheets = ['Patrol Logs', 'Analysis Summary', 'Patrol Type Breakdown', 'Filter Criteria', 'Coverage Analysis', 'Covering Patrols'];
+  sheets.forEach(sheetName => {
+    const sheet = workbook.Sheets[sheetName];
+    if (sheet) {
+      const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
+      const colWidths = {};
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = sheet[cellAddress];
+          if (cell && cell.v) {
+            const value = cell.v.toString();
+            const width = Math.min(value.length, 50);
+            if (!colWidths[C] || width > colWidths[C]) {
+              colWidths[C] = width;
+            }
+          }
+        }
+      }
+      sheet['!cols'] = Object.keys(colWidths).map(c => ({ wch: Math.max(colWidths[c] + 2, 12) }));
+    }
+  });
+
+  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const fileName = `patrol_complete_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+  saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
+  
+  message.success(language === "gu" ? "સંપૂર્ણ રિપોર્ટ સફળતાપૂર્વક નિકાસ થયો" : "Complete report exported successfully");
+};
+
+
   return (
     <div className="container">
       {isLoading && <Loader />}
       <div className="section">
-        <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px", marginLeft: "20px"}}>
+        <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px", fontSize: '25px',marginLeft: "20px", marginBottom: "10px"}}>
           {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Detail Level Patrolling Logs"}
         </h3>
 
-        <div style={{ marginTop: '8px', fontSize: '12px', color: 'rgb(17, 95, 34)', marginLeft: "20px" }}>
+        <div style={{ fontSize: '12px', color: 'rgb(17, 95, 34)', marginLeft: "20px" }}>
           {language === "gu" 
     ? "કવરેજ વિશ્લેષણ કરવા માટે વિભાગ માટે શરૂઆત અને સમાપ્તિ તારીખો પસંદ કરો" 
     : "Select the start and end dates for the division to perform coverage analysis"}
@@ -1900,8 +2102,22 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
             icon={<ReloadOutlined />}
             style={{ marginRight: "10px", background: "#f5f5f5", borderColor: "#d9d9d9", color: "#000" }}
           >
-            {language === "gu" ? "ફિલ્ટર સાફ કરો" : "Clear Filters"}
+            {language === "gu" ? "ફિલ્ટર દૂર કરો" : "Clear Filters"}
           </Button>
+
+          <Button 
+    onClick={exportTableToExcel}
+    style={{ 
+      background: "linear-gradient(135deg, #28a745 0%, #218838 100%)", 
+      borderColor: "#28a745", 
+      color: "#fff",
+      fontWeight: 500
+    }}
+  >
+    <img src={vector} alt="Export" style={{ width: '16px', height: '16px' }} />
+    {language === "gu" ? "નિકાસ" : "Export"}
+  </Button>
+          
         </div>
 
         <Table
@@ -1922,6 +2138,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
               </div>
             ),
           }}
+          
         />
         
         {totalItems > 0 && <CustomPagination />}
@@ -2089,7 +2306,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
         padding:'15px',
         display: 'flex',
         justifyContent: 'space-around',
-        alignItems: 'center'}}>
+        alignItems: 'center'}}> 
           <div>
         <p style={{display: 'flex',alignItems: 'center',gap: '6px' }}> © 2026 Gujarat Forest Department <img src={gujaratlogo} alt="logo picture" style={{width:'40px'}}></img> </p>
 

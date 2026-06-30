@@ -125,7 +125,7 @@ const allowedOrigins = ['https://gisfy.co.in:8445/geoserver/wms',
   'https://forestrecap.gisfy.co.in',
   'http://localhost:5002',
   'http://68.178.167.216:5002',
-'http://localhost:5173', 'http://localhost:5175','http://13.235.78.63:5002'
+'http://localhost:5173', 'http://localhost:5174','http://13.235.78.63:5002', 'http://localhost:5176'
 ];
 
 app.use(cors({

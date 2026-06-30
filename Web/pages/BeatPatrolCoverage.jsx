@@ -14,21 +14,20 @@ import {
   UndoOutlined,
   CloseCircleOutlined,
 } from "@ant-design/icons";
-import { Table, Tag, Image as AntImage, Modal, Button, message } from "antd";
+import { Table, Tag, Image as AntImage, Modal, Button, message, Row, Col, Pagination } from "antd";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import "./RouterMap.css";
 import { API_BASE_URL } from "../config";
 import Select from 'react-select';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import vector from '../assets/Vector.png';
 import gisfylogo from "../assets/gisfylogo.png";
 import noDataImage from "../assets/no-data.png";
 import startIconImg from "../assets/marker-icon.png";
 import endIconImg from "../assets/marker-icon-end.png";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
+import { useLanguage } from "../context/LanguageContext";
 
 import L from "leaflet";
 import {
@@ -70,25 +69,6 @@ const getImageUrl = (imageData) => {
   if (!imageData) return null;
   return `data:image/jpeg;base64,${imageData}`;
 };
-
-const PatrolLoader = () => (
-  <div style={{
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100%",
-    width: "100%"
-  }}>
-    <div style={{
-      border: "6px solid #f3f3f3",
-      borderTop: "6px solid #3498db",
-      borderRadius: "50%",
-      width: "40px",
-      height: "40px",
-      animation: "spin 1s linear infinite"
-    }}></div>
-  </div>
-);
 
 const startIcon = new L.Icon({
   iconUrl: startIconImg,
@@ -164,7 +144,8 @@ function PatrolMap({ patrol }) {
   );
 }
 
-const BeatPatrolCoverage = ({ language }) => {
+const BeatPatrolCoverage = () => {
+  const { language } = useLanguage();
   // Translations
   const translations = {
     en: {
@@ -243,7 +224,11 @@ const BeatPatrolCoverage = ({ language }) => {
       of: "of",
       items: "items",
       noDataAvailable: "No data available",
-      noImagesFound: "No images found"
+      noImagesFound: "No images found",
+      details: "Details",
+      route: "Route",
+      images: "Images",
+      photos: "Photos"
     },
     gu: {
       title: "પેટ્રોલ કવરેજ વિશ્લેષણ",
@@ -321,7 +306,11 @@ const BeatPatrolCoverage = ({ language }) => {
       of: "ના",
       items: "રેકોર્ડ",
       noDataAvailable: "કોઈ ડેટા ઉપલબ્ધ નથી",
-      noImagesFound: "કોઈ છબીઓ મળી નથી"
+      noImagesFound: "કોઈ છબીઓ મળી નથી",
+      details: "વિગતો",
+      route: "રસ્તો",
+      images: "છબીઓ",
+      photos: "ફોટા"
     }
   };
 
@@ -334,6 +323,7 @@ const BeatPatrolCoverage = ({ language }) => {
   const [selectedBoundary, setSelectedBoundary] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectionMode, setSelectionMode] = useState('boundary');
+  const [validationError, setValidationError] = useState(false);
 
   // Data states
   const [divisions, setDivisions] = useState([]);
@@ -353,15 +343,17 @@ const BeatPatrolCoverage = ({ language }) => {
   const [coverageData, setCoverageData] = useState(null);
   const [patrols, setPatrols] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
+  const [totalItems, setTotalItems] = useState(0);
   const [isLoadingPatrols, setIsLoadingPatrols] = useState(false);
 
-  // Modal states
-  const [selectedPatrolForRoute, setSelectedPatrolForRoute] = useState(null);
-  const [isRouteModalVisible, setIsRouteModalVisible] = useState(false);
-  const [selectedPatrolForImages, setSelectedPatrolForImages] = useState(null);
-  const [patrolDetails, setPatrolDetails] = useState(null);
-  const [showImagesModal, setShowImagesModal] = useState(false);
+  // Modal states - Single modal for both photos and map
+  const [selectedPatrolForDetails, setSelectedPatrolForDetails] = useState(null);
+  const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
+  const [combinedPatrolDetails, setCombinedPatrolDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Image preview states
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageRotation, setImageRotation] = useState(0);
   const [imageScale, setImageScale] = useState(1);
@@ -403,6 +395,7 @@ const BeatPatrolCoverage = ({ language }) => {
         }
       }
       setPatrols(fullPatrols);
+      setTotalItems(fullPatrols.length);
     } catch (error) {
       console.error("Error fetching patrol details:", error);
       message.error(t.failedToLoadPatrolDetails);
@@ -411,18 +404,20 @@ const BeatPatrolCoverage = ({ language }) => {
     }
   };
 
-  // Fetch patrol images
-  const fetchPatrolImages = async (patrolId) => {
-    setLoading(prev => ({ ...prev, patrolDetails: true }));
+  // Fetch patrol details for modal (photos + map)
+  const fetchPatrolDetails = async (patrol) => {
+    setLoadingDetails(true);
+    setSelectedPatrolForDetails(patrol);
+    
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_BASE_URL}/api/patrols/${patrolId}`, {
+      const response = await axios.get(`${API_BASE_URL}/api/patrols/${patrol.patrol_id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       if (response.data && response.data.data) {
-        setPatrolDetails(response.data.data);
-        setSelectedPatrolForImages(patrolId);
-        setShowImagesModal(true);
+        setCombinedPatrolDetails(response.data.data);
+        setIsDetailsModalVisible(true);
       } else {
         message.error(t.invalidDataFormat);
       }
@@ -430,22 +425,23 @@ const BeatPatrolCoverage = ({ language }) => {
       console.error("Error fetching patrol details:", error);
       message.error(t.failedToLoadPatrolDetails);
     } finally {
-      setLoading(prev => ({ ...prev, patrolDetails: false }));
+      setLoadingDetails(false);
     }
   };
 
-  const closeImagesModal = () => {
-    setShowImagesModal(false);
-    setSelectedPatrolForImages(null);
-    setPatrolDetails(null);
+  const closeDetailsModal = () => {
+    setIsDetailsModalVisible(false);
+    setSelectedPatrolForDetails(null);
+    setCombinedPatrolDetails(null);
     setSelectedImage(null);
     setImageRotation(0);
     setImageScale(1);
   };
 
-  const closeRouteModal = () => {
-    setIsRouteModalVisible(false);
-    setSelectedPatrolForRoute(null);
+  const closeImagePreview = () => {
+    setSelectedImage(null);
+    setImageRotation(0);
+    setImageScale(1);
   };
 
   // Table columns
@@ -527,7 +523,7 @@ const BeatPatrolCoverage = ({ language }) => {
       align: "center",
     },
     {
-      title: t.distance,
+      title: t.distance + " (km)",
       dataIndex: "distance_kms",
       key: "distance_kms",
       align: "center",
@@ -535,53 +531,70 @@ const BeatPatrolCoverage = ({ language }) => {
       sorter: (a, b) => parseFloat(a.distance_kms) - parseFloat(b.distance_kms),
     },
     {
-      title: t.staff,
-      dataIndex: "number_of_staff",
-      key: "number_of_staff",
-      align: "center",
-    },
-    {
-      title: t.showRoute,
-      key: "route",
+      title: t.details,
+      key: "details",
       align: "center",
       render: (record) => (
         <Button
           style={{
             borderRadius: "4.618px",
             border: "1.961px solid rgba(255, 255, 255, 0.23)",
-            background: "rgba(116, 190, 0, 0.40)",
+            background: "linear-gradient(135deg, rgba(116, 190, 0, 0.40), rgba(0, 166, 81, 0.40))",
             color: "#000",
           }}
           icon={<EyeOutlined />}
-          onClick={() => {
-            setSelectedPatrolForRoute(record);
-            setIsRouteModalVisible(true);
-          }}
-        >
-          {t.view}
-        </Button>
-      ),
-    },
-    {
-      title: t.images,
-      key: "images",
-      align: "center",
-      render: (record) => (
-        <Button
-          style={{
-            borderRadius: "4.618px",
-            border: "1.961px solid rgba(255, 255, 255, 0.23)",
-            background: "rgba(0, 166, 81, 0.40)",
-            color: "#000",
-          }}
-          icon={<PictureOutlined />}
-          onClick={() => fetchPatrolImages(record.patrol_id)}
+          onClick={() => fetchPatrolDetails(record)}
         >
           {t.view}
         </Button>
       ),
     },
   ];
+
+  // Custom Pagination Component
+  const CustomPagination = () => (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      marginTop: 16,
+      padding: '16px',
+      borderRadius: '8px',
+      flexWrap: 'wrap',
+      gap: '16px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ color: '#666', fontSize: '14px' }}>
+          {t.showing} <strong>{Math.min(currentPage * pageSize, totalItems)}</strong> {t.of} <strong>{totalItems}</strong> {t.items}
+        </span>
+      </div>
+      
+      <Pagination
+        current={currentPage}
+        pageSize={pageSize}
+        total={totalItems}
+        onChange={handlePageChange}
+        showSizeChanger
+        showQuickJumper
+        showTotal={(total, range) => 
+          `${t.showing} ${range[0]}-${range[1]} ${t.of} ${total} ${t.items}`
+        }
+        pageSizeOptions={['5', '10', '20', '50', '100']}
+      />
+    </div>
+  );
+
+  const handlePageChange = (page, newPageSize) => {
+    setCurrentPage(page);
+    setPageSize(newPageSize);
+  };
+
+  // Get current page data
+  const getCurrentPageData = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return patrols.slice(startIndex, endIndex);
+  };
 
   // Fetch boundaries
   const fetchPatrolBoundaries = async () => {
@@ -600,7 +613,6 @@ const BeatPatrolCoverage = ({ language }) => {
         label: item.name || item.boundary_name || `Boundary ${item.id}`,
         data: item
       }));
-      console.log(res.data.data);
 
       setBoundaries(boundaryList);
     } catch (err) {
@@ -767,42 +779,55 @@ const BeatPatrolCoverage = ({ language }) => {
       setSelectedRange(null);
       setSelectedBeat(null);
       setSelectionMode('boundary');
+      setValidationError(false);
     }
   };
 
   const handleMonthChange = (e) => {
     setSelectedMonth(e.target.value);
+    if (e.target.value) {
+      setValidationError(false); // Clear validation error when month is selected
+    }
   };
 
   const resetData = () => {
     setCoverageData(null);
     setPatrols([]);
-    setSelectedPatrolForRoute(null);
-    setSelectedPatrolForImages(null);
-    setPatrolDetails(null);
-    setShowImagesModal(false);
+    setTotalItems(0);
+    setCurrentPage(1);
+    setSelectedPatrolForDetails(null);
+    setCombinedPatrolDetails(null);
+    setIsDetailsModalVisible(false);
     setSelectedImage(null);
     setImageRotation(0);
     setImageScale(1);
     setSelectedMonth("");
-    setCurrentPage(1);
     setSelectedBoundary(null);
   };
 
   // Fetch coverage data
   const fetchCoverageData = async () => {
+    let hasError = false;
     if (selectionMode === 'beat' && !selectedBeat) {
       message.warning(t.completeSelection);
-      return;
+      hasError = true;
     }
     if (selectionMode === 'boundary' && !selectedBoundary) {
       message.warning(t.selectBoundaryFirst);
-      return;
+      hasError = true;
     }
     if (!selectedMonth) {
       message.warning(t.selectMonthFirst);
+      hasError = true;
+    }
+    
+    if (hasError) {
+      setValidationError(true);
       return;
     }
+
+    // Reset validation error if all fields are filled
+    setValidationError(false);
 
     setLoading(prev => ({ ...prev, coverage: true }));
     
@@ -836,7 +861,6 @@ const BeatPatrolCoverage = ({ language }) => {
 
       if (response.data.success) {
         const data = response.data.data;
-        console.log(data);
         setCoverageData(data);
         
         // Extract patrol IDs from the response
@@ -853,6 +877,7 @@ const BeatPatrolCoverage = ({ language }) => {
           await fetchFullPatrolDetails(patrolIds);
         } else {
           setPatrols([]);
+          setTotalItems(0);
           message.info(t.noPatrolsFound);
         }
       } else {
@@ -866,23 +891,18 @@ const BeatPatrolCoverage = ({ language }) => {
     }
   };
 
-  const handlePageChange = (page, newPageSize) => {
-    setCurrentPage(page);
-    setPageSize(newPageSize);
-  };
-
   // Export to Excel
   const exportToExcel = () => {
     if (!coverageData) return;
 
-    const summaryData = [
-      {
-        [selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel]: selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
-        "Boundary Area (sq m)": selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m,
-        "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
-        "Coverage %": coverageData.coverage_percentage,
-      },
-    ];
+    const summaryData = [{
+      [selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel]:
+        selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
+      "Area (km²)": (Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2),
+      "Patrol Covered Area (km²)": (Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2),
+      "Coverage %": Number(coverageData.coverage_percentage).toFixed(2),
+      "Month": selectedMonth
+    }];
 
     const patrolData = patrols.map((patrol, idx) => ({
       [t.srNo]: idx + 1,
@@ -947,11 +967,13 @@ const BeatPatrolCoverage = ({ language }) => {
   };
 
   return (
-    <div>
+    <div style={{ 
+      minHeight: "80vh", 
+      display: "flex", 
+      flexDirection: "column" 
+    }}>
       <style>{`
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
         .glow-button { background: #00A651; color: white; padding: 5px 10px; border-radius: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; border: none; }
         .glow-button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
         .stats-card { background: linear-gradient(180deg, #2E7D32 0%, #66BB6A 100%); color: black; border-radius: 16px; padding: 25px; }
@@ -967,50 +989,178 @@ const BeatPatrolCoverage = ({ language }) => {
         .transparent-table .ant-table-tbody > tr > td {
           background: rgba(255, 255, 255, 0.7) !important;
         }
-        
       `}</style>
 
-      {/* Route Modal */}
-      <Modal
-        open={isRouteModalVisible}
-        onCancel={closeRouteModal}
-        footer={null}
-        width={800}
-        title={
-          selectedPatrolForRoute
-            ? `${t.patrolRoute} - ${selectedPatrolForRoute.patrol_officer_name} (${t.distance}: ${selectedPatrolForRoute.distance_kms} km)`
-            : t.patrolRoute
-        }
-      >
-        {selectedPatrolForRoute && (
-          <PatrolMap patrol={selectedPatrolForRoute} />
-        )}
-      </Modal>
-
-      {/* Images Modal */}
-      {showImagesModal && patrolDetails && !selectedImage && (
-        <div className="modal-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }} onClick={closeImagesModal}>
-          <div className="modal-content" style={{ backgroundColor: "white", borderRadius: "12px", width: "90%", maxWidth: "800px", maxHeight: "80vh", overflow: "auto", position: "relative", boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: "10px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#00A651", color: "white", borderRadius: "12px 12px 0 0" }}>
-              <h2 style={{ fontSize: "24px", fontWeight: "600", margin: 0 }}>{t.patrolImages}</h2>
-              <button onClick={closeImagesModal} style={{ background: "rgba(255,255,255,0.2)", border: "none", fontSize: "20px", cursor: "pointer", width: "40px", height: "40px", borderRadius: "50%" }}>✕</button>
+      {/* Combined Details Modal - Photos first, then Map */}
+      {isDetailsModalVisible && combinedPatrolDetails && (
+        <div 
+          style={{ 
+            position: "fixed", 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            backgroundColor: "rgba(0,0,0,0.7)", 
+            display: "flex", 
+            justifyContent: "center", 
+            alignItems: "center", 
+            zIndex: 1000,
+            overflow: "auto"
+          }} 
+          onClick={closeDetailsModal}
+        >
+          <div 
+            style={{ 
+              backgroundColor: "white", 
+              borderRadius: "16px", 
+              width: "90%", 
+              maxWidth: "900px", 
+              maxHeight: "90vh", 
+              overflow: "auto", 
+              position: "relative",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+            }} 
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ 
+              padding: "20px", 
+              borderBottom: "2px solid #f0f0f0", 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center", 
+              background: "linear-gradient(135deg, #00A651, #008840)", 
+              color: "white", 
+              borderRadius: "16px 16px 0 0"
+            }}>
+              <div>
+                <h2 style={{ fontSize: "24px", fontWeight: "600", margin: 0 }}>
+                  {t.patrolDetails}
+                </h2>
+                <p style={{ margin: "5px 0 0 0", opacity: 0.9 }}>
+                  {combinedPatrolDetails.patrol_officer_name} - {formatDateTime(combinedPatrolDetails.start_time, language).date}
+                </p>
+              </div>
+              <button 
+                onClick={closeDetailsModal} 
+                style={{ 
+                  background: "rgba(255,255,255,0.2)", 
+                  border: "none", 
+                  fontSize: "20px", 
+                  cursor: "pointer", 
+                  width: "40px", 
+                  height: "40px", 
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  transition: "all 0.3s ease"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.4)"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.2)"}
+              >
+                ✕
+              </button>
             </div>
-            <div style={{ padding: "10px" }}>
-              {patrolDetails.images?.length > 0 ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "15px" }}>
-                  {patrolDetails.images.map((image, index) => (
-                    <div key={index} style={{ border: "2px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", cursor: "pointer" }} onClick={() => { setSelectedImage(image.image_data); setShowImagesModal(false); setImageRotation(0); setImageScale(1); }}>
-                      <div style={{ width: "100%", height: "140px", overflow: "hidden", position: "relative" }}>
-                        <AntImage width="100%" height="100%" style={{ objectFit: "cover" }} src={getImageUrl(image.image_data)} alt={`${t.images} ${index + 1}`} preview={false} />
-                        <div style={{ position: "absolute", top: "8px", right: "8px", backgroundColor: "rgba(0,0,0,0.7)", color: "white", fontSize: "12px", padding: "2px 6px", borderRadius: "4px" }}>{index + 1}</div>
-                      </div>
-                      <div style={{ padding: "5px", backgroundColor: "#f8fafc", textAlign: "center" }}>{image.image_category || t.uncategorized}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>{t.noImagesFound}</div>
-              )}
+
+            {/* Modal Content - Photos Section First */}
+            <div style={{ padding: "20px" }}>
+              {/* Photos Section */}
+              <div style={{ marginBottom: "30px" }}>
+                <h3 style={{ 
+                  marginBottom: "15px", 
+                  color: "#2d3748",
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
+                }}>
+                  <PictureOutlined /> {t.photos} ({combinedPatrolDetails.images?.length || 0})
+                </h3>
+                {loadingDetails ? (
+                  <div style={{ textAlign: "center", padding: "40px" }}>
+                    <div style={{ border: "6px solid #f3f3f3", borderTop: "6px solid #4299e1", borderRadius: "50%", width: "40px", height: "40px", animation: "spin 1s linear infinite", margin: "0 auto" }} />
+                  </div>
+                ) : combinedPatrolDetails.images?.length > 0 ? (
+                  <Row gutter={[16, 16]}>
+                    {combinedPatrolDetails.images.map((image, index) => (
+                      <Col xs={12} sm={8} md={6} key={index}>
+                        <div 
+                          style={{ 
+                            border: "2px solid #e2e8f0", 
+                            borderRadius: "8px", 
+                            overflow: "hidden", 
+                            cursor: "pointer",
+                            transition: "transform 0.3s ease",
+                            backgroundColor: "#fff"
+                          }} 
+                          onClick={() => {
+                            setSelectedImage(image.image_data);
+                            setIsDetailsModalVisible(false);
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+                        >
+                          <div style={{ width: "100%", height: "140px", overflow: "hidden", position: "relative" }}>
+                            <AntImage 
+                              width="100%" 
+                              height="100%" 
+                              style={{ objectFit: "cover" }} 
+                              src={getImageUrl(image.image_data)} 
+                              alt={`${t.images} ${index + 1}`} 
+                              preview={false} 
+                            />
+                            <div style={{ 
+                              position: "absolute", 
+                              top: "8px", 
+                              right: "8px", 
+                              backgroundColor: "rgba(0,0,0,0.7)", 
+                              color: "white", 
+                              fontSize: "12px", 
+                              padding: "2px 6px", 
+                              borderRadius: "4px" 
+                            }}>
+                              {index + 1}
+                            </div>
+                          </div>
+                          <div style={{ 
+                            padding: "8px", 
+                            backgroundColor: "#f8fafc", 
+                            textAlign: "center",
+                            fontSize: "12px",
+                            fontWeight: "500"
+                          }}>
+                            {image.image_category || t.uncategorized}
+                          </div>
+                        </div>
+                      </Col>
+                    ))}
+                  </Row>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "40px", color: "#999", background: "#f8fafc", borderRadius: "8px" }}>
+                    <div style={{ fontSize: "48px", marginBottom: "16px" }}>📷</div>
+                    {t.noImagesFound}
+                  </div>
+                )}
+              </div>
+
+              {/* Map Section */}
+              <div>
+                <h3 style={{ 
+                  marginBottom: "15px", 
+                  color: "#2d3748",
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
+                }}>
+                  🗺️ {t.route}
+                </h3>
+                <PatrolMap patrol={combinedPatrolDetails} />
+              </div>
             </div>
           </div>
         </div>
@@ -1033,10 +1183,8 @@ const BeatPatrolCoverage = ({ language }) => {
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setSelectedImage(null); 
-              setShowImagesModal(true); 
-              setImageRotation(0); 
-              setImageScale(1);
+              closeImagePreview();
+              setIsDetailsModalVisible(true);
             }
           }}
         >
@@ -1058,10 +1206,8 @@ const BeatPatrolCoverage = ({ language }) => {
             }} 
             onClick={(e) => {
               e.stopPropagation();
-              setSelectedImage(null); 
-              setShowImagesModal(true); 
-              setImageRotation(0); 
-              setImageScale(1);
+              closeImagePreview();
+              setIsDetailsModalVisible(true);
             }}
           >
             <CloseOutlined style={{ fontSize: "20px" }} />
@@ -1114,8 +1260,6 @@ const BeatPatrolCoverage = ({ language }) => {
                 transition: "all 0.3s ease",
                 fontSize: "18px"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.4)"}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.2)"}
               title="Zoom Out"
             >
               <ZoomOutOutlined />
@@ -1140,8 +1284,6 @@ const BeatPatrolCoverage = ({ language }) => {
                 transition: "all 0.3s ease",
                 fontSize: "18px"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.4)"}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.2)"}
               title="Rotate Left"
             >
               <RotateLeftOutlined />
@@ -1167,8 +1309,6 @@ const BeatPatrolCoverage = ({ language }) => {
                 transition: "all 0.3s ease",
                 fontSize: "18px"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.4)"}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.2)"}
               title="Reset"
             >
               <UndoOutlined />
@@ -1193,8 +1333,6 @@ const BeatPatrolCoverage = ({ language }) => {
                 transition: "all 0.3s ease",
                 fontSize: "18px"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.4)"}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.2)"}
               title="Rotate Right"
             >
               <RotateRightOutlined />
@@ -1219,8 +1357,6 @@ const BeatPatrolCoverage = ({ language }) => {
                 transition: "all 0.3s ease",
                 fontSize: "18px"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.4)"}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.2)"}
               title="Zoom In"
             >
               <ZoomInOutlined />
@@ -1229,12 +1365,19 @@ const BeatPatrolCoverage = ({ language }) => {
         </div>
       )}
 
-      {/* Main Container */}
-      <div style={{ padding: "20px" }}>
+      {/* Main Content */}
+      <div style={{ flex: 1, padding: "20px" }}>
         <h1 style={{ fontSize: "26px", fontWeight: "700", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" , backgroundColor:'black'}}>
           {t.title}
         </h1>
-        <p style={{ fontSize: "12px",}}>{language === "gu" ? "કૃપા કરીને પેટ્રોલ કવરેજ વિશ્લેષણ માટે બાઉન્ડ્રી અને મહિનો પસંદ કરો" : "Please select the Boundary and month for patrol coverage analysis."}</p>
+        <p style={{ 
+      fontSize: "12px", 
+      color: validationError ? "#ff0000" : "rgb(17, 95, 34)",
+      transition: "color 0.3s ease",
+      fontWeight: validationError ? "500" : "normal"
+    }}>
+      {language === "gu" ? "કૃપા કરીને પેટ્રોલ કવરેજ વિશ્લેષણ માટે બાઉન્ડ્રી અને મહિનો પસંદ કરો" : "Please select the Boundary and month for patrol coverage analysis."}
+    </p>
 
         {/* Selection Card */}
         <div style={{ backgroundColor: "#fff", borderRadius: "12px", paddingTop: "25px", marginBottom: "25px" }}>
@@ -1257,12 +1400,12 @@ const BeatPatrolCoverage = ({ language }) => {
                 </>
               ) : (
                 <div style={{ width: "300px" }}>
-                  <label style={{ display: "block", fontWeight: "600", marginBottom: "8px" }}>{t.boundary}</label>
+                  <label style={{ display: "block", fontWeight: "600", marginBottom: "8px" }}>{t.boundary} <span style={{ color: "red" }}>*</span></label>
                   <Select value={selectedBoundary} onChange={handleBoundaryChange} options={boundaries} isClearable placeholder={t.selectBoundary} styles={customSelectStyles} />
                 </div>
               )}
               <div style={{ width: "200px" }}>
-                <label style={{ display: "block", fontWeight: "600", marginBottom: "8px" }}>{t.month}</label>
+                <label style={{ display: "block", fontWeight: "600", marginBottom: "8px" }}>{t.month} <span style={{ color: "red" }}>*</span></label>
                 <input type="month" value={selectedMonth} onChange={handleMonthChange} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "2px solid #e2e8f0" }} />
               </div>
             </div>
@@ -1272,7 +1415,7 @@ const BeatPatrolCoverage = ({ language }) => {
                 className="glow-button" 
                 onClick={fetchCoverageData} 
                 disabled={loading.coverage} 
-                style={{ padding: "10px 24px", boxShadow: '-10.261px -10.261px 5.13px -11.971px #fff inset,-10.261px -10.261px 5.13px -11.971px #fff inset,-10.261px -10.261px 5.13px -11.971px #fff inset,13.681px 13.681px 7.696px -15.391px #fff inset' }}
+                style={{ padding: "10px 24px" }}
               >
                 {loading.coverage ? t.analyzing : t.analyzeCoverage}
               </button>
@@ -1292,59 +1435,51 @@ const BeatPatrolCoverage = ({ language }) => {
                 {t.reset}
               </button>
             </div>
+            
           </div>
+          
         </div>
 
         {/* Patrols Table */}
-            {isLoadingPatrols ? (
-              <div style={{ textAlign: "center", padding: "60px" }}>
-                <div style={{ border: "6px solid #f3f3f3", borderTop: "6px solid #4299e1", borderRadius: "50%", width: "60px", height: "60px", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
-                <p>{t.loadingPatrols}</p>
-              </div>
-            ) : patrols.length > 0 ? (
-              <>
-                <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
-                  {t.patrolsInside} {selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}
-                </h3>
-                <Table
-                  className="transparent-table"
-                  columns={getPatrolTableColumns()}
-                  dataSource={patrols}
-                  pagination={{
-                    current: currentPage,
-                    pageSize: pageSize,
-                    total: patrols.length,
-                    onChange: handlePageChange,
-                    showSizeChanger: true,
-                    showQuickJumper: true,
-                    showTotal: (total, range) => `${t.showing} ${range[0]}-${range[1]} ${t.of} ${total} ${t.items}`,
-                    pageSizeOptions: ['5', '10', '20', '50'],
-                  }}
-                  bordered
-                  scroll={{ x: 'max-content' }}
-                  rowKey="patrol_id"
-                  locale={{
-                    emptyText: (
-                      <div style={{ textAlign: "center", padding: "50px 0" }}>
-                        <img src={noDataImage} alt="No Data" style={{ width: 60, marginBottom: 16 }} />
-                        <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>{t.noDataAvailable}</div>
-                      </div>
-                    ),
-                  }}
-                />
-              </>
-            ) : (
-              <div style={{ textAlign: "center", padding: "40px", border: "2px dashed #e2e8f0", borderRadius: "12px", marginBottom: '50px' }}>
-                <div style={{ width: "60px", height: "60px", backgroundColor: "#fed7d7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: "24px" }}>⚡</div>
-                <p style={{ color: "#718096" }}>{t.noPatrolsFound} {selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}</p>
-              </div>
-            )}
+        {isLoadingPatrols ? (
+          <div style={{ textAlign: "center", padding: "60px" }}>
+            <div style={{ border: "6px solid #f3f3f3", borderTop: "6px solid #4299e1", borderRadius: "50%", width: "60px", height: "60px", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
+            <p>{t.loadingPatrols}</p>
+          </div>
+        ) : patrols.length > 0 ? (
+          <>
+            <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+              {t.patrolsInside} {selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}
+            </h3>
+            <Table
+              className="transparent-table"
+              columns={getPatrolTableColumns()}
+              dataSource={getCurrentPageData()}
+              pagination={false}
+              bordered
+              scroll={{ x: 'max-content' }}
+              rowKey="patrol_id"
+              locale={{
+                emptyText: (
+                  <div style={{ textAlign: "center", padding: "50px 0" }}>
+                    <img src={noDataImage} alt="No Data" style={{ width: 60, marginBottom: 16 }} />
+                    <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>{t.noDataAvailable}</div>
+                  </div>
+                ),
+              }}
+            />
+            {totalItems > 0 && <CustomPagination />}
+          </>
+        ) : coverageData && (
+          <div style={{ textAlign: "center", padding: "40px", border: "2px dashed #e2e8f0", borderRadius: "12px", marginBottom: '50px' }}>
+            <div style={{ width: "60px", height: "60px", backgroundColor: "#fed7d7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: "24px" }}>⚡</div>
+            <p style={{ color: "#718096" }}>{t.noPatrolsFound} {selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}</p>
+          </div>
+        )}
 
         {/* Coverage Data Display */}
         {coverageData && (
           <div style={{ backgroundColor: "#fff", borderRadius: "12px" }}>
-
-            
             {/* Summary Cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", marginBottom: "30px" }}>
               <div className="stats-card" style={{ background: "rgba(56, 189, 248, 0.3)"}}>
@@ -1368,36 +1503,36 @@ const BeatPatrolCoverage = ({ language }) => {
             </div>
 
             {/* Export Button */}
-            <button className="glow-button" onClick={exportToExcel} style={{ marginBottom: "30px", padding: "10px 24px", display: "flex", alignItems: "center", gap: "8px", boxShadow: '-10.261px -10.261px 5.13px -11.971px #fff inset,-10.261px -10.261px 5.13px -11.971px #fff inset,-10.261px -10.261px 5.13px -11.971px #fff inset,13.681px 13.681px 7.696px -15.391px #fff inset' }}>
+            <button className="glow-button" onClick={exportToExcel} style={{ marginBottom: "30px", padding: "10px 24px", display: "flex", alignItems: "center", gap: "8px" }}>
               <img src={vector} alt="Excel" style={{ width: "20px" }} /> {t.exportToExcel}
             </button>
-
-            
           </div>
         )}
       </div>
 
-      <footer className="footer" style={{color:'black',
-              textAlign:'center',
-              padding:'15px',
-              display: 'flex',
-              justifyContent: 'space-around',
-              alignItems: 'center'}}>
-                <div>
-              <p style={{display: 'flex',alignItems: 'center',gap: '6px' }}> © 2026 Gujarat Forest Department <img src={gujaratlogo} alt="logo picture" style={{width:'40px'}}></img> </p>
-      
-                </div>
-              <div style={{display:'flex', alignItems:'center',gap: '6px'}}>
-                <p>Powered by  </p>
-                <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
-                  <img 
-                    src={gisfylogo} 
-                    alt="logo picture" 
-                    style={{ width: '100px', height: '40px' }} 
-                  />
-                </a>
-              </div>
-            </footer>
+      {/* Footer */}
+      <footer style={{
+        textAlign:'center',
+                  padding:'15px',
+                  display: 'flex',
+                  justifyContent: 'space-around',
+                  alignItems: 'center',
+        marginTop: 'auto',
+        background: 'white',
+      }}>
+        <div>
+          <p style={{display: 'flex', alignItems: 'center', gap: '6px'}}> 
+            © 2026 Gujarat Forest Department 
+            <img src={gujaratlogo} alt="logo picture" style={{width:'40px'}} />
+          </p>
+        </div>
+        <div style={{display:'flex', alignItems:'center', gap: '6px'}}>
+          <p>Powered by</p>
+          <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+            <img src={gisfylogo} alt="logo picture" style={{ width: '100px', height: '40px' }} />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };

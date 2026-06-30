@@ -205,14 +205,18 @@ useEffect(() => {
 // Close dropdown when clicking outside
 useEffect(() => {
   const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target)
+    ) {
       setIsDropdownOpen(false);
     }
   };
 
-  document.addEventListener('mousedown', handleClickOutside);
+  document.addEventListener("click", handleClickOutside); // 🔁 use click instead of mousedown
+
   return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
+    document.removeEventListener("click", handleClickOutside);
   };
 }, []);
   return (
@@ -320,7 +324,7 @@ useEffect(() => {
            </div>
          )}
             {isDropdownOpen && (
-      <div className="dropdown-menu">
+      <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
         <div className="username">
         <b>{username}</b>
         {isAdmin && <span className="admin-badge"> (Admin)</span>}

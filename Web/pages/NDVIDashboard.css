@@ -35,3 +35,54 @@ body {
 .css-18qp6qv.Mui-error .MuiPickersOutlinedInput-notchedOutline{
     border-color: rgba(0, 0, 0, 0.23) !important;
 }
+
+.css-2npcip-MuiContainer-root{
+  padding-bottom: 0px !important;
+  min-height: 89vh !important;
+}
+
+.css-kgharg{
+    padding-bottom: 0px !important;
+  min-height: 10vh !important;
+}
+
+/* Main container layout */
+#root,
+html,
+body {
+  height: 80% !important;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* Main app container */
+.MuiContainer-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 80vh;
+  padding-bottom: 0 !important;
+}
+
+/* Main content area (pushes footer down) */
+.main-content {
+  flex: 1;
+}
+
+/* Footer styles */
+.footer {
+  color: black;
+  text-align: center;
+  padding: 15px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: auto;
+  background: white;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.css-17rbn86-MuiContainer-root{
+  min-height: 87vh !important;
+}
