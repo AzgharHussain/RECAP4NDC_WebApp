@@ -4,6 +4,7 @@ const multer = require('multer');
 const { sequelize } = require('../config/r_quire');
 const fs = require('fs'); 
 const path = require('path');
+const MongoImage = require('../models/Image');
 
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
 const { clean } = require("../middlewares/sanitize");
@@ -176,14 +177,33 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
 
         await sequelize.query(alterTableQuery);
 
-        // Fetch filtered data
+        // Fetch filtered data (exclude image_data — stored in MongoDB)
         const selectQuery = `
-           SELECT *
+           SELECT * EXCLUDE (image_data)
             FROM public."${actualTableName}"
             ${whereClause};
         `;
 
         const [results] = await sequelize.query(selectQuery);
+
+        // Fetch images from MongoDB for these records
+        if (results && results.length > 0) {
+          const recordIds = results.map(r => r.pixle_id).filter(Boolean);
+          if (recordIds.length > 0) {
+            const mongoImages = await MongoImage.find({
+              sourceType: 'ndvi',
+              coupeName: actualTableName,
+              recordId: { $in: recordIds }
+            }).lean();
+            const imgMap = {};
+            mongoImages.forEach(img => { imgMap[img.recordId] = img; });
+            results.forEach(row => {
+              const img = imgMap[row.pixle_id];
+              row.image_data = img ? img.imageData : null;
+              row.image_type = img ? img.imageType : null;
+            });
+          }
+        }
 
         res.json({
             success: true,
@@ -468,13 +488,32 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
 
         await sequelize.query(alterTableQuery);
 
-        // 2️⃣ Fetch all data
+        // 2️⃣ Fetch all data (exclude image_data — stored in MongoDB)
         const selectQuery = `
-           SELECT *
+           SELECT * EXCLUDE (image_data)
             FROM public."${NdvicoupeName}";
         `;
 
         const [results] = await sequelize.query(selectQuery);
+
+        // Fetch images from MongoDB for these records
+        if (results && results.length > 0) {
+          const recordIds = results.map(r => r.pixle_id).filter(Boolean);
+          if (recordIds.length > 0) {
+            const mongoImages = await MongoImage.find({
+              sourceType: 'ndvi',
+              coupeName: NdvicoupeName,
+              recordId: { $in: recordIds }
+            }).lean();
+            const imgMap = {};
+            mongoImages.forEach(img => { imgMap[img.recordId] = img; });
+            results.forEach(row => {
+              const img = imgMap[row.pixle_id];
+              row.image_data = img ? img.imageData : null;
+              row.image_type = img ? img.imageType : null;
+            });
+          }
+        }
 
         res.json({
             success: true,
@@ -523,7 +562,7 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
 
     try {
         const selectQuery = `
-           SELECT *
+           SELECT * EXCLUDE (image_data)
             FROM public."${NdvicoupeName}"
             WHERE pixle_id = ${id};
         `;
@@ -536,6 +575,16 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
                 message: 'Bad Request - Invalid syntax'
             });
         }
+
+        // Fetch image from MongoDB
+        const mongoImage = await MongoImage.findOne({
+          sourceType: 'ndvi',
+          coupeName: NdvicoupeName,
+          recordId: parseInt(id)
+        }).lean();
+
+        results[0].image_data = mongoImage ? mongoImage.imageData : null;
+        results[0].image_type = mongoImage ? mongoImage.imageType : null;
 
         res.json({
             success: true,
@@ -854,7 +903,7 @@ if (!tableRegex.test(coupename)) {
       replacements.note = sanitizedNote;
     }
 
-    // Handle image
+    // Handle image — store in MongoDB
     if (imageFile) {
 
       const allowedTypes = [
@@ -889,8 +938,15 @@ if (!tableRegex.test(coupename)) {
       const imageBuffer = fs.readFileSync(imageFile.path);
       const base64Image = imageBuffer.toString('base64');
 
-      updates.push('image_data = :image_data');
-      replacements.image_data = base64Image;
+      // Store image in MongoDB
+      await MongoImage.findOneAndUpdate(
+        { sourceType: 'ndvi', coupeName: coupename, recordId: parseInt(id) },
+        {
+          imageType: imageFile.mimetype,
+          imageData: base64Image,
+        },
+        { upsert: true, new: true }
+      );
 
       fs.unlinkSync(imageFile.path);
     }
@@ -975,12 +1031,23 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
       replacements.note = note;
     }
     
-    // Handle image_data (expected to be base64 string)
+    // Handle image_data (expected to be base64 string) — store in MongoDB
     if (image_data !== undefined) {
       // Optional: Validate base64 format
       if (typeof image_data === 'string' && image_data.startsWith('data:image')) {
-        updates.push('image_data = :image_data');
-        replacements.image_data = image_data;
+        // Extract mime type and base64 data from data URL
+        const matches = image_data.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+        const mimeType = matches ? matches[1] : 'image/jpeg';
+        const rawBase64 = matches ? matches[2] : image_data;
+
+        await MongoImage.findOneAndUpdate(
+          { sourceType: 'ndvi', coupeName: coupename, recordId: parseInt(id) },
+          {
+            imageType: mimeType,
+            imageData: rawBase64,
+          },
+          { upsert: true, new: true }
+        );
       } else {
         return res.status(400).json({
           success: false,
@@ -1084,6 +1151,13 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
         const [deletedRecord] = await sequelize.query(deleteQuery, {
             replacements: { id: parseInt(id) },
             type: sequelize.QueryTypes.DELETE
+        });
+
+        // Also delete associated image from MongoDB
+        await MongoImage.deleteOne({
+          sourceType: 'ndvi',
+          coupeName: coupename,
+          recordId: parseInt(id)
         });
 
         res.json({

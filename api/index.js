@@ -9,6 +9,7 @@ require('dotenv').config();
 const validateAlphaNumSpaceUnderscore = require("./middlewares/validateAlphaNumSpaceUnderscore");
 const { verifyJwt } = require("./middlewares/verifyJwt");
 const { sequelize, testConnection } = require('./config/database');
+const { connectMongo } = require('./config/mongo');
 const bcrypt = require('bcrypt');
 const setNoCacheHeaders = require('./middlewares/cacheControl');
 const admin = require("firebase-admin");
@@ -781,6 +782,10 @@ app.listen(PORT, "127.0.0.1" , async () => {
   } catch (err) {
     console.error('❌ Database connection failed:', err.message);
   }
+
+  // Connect to MongoDB
+  await connectMongo();
+
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📝 Test endpoints:`);
   console.log(`   GET  http://localhost:${PORT}/api/test`);

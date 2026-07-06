@@ -4,6 +4,7 @@ const multer = require('multer');
 const jwt = require("jsonwebtoken");
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
 const { clean } = require("../middlewares/sanitize");
+const MongoImage = require("../models/Image");
 
 
 const router = express.Router();
@@ -158,23 +159,25 @@ pat_data.division = clean(pat_data.division);
 
       const patrol_id = result.rows[0].patrol_id;
 
-      // Insert images if files are uploaded
+      // Insert images into MongoDB if files are uploaded
       if (req.files && req.files.length > 0) {
-        for (let i = 0; i < req.files.length; i++) {
-          const file = req.files[i];
+        const imageDocs = req.files.map((file, i) => {
           const base64Image = file.buffer.toString('base64');
-
           const imageCategory =
             i === 0 ? 'start_image' :
             i === 1 ? 'end_image' :
             `image_${i - 1}`;
 
-          await client.query(
-            `INSERT INTO patrol_images (image_data, image_type, patrol_id, image_category)
-             VALUES ($1, $2, $3, $4)`,
-            [base64Image, file.mimetype, patrol_id, imageCategory]
-          );
-        }
+          return {
+            sourceType: 'patrol',
+            patrolId: patrol_id,
+            imageCategory,
+            imageType: file.mimetype,
+            imageData: base64Image,
+          };
+        });
+
+        await MongoImage.insertMany(imageDocs);
       }
 
       // Commit transaction
@@ -231,18 +234,8 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
     const query = `
       SELECT
         p.*,
-        pt.type_name,
-        json_agg(
-          json_build_object(
-            'image_id', pi.image_id,
-            'image_data', pi.image_data,
-            'image_type', pi.image_type,
-            'image_category', pi.image_category,
-            'note', pi.note
-          )
-        ) AS images
+        pt.type_name
       FROM patrols p
-      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       GROUP BY p.patrol_id, pt.type_name
       ORDER BY p.patrol_id DESC
@@ -250,6 +243,23 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
     `;
 
     const result = await client.query(query);
+
+    const patrolIds = result.rows.map(p => p.patrol_id);
+    let imagesMap = {};
+    if (patrolIds.length > 0) {
+      const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: { $in: patrolIds } }).lean();
+      imagesMap = mongoImages.reduce((acc, img) => {
+        if (!acc[img.patrolId]) acc[img.patrolId] = [];
+        acc[img.patrolId].push({
+          image_id: img._id.toString(),
+          image_data: img.imageData,
+          image_type: img.imageType,
+          image_category: img.imageCategory,
+          note: img.note,
+        });
+        return acc;
+      }, {});
+    }
 
     const formattedData = result.rows.map(patrol => ({
 
@@ -266,7 +276,7 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
   start_time: toUTC(patrol.start_time),
   end_time: toUTC(patrol.end_time),
 
-  images: patrol.images.map(img => ({
+  images: (imagesMap[patrol.patrol_id] || []).map(img => ({
     ...img,
     image_data: img.image_data || null
   }))
@@ -390,22 +400,12 @@ if (end_date) {
       ? 'WHERE ' + conditions.join(' AND ')
       : '';
 
-    // Main query with pagination and filters
+    // Main query with pagination and filters (no image JOIN)
     const query = `
       SELECT
         p.*,
-        pt.type_name,
-        json_agg(
-          json_build_object(
-            'image_id', pi.image_id,
-            'image_data', pi.image_data,
-            'image_type', pi.image_type,
-            'image_category', pi.image_category,
-            'note', pi.note
-          )
-        ) AS images
+        pt.type_name
       FROM patrols p
-      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ${whereClause}
       GROUP BY p.patrol_id, pt.type_name
@@ -433,11 +433,29 @@ if (end_date) {
     const totalCount = parseInt(countResult.rows[0].total_count);
     const totalPages = Math.ceil(totalCount / limit);
 
+    // Fetch images from MongoDB for the patrols on this page
+    const patrolIds = result.rows.map(p => p.patrol_id);
+    let imagesMap = {};
+    if (patrolIds.length > 0) {
+      const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: { $in: patrolIds } }).lean();
+      imagesMap = mongoImages.reduce((acc, img) => {
+        if (!acc[img.patrolId]) acc[img.patrolId] = [];
+        acc[img.patrolId].push({
+          image_id: img._id.toString(),
+          image_data: img.imageData,
+          image_type: img.imageType,
+          image_category: img.imageCategory,
+          note: img.note,
+        });
+        return acc;
+      }, {});
+    }
+
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
       start_time: toUTC(patrol.start_time),
       end_time: toUTC(patrol.end_time),
-      images: patrol.images.filter(img => img.image_id !== null) // Remove null images from aggregation
+      images: imagesMap[patrol.patrol_id] || []
     }));
 
     res.json({ 
@@ -590,22 +608,8 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
     const query = `
       SELECT
         p.*,
-        pt.type_name,
-        COALESCE(
-          json_agg(
-            json_build_object(
-              'image_id', pi.image_id,
-              'image_data', pi.image_data,
-              'image_type', pi.image_type,
-              'image_category', pi.image_category,
-              'note', pi.note
-            )
-            ORDER BY pi.image_id
-          ) FILTER (WHERE pi.image_id IS NOT NULL),
-          '[]'::json
-        ) AS images
+        pt.type_name
       FROM patrols p
-      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ${whereClause}
       GROUP BY p.patrol_id, pt.type_name
@@ -642,9 +646,27 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
     // RESPONSE FORMAT
     // -----------------------------
 
+    // Fetch images from MongoDB for the patrols on this page
+    const patrolIds = result.rows.map(p => p.patrol_id);
+    let imagesMap = {};
+    if (patrolIds.length > 0) {
+      const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: { $in: patrolIds } }).lean();
+      imagesMap = mongoImages.reduce((acc, img) => {
+        if (!acc[img.patrolId]) acc[img.patrolId] = [];
+        acc[img.patrolId].push({
+          image_id: img._id.toString(),
+          image_data: img.imageData,
+          image_type: img.imageType,
+          image_category: img.imageCategory,
+          note: img.note,
+        });
+        return acc;
+      }, {});
+    }
+
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      images: Array.isArray(patrol.images) ? patrol.images : []
+      images: imagesMap[patrol.patrol_id] || []
     }));
 
     res.json({
@@ -676,18 +698,8 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
     const query = `
       SELECT
         p.*,
-        pt.type_name,
-        json_agg(
-          json_build_object(
-            'image_id', pi.image_id,
-            'image_data', pi.image_data,
-            'image_type', pi.image_type,
-            'image_category', pi.image_category,
-            'note', pi.note
-          )
-        ) AS images
+        pt.type_name
       FROM patrols p
-      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       WHERE p.user_id = $1
       GROUP BY p.patrol_id, pt.type_name
@@ -696,11 +708,28 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
 
     const result = await client.query(query, [user_id]);
 
+    const patrolIds = result.rows.map(p => p.patrol_id);
+    let imagesMap = {};
+    if (patrolIds.length > 0) {
+      const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: { $in: patrolIds } }).lean();
+      imagesMap = mongoImages.reduce((acc, img) => {
+        if (!acc[img.patrolId]) acc[img.patrolId] = [];
+        acc[img.patrolId].push({
+          image_id: img._id.toString(),
+          image_data: img.imageData,
+          image_type: img.imageType,
+          image_category: img.imageCategory,
+          note: img.note,
+        });
+        return acc;
+      }, {});
+    }
+
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
       start_time: toUTC(patrol.start_time),
       end_time: toUTC(patrol.end_time),
-      images: patrol.images.map(img => ({
+      images: (imagesMap[patrol.patrol_id] || []).map(img => ({
         ...img,
         image_data: img.image_data || null
       }))
@@ -724,18 +753,8 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
     const query = `
       SELECT
         p.*,
-        pt.type_name,
-        json_agg(
-          json_build_object(
-            'image_id', pi.image_id,
-            'image_data', pi.image_data,
-            'image_type', pi.image_type,
-            'image_category', pi.image_category,
-            'note', pi.note
-          )
-        ) AS images
+        pt.type_name
       FROM patrols p
-      LEFT JOIN patrol_images pi ON p.patrol_id = pi.patrol_id
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       WHERE p.patrol_id = $1
       GROUP BY p.patrol_id, pt.type_name;
@@ -748,14 +767,20 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
 
     const patrol = result.rows[0];
 
+    const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: parseInt(patrol_id) }).lean();
+    const images = mongoImages.map(img => ({
+      image_id: img._id.toString(),
+      image_data: img.imageData || null,
+      image_type: img.imageType,
+      image_category: img.imageCategory,
+      note: img.note,
+    }));
+
     const formattedPatrol = {
       ...patrol,
       start_time: toUTC(patrol.start_time),
       end_time: toUTC(patrol.end_time),
-      images: patrol.images.map(img => ({
-        ...img,
-        image_data: img.image_data || null
-      }))
+      images
     };
 
     res.json({ message: 'Patrol fetched successfully', data: formattedPatrol });
