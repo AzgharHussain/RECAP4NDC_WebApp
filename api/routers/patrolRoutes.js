@@ -1,5 +1,5 @@
 const express = require('express');
-const { Client } = require('pg');
+const { Pool } = require('pg');
 const multer = require('multer');
 const jwt = require("jsonwebtoken");
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
@@ -9,17 +9,20 @@ const MongoImage = require("../models/Image");
 
 const router = express.Router();
 
-// PostgreSQL client
-const client = new Client({
+// PostgreSQL connection pool
+const client = new Pool({
   host: '68.178.167.216',
   user: 'postgres',
   password: 'P$DB@25%$#!26',
   port: 5432,
   database: 'Recap4NDC'
 });
-client.connect()
+client.on('error', (err) => {
+  console.error('Unexpected PostgreSQL pool error:', err.message);
+});
+client.query('SELECT 1')
   .then(() => console.log('Database connected'))
-  .catch(() => console.log('Database not connected'));
+  .catch((err) => console.log('Database not connected:', err.message));
 
 // Multer memory storage
 const storage = multer.memoryStorage();
@@ -117,10 +120,13 @@ pat_data.division = clean(pat_data.division);
     const startUTC = parseToUTC(pat_data.start_time);
     const endUTC = parseToUTC(pat_data.end_time);
 
-    // Start a transaction
-    await client.query('BEGIN');
+    // Acquire a dedicated connection for the transaction
+    const txClient = await client.connect();
 
     try {
+      // Start a transaction
+      await txClient.query('BEGIN');
+
       const query1 = `
         INSERT INTO patrols (
           patrol_officer_name, 
@@ -141,7 +147,7 @@ pat_data.division = clean(pat_data.division);
         RETURNING patrol_id;
       `;
 
-      const result = await client.query(query1, [
+      const result = await txClient.query(query1, [
         pat_data.patrol_officer_name,
         startUTC,
         endUTC,
@@ -181,14 +187,16 @@ pat_data.division = clean(pat_data.division);
       }
 
       // Commit transaction
-      await client.query('COMMIT');
+      await txClient.query('COMMIT');
       
       res.json({ message: 'Data created successfully', patrol_id });
 
     } catch (err) {
       // Rollback transaction on error
-      await client.query('ROLLBACK');
+      await txClient.query('ROLLBACK');
       throw err;
+    } finally {
+      txClient.release();
     }
 
   } catch (err) {
