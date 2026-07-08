@@ -242,7 +242,7 @@ async function hasGeometryColumn(tableName) {
     console.log("\n🔍 Checking available tables and their structure...");
     const tablesRes = await pgClient.query(`
       SELECT DISTINCT input_table_name
-      FROM public.coupe_metadata
+      FROM public.coupe_metadata_old
       WHERE input_table_name IS NOT NULL
     `);
  
