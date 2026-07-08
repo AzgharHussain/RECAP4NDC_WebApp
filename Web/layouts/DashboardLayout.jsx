@@ -17,7 +17,7 @@ import logos10 from "../assets/logos10.png";
 import logos11 from "../assets/logos11.png";
 import userIcon from "../assets/user.png";
 import patrollingIcon from "../assets/Patrolling.png";
-import incidentIcon from "../assets/Incident.png";
+import incidentIcon from "../assets/incident.png";
 import { useLanguage } from "../context/LanguageContext";
 import "./DashboardLayout.css";
 

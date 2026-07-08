@@ -11,7 +11,7 @@ import {
 import { RiAdminFill } from "react-icons/ri";
 import "./AdminDashboard.css";
 import UploadPatrolBoundary from "./UploadPatrolBoundary";
-import gisfylogo from "../assets/gisfylogo.png";
+import gisfylogo from "../assets/Gisfylogo.png";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 
 

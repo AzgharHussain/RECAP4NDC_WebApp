@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useRef } from "react";
 import L from "leaflet";
 import * as htmlToImage from "html-to-image";
-import "./PrintControl.css";
+import "./printControl.css";
 
 const PrintControl = ({ mapRef }) => {
   const isExportingRef = useRef(false);

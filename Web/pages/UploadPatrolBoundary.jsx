@@ -15,7 +15,7 @@ import {
 } from "react-icons/fi";
 import { useLanguage } from "../context/LanguageContext";
 import "./AdminDashboard.css";
-import gisfylogo from "../assets/gisfylogo.png";
+import gisfylogo from "../assets/Gisfylogo.png";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 
 

@@ -25,7 +25,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
 // import "./Homepage.css";
-import gisfylogo from "../assets/gisfylogo.png";
+import gisfylogo from "../assets/Gisfylogo.png";
 
 const Loader = () => {
   console.log("loading");

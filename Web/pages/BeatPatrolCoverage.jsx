@@ -22,7 +22,7 @@ import "./RouterMap.css";
 import { API_BASE_URL } from "../config";
 import Select from 'react-select';
 import vector from '../assets/Vector.png';
-import gisfylogo from "../assets/gisfylogo.png";
+import gisfylogo from "../assets/Gisfylogo.png";
 import noDataImage from "../assets/no-data.png";
 import startIconImg from "../assets/marker-icon.png";
 import endIconImg from "../assets/marker-icon-end.png";

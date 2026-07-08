@@ -17,7 +17,7 @@ import {
 } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 
-import gisfylogo from "../assets/gisfylogo.png";
+import gisfylogo from "../assets/Gisfylogo.png";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 
 

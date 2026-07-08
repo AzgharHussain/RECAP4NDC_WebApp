@@ -24,7 +24,7 @@ const NDVIChangeDashboard = lazy(() => import("./pages/NDVIDashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Homepage = lazy(() => import("./pages/Homepage"));
 const BeatPatrolCoverage = lazy(() => import("./pages/BeatPatrolCoverage"));
-const ChangePassword = lazy(() => import("./pages/changepassword"));
+const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const UploadPatrolBoundary = lazy(() => import("./pages/UploadPatrolBoundary"));
 
 

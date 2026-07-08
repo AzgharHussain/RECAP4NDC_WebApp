@@ -20,7 +20,7 @@ import user from "../assets/user.png";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
 import giz from "../assets/giz.png";
-import recap4NDC from "../assets/RE.png";
+import recap4NDC from "../assets/re.png";
 
 import Geospacial from "../assets/Geospacial.png";
 import Vegetation from "../assets/vegetation.jpg";
@@ -29,7 +29,7 @@ import forestmonitoring from "../assets/p1.jpg";
 import pm from "../assets/p-m.png";
 import fm from "../assets/f-m.png";
 import nv from "../assets/n-v.png";
-import gisfylogo from "../assets/gisfylogo.png";
+import gisfylogo from "../assets/Gisfylogo.png";
 import cb from "../assets/cb.png";
 import curve from "../assets/curve.png";
 

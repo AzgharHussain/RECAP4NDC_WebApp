@@ -30,7 +30,7 @@ const BeatPatrolCoverage = lazy(() => import("./BeatPatrolCoverage"));
 import vector from '../assets/Vector.png';
 import Analyze_patrolling from '../assets/Analyze_patroll.png';
 
-import gisfylogo from "../assets/gisfylogo.png";
+import gisfylogo from "../assets/Gisfylogo.png";
 
 import {
   MapContainer,

@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation,BrowserRouter,useNavigate } from "react-ro
 import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight} from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
-import brand from "../assets/logogiz.png";
+import brand from "../assets/Logogiz.png";
 import logos1 from "../assets/logos1.png";
 import logos2 from "../assets/logos2.png";
 import logos3 from "../assets/logos3.png";
@@ -17,7 +17,7 @@ import logos10 from "../assets/logos10.png";
 import logos11 from "../assets/logos11.png";
 import userIcon from "../assets/user.png"; // ✅ import your image
 import patrollingIcon from "../assets/Patrolling.png";  // Import the Patrolling image
-import incidentIcon from "../assets/Incident.png";  // Import the Incident image
+import incidentIcon from "../assets/incident.png";  // Import the Incident image
 import { useLanguage } from "../context/LanguageContext";
 import "./DashboardLayout.css";
 
