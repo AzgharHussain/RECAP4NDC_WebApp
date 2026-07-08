@@ -187,91 +187,41 @@ function Login() {
     }
   };
 
-  // Frontend-only SOAP authentication using Vite proxy
+  // SOAP authentication via backend API (works in both dev and production)
   const forestLogin = async (username, password) => {
     try {
-      console.log("🌲 Making SOAP request through Vite proxy...");
-      
-      // Create SOAP Request
-      const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-  <soap12:Body>
-    <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
-      <username>${username}</username>
-      <password>${password}</password>
-    </LOGIN_EGUJFOREST>
-  </soap12:Body>
-</soap12:Envelope>`;
+      console.log("🌲 Making forest login request via backend API...");
 
-      console.log('Sending SOAP request...');
-      
-      // Make SOAP request through Vite proxy
       const response = await axios.post(
-        '/forest-proxy/FMIS/CommonService/forestcommonservice.asmx',
-        soapRequest,
-        {
-          headers: {
-            'Content-Type': 'text/xml; charset=utf-8',
-            'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
-          },
-          timeout: 30000,
-          responseType: 'text'
-        }
+        `${API_BASE_URL}/api/forest-login`,
+        { username, password },
+        { timeout: 30000 }
       );
 
-      console.log('SOAP Response Status:', response.status);
-      
+      console.log('Forest login response status:', response.status);
+
       if (response.status !== 200) {
         throw new Error('FOREST_SERVICE_UNAVAILABLE');
       }
 
-      // Parse XML response using DOMParser
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(response.data, "text/xml");
-      
-      // Check for parsing errors
-      const parseError = xmlDoc.querySelector('parsererror');
-      if (parseError) {
-        console.error("XML parsing error");
+      const data = response.data;
+
+      if (!data.success) {
         throw new Error('FOREST_AUTH_FAILED');
       }
 
-      // Navigate through XML structure to extract user data
-      const getElementText = (doc, tagName) => {
-        const element = doc.getElementsByTagName(tagName)[0];
-        return element ? (element.textContent || '-') : '-';
-      };
-
-      // Extract data from XML
-      const userData = {
-        NAME: getElementText(xmlDoc, 'NAME'),
-        NameOfPost: getElementText(xmlDoc, 'NameOfPost'),
-        CadreName: getElementText(xmlDoc, 'CadreName'),
-        CircleName: getElementText(xmlDoc, 'CircleName'),
-        DivisionName: getElementText(xmlDoc, 'DivisionName'),
-        RangeName: getElementText(xmlDoc, 'RangeName'),
-        RoundName: getElementText(xmlDoc, 'RoundName'),
-        BeatName: getElementText(xmlDoc, 'BeatName'),
-        MobileNo: getElementText(xmlDoc, 'MobileNo'),
-        EmailID: getElementText(xmlDoc, 'EmailID'),
-        USER_ID: getElementText(xmlDoc, 'USER_ID'),
-        USER_TYPE: getElementText(xmlDoc, 'USER_TYPE'),
-        F_ID: getElementText(xmlDoc, 'F_ID')
-      };
-
+      const userData = data.jsonMap;
       console.log('Extracted user data:', userData);
-      
-      // Check if we have valid user data
-      if (!userData.NAME || userData.NAME === '-') {
+
+      if (!userData || !userData.NAME || userData.NAME === '-') {
         throw new Error('FOREST_AUTH_FAILED');
       }
 
       return userData;
 
     } catch (error) {
-      console.error('SOAP proxy error:', error.message);
-      
-      // Map error messages
+      console.error('Forest login error:', error.message);
+
       if (error.message === 'FOREST_AUTH_FAILED') {
         throw new Error('FOREST_AUTH_FAILED');
       } else if (error.code === 'ECONNABORTED') {
@@ -283,7 +233,7 @@ function Login() {
       } else if (error.message.includes('502') || error.message.includes('504') || error.message.includes('503')) {
         throw new Error('FOREST_SERVICE_UNAVAILABLE');
       }
-      
+
       throw new Error(error.message || 'FOREST_AUTH_FAILED');
     }
   };
