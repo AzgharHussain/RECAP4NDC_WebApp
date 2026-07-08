@@ -76,7 +76,7 @@ app.post("/uploadShapefile", upload.single("shapefile"), async (req, res) => {
       tableName,
     });
   } catch (err) {
-    console.error("💥 Fatal error:", err.message);
+    console.error("💥 Fatal2222222 error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   } finally {
     client.release();

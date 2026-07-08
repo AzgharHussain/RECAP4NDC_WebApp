@@ -423,7 +423,7 @@ async function hasGeometryColumn(tableName) {
     }
  
   } catch (err) {
-    console.error("💥 Fatal error:", err.message);
+    console.error("💥 Fatal111111 error:", err.message);
     console.error(err.stack);
   } finally {
     await pgClient.end();
