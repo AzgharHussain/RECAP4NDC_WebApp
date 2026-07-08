@@ -28,7 +28,7 @@ const pool = new Pool({
   user: "postgres",
   host: "68.178.167.216",
   database: "Recap4NDC",
-  password: "P$DB@25%$#!26",
+  password: "pass@123",
   port: 5432,
 });
 
@@ -76,7 +76,7 @@ app.post("/uploadShapefile", upload.single("shapefile"), async (req, res) => {
       tableName,
     });
   } catch (err) {
-    console.error("💥 Fatal2222222 error:", err.message);
+    console.error("💥 Fatal error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   } finally {
     client.release();

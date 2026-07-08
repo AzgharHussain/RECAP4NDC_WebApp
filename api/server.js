@@ -12,7 +12,7 @@ const pgClient = new Client({
   user: "postgres",
   host: "68.178.167.216",
   database: "Recap4NDC",
-  password: "P$DB@25%$#!26",
+  password: "pass@123",
   port: 5432,
 });
  
@@ -242,7 +242,7 @@ async function hasGeometryColumn(tableName) {
     console.log("\n🔍 Checking available tables and their structure...");
     const tablesRes = await pgClient.query(`
       SELECT DISTINCT input_table_name
-      FROM public.beatview_metadata
+      FROM public.coupe_metadata
       WHERE input_table_name IS NOT NULL
     `);
  
@@ -423,7 +423,7 @@ async function hasGeometryColumn(tableName) {
     }
  
   } catch (err) {
-    console.error("💥 Fatal111111 error:", err.message);
+    console.error("💥 Fatal error:", err.message);
     console.error(err.stack);
   } finally {
     await pgClient.end();
