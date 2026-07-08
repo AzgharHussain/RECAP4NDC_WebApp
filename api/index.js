@@ -776,7 +776,7 @@ app.use((req, res, next) => {
 // ==================== START SERVER ==================== //
 const PORT = process.env.PORT || 5002;
 
-app.listen(PORT, "127.0.0.1" , async () => {
+app.listen(PORT, "0.0.0.0" , async () => {
   try {
     await sequelize.authenticate();
     console.log('🟢 Database connected successfully');
