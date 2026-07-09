@@ -177,14 +177,15 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
 
         await sequelize.query(alterTableQuery);
 
-        // Fetch filtered data (exclude image_data — stored in MongoDB)
+        // Fetch filtered data (image_data fetched separately from MongoDB)
         const selectQuery = `
-           SELECT * EXCLUDE (image_data)
+            SELECT *
             FROM public."${actualTableName}"
             ${whereClause};
         `;
 
         const [results] = await sequelize.query(selectQuery);
+        results.forEach(row => { delete row.image_data; });
 
         // Fetch images from MongoDB for these records
         if (results && results.length > 0) {
@@ -488,13 +489,14 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
 
         await sequelize.query(alterTableQuery);
 
-        // 2️⃣ Fetch all data (exclude image_data — stored in MongoDB)
+        // 2️⃣ Fetch all data (image_data fetched separately from MongoDB)
         const selectQuery = `
-           SELECT * EXCLUDE (image_data)
+            SELECT *
             FROM public."${NdvicoupeName}";
         `;
 
         const [results] = await sequelize.query(selectQuery);
+        results.forEach(row => { delete row.image_data; });
 
         // Fetch images from MongoDB for these records
         if (results && results.length > 0) {
