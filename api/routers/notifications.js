@@ -314,15 +314,30 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
 
   try {
 
+    console.log("[send-notifications] req.headers:", req.headers['content-type']);
+    console.log("[send-notifications] req.body:", req.body);
+    console.log("[send-notifications] req.body keys:", Object.keys(req.body || {}));
+
     const firebase_token = (req.body.firebase_token || "").trim();
     const user_id = (req.body.user_id || "").trim();
     const village_name = (req.body.village_name || "").trim();
-    const coupe_name = (req.body.coupe_name || "").trim();
+
+    // Accept common coupe/coupen name variations sent by clients
+    const coupe_name = (
+      req.body.coupe_name ||
+      req.body.coupenname ||
+      req.body.coupename ||
+      req.body.coupeName ||
+      req.body.coupenName ||
+      ""
+    ).trim();
 
     if (!firebase_token || !user_id || !village_name || !coupe_name) {
       return res.status(400).json({
         success: false,
-        message: "Invalid request"
+        message: "Invalid request",
+        received: { firebase_token: !!firebase_token, user_id: !!user_id, village_name: !!village_name, coupe_name: !!coupe_name },
+        bodyKeys: Object.keys(req.body || {})
       });
     }
 
