@@ -26,6 +26,7 @@ const Homepage = lazy(() => import("./pages/Homepage"));
 const BeatPatrolCoverage = lazy(() => import("./pages/BeatPatrolCoverage"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const UploadPatrolBoundary = lazy(() => import("./pages/UploadPatrolBoundary"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 
 
 const LoadingFallback = () => (
@@ -45,6 +46,7 @@ export default function App() {
           {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Homepage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
           {/* Protected User Routes */}
           <Route
