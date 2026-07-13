@@ -116,10 +116,12 @@ async function extractShapefileData(shapefilePath, coupeName) {
     result = await source.read();
   }
   console.log(`✅ Extracted ${shapefileData.length} features for ${coupeName}`);
-  return shapefileData;
-}
+  return shapefileData;    
+}  
 
-// ---- Create PostGIS Table ----
+
+
+// ---- Create P  ostGIS Table ----
 async function createTableForCoupe(client, coupeName) {
   const tableName =
     coupeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "") + "_table";
