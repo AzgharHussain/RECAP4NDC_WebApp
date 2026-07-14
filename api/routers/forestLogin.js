@@ -39,7 +39,8 @@ router.post('/forest-login', async (req, res) => {
       soapRequest,
       {
         headers: {
-          'Content-Type': 'text/xml; charset=utf-8'
+          'Content-Type': 'application/soap+xml; charset=utf-8',
+          SOAPAction: 'http://tempuri.org/LOGIN_EGUJFOREST'
         },
         timeout: 30000
       }
