@@ -52,8 +52,7 @@ function PrivacyPolicy() {
         <ul>
           <li>Recording and monitoring patrol routes and coverage areas;</li>
           <li>Supporting forest protection, monitoring, and enforcement activities;</li>
-          <li>Providing operational oversight to authorized officers of the Gujarat Forest Department;</li>
-          <li>Generating anonymized and aggregated reports for project monitoring and evaluation under RECAP4NDC; and</li>
+          <li>Providing operational oversight to authorized officers of the Gujarat Forest Department.</li>
           <li>Maintaining, securing, and improving the Forest Patrolling &amp; Monitoring System.</li>
         </ul>
 
@@ -72,24 +71,15 @@ function PrivacyPolicy() {
         <p>Location access is essential for the intended functionality of the Forest Patrolling &amp; Monitoring System.</p>
         <p>Disabling location permissions may prevent the Gujarat Forest Department from recording patrol activities and may limit or disable core operational features required for official duties.</p>
 
-        <h3>6. Data Storage and Retention</h3>
-        <p>Data collected through the Forest Patrolling &amp; Monitoring System is stored on infrastructure located in India and retained in accordance with:</p>
-        <ul>
-          <li>Gujarat Forest Department record retention policies;</li>
-          <li>Applicable legal requirements; and</li>
-          <li>RECAP4NDC project obligations.</li>
-        </ul>
-        <p>Following the expiry of retention requirements, data may be securely deleted or anonymized.</p>
-
-        <h3>7. International Data Transfers</h3>
+        <h3>6. International Data Transfers</h3>
         <p>The Gujarat Forest Department primarily stores and processes data within India. Any international access for technical support or project management purposes will be subject to appropriate safeguards and applicable legal requirements.</p>
 
-        <h3>8. Changes to this Privacy Notice</h3>
+        <h3>7. Changes to this Privacy Notice</h3>
         <p>This Privacy Notice may be updated from time to time to reflect operational, legal, or technical changes. Updated versions will be published through the Forest Patrolling &amp; Monitoring System.</p>
 
-        <h3>9. Contact Information</h3>
+        <h3>8. Contact Information</h3>
         <p>For questions regarding this Privacy Notice, please contact:</p>
-        <p>Gujarat Forest Department<br />RECAP4NDC Project<br />Email: [Project Coordinator Email]</p>
+        <p>Gujarat Forest Department<br />RECAP4NDC Project<br />Email: gujfd@gmail.com</p>
 
         <hr className="legal-divider" />
 
