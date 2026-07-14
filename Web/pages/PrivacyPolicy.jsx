@@ -8,127 +8,95 @@ function PrivacyPolicy() {
       <div className="legal-container">
         <Link to="/login" className="legal-back-link">&larr; Back to Login</Link>
 
-        {/* ===================== PRIVACY NOTICE ===================== */}
-        <h1 className="legal-title">PRIVACY NOTICE &ndash; INDIA</h1>
-        <h2 className="legal-subtitle">FOREST PATROLLING &amp; MONITORING SYSTEM</h2>
-        <p className="legal-updated">Last Updated: 9 July 2026</p>
+        {/* ===================== PRIVACY POLICY ===================== */}
+        <h1 className="legal-title">PRIVACY POLICY</h1>
+        <h2 className="legal-subtitle">VKY WORK TRACKER</h2>
 
-        <p>This Privacy Notice explains how the Gujarat Forest Department collects, uses, stores, and shares information in connection with the provision of forest patrolling and monitoring services through the Forest Patrolling &amp; Monitoring System.</p>
-        <p>The Forest Patrolling &amp; Monitoring System has been developed for the Gujarat Forest Department under the RECAP4NDC Project implemented by Deutsche Gesellschaft f&uuml;r Internationale Zusammenarbeit (GIZ) GmbH.</p>
-        <p>This Privacy Notice applies to the Forest Patrolling &amp; Monitoring System available at https://forestrecap.gisfy.co.in/ and all related services associated with the Gujarat Forest Department.</p>
+        <p>VKY WORK TRACKER is developed, managed, and maintained by the Commissionerate of Tribal Development, Gujarat. We are committed to maintaining the highest standards of privacy protection for our users and ensuring that your personal and professional information is handled with absolute security, transparency, and responsibility.</p>
+        <p>This Privacy Policy outlines how VKY WORK TRACKER collects, uses, stores, discloses, and safeguards your data when you install and interact with our mobile application.</p>
 
-        <h3>1. Information We Collect</h3>
-        <p>The Gujarat Forest Department is designed to minimize data collection and only collects information that is necessary for operational forest patrolling activities.</p>
-        <h4>Location Information</h4>
-        <p>During active patrol operations, the Gujarat Forest Department collects:</p>
+        <h3>1. Developer Information</h3>
+        <p><strong>Developer Name:</strong> Commissionerate of Tribal Development, Gujarat</p>
+        <p><strong>Developer Website:</strong> <a href="https://vky.gujarat.gov.in/" target="_blank" rel="noopener noreferrer">https://vky.gujarat.gov.in/</a></p>
+        <p><strong>Office Address:</strong><br />1st Floor, Birsa Munda Bhavan, Sector-10/A, Gandhinagar, Gujarat, India.</p>
+        <p><strong>Email:</strong> <a href="mailto:jasvantm@gujarat.gov.in">jasvantm@gujarat.gov.in</a></p>
+        <p><strong>Phone:</strong> +91 9662511327</p>
+
+        <h3>2. Information We Collect</h3>
+        <p>Depending on the features you use, the application may collect:</p>
         <ul>
-          <li>GPS coordinates of patrol locations;</li>
-          <li>Patrol route information;</li>
-          <li>Date and time stamps associated with location events; and</li>
-          <li>Device identifiers required for synchronization, authentication, and operational continuity.</li>
+          <li>Username</li>
+          <li>Location</li>
+          <li>Camera Images</li>
+          <li>Work Reports</li>
+          <li>Usage Logs</li>
         </ul>
-        <h4>Technical Device Information</h4>
-        <p>The Gujarat Forest Department may collect limited technical information required for system functionality and troubleshooting, including:</p>
+        <p>We collect only the information necessary for providing official application services.</p>
+
+        <h3>3. Permissions Used</h3>
+        <p>The application may request the following permissions:</p>
+        <h4>Camera</h4>
+        <p>Used for:</p>
         <ul>
-          <li>Device model;</li>
-          <li>Operating system version;</li>
-          <li>Application version; and</li>
-          <li>Error and diagnostic logs.</li>
+          <li>Capturing work photographs</li>
+          <li>Attendance verification</li>
+          <li>Document uploads</li>
         </ul>
-
-        <h3>2. Information We Do Not Collect</h3>
-        <p>The Gujarat Forest Department is not designed to collect or process the following information unless separately provided through departmental systems:</p>
+        <p>The camera is never accessed without your permission.</p>
+        <h4>Location</h4>
+        <p>Used for:</p>
         <ul>
-          <li>Personal contact information such as email addresses or phone numbers;</li>
-          <li>Demographic information;</li>
-          <li>Biometric information;</li>
-          <li>Audio recordings;</li>
-          <li>Photographs or videos captured for personal purposes; or</li>
-          <li>Any other information not required for official forest patrolling operations.</li>
+          <li>Attendance marking</li>
+          <li>Field visit tracking</li>
+          <li>Work location verification</li>
         </ul>
-
-        <h3>3. How We Use Information</h3>
-        <p>Collected information is used exclusively for official purposes, including:</p>
+        <h4>Storage / Photos</h4>
+        <p>Used for:</p>
         <ul>
-          <li>Recording and monitoring patrol routes and coverage areas;</li>
-          <li>Supporting forest protection, monitoring, and enforcement activities;</li>
-          <li>Providing operational oversight to authorized officers of the Gujarat Forest Department.</li>
-          <li>Maintaining, securing, and improving the Forest Patrolling &amp; Monitoring System.</li>
-        </ul>
-
-        <h3>4. Sharing of Information</h3>
-        <p>Information collected through the Gujarat Forest Department's system may be shared only in the following circumstances:</p>
-        <h4>Gujarat Forest Department</h4>
-        <p>Location information and patrol records are accessible to authorized officers of the Gujarat Forest Department for operational supervision and management purposes.</p>
-        <h4>Service Providers</h4>
-        <p>Information may be processed by authorized hosting, cloud infrastructure, mapping, or technical support providers strictly for the purpose of operating and maintaining the Forest Patrolling &amp; Monitoring System.</p>
-        <h4>Project Partners</h4>
-        <p>Aggregated and anonymized information, such as patrol coverage statistics and heat maps, may be shared with GIZ and RECAP4NDC partners for project reporting, monitoring, and evaluation purposes.</p>
-        <h4>Legal Requirements</h4>
-        <p>Information may be disclosed where required by applicable law, court order, or governmental authority.</p>
-
-        <h3>5. Location Permissions</h3>
-        <p>Location access is essential for the intended functionality of the Forest Patrolling &amp; Monitoring System.</p>
-        <p>Disabling location permissions may prevent the Gujarat Forest Department from recording patrol activities and may limit or disable core operational features required for official duties.</p>
-
-        <h3>6. International Data Transfers</h3>
-        <p>The Gujarat Forest Department primarily stores and processes data within India. Any international access for technical support or project management purposes will be subject to appropriate safeguards and applicable legal requirements.</p>
-
-        <h3>7. Changes to this Privacy Notice</h3>
-        <p>This Privacy Notice may be updated from time to time to reflect operational, legal, or technical changes. Updated versions will be published through the Forest Patrolling &amp; Monitoring System.</p>
-
-        <h3>8. Contact Information</h3>
-        <p>For questions regarding this Privacy Notice, please contact:</p>
-        <p>Gujarat Forest Department<br />RECAP4NDC Project<br />Email: gujfd@gmail.com</p>
-
-        <hr className="legal-divider" />
-
-        {/* ===================== TERMS OF USE ===================== */}
-        <h1 className="legal-title">TERMS OF USE</h1>
-        <h2 className="legal-subtitle">FOREST PATROLLING &amp; MONITORING SYSTEM</h2>
-        <p className="legal-updated">Last Updated: 9 July 2026</p>
-
-        <p>These Terms of Use govern access to and use of the Gujarat Forest Department's Forest Patrolling &amp; Monitoring System.</p>
-        <p>By accessing or using the Forest Patrolling &amp; Monitoring System, you agree to comply with these Terms.</p>
-
-        <h3>1. Eligibility and Authorization</h3>
-        <p>Access to the Forest Patrolling &amp; Monitoring System is restricted to authorized personnel, employees, contractors, or agents of the Gujarat Forest Department acting within the scope of their official responsibilities.</p>
-        <p>Users are responsible for maintaining the confidentiality and security of their login credentials. Credential sharing with unauthorized individuals is strictly prohibited.</p>
-
-        <h3>2. Permitted Use</h3>
-        <p>The Forest Patrolling &amp; Monitoring System may only be used for official forest patrolling, monitoring, conservation, and enforcement activities.</p>
-        <p>Users agree that they will not:</p>
-        <ul>
-          <li>Use the Forest Patrolling &amp; Monitoring System for personal or commercial purposes;</li>
-          <li>Circumvent or disable security controls or location tracking mechanisms;</li>
-          <li>Attempt to reverse engineer, modify, or interfere with the Forest Patrolling &amp; Monitoring System; or</li>
-          <li>Share patrol data or operational information without authorization.</li>
+          <li>Uploading images</li>
+          <li>Selecting files</li>
         </ul>
 
-        <h3>3. Ownership of Data</h3>
-        <p>All patrol information, location records, operational data, and derived outputs generated through the Forest Patrolling &amp; Monitoring System are the property of the Gujarat Forest Department.</p>
-        <p>Unauthorized copying, extraction, publication, or distribution of such information is prohibited.</p>
+        <h3>4. How We Use Your Information</h3>
+        <p>We use collected information to:</p>
+        <ul>
+          <li>Authenticate users</li>
+          <li>Track work</li>
+          <li>Verify work location</li>
+          <li>Generate work reports</li>
+          <li>Improve application performance</li>
+          <li>Resolve technical issues</li>
+          <li>Ensure application security</li>
+        </ul>
+        <p>We do not sell your personal information.</p>
 
-        <h3>4. Availability and Accuracy</h3>
-        <p>The Forest Patrolling &amp; Monitoring System is provided on an "AS IS" and "AS AVAILABLE" basis.</p>
-        <p>The Gujarat Forest Department, GIZ, RECAP4NDC, and the system developers do not guarantee uninterrupted service availability or the accuracy of GPS positioning, particularly in areas with limited network connectivity or satellite coverage.</p>
+        <h3>5. Information Sharing</h3>
+        <p>Your information may be shared only:</p>
+        <ul>
+          <li>With authorized government departments</li>
+          <li>With service providers working on behalf of the application</li>
+          <li>When required by law</li>
+          <li>To protect legal rights or prevent fraud</li>
+        </ul>
+        <p>We never sell user data to third parties.</p>
 
-        <h3>5. Limitation of Liability</h3>
-        <p>To the fullest extent permitted by applicable law, the Gujarat Forest Department, GIZ, RECAP4NDC, and associated developers shall not be liable for any indirect, incidental, consequential, or special damages arising from the use of the Forest Patrolling &amp; Monitoring System.</p>
+        <h3>6. Data Security</h3>
+        <p>We implement reasonable administrative, technical, and physical safeguards to protect your information against unauthorized access, misuse, or disclosure.</p>
+        <p>Although no method of electronic transmission is completely secure, we strive to use industry standard security practices.</p>
 
-        <h3>6. Indemnification</h3>
-        <p>Users agree to indemnify and hold harmless the Gujarat Forest Department, GIZ, RECAP4NDC, and their respective officers, employees, and representatives against claims arising from unauthorized use or misuse of the Forest Patrolling &amp; Monitoring System.</p>
+        <h3>7. Data Retention and Account Deletion</h3>
+        <p>Your information is stored in active databases only for the period necessary to execute official workflows, fulfill compliance audits, or maintain institutional history.</p>
+        <p><strong>Account &amp; Data Deletion:</strong> To comply with Google Play Console guidelines, users can request the complete deletion of their account profile and associated personal details. Deletion requests are subject to institutional verification and record-retention laws. To initiate an account or data deletion request, please reach out to your department supervisor or contact us directly at <a href="mailto:jasvantm@gujarat.gov.in">jasvantm@gujarat.gov.in</a>.</p>
 
-        <h3>7. Intellectual Property</h3>
-        <p>The Forest Patrolling &amp; Monitoring System software, interface, documentation, source code, maps, and associated datasets are protected by applicable intellectual property laws.</p>
-        <p>Unless otherwise specified, ownership remains with the Gujarat Forest Department, RECAP4NDC, GIZ, or their licensors.</p>
+        <h3>8. Third-Party Services</h3>
+        <p>To optimize operational framework and stability, the app embeds a minimal number of trusted third-party Software Development Kits (SDKs) which manage data under their independent privacy frameworks:</p>
 
-        <h3>8. Governing Law</h3>
-        <p>These Terms shall be governed by the laws of India.</p>
-        <p>Any disputes arising from these Terms or the use of the Forest Patrolling &amp; Monitoring System shall be subject to the exclusive jurisdiction of the competent courts located in Gandhinagar, Gujarat.</p>
+        <h3>9. Children's Privacy</h3>
+        <p>VKY WORK TRACKER is structured strictly for authorized adult professionals and government workforce personnel. It is not intended for individuals below the age of 18, and we do not knowingly track or record information belonging to minors.</p>
 
-        <h3>9. Privacy Notice</h3>
-        <p>By using the Forest Patrolling &amp; Monitoring System, users acknowledge that location information is processed in accordance with the Privacy Notice described above.</p>
+        <h3>10. Contact Us</h3>
+        <p>For data deletion executions, general privacy concerns, or security inquiries, please contact:</p>
+        <p>Commissionerate of Tribal Development, Gujarat<br />1st Floor, Birsa Munda Bhavan, Sector-10/A<br />Gandhinagar, Gujarat, India<br />Website: <a href="https://vky.gujarat.gov.in/" target="_blank" rel="noopener noreferrer">https://vky.gujarat.gov.in/</a><br />Email: <a href="mailto:jasvantm@gujarat.gov.in">jasvantm@gujarat.gov.in</a><br />Phone: +91 9662511327</p>
 
         <Link to="/login" className="legal-back-link legal-back-link-bottom">&larr; Back to Login</Link>
       </div>
