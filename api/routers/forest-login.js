@@ -3,8 +3,13 @@ const axios = require("axios");
 const xml2js = require("xml2js");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
+const https = require("https");
 const router = express.Router();
 const { sequelize } = require('../config/database');
+
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 // Define secret key (should be in environment variables in production)
 const SECRET_KEY = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
 
@@ -53,6 +58,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
           "Content-Type": "application/soap+xml; charset=utf-8",
           SOAPAction: "http://tempuri.org/LOGIN_EGUJFOREST",
         },
+        httpsAgent,
         timeout: 30000,
       }
     );

@@ -3,6 +3,11 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const xml2js = require('xml2js');
+const https = require('https');
+
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 
 // SOAP proxy endpoint for Gujarat Forest Service
 router.post('/forest-login', async (req, res) => {
@@ -42,6 +47,7 @@ router.post('/forest-login', async (req, res) => {
           'Content-Type': 'application/soap+xml; charset=utf-8',
           SOAPAction: 'http://tempuri.org/LOGIN_EGUJFOREST'
         },
+        httpsAgent,
         timeout: 30000
       }
     );
@@ -150,9 +156,15 @@ router.post('/forest-login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('SOAP proxy error:', error.message);
+    console.error('SOAP proxy error:', error.message || '(no message)');
+    console.error('SOAP proxy error code:', error.code);
+    console.error('SOAP proxy error stack:', error.stack);
+    if (error.response) {
+      console.error('SOAP proxy response status:', error.response.status);
+      console.error('SOAP proxy response data:', typeof error.response.data === 'string' ? error.response.data.substring(0, 500) : error.response.data);
+    }
     
-    let errorMessage = error.message;
+    let errorMessage = error.message || 'Unknown SOAP error';
     let errorCode = 500;
     
     if (error.code === 'ECONNABORTED') {
