@@ -90,11 +90,11 @@ function PrivacyPolicy() {
         </ul>
         <p>These services process data in accordance with their respective privacy policies and only as necessary for operating the application.</p>
 
-        <h3>9. Children&rsquo;s Privacy</h3>
+        <h3>8. Children&rsquo;s Privacy</h3>
         <p>The Forest Patrolling &amp; Monitoring System is intended exclusively for authorized government officials, forest personnel, and other authorized users.</p>
         <p>It is not intended for individuals under 18 years of age, and we do not knowingly collect information from minors.</p>
 
-        <h3>10. Contact Us</h3>
+        <h3>9. Contact Us</h3>
         <p>For questions regarding this Privacy Policy, data security, or account deletion requests, please contact:</p>
         <p>Gujarat Forest Department<br />RECAP4NDC &ndash; Forest Patrolling &amp; Monitoring System<br />Website: https://forestrecap.gisfy.co.in/<br />Email: gujfd@gmail.com</p>
 
