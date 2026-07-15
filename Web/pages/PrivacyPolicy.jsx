@@ -98,55 +98,8 @@ function PrivacyPolicy() {
         <p>For questions regarding this Privacy Policy, data security, or account deletion requests, please contact:</p>
         <p>Gujarat Forest Department<br />RECAP4NDC &ndash; Forest Patrolling &amp; Monitoring System<br />Website: https://forestrecap.gisfy.co.in/<br />Email: gujfd@gmail.com</p>
 
-        <hr className="legal-divider" />
-
-        {/* ===================== TERMS OF USE ===================== */}
-        <h1 className="legal-title">TERMS OF USE</h1>
-        <h2 className="legal-subtitle">FOREST PATROLLING &amp; MONITORING SYSTEM</h2>
-        <p className="legal-updated">Last Updated: 9 July 2026</p>
-
-        <p>These Terms of Use govern access to and use of the Gujarat Forest Department's Forest Patrolling &amp; Monitoring System.</p>
-        <p>By accessing or using the Forest Patrolling &amp; Monitoring System, you agree to comply with these Terms.</p>
-
-        <h3>1. Eligibility and Authorization</h3>
-        <p>Access to the Forest Patrolling &amp; Monitoring System is restricted to authorized personnel, employees, contractors, or agents of the Gujarat Forest Department acting within the scope of their official responsibilities.</p>
-        <p>Users are responsible for maintaining the confidentiality and security of their login credentials. Credential sharing with unauthorized individuals is strictly prohibited.</p>
-
-        <h3>2. Permitted Use</h3>
-        <p>The Forest Patrolling &amp; Monitoring System may only be used for official forest patrolling, monitoring, conservation, and enforcement activities.</p>
-        <p>Users agree that they will not:</p>
-        <ul>
-          <li>Use the Forest Patrolling &amp; Monitoring System for personal or commercial purposes;</li>
-          <li>Circumvent or disable security controls or location tracking mechanisms;</li>
-          <li>Attempt to reverse engineer, modify, or interfere with the Forest Patrolling &amp; Monitoring System; or</li>
-          <li>Share patrol data or operational information without authorization.</li>
-        </ul>
-
-        <h3>3. Ownership of Data</h3>
-        <p>All patrol information, location records, operational data, and derived outputs generated through the Forest Patrolling &amp; Monitoring System are the property of the Gujarat Forest Department.</p>
-        <p>Unauthorized copying, extraction, publication, or distribution of such information is prohibited.</p>
-
-        <h3>4. Availability and Accuracy</h3>
-        <p>The Forest Patrolling &amp; Monitoring System is provided on an "AS IS" and "AS AVAILABLE" basis.</p>
-        <p>The Gujarat Forest Department, GIZ, RECAP4NDC, and the system developers do not guarantee uninterrupted service availability or the accuracy of GPS positioning, particularly in areas with limited network connectivity or satellite coverage.</p>
-
-        <h3>5. Limitation of Liability</h3>
-        <p>To the fullest extent permitted by applicable law, the Gujarat Forest Department, GIZ, RECAP4NDC, and associated developers shall not be liable for any indirect, incidental, consequential, or special damages arising from the use of the Forest Patrolling &amp; Monitoring System.</p>
-
-        <h3>6. Indemnification</h3>
-        <p>Users agree to indemnify and hold harmless the Gujarat Forest Department, GIZ, RECAP4NDC, and their respective officers, employees, and representatives against claims arising from unauthorized use or misuse of the Forest Patrolling &amp; Monitoring System.</p>
-
-        <h3>7. Intellectual Property</h3>
-        <p>The Forest Patrolling &amp; Monitoring System software, interface, documentation, source code, maps, and associated datasets are protected by applicable intellectual property laws.</p>
-        <p>Unless otherwise specified, ownership remains with the Gujarat Forest Department, RECAP4NDC, GIZ, or their licensors.</p>
-
-        <h3>8. Governing Law</h3>
-        <p>These Terms shall be governed by the laws of India.</p>
-        <p>Any disputes arising from these Terms or the use of the Forest Patrolling &amp; Monitoring System shall be subject to the exclusive jurisdiction of the competent courts located in Gandhinagar, Gujarat.</p>
-
-        <h3>9. Privacy Notice</h3>
-        <p>By using the Forest Patrolling &amp; Monitoring System, users acknowledge that location information is processed in accordance with the Privacy Notice described above.</p>
-
+       
+        
         <Link to="/login" className="legal-back-link legal-back-link-bottom">&larr; Back to Login</Link>
       </div>
     </div>
