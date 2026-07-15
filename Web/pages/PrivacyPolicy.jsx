@@ -17,7 +17,7 @@ function PrivacyPolicy() {
         <p>We are committed to protecting the privacy and security of all authorized users. This Privacy Policy explains how we collect, use, store, disclose, and safeguard information when you access and use the Forest Monitoring &amp; Patrolling System.</p>
 
         <h3>1. Developer Information</h3>
-        <p>Organization:<br />Project: RECAP4NDC &ndash; Forest Monitoring &amp; Patrolling System<br />Website: https://forestrecap.gisfy.co.in/<br />Email: gujfd@gmail.com</p>
+        <p>Organization: Gujarat Forest Department<br />Project: RECAP4NDC &ndash; Forest Monitoring &amp; Patrolling System<br />Email: gujfdp@gmail.com</p>
 
         <h3>2. Information We Collect</h3>
         <p>The application collects only the information necessary to perform official forest patrolling and monitoring activities.</p>
@@ -96,7 +96,7 @@ function PrivacyPolicy() {
 
         <h3>9. Contact Us</h3>
         <p>For questions regarding this Privacy Policy, data security, or account deletion requests, please contact:</p>
-        <p>Gujarat Forest Department<br />RECAP4NDC &ndash; Forest Monitoring &amp; Patrolling System<br />Website: https://forestrecap.gisfy.co.in/<br />Email: gujfd@gmail.com</p>
+        <p>Gujarat Forest Department<br />RECAP4NDC &ndash; Forest Monitoring &amp; Patrolling System<br />Email: gujfdp@gmail.com</p>
 
        
         <Link to="/login" className="legal-back-link legal-back-link-bottom">&larr; Back to Login</Link>

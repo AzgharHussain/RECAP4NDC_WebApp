@@ -146,6 +146,22 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
         
         console.log(`[ndvi-change-get-filtered] Original: ${tableName}, Division: ${division}, Transformed to: ${actualTableName}`);
 
+        // Check if the table exists before doing anything else.
+        // NDVI change tables are only generated for divisions/dates that have
+        // processed data, so a missing table simply means there is no data yet.
+        const [tableExistsResult] = await sequelize.query(
+            `SELECT to_regclass('public."${actualTableName}"') AS regclass;`
+        );
+        const tableExists = tableExistsResult[0] && tableExistsResult[0].regclass;
+
+        if (!tableExists) {
+            console.log(`[ndvi-change-get-filtered] Table not found, returning empty data: ${actualTableName}`);
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
         // Build WHERE clause based on hierarchy filters
         let whereClause = '';
         const conditions = [];
