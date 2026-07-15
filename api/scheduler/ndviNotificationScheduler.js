@@ -148,6 +148,31 @@ module.exports = function startNdviScheduler(admin) {
 
             console.error("❌ Firebase send error:", err.message);
 
+            // ------------------------------------------------
+            // Invalid/unregistered token — clear it so we stop
+            // retrying it on every scheduler run.
+            // ------------------------------------------------
+            const isInvalidToken =
+              err.code === "messaging/registration-token-not-registered" ||
+              err.code === "messaging/invalid-registration-token" ||
+              (err.message && err.message.includes("Requested entity was not found"));
+
+            if (isInvalidToken) {
+              try {
+                await client.query(`
+                  UPDATE public.ndvi_notification_users
+                  SET firebase_token = NULL
+                  WHERE user_id = $1
+                `, {
+                  bind: [user_id],
+                  type: sequelize.QueryTypes.UPDATE
+                });
+                console.log(`🧹 Cleared invalid firebase_token for user ${user_id}`);
+              } catch (cleanupErr) {
+                console.error("❌ Failed clearing invalid token:", cleanupErr.message);
+              }
+            }
+
           }
 
         }
