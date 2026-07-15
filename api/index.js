@@ -1,4 +1,16 @@
 // app.js or index.js
+
+// ==================== GLOBAL CRASH PROTECTION ==================== //
+// Without these handlers, a single unhandled error/rejection in ANY
+// route anywhere in the app will crash the entire Node process,
+// forcibly closing every open connection (seen by clients as ECONNRESET).
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🔥 Unhandled Rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('🔥 Uncaught Exception:', err);
+});
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
