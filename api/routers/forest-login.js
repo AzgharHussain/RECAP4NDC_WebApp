@@ -50,8 +50,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
       soapRequest,
       {
         headers: {
-          "Content-Type": "application/soap+xml; charset=utf-8",
-          SOAPAction: "http://tempuri.org/LOGIN_EGUJFOREST",
+          "Content-Type": "text/xml; charset=utf-8",
         },
         timeout: 30000,
       }
@@ -64,30 +63,34 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
       });
     }
 
-    // Parse XML
+    // Parse XML — use stripPrefix to remove namespace prefixes (soap:, diffgr:, etc.)
     const parsed = await xml2js.parseStringPromise(response.data, {
-      explicitArray: false, // This helps with parsing
-      mergeAttrs: true
+      explicitArray: false,
+      mergeAttrs: true,
+      tagNameProcessors: [xml2js.processors.stripPrefix]
     });
-    
-    // Navigate through the response structure
-    const body = parsed['soap:Envelope']?.['soap:Body'] || parsed['soap:Body'] || parsed['Body'];
+
+    // Navigate through the response structure (prefixes stripped)
+    const envelope = parsed['Envelope'] || parsed;
+    const body = envelope?.['Body'];
     const loginResponse = body?.['LOGIN_EGUJFORESTResponse'];
     const loginResult = loginResponse?.['LOGIN_EGUJFORESTResult'];
-    
+
     if (!loginResult) {
+      console.error("SOAP response missing LOGIN_EGUJFORESTResult. Parsed structure:", JSON.stringify(parsed, null, 2).substring(0, 1000));
       return res.status(500).json({
         success: false,
         error: "Invalid response from forest service"
       });
     }
 
-    // The user data is in the diffgram
-    const diffgram = loginResult['diffgr:diffgram'];
+    // The user data is in the diffgram (prefix stripped)
+    const diffgram = loginResult['diffgram'];
     const documentElement = diffgram?.['DocumentElement'];
     const result = documentElement?.['Result'] || documentElement?.['result'];
-    
+
     if (!result) {
+      console.error("No Result in diffgram. loginResult keys:", Object.keys(loginResult));
       return res.status(401).json({
         success: false,
         message: "Invalid credentials - no user data found"
@@ -96,7 +99,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
 
     // Extract user data (handling both array and object responses)
     const userResult = Array.isArray(result) ? result[0] : result;
-    
+
     const userData = {
       NAME: userResult.NAME || "-",
       NameOfPost: userResult.NameOfPost || "-",
@@ -114,6 +117,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
 
     // ✅ VERIFY LOGIN
     if (!userData.NAME || userData.NAME === "-") {
+      console.error("NAME field empty or '-'. userResult:", JSON.stringify(userResult, null, 2).substring(0, 500));
       return res.status(401).json({
         success: false,
         message: "Invalid credentials"
