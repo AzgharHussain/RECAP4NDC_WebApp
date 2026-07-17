@@ -79,6 +79,8 @@ async function migratePatrolImages() {
 
       // Build docs for this batch — skip if image_data is null/empty
       const docs = [];
+      let migCounter = 0;
+      const baseCount = await MongoImage.countDocuments();
       for (const row of result.rows) {
         if (!row.image_data || row.image_data.trim() === '') {
           skipped++;
@@ -98,6 +100,7 @@ async function migratePatrolImages() {
         }
 
         docs.push({
+          imageId: baseCount + migCounter + 1,
           sourceType: 'patrol',
           patrolId: row.patrol_id,
           imageCategory: row.image_category,
@@ -105,6 +108,7 @@ async function migratePatrolImages() {
           imageData: row.image_data,
           note: row.note || null,
         });
+        migCounter++;
       }
 
       if (docs.length > 0) {
@@ -205,7 +209,10 @@ async function migrateNdviImages() {
             continue;
           }
 
+          const lastMigImg = await MongoImage.findOne({}, {}, { sort: { imageId: -1 } });
+          const migId = lastMigImg && lastMigImg.imageId ? lastMigImg.imageId + 1 : 1;
           await MongoImage.create({
+            imageId: migId,
             sourceType: 'ndvi',
             coupeName: tablename,
             recordId: recordId,

@@ -2,6 +2,11 @@ const mongoose = require('../config/mongo').mongoose;
 
 const imageSchema = new mongoose.Schema(
   {
+    imageId: {
+      type: Number,
+      unique: true,
+      index: true,
+    },
     sourceType: {
       type: String,
       enum: ['patrol', 'ndvi'],
@@ -45,5 +50,13 @@ const imageSchema = new mongoose.Schema(
 
 imageSchema.index({ sourceType: 1, patrolId: 1 });
 imageSchema.index({ sourceType: 1, coupeName: 1, recordId: 1 });
+
+imageSchema.pre('save', async function (next) {
+  if (!this.imageId) {
+    const lastDoc = await this.constructor.findOne({}, {}, { sort: { imageId: -1 } });
+    this.imageId = lastDoc && lastDoc.imageId ? lastDoc.imageId + 1 : 1;
+  }
+  next();
+});
 
 module.exports = mongoose.model('Image', imageSchema);

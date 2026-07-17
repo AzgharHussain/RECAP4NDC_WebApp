@@ -957,14 +957,23 @@ if (!tableRegex.test(coupename)) {
       const base64Image = imageBuffer.toString('base64');
 
       // Store image in MongoDB
-      await MongoImage.findOneAndUpdate(
-        { sourceType: 'ndvi', coupeName: coupename, recordId: parseInt(id) },
-        {
+      const existingImg = await MongoImage.findOne({ sourceType: 'ndvi', coupeName: coupename, recordId: parseInt(id) });
+      if (existingImg) {
+        existingImg.imageType = imageFile.mimetype;
+        existingImg.imageData = base64Image;
+        await existingImg.save();
+      } else {
+        const lastImg = await MongoImage.findOne({}, {}, { sort: { imageId: -1 } });
+        const nextId = lastImg && lastImg.imageId ? lastImg.imageId + 1 : 1;
+        await MongoImage.create({
+          imageId: nextId,
+          sourceType: 'ndvi',
+          coupeName: coupename,
+          recordId: parseInt(id),
           imageType: imageFile.mimetype,
           imageData: base64Image,
-        },
-        { upsert: true, new: true }
-      );
+        });
+      }
 
       fs.unlinkSync(imageFile.path);
     }
@@ -1058,14 +1067,23 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
         const mimeType = matches ? matches[1] : 'image/jpeg';
         const rawBase64 = matches ? matches[2] : image_data;
 
-        await MongoImage.findOneAndUpdate(
-          { sourceType: 'ndvi', coupeName: coupename, recordId: parseInt(id) },
-          {
+        const existingImg2 = await MongoImage.findOne({ sourceType: 'ndvi', coupeName: coupename, recordId: parseInt(id) });
+        if (existingImg2) {
+          existingImg2.imageType = mimeType;
+          existingImg2.imageData = rawBase64;
+          await existingImg2.save();
+        } else {
+          const lastImg2 = await MongoImage.findOne({}, {}, { sort: { imageId: -1 } });
+          const nextId2 = lastImg2 && lastImg2.imageId ? lastImg2.imageId + 1 : 1;
+          await MongoImage.create({
+            imageId: nextId2,
+            sourceType: 'ndvi',
+            coupeName: coupename,
+            recordId: parseInt(id),
             imageType: mimeType,
             imageData: rawBase64,
-          },
-          { upsert: true, new: true }
-        );
+          });
+        }
       } else {
         return res.status(400).json({
           success: false,

@@ -167,6 +167,9 @@ pat_data.division = clean(pat_data.division);
 
       // Insert images into MongoDB if files are uploaded
       if (req.files && req.files.length > 0) {
+        const lastImg = await MongoImage.findOne({}, {}, { sort: { imageId: -1 } });
+        let nextId = lastImg && lastImg.imageId ? lastImg.imageId + 1 : 1;
+
         const imageDocs = req.files.map((file, i) => {
           const base64Image = file.buffer.toString('base64');
           const imageCategory =
@@ -175,6 +178,7 @@ pat_data.division = clean(pat_data.division);
             `image_${i - 1}`;
 
           return {
+            imageId: nextId++,
             sourceType: 'patrol',
             patrolId: patrol_id,
             imageCategory,
@@ -259,7 +263,7 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
       imagesMap = mongoImages.reduce((acc, img) => {
         if (!acc[img.patrolId]) acc[img.patrolId] = [];
         acc[img.patrolId].push({
-          image_id: img._id.toString(),
+          image_id: img.imageId,
           image_data: img.imageData,
           image_type: img.imageType,
           image_category: img.imageCategory,
@@ -449,7 +453,7 @@ if (end_date) {
       imagesMap = mongoImages.reduce((acc, img) => {
         if (!acc[img.patrolId]) acc[img.patrolId] = [];
         acc[img.patrolId].push({
-          image_id: img._id.toString(),
+          image_id: img.imageId,
           image_data: img.imageData,
           image_type: img.imageType,
           image_category: img.imageCategory,
@@ -662,7 +666,7 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       imagesMap = mongoImages.reduce((acc, img) => {
         if (!acc[img.patrolId]) acc[img.patrolId] = [];
         acc[img.patrolId].push({
-          image_id: img._id.toString(),
+          image_id: img.imageId,
           image_data: img.imageData,
           image_type: img.imageType,
           image_category: img.imageCategory,
@@ -723,7 +727,7 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
       imagesMap = mongoImages.reduce((acc, img) => {
         if (!acc[img.patrolId]) acc[img.patrolId] = [];
         acc[img.patrolId].push({
-          image_id: img._id.toString(),
+          image_id: img.imageId,
           image_data: img.imageData,
           image_type: img.imageType,
           image_category: img.imageCategory,
@@ -777,7 +781,7 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
 
     const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: parseInt(patrol_id) }).lean();
     const images = mongoImages.map(img => ({
-      image_id: img._id.toString(),
+      image_id: img.imageId,
       image_data: img.imageData || null,
       image_type: img.imageType,
       image_category: img.imageCategory,
