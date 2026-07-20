@@ -1,5 +1,5 @@
 const express = require('express');
-const { Client } = require('pg');
+const { Pool } = require('pg');
 const multer = require('multer');
 const admin = require("firebase-admin");
 const { DATE } = require('sequelize');
@@ -11,14 +11,22 @@ const blacklistedTokens = require("../middlewares/tokenBlacklist");
 
 
 // ----------------------------------------------------
-// 2. Postgres Connection
+// 2. Postgres Connection Pool
 // ----------------------------------------------------
-const client = new Client({
+const client = new Pool({
   host: '68.178.167.216',
   user: 'postgres',
   password: 'pass@123',
   port: 5435,
-  database: 'Recap4NDC_Query'
+  database: 'Recap4NDC_Query',
+  max: 10,
+  min: 0,
+  acquire: 30000,
+  idle: 10000
+});
+
+client.on('error', (err) => {
+  console.error('Unexpected PostgreSQL pool error:', err.message);
 });
 
 
@@ -78,9 +86,7 @@ async function createNotificationTables() {
 
 // run once
 createNotificationTables();
-client.connect()
-  .then(() => console.log("🟢 Database connected"))
-  .catch(err => console.error("🔴 DB connection failed:", err));
+console.log("🟢 Notification database pool initialized");
 
 // ----------------------------------------------------
 // 4. Helper: Send Notification using Firebase Admin

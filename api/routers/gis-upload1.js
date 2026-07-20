@@ -465,17 +465,12 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
     // Step 6: Cleanup uploaded files
     console.log(`\n[6/6] Cleaning up uploaded files...`);
-    uploadedFiles.forEach(file => {
+    await Promise.all(uploadedFiles.map(file => {
       const filePath = path.join(UPLOAD_DIR, file.originalname);
-      if (fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-          console.log(`✓ Deleted: ${file.originalname}`);
-        } catch (cleanupErr) {
-          console.warn(`⚠ Failed to delete ${filePath}:`, cleanupErr.message);
-        }
-      }
-    });
+      return fs.promises.unlink(filePath)
+        .then(() => console.log(`✓ Deleted: ${file.originalname}`))
+        .catch(cleanupErr => console.warn(`⚠ Failed to delete ${filePath}:`, cleanupErr.message));
+    }));
 
     console.log(`\n✅ Upload process completed successfully!`);
     console.log(`========================================`);
@@ -509,17 +504,12 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
     }
     
     // Cleanup on error
-    uploadedFiles.forEach(file => {
+    await Promise.all(uploadedFiles.map(file => {
       const filePath = path.join(UPLOAD_DIR, file.originalname);
-      if (fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-          console.log(`✓ Cleaned up on error: ${file.originalname}`);
-        } catch (cleanupErr) {
-          console.warn(`⚠ Failed to delete ${filePath}:`, cleanupErr.message);
-        }
-      }
-    });
+      return fs.promises.unlink(filePath)
+        .then(() => console.log(`✓ Cleaned up on error: ${file.originalname}`))
+        .catch(cleanupErr => console.warn(`⚠ Failed to delete ${filePath}:`, cleanupErr.message));
+    }));
     
     res.status(500).json({
       success: false,

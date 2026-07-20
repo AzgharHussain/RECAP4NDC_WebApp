@@ -766,12 +766,10 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       );
 
       // Cleanup uploaded files
-      uploadedFiles.forEach((file) => {
+      await Promise.all(uploadedFiles.map((file) => {
         const filePath = path.join(UPLOAD_DIR, file.originalname);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      });
+        return fs.promises.unlink(filePath).catch(() => {});
+      }));
 
       // Delete backup table after successful replacement
       try {
@@ -801,12 +799,10 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       console.error("Patrol Boundary Replace Error:", error);
 
       // Cleanup uploaded files
-      uploadedFiles.forEach((file) => {
+      await Promise.all(uploadedFiles.map((file) => {
         const filePath = path.join(UPLOAD_DIR, file.originalname);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      });
+        return fs.promises.unlink(filePath).catch(() => {});
+      }));
 
       res.status(500).json({
         success: false,
@@ -1081,12 +1077,10 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       );
 
       // Cleanup
-      uploadedFiles.forEach((file) => {
+      await Promise.all(uploadedFiles.map((file) => {
         const filePath = path.join(UPLOAD_DIR, file.originalname);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      });
+        return fs.promises.unlink(filePath).catch(() => {});
+      }));
 
       const fileType = isKML ? "KML" : "SHP";
 
@@ -1108,12 +1102,10 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
     } catch (error) {
       console.error("Patrol Boundary Upload Error:", error);
 
-      uploadedFiles.forEach((file) => {
+      await Promise.all(uploadedFiles.map((file) => {
         const filePath = path.join(UPLOAD_DIR, file.originalname);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      });
+        return fs.promises.unlink(filePath).catch(() => {});
+      }));
 
       res.status(500).json({
         success: false,

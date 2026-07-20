@@ -54,7 +54,6 @@ app.use((req, res, next) => {
 });
 
 app.use(setNoCacheHeaders);
-app.use(errorHandler);
 
 // ✅ Explicitly set all required headers
 // In app.js, enhance your Helmet configuration

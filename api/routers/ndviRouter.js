@@ -732,10 +732,10 @@ const upload = multer({
 });
 
 // Helper function to convert image to base64
-const imageToBase64 = (imagePath) => {
+const imageToBase64 = async (imagePath) => {
   try {
     // Read image file
-    const imageBuffer = fs.readFileSync(imagePath);
+    const imageBuffer = await fs.promises.readFile(imagePath);
     
     // Get file extension
     const ext = path.extname(imagePath).toLowerCase().substring(1);
@@ -952,8 +952,7 @@ if (!tableRegex.test(coupename)) {
         });
       }
 
-      const fs = require('fs');
-      const imageBuffer = fs.readFileSync(imageFile.path);
+      const imageBuffer = await fs.promises.readFile(imageFile.path);
       const base64Image = imageBuffer.toString('base64');
 
       // Store image in MongoDB
