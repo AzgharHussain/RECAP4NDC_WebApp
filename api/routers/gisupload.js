@@ -7,6 +7,7 @@ const { exec } = require("child_process");
 const axios = require("axios");
 const https = require("https");
 const { verifyJwt } = require("../middlewares/verifyJwt");
+const { logFromRequest } = require("../utils/auditLogger");
 
 const router = express.Router();
 
@@ -794,9 +795,27 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
           color: color,
         },
       });
+
+      logFromRequest(req, {
+        action: 'BOUNDARY_UPDATE',
+        status: 'SUCCESS',
+        statusCode: 200,
+        resourceType: 'patrol_boundary',
+        resourceId: id,
+        details: { tableName, fileType },
+      });
       
     } catch (error) {
       console.error("Patrol Boundary Replace Error:", error);
+
+      logFromRequest(req, {
+        action: 'BOUNDARY_UPDATE',
+        status: 'ERROR',
+        statusCode: 500,
+        resourceType: 'patrol_boundary',
+        resourceId: req.params?.id || null,
+        errorMessage: error.message,
+      });
 
       // Cleanup uploaded files
       await Promise.all(uploadedFiles.map((file) => {
@@ -1099,8 +1118,25 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
           is_replace: !!existingBoundary,
         },
       });
+
+      logFromRequest(req, {
+        action: 'BOUNDARY_CREATE',
+        status: 'SUCCESS',
+        statusCode: 200,
+        resourceType: 'patrol_boundary',
+        resourceId: tableName,
+        details: { tableName, boundaryDisplayName, fileType, isReplace: !!existingBoundary },
+      });
     } catch (error) {
       console.error("Patrol Boundary Upload Error:", error);
+
+      logFromRequest(req, {
+        action: 'FILE_UPLOAD_FAILED',
+        status: 'ERROR',
+        statusCode: 500,
+        resourceType: 'patrol_boundary',
+        errorMessage: error.message,
+      });
 
       await Promise.all(uploadedFiles.map((file) => {
         const filePath = path.join(UPLOAD_DIR, file.originalname);
@@ -1295,8 +1331,26 @@ router.delete("/patrol-boundaries/:id", verifyJwt, async (req, res) => {
       success: true,
       message: "Boundary deleted successfully",
     });
+
+    logFromRequest(req, {
+      action: 'BOUNDARY_DELETE',
+      status: 'SUCCESS',
+      statusCode: 200,
+      resourceType: 'patrol_boundary',
+      resourceId: id,
+      details: { tableName },
+    });
   } catch (error) {
     console.error(error);
+
+    logFromRequest(req, {
+      action: 'BOUNDARY_DELETE',
+      status: 'ERROR',
+      statusCode: 500,
+      resourceType: 'patrol_boundary',
+      resourceId: req.params?.id || null,
+      errorMessage: error.message,
+    });
     res.status(500).json({
       success: false,
       message: "Delete failed",

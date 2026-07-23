@@ -8,6 +8,7 @@ const router = express.Router();
 const upload = multer();
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
 const blacklistedTokens = require("../middlewares/tokenBlacklist");
+const { logFromRequest } = require("../utils/auditLogger");
 
 
 // ----------------------------------------------------
@@ -381,9 +382,26 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
       message: "Notification subscription saved successfully"
     });
 
+    logFromRequest(req, {
+      action: 'NOTIFICATION_SUBSCRIBE',
+      status: 'SUCCESS',
+      statusCode: 200,
+      userId,
+      resourceType: 'notification',
+      details: { village_name, coupe_name },
+    });
+
   } catch (err) {
 
     console.error("Subscription error:", err);
+
+    logFromRequest(req, {
+      action: 'NOTIFICATION_SUBSCRIBE',
+      status: 'ERROR',
+      statusCode: 500,
+      userId: req.body?.user_id || null,
+      errorMessage: err.message,
+    });
 
     res.status(500).json({
       success: false,
@@ -433,9 +451,25 @@ router.put("/update-notification-user", verifyJwt, upload.none(), async (req, re
       data: result.rows[0]
     });
 
+    logFromRequest(req, {
+      action: 'NOTIFICATION_UPDATE',
+      status: 'SUCCESS',
+      statusCode: 200,
+      userId,
+      resourceType: 'notification',
+    });
+
   } catch (err) {
 
     console.error("Update error:", err);
+
+    logFromRequest(req, {
+      action: 'NOTIFICATION_UPDATE',
+      status: 'ERROR',
+      statusCode: 500,
+      userId: req.body?.user_id || null,
+      errorMessage: err.message,
+    });
 
     res.status(500).json({
       success: false,
@@ -509,6 +543,14 @@ router.post('/logout',verifyJwt ,async (req, res) => {
     // Add token to blacklist
     blacklistedTokens.add(token);
 
+    logFromRequest(req, {
+      action: 'LOGOUT',
+      status: 'SUCCESS',
+      statusCode: 200,
+      userId: user_id,
+      resourceType: 'user_session',
+    });
+
     return res.json({
       message: "Logged out successfully",
       deletedUser: result.rows[0] || null
@@ -516,6 +558,14 @@ router.post('/logout',verifyJwt ,async (req, res) => {
 
   } catch (error) {
     console.error("Logout error:", error);
+
+    logFromRequest(req, {
+      action: 'LOGOUT_FAILED',
+      status: 'ERROR',
+      statusCode: 500,
+      userId: req.body?.user_id || null,
+      errorMessage: error.message,
+    });
     return res.status(500).json({ message: "Server error" });
   }
 });

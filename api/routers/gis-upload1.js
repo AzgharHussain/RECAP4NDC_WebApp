@@ -5,7 +5,8 @@ const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
 const axios = require("axios");
-const { verifyJwt } = require("../middlewares/verifyJwt"); 
+const { verifyJwt } = require("../middlewares/verifyJwt");
+const { logFromRequest } = require("../utils/auditLogger");
 
 const router = express.Router();
 
@@ -490,6 +491,15 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       }
     });
 
+    logFromRequest(req, {
+      action: 'FILE_UPLOAD',
+      status: 'SUCCESS',
+      statusCode: 200,
+      resourceType: 'gis_file',
+      resourceId: tableName,
+      details: { tableName, villagesInserted: villageInserted },
+    });
+
   } catch (err) {
     console.error("\n❌ Upload error occurred:");
     console.error("Error:", err.message);
@@ -520,6 +530,14 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
         stdout: err.stdout ? err.stdout.substring(0, 500) : null,
         code: err.code
       }
+    });
+
+    logFromRequest(req, {
+      action: 'FILE_UPLOAD_FAILED',
+      status: 'ERROR',
+      statusCode: 500,
+      resourceType: 'gis_file',
+      errorMessage: err.message,
     });
   }
 });

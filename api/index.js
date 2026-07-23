@@ -33,6 +33,9 @@ const helmet = require("helmet");
 const crypto = require('crypto');
 const rateLimit = require("express-rate-limit");
 const forestRoutes = require("./routers/forest-login");
+const auditMiddleware = require("./middlewares/auditMiddleware");
+const auditLogsRouter = require("./routers/auditLogs");
+const { logFromRequest } = require("./utils/auditLogger");
 const app = express();
 app.set('trust proxy', 1);
 const startNdviScheduler = require("./scheduler/ndviNotificationScheduler");
@@ -54,6 +57,7 @@ app.use((req, res, next) => {
 });
 
 app.use(setNoCacheHeaders);
+app.use(auditMiddleware);
 
 // ✅ Explicitly set all required headers
 // In app.js, enhance your Helmet configuration
@@ -426,8 +430,16 @@ app.post("/api/changepassword", verifyJwt, async (req, res) => {
       `UPDATE admin SET password = '${hashedNewPassword}' WHERE username = '${username}'`,
     );
 
-    // Log the password change (optional, for audit trail)
     console.log(`Password changed successfully for user: ${username}`);
+
+    logFromRequest(req, {
+      action: 'PASSWORD_CHANGE',
+      status: 'SUCCESS',
+      statusCode: 200,
+      username,
+      resourceType: 'admin_password',
+      details: { changedBy: req.user?.username || username },
+    });
 
     return res.json({
       success: true,
@@ -436,6 +448,14 @@ app.post("/api/changepassword", verifyJwt, async (req, res) => {
 
   } catch (err) {
     console.error("Change password error:", err);
+
+    logFromRequest(req, {
+      action: 'PASSWORD_CHANGE_FAILED',
+      status: 'ERROR',
+      statusCode: 500,
+      username: req.body?.username || null,
+      errorMessage: err.message,
+    });
     
     return res.status(500).json({
       success: false,
@@ -471,6 +491,13 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
     );
 
     if (result.length === 0) {
+      logFromRequest(req, {
+        action: 'LOGIN_FAILED',
+        status: 'FAILED',
+        statusCode: 401,
+        username,
+        errorMessage: 'User not found',
+      });
       return res.status(401).json({
         success: false,
         error: "Invalid admin credentials"
@@ -483,6 +510,13 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, admin.password);
 
     if (!isPasswordValid) {
+      logFromRequest(req, {
+        action: 'LOGIN_FAILED',
+        status: 'FAILED',
+        statusCode: 401,
+        username,
+        errorMessage: 'Invalid password',
+      });
       return res.status(401).json({
         success: false,
         error: "Invalid admin credentials"
@@ -500,6 +534,15 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
       // }
     );
 
+    logFromRequest(req, {
+      action: 'LOGIN',
+      status: 'SUCCESS',
+      statusCode: 200,
+      username: admin.username,
+      userRole: 'admin',
+      resourceType: 'user_session',
+    });
+
     return res.json({
       success: true,
       message: "Admin login successful",
@@ -512,6 +555,14 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
   } catch (err) {
 
     console.error("Admin login error:", err);
+
+    logFromRequest(req, {
+      action: 'LOGIN_FAILED',
+      status: 'ERROR',
+      statusCode: 500,
+      username: req.body?.username || null,
+      errorMessage: err.message,
+    });
 
     return res.status(500).json({
       success: false,
@@ -765,6 +816,7 @@ app.use('/api', gisupload);
 app.use('/api', gisupload1);
 app.use('/api', forestLoginRoutes);
 app.use("/api", forestRoutes);
+app.use('/api', auditLogsRouter);
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server error:', err.stack);

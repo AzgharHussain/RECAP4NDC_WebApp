@@ -8,6 +8,7 @@ const MongoImage = require('../models/Image');
 
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
 const { clean } = require("../middlewares/sanitize");
+const { logFromRequest } = require("../utils/auditLogger");
 const { body, param, validationResult } = require('express-validator');
 
 // POST: Create new NDVI record (with auto-generated ID)
@@ -1016,8 +1017,26 @@ if (!tableRegex.test(coupename)) {
       }
     });
 
+    logFromRequest(req, {
+      action: 'RECORD_UPDATE',
+      status: 'SUCCESS',
+      statusCode: 200,
+      resourceType: 'ndvi_record',
+      resourceId: id,
+      details: { coupename, status: req.body?.status },
+    });
+
   } catch (error) {
     console.error('Error:', error);
+
+    logFromRequest(req, {
+      action: 'RECORD_UPDATE',
+      status: 'ERROR',
+      statusCode: 500,
+      resourceType: 'ndvi_record',
+      resourceId: req.params?.id || null,
+      errorMessage: error.message,
+    });
     res.status(500).json({
       success: false,
       message: 'Update failed'
@@ -1128,8 +1147,26 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
       data: results[0]
     });
 
+    logFromRequest(req, {
+      action: 'RECORD_UPDATE',
+      status: 'SUCCESS',
+      statusCode: 200,
+      resourceType: 'ndvi_record',
+      resourceId: id,
+      details: { coupename, status: req.body?.status },
+    });
+
   } catch (error) {
     console.error('Error updating NDVI record:', error);
+
+    logFromRequest(req, {
+      action: 'RECORD_UPDATE',
+      status: 'ERROR',
+      statusCode: 500,
+      resourceType: 'ndvi_record',
+      resourceId: req.params?.id || null,
+      errorMessage: error.message,
+    });
     res.status(500).json({
       success: false,
       message: 'Server encountered an unexpected condition',
@@ -1201,8 +1238,26 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
             data: { deletedId: id }
         });
 
+        logFromRequest(req, {
+          action: 'RECORD_DELETE',
+          status: 'SUCCESS',
+          statusCode: 200,
+          resourceType: 'ndvi_record',
+          resourceId: id,
+          details: { coupename },
+        });
+
     } catch (error) {
         console.error('Error deleting NDVI record:', error);
+
+        logFromRequest(req, {
+          action: 'RECORD_DELETE',
+          status: 'ERROR',
+          statusCode: 500,
+          resourceType: 'ndvi_record',
+          resourceId: req.params?.id || null,
+          errorMessage: error.message,
+        });
         res.status(500).json({
             success: false,
             message: 'Server encountered an unexpected condition',

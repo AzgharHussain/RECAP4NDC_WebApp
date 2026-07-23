@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const router = express.Router();
 const { sequelize } = require('../config/database');
+const { logFromRequest } = require('../utils/auditLogger');
 // Define secret key (should be in environment variables in production)
 const SECRET_KEY = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
 
@@ -118,6 +119,13 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
     // ✅ VERIFY LOGIN
     if (!userData.NAME || userData.NAME === "-") {
       console.error("NAME field empty or '-'. userResult:", JSON.stringify(userResult, null, 2).substring(0, 500));
+      logFromRequest(req, {
+        action: 'LOGIN_FAILED',
+        status: 'FAILED',
+        statusCode: 401,
+        username: username,
+        errorMessage: 'Invalid credentials from SOAP service',
+      });
       return res.status(401).json({
         success: false,
         message: "Invalid credentials"
@@ -177,6 +185,16 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
       // }
     );
 
+    logFromRequest(req, {
+      action: 'LOGIN',
+      status: 'SUCCESS',
+      statusCode: 200,
+      userId: user.user_id,
+      username: user.username,
+      resourceType: 'user_session',
+      details: { name: userData.NAME, division: userData.DivisionName, isNewUser },
+    });
+
     return res.json({
       success: true,
       token,
@@ -189,6 +207,14 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
 
   } catch (error) {
     console.error("Forest login error:", error.message);
+
+    logFromRequest(req, {
+      action: 'LOGIN_FAILED',
+      status: 'ERROR',
+      statusCode: error.code === 'ECONNABORTED' ? 504 : 500,
+      username: req.body?.username || null,
+      errorMessage: error.message,
+    });
     
     // Handle specific error types
     if (error.code === 'ECONNABORTED') {

@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const xml2js = require('xml2js');
+const { logFromRequest } = require('../utils/auditLogger');
 
 // SOAP proxy endpoint for Gujarat Forest Service
 router.post('/forest-login', async (req, res) => {
@@ -112,6 +113,13 @@ router.post('/forest-login', async (req, res) => {
         console.log('Extracted user data:', userData);
         
         if (!userData || Object.keys(userData).length === 0) {
+          logFromRequest(req, {
+            action: 'LOGIN_FAILED',
+            status: 'FAILED',
+            statusCode: 401,
+            username,
+            errorMessage: 'No user data found in SOAP response',
+          });
           return res.status(401).json({
             success: false,
             error: 'Invalid credentials - no user data found',
@@ -121,6 +129,13 @@ router.post('/forest-login', async (req, res) => {
 
         // Check if we have valid user data
         if (!userData.NAME || userData.NAME === '-') {
+          logFromRequest(req, {
+            action: 'LOGIN_FAILED',
+            status: 'FAILED',
+            statusCode: 401,
+            username,
+            errorMessage: 'NAME field empty or dash',
+          });
           return res.status(401).json({
             success: false,
             error: 'Invalid user credentials',
@@ -129,6 +144,15 @@ router.post('/forest-login', async (req, res) => {
         }
 
         // Return success with user data
+        logFromRequest(req, {
+          action: 'LOGIN',
+          status: 'SUCCESS',
+          statusCode: 200,
+          username,
+          resourceType: 'user_session',
+          details: { name: userData.NAME, division: userData.DivisionName },
+        });
+
         res.json({
           success: true,
           jsonMap: userData,
@@ -150,6 +174,14 @@ router.post('/forest-login', async (req, res) => {
 
   } catch (error) {
     console.error('SOAP proxy error:', error.message);
+
+    logFromRequest(req, {
+      action: 'LOGIN_FAILED',
+      status: 'ERROR',
+      statusCode: error.code === 'ECONNABORTED' ? 504 : 502,
+      username: req.body?.username || null,
+      errorMessage: error.message,
+    });
     
     let errorMessage = error.message;
     let errorCode = 500;

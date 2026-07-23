@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
 const { clean } = require("../middlewares/sanitize");
 const MongoImage = require("../models/Image");
+const { logFromRequest } = require("../utils/auditLogger");
 
 
 const router = express.Router();
@@ -193,6 +194,16 @@ pat_data.division = clean(pat_data.division);
       // Commit transaction
       await txClient.query('COMMIT');
       
+      logFromRequest(req, {
+        action: 'RECORD_CREATE',
+        status: 'SUCCESS',
+        statusCode: 200,
+        userId: pat_data.user_id,
+        resourceType: 'patrol',
+        resourceId: patrol_id,
+        details: { officer: pat_data.patrol_officer_name, beat: pat_data.beat, distance: pat_data.distance_kms },
+      });
+
       res.json({ message: 'Data created successfully', patrol_id });
 
     } catch (err) {
@@ -205,6 +216,15 @@ pat_data.division = clean(pat_data.division);
 
   } catch (err) {
     console.error(err);
+
+    logFromRequest(req, {
+      action: 'RECORD_CREATE',
+      status: 'ERROR',
+      statusCode: 500,
+      userId: req.body?.user_id || null,
+      resourceType: 'patrol',
+      errorMessage: err.message,
+    });
     res.status(500).json({ error: 'Data insertion failed' });
   }
 });
