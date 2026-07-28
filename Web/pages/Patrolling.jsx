@@ -930,8 +930,8 @@ const PatrolIncidentLogs = () => {
   const [dashboardData, setDashboardData] = useState([]);
   const [selectedPatrol, setSelectedPatrol] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDashboardLoading, setIsDashboardLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const { language } = useLanguage();
   const [showmaproute, setShowMapRoute] = useState(false);
   
