@@ -77,7 +77,7 @@ const [contentHeight, setContentHeight] = useState(0);
       english: "અંગ્રેજી",
       gujarati: "ગુજરાતી",
       NDVIDashboard: "NDVI ડેશબોર્ડ",        // Added (Gujarati translation)
-      PatrolCoverageAnalysis: "પેટ્રોલ કવરેજ વિશ્લેષણ" 
+      PatrolCoverageAnalysis: "પ્લાન્ટેશન આવરણનું વિશ્લેષણ"
     },
   };
 
