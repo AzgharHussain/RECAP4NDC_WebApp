@@ -836,6 +836,9 @@ app.use((req, res, next) => {
   });
 });
 
+// Centralized error handler — must be last middleware
+app.use(errorHandler);
+
 // ==================== START SERVER ==================== //
 const PORT = process.env.PORT || 5002;
 

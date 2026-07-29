@@ -405,7 +405,7 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
 
     res.status(500).json({
       success: false,
-      error: err.message
+      message: "An internal error occurred. Please try again later."
     });
 
   }
@@ -473,7 +473,7 @@ router.put("/update-notification-user", verifyJwt, upload.none(), async (req, re
 
     res.status(500).json({
       success: false,
-      error: err.message
+      message: "An internal error occurred. Please try again later."
     });
 
   }
@@ -508,9 +508,10 @@ router.post("/test-fcm", verifyJwt,upload.none(), async (req, res) => {
     });
 
   } catch (err) {
+    console.error("FCM test error:", err);
     res.status(500).json({
       success: false,
-      error: err.message
+      message: "Failed to send test notification. Please check the firebase token."
     });
   }
 });

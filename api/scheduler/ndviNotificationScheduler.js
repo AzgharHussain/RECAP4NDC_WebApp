@@ -60,22 +60,30 @@ module.exports = function startNdviScheduler(admin) {
 
           // ------------------------------------------------
           // 4️⃣ Get NDVI change record
+          //    Wrapped in try-catch so a column mismatch in
+          //    one table doesn't crash the entire scheduler.
           // ------------------------------------------------
-          const records = await client.query(`
-            SELECT
-              pixle_id,
-              "NDVI_change",
-              change_category,
-              longitude,
-              latitude
-            FROM public."${tableName}"
-            WHERE village = $1
-            ORDER BY "NDVI_change" DESC
-            LIMIT 1
-          `, {
-            bind: [village_name],
-            type: sequelize.QueryTypes.SELECT
-          });
+          let records;
+          try {
+            records = await client.query(`
+              SELECT
+                pixle_id,
+                "NDVI_change",
+                change_category,
+                longitude,
+                latitude
+              FROM public."${tableName}"
+              WHERE village = $1
+              ORDER BY "NDVI_change" DESC
+              LIMIT 1
+            `, {
+              bind: [village_name],
+              type: sequelize.QueryTypes.SELECT
+            });
+          } catch (queryErr) {
+            console.error(`❌ Query failed for table "${tableName}" (possible column mismatch):`, queryErr.message);
+            continue; // skip this table, move to next user/table
+          }
 
           if (!records.length) continue;
 
