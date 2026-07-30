@@ -10,14 +10,14 @@ function PrivacyPolicy() {
 
         {/* ===================== PRIVACY POLICY ===================== */}
         <h1 className="legal-title">PRIVACY POLICY</h1>
-        <h2 className="legal-subtitle">FOREST MONITORING &amp; PATROLLING SYSTEM</h2>
+        <h2 className="legal-subtitle">FMPS (Forest Monitoring &amp; Patrolling System)</h2>
         <p className="legal-updated">Last Updated: 20 July 2026</p>
 
-        <p>The Forest Monitoring &amp; Patrolling System is developed for the Gujarat Forest Department under the RECAP4NDC Project, implemented by Deutsche Gesellschaft f&uuml;r Internationale Zusammenarbeit (GIZ) GmbH. The application is managed and maintained by the Gujarat Forest Department to support official forest patrolling, monitoring, conservation, and enforcement activities.</p>
-        <p>The Gujarat Forest Department is committed to protecting the privacy and security of all authorized users. This Privacy Policy explains how information is collected, used, stored, disclosed, and safeguarded when you access and use the Forest Monitoring &amp; Patrolling System.</p>
+        <p>The FMPS (Forest Monitoring &amp; Patrolling System) is developed for the Gujarat Forest Department under the RECAP4NDC Project, implemented by Deutsche Gesellschaft f&uuml;r Internationale Zusammenarbeit (GIZ) GmbH. The application is managed and maintained by the Gujarat Forest Department to support official forest patrolling, monitoring, conservation, and enforcement activities.</p>
+        <p>The Gujarat Forest Department is committed to protecting the privacy and security of all authorized users. This Privacy Policy explains how information is collected, used, stored, disclosed, and safeguarded when you access and use the FMPS (Forest Monitoring &amp; Patrolling System).</p>
 
         <h3>1. Developer Information</h3>
-        <p>Organization: Gujarat Forest Department<br />Project: RECAP4NDC &ndash; Forest Monitoring &amp; Patrolling System<br />Email: gujfdp@gmail.com</p>
+        <p>Organization: Gujarat Forest Department<br />Project: RECAP4NDC &ndash; FMPS (Forest Monitoring &amp; Patrolling System)<br />Email: gujfdp@gmail.com</p>
 
         <h3>2. Information We Collect</h3>
         <p>The application collects only the information necessary to perform official forest patrolling and monitoring activities.</p>
@@ -101,12 +101,12 @@ function PrivacyPolicy() {
         <p>These services process data only as required for operating the application and in accordance with applicable privacy and security requirements.</p>
 
         <h3>8. Children&rsquo;s Privacy</h3>
-        <p>The Forest Monitoring &amp; Patrolling System is intended exclusively for authorized government officials, forest personnel, and other authorized users.</p>
+        <p>The FMPS (Forest Monitoring &amp; Patrolling System) is intended exclusively for authorized government officials, forest personnel, and other authorized users.</p>
         <p>It is not intended for individuals under 18 years of age, and the application does not knowingly collect information from children.</p>
 
         <h3>9. Contact Us</h3>
         <p>For questions regarding this Privacy Policy or data protection practices, please contact:</p>
-        <p>Gujarat Forest Department<br />RECAP4NDC &ndash; Forest Monitoring &amp; Patrolling System<br />Email: gujfdp@gmail.com</p>
+        <p>Gujarat Forest Department<br />RECAP4NDC &ndash; FMPS (Forest Monitoring &amp; Patrolling System)<br />Email: gujfdp@gmail.com</p>
 
        
         <Link to="/login" className="legal-back-link legal-back-link-bottom">&larr; Back to Login</Link>

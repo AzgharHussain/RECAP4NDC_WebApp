@@ -348,7 +348,7 @@ function validateNoDuplicateParams22(req, res, next) {
   }
 }
 try {
-  const serviceAccount = require("./recap4ndc-ad332-d882dbe98b5e.json");
+  const serviceAccount = require("./routers/recap4ndc-add07-firebase-adminsdk-fbsvc-5a8fab9fe1_1967.json");
 
   if (!admin.apps.length) {
     admin.initializeApp({
