@@ -36,9 +36,9 @@ const httpsAgent = new https.Agent({
 // Environment variables for GDAL
 const GDAL_ENV = {
   ...process.env,
-  PATH: `${process.env.PATH};C:\\Users\\HP\\AppData\\Local\\Programs\\OSGeo4W\\bin;C:\\Program Files\\PostgreSQL\\17\\bin`,
-  GDAL_DATA: "C:\\Users\\HP\\AppData\\Local\\Programs\\OSGeo4W\\share\\gdal",
-  PROJ_LIB: "C:\\Users\\HP\\AppData\\Local\\Programs\\OSGeo4W\\share\\proj",
+  PATH: `${process.env.PATH};C:\\OSGeo4W\\bin;C:\\Program Files\\PostgreSQL\\17\\bin`,
+  GDAL_DATA: "C:\\OSGeo4W\\share\\gdal",
+  PROJ_LIB: "C:\\OSGeo4W\\share\\proj",
   PROJ_IGNORE_CATALOG_ERRORS: "YES",
   PROJ_NETWORK: "OFF",
 };

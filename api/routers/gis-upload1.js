@@ -41,9 +41,9 @@ function runCommand(cmd, env = process.env) {
   // Add GDAL to PATH for this command
   const updatedEnv = {
     ...env,
-    PATH: `${env.PATH};C:\\GisfyProject\\RECAP_OSGEO\\OSGeo4W\\bin`,
-    GDAL_DATA: "C:\\GisfyProject\\RECAP_OSGEO\\OSGeo4W\\share\\gdal",
-    PROJ_LIB: "C:\\GisfyProject\\RECAP_OSGEO\\OSGeo4W\\share\\proj"
+    PATH: `${env.PATH};C:\\OSGeo4W\\bin`,
+    GDAL_DATA: "C:\\OSGeo4W\\share\\gdal",
+    PROJ_LIB: "C:\\OSGeo4W\\share\\proj"
   };
   
   return new Promise((resolve, reject) => {
@@ -73,7 +73,7 @@ async function testGDALConnection() {
     
     // Try multiple ways to find GDAL
     const gdalPaths = [
-      "C:\\GisfyProject\\RECAP_OSGEO\\OSGeo4W\\bin\\ogr2ogr.exe",
+      "C:\\OSGeo4W\\bin\\ogr2ogr.exe",
       "ogr2ogr.exe",
       "ogr2ogr"
     ];

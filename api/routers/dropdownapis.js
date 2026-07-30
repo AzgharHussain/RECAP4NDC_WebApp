@@ -1285,4 +1285,22 @@ router.post('/beat-coupe-beats', async (req, res) => {
 });
 
 
+router.get('/coupe_metadata/location', async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT input_table_name, coupe_name, coupe_code
+      FROM public.coupe_metadata
+      WHERE input_table_name IS NOT NULL
+      ORDER BY input_table_name
+    `;
+    const result = await sequelize.query(query, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching coupe_metadata location:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
