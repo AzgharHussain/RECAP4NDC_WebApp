@@ -377,18 +377,18 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
       [user_id, firebase_token, village_name, coupe_name]
     );
 
-    res.json({
-      success: true,
-      message: "Notification subscription saved successfully"
-    });
-
     logFromRequest(req, {
       action: 'NOTIFICATION_SUBSCRIBE',
       status: 'SUCCESS',
       statusCode: 200,
-      userId,
+      userId: user_id,
       resourceType: 'notification',
       details: { village_name, coupe_name },
+    });
+
+    res.json({
+      success: true,
+      message: "Notification subscription saved successfully"
     });
 
   } catch (err) {
@@ -445,18 +445,18 @@ router.put("/update-notification-user", verifyJwt, upload.none(), async (req, re
       });
     }
 
-    res.json({
-      success: true,
-      message: "Notification user updated successfully",
-      data: result.rows[0]
-    });
-
     logFromRequest(req, {
       action: 'NOTIFICATION_UPDATE',
       status: 'SUCCESS',
       statusCode: 200,
-      userId,
+      userId: user_id,
       resourceType: 'notification',
+    });
+
+    res.json({
+      success: true,
+      message: "Notification user updated successfully",
+      data: result.rows[0]
     });
 
   } catch (err) {

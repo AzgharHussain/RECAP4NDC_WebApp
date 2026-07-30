@@ -108,10 +108,28 @@ auditLogSchema.index({ action: 1, status: 1 });
 auditLogSchema.index({ userId: 1, timestamp: -1 });
 auditLogSchema.index({ timestamp: -1 });
 
+const auditLogCounterSchema = new mongoose.Schema(
+  {
+    _id: { type: String, required: true },
+    seq: { type: Number, default: 0 },
+  }
+);
+
+mongoose.model('AuditLogCounter', auditLogCounterSchema);
+
 auditLogSchema.pre('save', async function (next) {
   if (!this.logId) {
-    const lastDoc = await this.constructor.findOne({}, {}, { sort: { logId: -1 } });
-    this.logId = lastDoc && lastDoc.logId ? lastDoc.logId + 1 : 1;
+    try {
+      const Counter = mongoose.model('AuditLogCounter');
+      const counter = await Counter.findOneAndUpdate(
+        { _id: 'auditLog' },
+        { $inc: { seq: 1 } },
+        { upsert: true, new: true }
+      );
+      this.logId = counter.seq;
+    } catch (err) {
+      return next(err);
+    }
   }
   next();
 });

@@ -853,6 +853,22 @@ app.listen(PORT, "0.0.0.0" , async () => {
   // Connect to MongoDB
   await connectMongo();
 
+  // Seed AuditLog counter with current max logId
+  try {
+    const AuditLog = require('./models/AuditLog');
+    const Counter = require('mongoose').model('AuditLogCounter');
+    const lastDoc = await AuditLog.findOne({}, {}, { sort: { logId: -1 } });
+    const currentMax = lastDoc && lastDoc.logId ? lastDoc.logId : 0;
+    await Counter.findByIdAndUpdate(
+      { _id: 'auditLog' },
+      { $max: { seq: currentMax } },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
+    console.log(`✅ AuditLog counter seeded at ${currentMax}`);
+  } catch (err) {
+    console.error('⚠️ AuditLog counter seed failed:', err.message);
+  }
+
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📝 Test endpoints:`);
   console.log(`   GET  http://localhost:${PORT}/api/test`);
