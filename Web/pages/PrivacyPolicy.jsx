@@ -15,7 +15,7 @@ function PrivacyPolicy() {
 
         <p>The FMPS (Forest Monitoring &amp; Patrolling System) is developed for the Gujarat Forest Department under the RECAP4NDC Project, implemented by Deutsche Gesellschaft f&uuml;r Internationale Zusammenarbeit (GIZ) GmbH. The application is managed and maintained by the Gujarat Forest Department to support official forest patrolling, monitoring, conservation, and enforcement activities.</p>
         <p>The Gujarat Forest Department is committed to protecting the privacy and security of all authorized users. This Privacy Policy explains how information is collected, used, stored, disclosed, and safeguarded when you access and use the FMPS (Forest Monitoring &amp; Patrolling System).</p>
-
+<p>FMPS (The Forest Monitoring and Patrolling System)  is a mobile application developed to support forest patrolling and monitoring activities. The application enables authorized forest personnel to record patrolling activities, maintain digital patrolling records, view coupe boundaries and patrolling routes, capture geo-tagged photographs, and monitor changes in forest cover. These features help improve the efficiency, transparency, and effectiveness of forest field operations.  </p>
         <h3>1. Developer Information</h3>
         <p>Organization: Gujarat Forest Department<br />Project: RECAP4NDC &ndash; FMPS (Forest Monitoring &amp; Patrolling System)<br />Email: gujfdp@gmail.com</p>
 
