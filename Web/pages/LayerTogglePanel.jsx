@@ -1676,7 +1676,7 @@ const layersData = {
       type: "flat",
       children: [
         { Name: "baria_coupe", Layer: "Baria" },
-        { Name: "bharuch_coupe", Layer: "Bharuch" },
+        { Name: "bharuchsubdivision_coupe", Layer: "Bharuchsubdivision" },
         { Name: "godhara_coupe", Layer: "Godhara" },
         { Name: "junagadh_coupe", Layer: "Junagadh" },
         { Name: "surat_coupe", Layer: "Surat" },
@@ -1852,7 +1852,7 @@ const generateCoupeGroups = (layers) => {
     
     if (match && match[1]) {
       // Clean up the name
-      let coupeName = match[1].replace(/_subdivision$/, '').replace(/_/g, ' ');
+      let coupeName = match[1].replace(/_/g, ' ');
       // Capitalize first letter of each word
       coupeName = coupeName.split(' ').map(word => 
         word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
@@ -1865,8 +1865,14 @@ const generateCoupeGroups = (layers) => {
   // Convert to array and sort
   const sortedCoupeNames = Array.from(coupeNames).sort();
 
+  // Filter out superseded coupe names
+  const filteredCoupeNames = sortedCoupeNames.filter(name => {
+    if (name === 'Bharuch' && sortedCoupeNames.includes('Bharuchsubdivision')) return false;
+    return true;
+  });
+
   // Generate coupe groups
-  const generatedGroups = sortedCoupeNames.map((coupeName, index) => {
+  const generatedGroups = filteredCoupeNames.map((coupeName, index) => {
     // Create a base name for the coupe (lowercase, underscores)
     const baseName = coupeName.toLowerCase().replace(/\s+/g, '_');
     
@@ -2232,7 +2238,6 @@ const layerManager = {
       return null;
     }
 
-    setIsLayerLoading(true);
     try {
       const zIndex = calculateZIndex();
       const newLayer = createLayer(layerName, layerLabel, zIndex);
@@ -2248,27 +2253,23 @@ const layerManager = {
       return new Promise((resolve) => {
         const timeout = setTimeout(() => {
           console.warn(`[addLayer] Timeout while loading "${layerName}" (15s)`);
-          setIsLayerLoading(false);
           resolve(newLayer);
         }, 15000);
 
         newLayer.on("load", () => {
           console.log(`[addLayer] Layer "${layerName}" fully loaded`);
           clearTimeout(timeout);
-          setIsLayerLoading(false);
           resolve(newLayer);
         });
 
         newLayer.on("tileerror", (error) => {
           console.warn(`[addLayer] Tile error in "${layerName}"`, error);
           clearTimeout(timeout);
-          setIsLayerLoading(false);
           resolve(newLayer);
         });
       });
     } catch (error) {
       console.error("[addLayer] Error adding layer:", error);
-      setIsLayerLoading(false);
       throw error;
     }
   },
@@ -2815,6 +2816,7 @@ const handleGroupCheckbox = useCallback(async (e) => {
             checked={isChecked}
             onChange={handleGroupCheckbox}
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.preventDefault()}
             style={{ marginRight: "8px", cursor: 'pointer' }}
           />
           {/* <FaLayerGroup style={{ marginRight: "8px" }} /> */}

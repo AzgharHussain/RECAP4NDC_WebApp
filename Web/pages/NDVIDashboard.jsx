@@ -740,12 +740,24 @@ const NDVIChangeDashboard = () => {
   const transformDivisionToCoupe = (divisionName) => {
     if (!divisionName || divisionName === 'all') return null;
     
+    // Special mappings for divisions where the coupe table name
+    // doesn't follow the standard naming convention
+    const coupeNameOverrides = {
+      'bharuch': 'bharuchsubdivision_coupe',
+    };
+
     // Remove " Forest Division" and replace with "_coupe"
     // Also convert to lowercase and replace spaces with underscores
     let coupeName = divisionName
       .replace(/ Forest Division$/i, '') // Remove " Forest Division" at the end
       .replace(/\s+/g, '_') // Replace spaces with underscores
       .toLowerCase(); // Convert to lowercase
+    
+    // Check if this division has a special coupe name override
+    const baseName = coupeName;
+    if (coupeNameOverrides[baseName]) {
+      return coupeNameOverrides[baseName];
+    }
     
     // Add "_coupe" at the end
     coupeName = `${coupeName}_coupe`;

@@ -1298,7 +1298,7 @@ router.get('/ndvi-change-layer-bounds/:layerName', async (req, res) => {
     if (!results || results.length === 0 || !results[0] || !results[0].min_x) {
       return res.status(404).json({ 
         error: 'Layer not found or has no geometry',
-        table: validTableName 
+        table: tableName 
       });
     }
     

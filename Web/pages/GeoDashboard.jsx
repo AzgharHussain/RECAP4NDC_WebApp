@@ -26,6 +26,7 @@ import 'leaflet-measure';
 import 'leaflet-measure/dist/leaflet-measure.css';
 // import "./Homepage.css";
 import gisfylogo from "../assets/Gisfylogo.png";
+import { API_BASE_URL } from '../config';
 
 const Loader = () => {
   console.log("loading");
@@ -127,7 +128,7 @@ export default function MapView() {
 // ];
   const fetchCoupeLayers = async () => {
     try {
-      const response = await axios.get("http://68.178.167.39:5000/api/coupe_metadata/location");
+      const response = await axios.get(`${API_BASE_URL}/api/coupe_metadata/location`);
       setCoupeLayers(response.data || []);
     } catch (error) {
       console.error("Error fetching coupe layers:", error);

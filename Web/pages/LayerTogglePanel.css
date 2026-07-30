@@ -153,7 +153,7 @@
   margin-bottom: 10px;
   
   border-radius: 8px;
-  overflow: auto;
+  overflow: visible;
   background: white;
 }
 
@@ -1065,7 +1065,14 @@ input[type="checkbox"]:focus {
 }
 
 .coupe-groups {
-  max-height: 300px;
+  max-height: 400px;
+  overflow-y: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.coupe-groups::-webkit-scrollbar {
+  display: none;
 }
 
 .group-month-selector {
