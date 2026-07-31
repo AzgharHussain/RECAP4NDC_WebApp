@@ -24,7 +24,7 @@ const imageSchema = new mongoose.Schema(
       default: null,
     },
     recordId: {
-      type: Number,
+      type: mongoose.Schema.Types.Mixed,
       index: true,
       default: null,
     },

@@ -130,6 +130,19 @@ const transformTableName = (tableName, division) => {
   return tableName;
 };
 
+const getRecordIdCandidates = (recordId) => {
+  const candidates = [];
+  if (recordId !== undefined && recordId !== null && recordId !== '') {
+    candidates.push(recordId);
+    const numericRecordId = Number(recordId);
+    if (Number.isFinite(numericRecordId)) candidates.push(numericRecordId);
+    candidates.push(String(recordId));
+  }
+  return [...new Set(candidates)];
+};
+
+const getRecordIdMapKeys = (recordId) => getRecordIdCandidates(recordId).map(String);
+
 // Update the first endpoint
 router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
     let { tableName, range, round, beat, division } = req.body;
@@ -206,7 +219,7 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
 
         // Fetch images from MongoDB for these records
         if (results && results.length > 0) {
-          const recordIds = results.map(r => r.pixle_id).filter(Boolean);
+          const recordIds = [...new Set(results.flatMap(r => getRecordIdCandidates(r.pixle_id)))];
           if (recordIds.length > 0) {
             const mongoImages = await MongoImage.find({
               sourceType: 'ndvi',
@@ -214,9 +227,9 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
               recordId: { $in: recordIds }
             }).lean();
             const imgMap = {};
-            mongoImages.forEach(img => { imgMap[img.recordId] = img; });
+            mongoImages.forEach(img => { imgMap[String(img.recordId)] = img; });
             results.forEach(row => {
-              const img = imgMap[row.pixle_id];
+              const img = getRecordIdMapKeys(row.pixle_id).map(key => imgMap[key]).find(Boolean);
               row.image_data = img ? img.imageData : null;
               row.image_type = img ? img.imageType : null;
             });
@@ -517,7 +530,7 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
 
         // Fetch images from MongoDB for these records
         if (results && results.length > 0) {
-          const recordIds = results.map(r => r.pixle_id).filter(Boolean);
+          const recordIds = [...new Set(results.flatMap(r => getRecordIdCandidates(r.pixle_id)))];
           if (recordIds.length > 0) {
             const mongoImages = await MongoImage.find({
               sourceType: 'ndvi',
@@ -525,9 +538,9 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
               recordId: { $in: recordIds }
             }).lean();
             const imgMap = {};
-            mongoImages.forEach(img => { imgMap[img.recordId] = img; });
+            mongoImages.forEach(img => { imgMap[String(img.recordId)] = img; });
             results.forEach(row => {
-              const img = imgMap[row.pixle_id];
+              const img = getRecordIdMapKeys(row.pixle_id).map(key => imgMap[key]).find(Boolean);
               row.image_data = img ? img.imageData : null;
               row.image_type = img ? img.imageType : null;
             });
@@ -563,7 +576,7 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
         });
     }
 
-    if (!id || isNaN(id)) {
+    if (id === undefined || id === null || id === '') {
         return res.status(400).json({
             success: false,
             message: 'Bad Request - Invalid syntax'
@@ -583,10 +596,12 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
         const selectQuery = `
            SELECT * EXCLUDE (image_data)
             FROM public."${NdvicoupeName}"
-            WHERE pixle_id = ${id};
+            WHERE pixle_id::text = :id;
         `;
 
-        const [results] = await sequelize.query(selectQuery);
+        const [results] = await sequelize.query(selectQuery, {
+          replacements: { id: String(id) }
+        });
 
         if (!results || results.length === 0) {
             return res.status(404).json({
@@ -599,7 +614,7 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
         const mongoImage = await MongoImage.findOne({
           sourceType: 'ndvi',
           coupeName: NdvicoupeName,
-          recordId: parseInt(id)
+          recordId: { $in: getRecordIdCandidates(id) }
         }).lean();
 
         results[0].image_data = mongoImage ? mongoImage.imageData : null;
@@ -798,7 +813,7 @@ const sanitizeHtml = require('sanitize-html');
 //   try {
 //     // Build dynamic update query based on provided fields
 //     const updates = [];
-//     const replacements = { id: parseInt(id) };
+//     const replacements = { id: String(id) };
 
 //     if (note !== undefined) {
 //       updates.push('note = :note');
@@ -904,7 +919,7 @@ if (!tableRegex.test(coupename)) {
 }
 
   // Manual validation
-  if (!id || isNaN(id) || id <= 0) {
+  if (id === undefined || id === null || id === '') {
     return res.status(400).json({
       success: false,
       message: 'Bad Request - Invalid syntax'
@@ -915,7 +930,7 @@ if (!tableRegex.test(coupename)) {
     const sanitizedNote = note ? clean(note) : undefined;
 
     const updates = [];
-    const replacements = { id: parseInt(id) };
+    const replacements = { id: String(id) };
 
     if (sanitizedNote !== undefined) {
       updates.push('note = :note');
@@ -957,7 +972,9 @@ if (!tableRegex.test(coupename)) {
       const base64Image = imageBuffer.toString('base64');
 
       // Store image in MongoDB
-      const existingImg = await MongoImage.findOne({ sourceType: 'ndvi', coupeName: coupename, recordId: parseInt(id) });
+      const recordIdCandidates = getRecordIdCandidates(id);
+      const recordId = Number.isFinite(Number(id)) ? Number(id) : String(id);
+      const existingImg = await MongoImage.findOne({ sourceType: 'ndvi', coupeName: coupename, recordId: { $in: recordIdCandidates } });
       if (existingImg) {
         existingImg.imageType = imageFile.mimetype;
         existingImg.imageData = base64Image;
@@ -969,7 +986,7 @@ if (!tableRegex.test(coupename)) {
           imageId: nextId,
           sourceType: 'ndvi',
           coupeName: coupename,
-          recordId: parseInt(id),
+          recordId,
           imageType: imageFile.mimetype,
           imageData: base64Image,
         });
@@ -993,7 +1010,7 @@ if (!tableRegex.test(coupename)) {
     const updateQuery = `
       UPDATE public."${coupename}"
       SET ${updates.join(', ')}, updated_at = NOW()
-      WHERE pixle_id = :id
+      WHERE pixle_id::text = :id
       RETURNING pixle_id, longitude, latitude, note, status;
     `;
 
@@ -1059,7 +1076,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
     });
   }
 
-  if (!id || isNaN(id)) {
+  if (id === undefined || id === null || id === '') {
     return res.status(400).json({
       success: false,
       message: 'Bad Request - Invalid syntax'
@@ -1069,7 +1086,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
   try {
     // Build dynamic update query based on provided fields
     const updates = [];
-    const replacements = { id: parseInt(id) };
+    const replacements = { id: String(id) };
 
     if (note !== undefined) {
       updates.push('note = :note');
@@ -1085,7 +1102,9 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
         const mimeType = matches ? matches[1] : 'image/jpeg';
         const rawBase64 = matches ? matches[2] : image_data;
 
-        const existingImg2 = await MongoImage.findOne({ sourceType: 'ndvi', coupeName: coupename, recordId: parseInt(id) });
+        const recordIdCandidates = getRecordIdCandidates(id);
+        const recordId = Number.isFinite(Number(id)) ? Number(id) : String(id);
+        const existingImg2 = await MongoImage.findOne({ sourceType: 'ndvi', coupeName: coupename, recordId: { $in: recordIdCandidates } });
         if (existingImg2) {
           existingImg2.imageType = mimeType;
           existingImg2.imageData = rawBase64;
@@ -1097,7 +1116,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
             imageId: nextId2,
             sourceType: 'ndvi',
             coupeName: coupename,
-            recordId: parseInt(id),
+            recordId,
             imageType: mimeType,
             imageData: rawBase64,
           });
@@ -1125,7 +1144,7 @@ router.put('/ndvi-change-base64/:id',verifyJwt, async (req, res) => {
     const updateQuery = `
       UPDATE public."${coupename}"
       SET ${updates.join(', ')}, updated_at = NOW()
-      WHERE id = :id
+      WHERE id::text = :id
       RETURNING id, longitude, latitude, note, image_data, status;
     `;
 
@@ -1188,7 +1207,7 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
         });
     }
 
-    if (!id || isNaN(id)) {
+    if (id === undefined || id === null || id === '') {
         return res.status(400).json({
             success: false,
             message: 'Bad Request - Invalid syntax'
@@ -1198,11 +1217,11 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
     try {
         // First check if record exists
         const checkQuery = `
-            SELECT id FROM public."${coupename}" WHERE id = :id;
+            SELECT id FROM public."${coupename}" WHERE id::text = :id;
         `;
 
         const [existingRecord] = await sequelize.query(checkQuery, {
-            replacements: { id: parseInt(id) },
+            replacements: { id: String(id) },
             type: sequelize.QueryTypes.SELECT
         });
 
@@ -1216,12 +1235,12 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
         // Delete the record
         const deleteQuery = `
             DELETE FROM public."${coupename}"
-            WHERE id = :id
+            WHERE id::text = :id
             RETURNING id;
         `;
 
         const [deletedRecord] = await sequelize.query(deleteQuery, {
-            replacements: { id: parseInt(id) },
+            replacements: { id: String(id) },
             type: sequelize.QueryTypes.DELETE
         });
 
@@ -1229,7 +1248,7 @@ router.delete('/ndvi-change/:id',verifyJwt, async (req, res) => {
         await MongoImage.deleteOne({
           sourceType: 'ndvi',
           coupeName: coupename,
-          recordId: parseInt(id)
+          recordId: { $in: getRecordIdCandidates(id) }
         });
 
         res.json({
