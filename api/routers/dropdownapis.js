@@ -1263,17 +1263,23 @@ router.post('/beat-coupe-beats', async (req, res) => {
       return res.status(400).json({ error: 'division and range are required' });
     }
 
-    const query = `
+    const query = round ? `
       SELECT DISTINCT beat
       FROM public.beat_witheeee22
       WHERE division = ?
       AND range = ? AND round = ?
       ORDER BY beat
+    ` : `
+      SELECT DISTINCT beat
+      FROM public.beat_witheeee22
+      WHERE division = ?
+      AND range = ?
+      ORDER BY beat
     `;
     
     // Using parameterized query with replacements
     const result = await sequelize.query(query, {
-      replacements: [division, range, round],
+      replacements: round ? [division, range, round] : [division, range],
       type: sequelize.QueryTypes.SELECT
     });
     

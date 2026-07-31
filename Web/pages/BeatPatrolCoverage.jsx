@@ -379,10 +379,19 @@ const BeatPatrolCoverage = () => {
     return type;
   };
 
+  const getAuthToken = async () => {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const token = localStorage.getItem("token");
+      if (token) return token;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return localStorage.getItem("token");
+  };
+
   // Fetch full patrol details for all patrols in coverage result
   const fetchFullPatrolDetails = async (patrolIds) => {
     setIsLoadingPatrols(true);
-    const token = localStorage.getItem("token");
+    const token = await getAuthToken();
     const fullPatrols = [];
     
     try {
@@ -410,7 +419,7 @@ const BeatPatrolCoverage = () => {
     setSelectedPatrolForDetails(patrol);
     
     try {
-      const token = localStorage.getItem("token");
+      const token = await getAuthToken();
       const response = await axios.get(`${API_BASE_URL}/api/patrols/${patrol.patrol_id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -600,7 +609,7 @@ const BeatPatrolCoverage = () => {
   const fetchPatrolBoundaries = async () => {
     setLoading(prev => ({ ...prev, boundaries: true }));
     try {
-      const token = localStorage.getItem("token");
+      const token = await getAuthToken();
       const res = await axios.get(
         `${API_BASE_URL}/api/patrol-boundaries`,
         {
@@ -627,7 +636,7 @@ const BeatPatrolCoverage = () => {
   const fetchDivisions = async () => {
     setLoading(prev => ({ ...prev, divisions: true }));
     try {
-      const token = localStorage.getItem("token");
+      const token = await getAuthToken();
       const response = await axios.get(
         `${API_BASE_URL}/api/beat-coupe-divisions`,
         {
@@ -659,7 +668,7 @@ const BeatPatrolCoverage = () => {
     setBeats([]);
     
     try {
-      const token = localStorage.getItem("token");
+      const token = await getAuthToken();
       const response = await axios.post(
         `${API_BASE_URL}/api/beat-coupe-ranges`,
         { division: division.value },
@@ -701,7 +710,7 @@ const BeatPatrolCoverage = () => {
     setSelectedBeat(null);
     
     try {
-      const token = localStorage.getItem("token");
+      const token = await getAuthToken();
       const response = await axios.post(
         `${API_BASE_URL}/api/beat-coupe-beats`,
         { 
@@ -741,6 +750,21 @@ const BeatPatrolCoverage = () => {
   useEffect(() => {
     fetchDivisions();
     fetchPatrolBoundaries();
+
+    const refetchInitialDropdowns = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDivisions();
+        fetchPatrolBoundaries();
+      }
+    };
+
+    window.addEventListener('focus', refetchInitialDropdowns);
+    document.addEventListener('visibilitychange', refetchInitialDropdowns);
+
+    return () => {
+      window.removeEventListener('focus', refetchInitialDropdowns);
+      document.removeEventListener('visibilitychange', refetchInitialDropdowns);
+    };
   }, []);
 
   const handleDivisionChange = (selectedOption) => {
