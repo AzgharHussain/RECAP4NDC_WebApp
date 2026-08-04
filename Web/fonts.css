@@ -13,6 +13,31 @@
   font-style: normal;
 }
 
+/* === Inter font (standard website font) === */
+@font-face {
+  font-family: 'Inter';
+  src: url('../Web/assets/fonts/inter-v20-latin-regular-1.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../Web/assets/fonts/inter-v20-latin-500-1.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../Web/assets/fonts/inter-v20-latin-700-1.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 
 
 body {

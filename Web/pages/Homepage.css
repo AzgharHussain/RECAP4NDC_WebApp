@@ -83,18 +83,18 @@ body {
   justify-content: center;
   position: relative;
   z-index: 1;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.26) 0%, rgba(0, 0, 0, 0.26) 100%),
-              url("../assets/b3.png") lightgray 50% / cover no-repeat;
+ background-image:  url(../assets/b3.png);
+ background-size: cover;
 }
 
 .hero-overlay {
   padding-top: 110px;
-  color: white;
+  color: #ffffff;
   text-align: center;
 }
 
 .hero-overlay2 {
-  color: white;
+  color: #ffffff;
   font-size: 12px;
   padding-left: 50px;
 }
@@ -133,7 +133,7 @@ body {
 /* ===== Overview Section ===== */
 .overview-section {
   padding: 60px 3%;
-  background: linear-gradient(180deg, #ECF3F8 0%, #BFE3FF 100%);
+  background: #ffffff;
   position: relative;
   z-index: 1;
 }
@@ -199,7 +199,7 @@ body {
   height: 250px;
   padding-left: 50px;
   margin-top: 10px;
-  background: linear-gradient(181.21deg, rgba(255, 216, 150, 0.1) 1.01%, rgba(245, 158, 11, 0.1) 98.47%);
+  background: #ffffff;
   border-top-left-radius: 50px;
   text-align: center;
   border-top: 1px solid #F59E0B;
@@ -230,7 +230,7 @@ body {
 
 .module-title {
   padding-left: 15px;
-  background: linear-gradient(181.21deg, rgba(255, 216, 150, 0.1) 1.01%, rgba(245, 158, 11, 0.1) 98.47%);
+  background: #ffffff;
   border-bottom-right-radius: 50px;
   text-align: center;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
@@ -273,7 +273,7 @@ body {
 /* ===== FAQ Section ===== */
 .faq-section {
   padding: 70px 5%;
-  background: linear-gradient(180deg, #f0faf4 0%, #e4f5ec 100%);
+  background: #ffffff;
 }
 
 .faq-header {

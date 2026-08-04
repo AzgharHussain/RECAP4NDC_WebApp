@@ -19,6 +19,7 @@ import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import "./RouterMap.css";
+import "./BeatPatrolCoverage.css";
 import { API_BASE_URL } from "../config";
 import Select from 'react-select';
 import vector from '../assets/Vector.png';
@@ -968,25 +969,26 @@ const BeatPatrolCoverage = () => {
   const customSelectStyles = {
     control: (base, state) => ({
       ...base,
-      minHeight: '40px',
-      borderRadius: '8px',
-      border: '2px solid #e2e8f0',
-      boxShadow: state.isFocused ? '0 0 0 3px rgba(66, 153, 225, 0.1)' : 'none',
-      borderColor: state.isFocused ? '#4299e1' : '#e2e8f0',
-      '&:hover': { borderColor: state.isFocused ? '#4299e1' : '#cbd5e0' },
-      backgroundColor: state.isDisabled ? '#f7fafc' : 'white',
+      width: '100%',
+      minHeight: '44px',
+      borderRadius: '10px',
+      border: '1px solid #dfe9e2',
+      boxShadow: state.isFocused ? '0 0 0 4px rgba(34, 128, 71, 0.12)' : 'none',
+      borderColor: state.isFocused ? '#228047' : '#dfe9e2',
+      '&:hover': { borderColor: state.isFocused ? '#228047' : '#b9d5c3' },
+      backgroundColor: state.isDisabled ? '#f7faf8' : 'white',
     }),
-    valueContainer: (base) => ({ ...base, padding: '0 12px' }),
+    valueContainer: (base) => ({ ...base, padding: '0 14px' }),
     input: (base) => ({ ...base, margin: 0, padding: 0 }),
-    placeholder: (base) => ({ ...base, color: '#a0aec0', fontSize: '14px' }),
-    singleValue: (base) => ({ ...base, fontSize: '14px', color: '#2d3748' }),
-    menu: (base) => ({ ...base, borderRadius: '8px', zIndex: 9999 }),
+    placeholder: (base) => ({ ...base, color: '#8a9a90', fontSize: '14px' }),
+    singleValue: (base) => ({ ...base, fontSize: '14px', color: '#173b25', fontWeight: 600 }),
+    menu: (base) => ({ ...base, borderRadius: '12px', zIndex: 9999, overflow: 'hidden' }),
     option: (base, state) => ({
       ...base,
       fontSize: '14px',
       padding: '10px 12px',
-      backgroundColor: state.isSelected ? '#4299e1' : state.isFocused ? '#ebf8ff' : 'white',
-      color: state.isSelected ? 'white' : '#2d3748',
+      backgroundColor: state.isSelected ? '#228047' : state.isFocused ? '#eef8f1' : 'white',
+      color: state.isSelected ? 'white' : '#173b25',
     }),
   };
 
@@ -998,21 +1000,6 @@ const BeatPatrolCoverage = () => {
     }}>
       <style>{`
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .glow-button { background: #00A651; color: white; padding: 5px 10px; border-radius: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; border: none; }
-        .glow-button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-        .stats-card { background: linear-gradient(180deg, #2E7D32 0%, #66BB6A 100%); color: black; border-radius: 16px; padding: 25px; }
-        .stats-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(102, 126, 234, 0.25); }
-        .transparent-table .ant-table {
-          background: transparent !important;
-        }
-        .transparent-table .ant-table-thead > tr > th {
-          background: #00A651 !important;
-          font-weight: 600;
-          color: white;
-        }
-        .transparent-table .ant-table-tbody > tr > td {
-          background: rgba(255, 255, 255, 0.7) !important;
-        }
       `}</style>
 
       {/* Combined Details Modal - Photos first, then Map */}
@@ -1390,73 +1377,58 @@ const BeatPatrolCoverage = () => {
       )}
 
       {/* Main Content */}
-      <div style={{ flex: 1, padding: "20px" }}>
-        <h1 style={{ fontSize: "26px", fontWeight: "700", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" , backgroundColor:'black'}}>
-          {t.title}
-        </h1>
-        <p style={{ 
-      fontSize: "12px", 
-      color: validationError ? "#ff0000" : "rgb(17, 95, 34)",
-      transition: "color 0.3s ease",
-      fontWeight: validationError ? "500" : "normal"
-    }}>
-      {language === "gu" ? "કૃપા કરીને પેટ્રોલ કવરેજ વિશ્લેષણ માટે બાઉન્ડ્રી અને મહિનો પસંદ કરો" : "Please select the Boundary and month for patrol coverage analysis."}
-    </p>
+      <div className="coverage-page-content">
+        <div className="coverage-page-header">
+          <div className="coverage-title-icon"><SearchOutlined /></div>
+          <div>
+            <h1>{t.title}</h1>
+            <p className={validationError ? "coverage-subtitle coverage-subtitle-error" : "coverage-subtitle"}>
+              {language === "gu" ? "કૃપા કરીને પેટ્રોલ કવરેજ વિશ્લેષણ માટે બાઉન્ડ્રી અને મહિનો પસંદ કરો" : "Select a boundary and month to analyze patrol coverage within the selected area."}
+            </p>
+          </div>
+        </div>
 
         {/* Selection Card */}
-        <div style={{ backgroundColor: "#fff", borderRadius: "12px", paddingTop: "25px", marginBottom: "25px" }}>
-          <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "flex-end" }}>
+        <div className="coverage-filter-card">
+          <div className="coverage-filter-grid">
+            <div className="coverage-filter-fields">
               {selectionMode === 'beat' ? (
                 <>
-                  <div style={{ width: "200px" }}>
-                    <label style={{ display: "block", fontWeight: "600", marginBottom: "8px" }}>{t.division}</label>
+                  <div className="coverage-field">
+                    <label>{t.division}</label>
                     <Select value={selectedDivision} onChange={handleDivisionChange} options={divisions} isClearable placeholder={t.selectDivision} styles={customSelectStyles} />
                   </div>
-                  <div style={{ width: "200px" }}>
-                    <label style={{ display: "block", fontWeight: "600", marginBottom: "8px" }}>{t.range}</label>
+                  <div className="coverage-field">
+                    <label>{t.range}</label>
                     <Select value={selectedRange} onChange={handleRangeChange} options={ranges} isClearable placeholder={t.selectRange} styles={customSelectStyles} isDisabled={!selectedDivision} />
                   </div>
-                  <div style={{ width: "200px" }}>
-                    <label style={{ display: "block", fontWeight: "600", marginBottom: "8px" }}>{t.beat}</label>
+                  <div className="coverage-field">
+                    <label>{t.beat}</label>
                     <Select value={selectedBeat} onChange={handleBeatChange} options={beats} isClearable placeholder={t.selectBeat} styles={customSelectStyles} isDisabled={!selectedRange} />
                   </div>
                 </>
               ) : (
-                <div style={{ width: "300px" }}>
-                  <label style={{ display: "block", fontWeight: "600", marginBottom: "8px" }}>{t.boundary} <span style={{ color: "red" }}>*</span></label>
+                <div className="coverage-field">
+                  <label>{t.boundary} <span>*</span></label>
                   <Select value={selectedBoundary} onChange={handleBoundaryChange} options={boundaries} isClearable placeholder={t.selectBoundary} styles={customSelectStyles} />
                 </div>
               )}
-              <div style={{ width: "200px" }}>
-                <label style={{ display: "block", fontWeight: "600", marginBottom: "8px" }}>{t.month} <span style={{ color: "red" }}>*</span></label>
-                <input type="month" value={selectedMonth} onChange={handleMonthChange} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "2px solid #e2e8f0" }} />
+              <div className="coverage-field">
+                <label>{t.month} <span>*</span></label>
+                <input className="coverage-month-input" type="month" value={selectedMonth} onChange={handleMonthChange} />
               </div>
             </div>
             
-            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginRight: '50px' }}>
+            <div className="coverage-filter-actions">
               <button 
-                className="glow-button" 
+                className="glow-button coverage-primary-btn" 
                 onClick={fetchCoverageData} 
                 disabled={loading.coverage} 
-                style={{ padding: "10px 24px" }}
               >
-                {loading.coverage ? t.analyzing : t.analyzeCoverage}
+                <SearchOutlined /> {loading.coverage ? t.analyzing : t.analyzeCoverage}
               </button>
-              <button 
-                onClick={resetData} 
-                style={{ 
-                  padding: "10px 24px", 
-                  borderRadius: "8px", 
-                  border: "2px solid #e2e8f0", 
-                  background: "#E7E4E4", 
-                  cursor: "pointer",
-                  transition: "all 0.3s ease"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "#d4d4d4"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "#E7E4E4"}
-              >
-                {t.reset}
+              <button className="coverage-reset-btn" onClick={resetData}>
+                <UndoOutlined /> {t.reset}
               </button>
             </div>
             
@@ -1472,11 +1444,13 @@ const BeatPatrolCoverage = () => {
           </div>
         ) : patrols.length > 0 ? (
           <>
-            <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
-              {t.patrolsInside} {selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}
-            </h3>
-            <Table
-              className="transparent-table"
+            <div className="coverage-table-card">
+              <div className="coverage-section-title">
+                <div className="coverage-section-icon"><UserOutlined /></div>
+                <h3>{t.patrolsInside} {selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}</h3>
+              </div>
+              <Table
+              className="transparent-table coverage-modern-table"
               columns={getPatrolTableColumns()}
               dataSource={getCurrentPageData()}
               pagination={false}
@@ -1492,7 +1466,8 @@ const BeatPatrolCoverage = () => {
                 ),
               }}
             />
-            {totalItems > 0 && <CustomPagination />}
+              {totalItems > 0 && <CustomPagination />}
+            </div>
           </>
         ) : coverageData && (
           <div style={{ textAlign: "center", padding: "40px", border: "2px dashed #e2e8f0", borderRadius: "12px", marginBottom: '50px' }}>
@@ -1503,32 +1478,42 @@ const BeatPatrolCoverage = () => {
 
         {/* Coverage Data Display */}
         {coverageData && (
-          <div style={{ backgroundColor: "#fff", borderRadius: "12px" }}>
+          <div className="coverage-results-card">
             {/* Summary Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", marginBottom: "30px" }}>
-              <div className="stats-card" style={{ background: "rgba(56, 189, 248, 0.3)"}}>
-                <p style={{ fontSize: "14px", marginBottom: "8px", opacity: 0.9 }}>{selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}</p>
-                <div style={{ padding: "8px 20px", borderRadius: "20px", backgroundColor: "rgba(255,255,255,0.5)", display: "inline-block" }}>
-                  {selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label}
+            <div className="coverage-summary-grid">
+              <div className="stats-card coverage-summary-card coverage-summary-boundary">
+                <div className="coverage-summary-icon"><SearchOutlined /></div>
+                <div>
+                  <p>{selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel}</p>
+                  <h3>{selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label}</h3>
                 </div>
               </div>
-              <div className="stats-card" style={{ background: "rgba(0, 255, 162, 0.3)" }}>
-                <p style={{ fontSize: "14px", marginBottom: "8px", opacity: 0.9 }}>{selectionMode === 'beat' ? t.beatArea : t.boundaryArea}</p>
-                <h3 style={{ fontSize: "28px", margin: 0 }}>{(Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} {t.areaUnit}</h3>
+              <div className="stats-card coverage-summary-card coverage-summary-area">
+                <div className="coverage-summary-icon"><CalendarOutlined /></div>
+                <div>
+                  <p>{selectionMode === 'beat' ? t.beatArea : t.boundaryArea}</p>
+                  <h3>{(Number(selectionMode === 'beat' ? coverageData.coupe_area_sq_m : coverageData.coupe_area_sq_m) / 1000000).toFixed(2)} {t.areaUnit}</h3>
+                </div>
               </div>
-              <div className="stats-card" style={{ background: "rgba(64, 0, 255, 0.3)" }}>
-                <p style={{ fontSize: "14px", marginBottom: "8px", opacity: 0.9 }}>{t.patrolCoveredArea}</p>
-                <h3 style={{ fontSize: "28px", margin: 0 }}>{(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} {t.areaUnit}</h3>
+              <div className="stats-card coverage-summary-card coverage-summary-covered">
+                <div className="coverage-summary-icon"><EyeOutlined /></div>
+                <div>
+                  <p>{t.patrolCoveredArea}</p>
+                  <h3>{(Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2)} {t.areaUnit}</h3>
+                </div>
               </div>
-              <div className="stats-card" style={{ background: "rgba(255, 152, 0, 0.2)"}}>
-                <p style={{ fontSize: "14px", marginBottom: "8px", opacity: 0.9 }}>{t.coverage}</p>
-                <h3 style={{ fontSize: "36px", margin: 0 }}>{Number(coverageData.coverage_percentage).toFixed(2)}%</h3>
+              <div className="stats-card coverage-summary-card coverage-summary-percent">
+                <div className="coverage-summary-icon"><ClockCircleOutlined /></div>
+                <div>
+                  <p>{t.coverage}</p>
+                  <h3>{Number(coverageData.coverage_percentage).toFixed(2)}%</h3>
+                </div>
               </div>
             </div>
 
             {/* Export Button */}
-            <button className="glow-button" onClick={exportToExcel} style={{ marginBottom: "30px", padding: "10px 24px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <img src={vector} alt="Excel" style={{ width: "20px" }} /> {t.exportToExcel}
+            <button className="glow-button coverage-export-btn" onClick={exportToExcel}>
+              <img src={vector} alt="Excel" /> {t.exportToExcel}
             </button>
           </div>
         )}

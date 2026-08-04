@@ -1,0 +1,1086 @@
+{
+  "info": {
+    "_postman_id": "0d13ed16-0c50-4d2f-89e5-remainingapis",
+    "name": "RECAP4NDC Remaining APIs",
+    "description": "Remaining APIs after excluding the user-provided forestrecap.gisfy.co.in API list from RECAP4NDC_Selected_APIs_Postman_Collection.json.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+   {
+  "key": "baseUrl",
+  "value": "https://forestrecap.gisfy.co.in",
+  "type": "string"
+},
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth and User",
+      "item": [
+        {
+          "name": "Forest Login",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"forest_user\",\n  \"password\": \"password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/forest-login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "forest-login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"currentPassword\": \"oldPassword\",\n  \"newPassword\": \"newPassword\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/changepassword",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "changepassword"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "logout"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patrol",
+      "item": [
+        {
+          "name": "Patrolling Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "patrolling-types"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Patrolling Range",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-range",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "patrolling-range"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Patrolling Beat",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-beat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "patrolling-beat"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Patrolling Range By Division",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-range-by-division?division=Division%20Name",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "patrolling-range-by-division"
+              ],
+              "query": [
+                {
+                  "key": "division",
+                  "value": "Division Name"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Patrolling Beat By Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-beat-by-range?range=Range%20Name&division=Division%20Name",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "patrolling-beat-by-range"
+              ],
+              "query": [
+                {
+                  "key": "range",
+                  "value": "Range Name"
+                },
+                {
+                  "key": "division",
+                  "value": "Division Name"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patrol Boundaries and Coverage",
+      "item": [
+        {
+          "name": "List Patrol Boundaries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-boundaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "patrol-boundaries"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Patrol Boundary Name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boundary_name\": \"Boundary Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-boundaries/check-name",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "patrol-boundaries",
+                "check-name"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Boundary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boundary_name\": \"Boundary Name\",\n  \"color\": \"#ff0000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/create-boundary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "create-boundary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coupe Patrol Coverage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"coupe_table\": \"Beat Name\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": \"2026-08-04\",\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-patrol-coverage",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupe-patrol-coverage"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Boundary Patrol Coverage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boundary_table\": \"boundary_table\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": \"2026-08-04\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/boundary-patrol-coverage",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "boundary-patrol-coverage"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hierarchy and Dropdowns",
+      "item": [
+        {
+          "name": "Forest Types",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/forest-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "forest-types"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Divisions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/get-divisions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "get-divisions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hierarchy",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hierarchy"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hierarchy Divisions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-divisions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hierarchy-divisions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hierarchy Ranges",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Division Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-ranges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hierarchy-ranges"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hierarchy Rounds",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-rounds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hierarchy-rounds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hierarchy Beats",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-beats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hierarchy-beats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hierarchy Villages",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\",\n  \"beat\": \"Beat Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-villages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hierarchy-villages"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coupe Numbers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"village\": \"Village Name\",\n  \"coupe_name\": \"coupe_table\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-numbers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupe-numbers"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupe and NDVI",
+      "item": [
+        {
+          "name": "Coupe Divisions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-divisions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupe-divisions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coupe Ranges",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Division Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-ranges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupe-ranges"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coupe Rounds",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-rounds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupe-rounds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coupe Beats",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-beats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupe-beats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Beat Coupe Divisions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/beat-coupe-divisions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "beat-coupe-divisions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Beat Coupe Ranges",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Division Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beat-coupe-ranges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "beat-coupe-ranges"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Beat Coupe Beats",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beat-coupe-beats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "beat-coupe-beats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coupe Metadata Location",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe_metadata/location",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupe_metadata",
+                "location"
+              ]
+            }
+          }
+        },
+        {
+          "name": "NDVI Change By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ndvi-change",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete NDVI Change",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tableName\": \"2026-01-01_aravalli_coupe_NDVI_Change\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ndvi-change",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "NDVI Change Get Filtered",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tableName\": \"2026-01-01_aravalli_coupe_NDVI_Change\",\n  \"division\": \"aravalli\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\",\n  \"beat\": \"Beat Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change-get-filtered",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ndvi-change-get-filtered"
+              ]
+            }
+          }
+        },
+        {
+          "name": "NDVI Change Tables",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change-tables",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ndvi-change-tables"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupe Logs and Incidents",
+      "item": [
+        {
+          "name": "Coupe Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"coupe_name\": \"coupe_name\",\n  \"note\": \"Observation note\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe/log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupe",
+                "log"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coupe Log With Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe/log-with-images?user_id=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupe",
+                "log-with-images"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Incidents With Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incidents-with-images?user_id=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incidents-with-images"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GIS Upload",
+      "item": [
+        {
+          "name": "Upload SHP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "layer_name",
+                  "value": "Layer Name",
+                  "type": "text"
+                },
+                {
+                  "key": "boundary_name",
+                  "value": "Boundary Name",
+                  "type": "text"
+                },
+                {
+                  "key": "color",
+                  "value": "#00ff00",
+                  "type": "text"
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload-shp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "upload-shp"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Send Notifications",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "firebase_token",
+                  "value": "firebase-token",
+                  "type": "text"
+                },
+                {
+                  "key": "user_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "village_name",
+                  "value": "Village Name",
+                  "type": "text"
+                },
+                {
+                  "key": "coupe_name",
+                  "value": "aravalli_coupe",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/send-notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "send-notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Notification User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "firebase_token",
+                  "value": "firebase-token",
+                  "type": "text"
+                },
+                {
+                  "key": "user_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "village_name",
+                  "value": "Village Name",
+                  "type": "text"
+                },
+                {
+                  "key": "coupe_name",
+                  "value": "aravalli_coupe",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/update-notification-user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "update-notification-user"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

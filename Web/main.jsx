@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import 'leaflet/dist/leaflet.css';
 import './fonts.css';
+import './index.css';
 
 const rootElement = document.getElementById('root');
 const root = ReactDOM.createRoot(rootElement);

@@ -127,8 +127,15 @@ useEffect(() => {
   return () => window.removeEventListener("resize", updateHeight);
 }, []);
 
-  const handleLinkClick = () => {
+  const handleLinkClick = (e) => {
     setIsSidebarOpen(false);
+    // Show loader immediately and block further clicks until navigation completes
+    if (e && e.currentTarget && e.currentTarget.getAttribute) {
+      const targetPath = e.currentTarget.getAttribute("href");
+      if (targetPath && targetPath !== location.pathname) {
+        setIsNavigating(true);
+      }
+    }
   };
 
   const handleLogout = async () => {
@@ -194,6 +201,22 @@ useEffect(() => {
 const dropdownRef = useRef(null);
 const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+// === Navigation loader: shows overlay + blocks clicks during route changes ===
+const [isNavigating, setIsNavigating] = useState(false);
+const prevPathRef = useRef(location.pathname);
+
+useEffect(() => {
+  const currentPath = location.pathname;
+  if (currentPath !== prevPathRef.current) {
+    // A navigation has occurred → show loader until the new page mounts/renders
+    setIsNavigating(true);
+    prevPathRef.current = currentPath;
+    // Hide loader on next tick (after the new page has rendered)
+    const t = setTimeout(() => setIsNavigating(false), 600);
+    return () => clearTimeout(t);
+  }
+}, [location.pathname]);
+
 // Close dropdown when clicking outside
 useEffect(() => {
   const handleClickOutside = (event) => {
@@ -213,6 +236,15 @@ useEffect(() => {
 }, []);
   return (
     <div className="layout">
+      {/* Navigation loader overlay — blocks all clicks while loading */}
+      {isNavigating && (
+        <div className="nav-loader-overlay" role="status" aria-live="polite">
+          <div className="nav-loader-box">
+            <div className="nav-loader-spinner" />
+            <div className="nav-loader-text">Loading…</div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header className="header" ref={headerRef}>
         {/* ===== TOP ROW ===== */}
@@ -359,18 +391,35 @@ useEffect(() => {
           </NavLink>
            </div>
          <div className="header-right">
+  {/* Language selector beside profile icon */}
+  <div className="header-lang-selector">
+    <button
+      className={`header-lang-btn ${language === "en" ? "active" : ""}`}
+      onClick={() => toggleLanguage("en")}
+      title="English"
+    >
+      EN
+    </button>
+    <button
+      className={`header-lang-btn ${language === "gu" ? "active" : ""}`}
+      onClick={() => toggleLanguage("gu")}
+      title="ગુજરાતી"
+    >
+      ગુ
+    </button>
+  </div>
   <div className="user-dropdown" ref={dropdownRef}>
     {/* User icon and username as dropdown trigger */}
-    <div 
+    <div
       className="dropdown-trigger"
       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
     >
       <img src={userIcon} alt="User Icon" className="user-icon-img" />
-     
+
     </div>
-    
+
     {/* Dropdown menu */}
- 
+
   </div>
 </div>
         </div>
@@ -381,7 +430,7 @@ useEffect(() => {
       
       </header>
 
-      <main className="content" style={{ height: contentHeight }}>
+      <main className="content">
         <Outlet />
       </main>
 
@@ -418,39 +467,6 @@ useEffect(() => {
         {isAdmin && <span className="admin-badge"> (Admin)</span>}
       </div>
 
-      <div className="language-section">
-      <div className="language-label">Change Language</div>
-      <div className="language-buttons">
-  <label className={`lang-radio ${language === "en" ? "active" : ""}`}>
-    <input
-      type="radio"
-      name="language"
-      value="en"
-      checked={language === "en"}
-      onChange={() => {
-        toggleLanguage("en");
-        // setIsDropdownOpen(false);
-      }}
-    />
-    <span className="radio-label">English</span>
-  </label>
-  
-  <label className={`lang-radio ${language === "gu" ? "active" : ""}`}>
-    <input
-      type="radio"
-      name="language"
-      value="gu"
-      checked={language === "gu"}
-      onChange={() => {
-        toggleLanguage("gu");
-        // setIsDropdownOpen(false);
-      }}
-    />
-    <span className="radio-label">ગુજરાતી</span>
-  </label>
-</div>
-    </div>
-      
         <button
           className="logout-btn dropdown-item"
           onClick={handleLogout}

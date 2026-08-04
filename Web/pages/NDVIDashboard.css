@@ -86,3 +86,165 @@ body {
 .css-17rbn86-MuiContainer-root{
   min-height: 87vh !important;
 }
+
+.ndvi-dashboard-page {
+  background: #ffffff;
+  color: #14261a;
+}
+
+.ndvi-dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ndvi-dashboard-page .MuiCard-root {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid rgba(20, 83, 45, 0.1);
+  border-radius: 12px !important;
+  box-shadow: 0 10px 28px rgba(20, 83, 45, 0.08) !important;
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.ndvi-dashboard-page .MuiCard-root:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(20, 83, 45, 0.12) !important;
+  border-color: rgba(22, 163, 74, 0.22);
+}
+
+.ndvi-dashboard-page .MuiCard-root:first-of-type {
+  background: linear-gradient(135deg, #ffffff 0%, #f3fbf5 100%) !important;
+}
+
+.ndvi-dashboard-page .MuiTypography-h4,
+.ndvi-dashboard-page .MuiTypography-h5,
+.ndvi-dashboard-page .MuiTypography-h6 {
+  color: #112c1b;
+  letter-spacing: -0.02em;
+}
+
+.ndvi-dashboard-page .MuiButton-containedPrimary,
+.ndvi-dashboard-page .MuiButton-containedError {
+  background: linear-gradient(135deg, #047857, #006b3f) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 18px rgba(4, 120, 87, 0.24) !important;
+  text-transform: none;
+  font-weight: 700;
+}
+
+.ndvi-dashboard-page .MuiButton-containedPrimary:hover,
+.ndvi-dashboard-page .MuiButton-containedError:hover {
+  background: linear-gradient(135deg, #006b3f, #064e3b) !important;
+  transform: translateY(-1px);
+}
+
+.ndvi-dashboard-page .MuiOutlinedInput-root,
+.ndvi-dashboard-page .MuiInputBase-root {
+  border-radius: 8px !important;
+  background: #fff;
+}
+
+.ndvi-dashboard-page .MuiOutlinedInput-notchedOutline {
+  border-color: #dbe7dd !important;
+}
+
+.ndvi-dashboard-page .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline,
+.ndvi-dashboard-page .Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #2f8f5b !important;
+}
+
+.ndvi-summary-grid .MuiGrid-item {
+  display: flex;
+}
+
+.ndvi-stat-card {
+  width: 100%;
+  min-height: 126px;
+}
+
+.ndvi-stat-card .MuiCardContent-root {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.ndvi-dashboard-page .MuiLinearProgress-root {
+  height: 10px;
+  border-radius: 999px;
+  background-color: #e6f4ea;
+}
+
+.ndvi-dashboard-page .MuiLinearProgress-bar {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 999px;
+}
+
+.ndvi-dashboard-page .MuiTableContainer-root {
+  border: 1px solid #e2eee5;
+  border-radius: 12px;
+  box-shadow: none !important;
+}
+
+.ndvi-dashboard-page .MuiTable-root {
+  background: #fff;
+}
+
+.ndvi-dashboard-page .MuiTableHead-root .MuiTableCell-root {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f7faf7;
+  color: #173b25;
+  font-weight: 800;
+  border-bottom: 1px solid #dfeee4;
+  white-space: nowrap;
+}
+
+.ndvi-dashboard-page .MuiTableBody-root .MuiTableCell-root {
+  border-bottom: 1px solid #edf3ef;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.ndvi-dashboard-page .MuiTableBody-root .MuiTableRow-root:hover {
+  background: #f4fbf6;
+}
+
+.ndvi-dashboard-page .MuiChip-root {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.ndvi-dashboard-page .MuiPaginationItem-root.Mui-selected,
+.ndvi-dashboard-page .MuiTablePagination-actions button:hover {
+  background: #087443 !important;
+  color: #fff !important;
+}
+
+.ndvi-dashboard-page canvas {
+  max-height: 360px;
+}
+
+@media (max-width: 900px) {
+  .ndvi-dashboard-page {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .ndvi-dashboard-page .MuiCardHeader-root,
+  .ndvi-dashboard-page .MuiCardContent-root {
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .ndvi-dashboard-page .MuiTypography-h4 {
+    font-size: 1.5rem;
+  }
+
+  .ndvi-dashboard-page .MuiButton-root {
+    width: 100%;
+  }
+}

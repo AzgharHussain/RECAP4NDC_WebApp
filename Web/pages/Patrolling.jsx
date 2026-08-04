@@ -5,10 +5,9 @@ import {
   Space, Spin, Alert, message 
 } from "antd";
 import { 
-  SearchOutlined, EyeOutlined, TeamOutlined, ClockCircleOutlined, 
-  DashboardOutlined, CalendarOutlined, FilterOutlined,
-  ReloadOutlined, DownloadOutlined, CloseOutlined 
+  SearchOutlined, EyeOutlined, FilterOutlined, ReloadOutlined
 } from "@ant-design/icons";
+import { FaCalendarCheck, FaRoute, FaUsers, FaSun, FaMoon, FaShieldAlt, FaUserTie, FaTrophy, FaMapMarkedAlt } from "react-icons/fa";
 import "./PatrolIncidentLogs.css";
 import exportIcon from "../assets/excel.png";
 import dayjs from "dayjs";
@@ -321,7 +320,7 @@ const PatrolAnalysisDashboard = ({
       key: 'total',
       value: totalPatrols,
       title: language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols",
-      icon: <CalendarOutlined />,
+      icon: <FaCalendarCheck />,
       color: 'rgba(56, 189, 248, 0.3)',
       borderColor: 'rgba(56, 189, 248, 0.5)',
     },
@@ -330,7 +329,7 @@ const PatrolAnalysisDashboard = ({
       value: avgDistanceOverall,
       title: language === "gu" ? "સરેરાશ અંતર" : "Average Distance",
       suffix: "km",
-      icon: <DashboardOutlined />,
+      icon: <FaRoute />,
       color: 'rgba(0, 255, 162, 0.3)',
       borderColor: 'rgba(0, 255, 162, 1)'
     },
@@ -338,54 +337,12 @@ const PatrolAnalysisDashboard = ({
       key: 'officers',
       value: uniqueOfficers.length,
       title: language === "gu" ? "કુલ અધિકારીઓ" : "Total Officers",
-      icon: <TeamOutlined />,
+      icon: <FaUsers />,
       color: 'rgba(64, 0, 255, 0.3)',
       borderColor: 'rgba(64, 0, 255, 1)'
-    },
-
-    // NEW CARDS 👇 - ADDED NULL CHECKS
-    {
-      key: 'area',
-      value: coverageData && coverageData.coupe_area_sq_m 
-        ? (Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2) 
-        : 'N/A',
-      title: language === "gu"
-        ? (beatFilter ? "બીટ વિસ્તાર" : rangeFilter ? "રેંજ વિસ્તાર" : "વિભાગ વિસ્તાર")
-        : (beatFilter ? "Beat Area" : rangeFilter ? "Range Area" : "Division Area"),
-      suffix: "km²",
-      color: 'rgba(56, 189, 248, 0.3)',
-      isGradient: true
-    },
-    {
-      key: 'covered',
-      value: coverageData && coverageData.patrol_area_sq_m 
-        ? (Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2) 
-        : 'N/A',
-      title: language === "gu" ? "કવરેજ વિસ્તાર" : "Covered Area",
-      suffix: "km²",
-      color: 'rgba(0, 255, 162, 0.3)',
-      isGradient: true
-    },
-    {
-      key: 'percentage',
-      value: coverageData && coverageData.coverage_percentage 
-        ? (Number(coverageData.coverage_percentage)).toFixed(2) 
-        : 'N/A',
-      title: language === "gu" ? "કવરેજ %" : "Coverage %",
-      suffix: (() => {
-        if (!coverageData) return '';
-        const percentValue = Number(coverageData.coverage_percentage);
-        if (coverageData.coverage_percentage === null || coverageData.coverage_percentage === undefined || percentValue === 0) {
-          return '';
-        }
-        return "%";
-      })(),
-      color: 'rgba(64, 0, 255, 0.3)',
-      isGradient: true
     }
   ].map((item) => (
-    // Change this line to span={4} for all screen sizes to get 6 cards in a row
-    <Col xs={24} sm={12} md={8} lg={4} xl={4} xxl={4} key={item.key}>
+    <Col xs={24} sm={12} md={8} key={item.key}>
       <div style={{
         background: item.isGradient ? item.color : item.color,
         backdropFilter: item.isGradient ? 'none' : 'blur(12px)',
@@ -545,378 +502,131 @@ const PatrolAnalysisDashboard = ({
       )} */}
 
       {/* Patrol Distribution */}
-      <div style={{ 
-        marginTop: 44,
-        marginBottom: 44,
-        background: 'rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(12px)',
-        borderRadius: 16,
-        border: '1px solid rgba(255, 255, 255, 0.15)'
-      }}>
-        <Text strong style={{ 
-          display: 'block', 
-          marginBottom: 16,
-          marginRight: 10,
-          color: 'rgba(0, 0, 0, 0.95)',
-          fontSize: '25px',
-          textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"
-        }}>
+      <div className="patrol-distribution-section">
+        <Text strong className="patrol-distribution-heading">
           {language === "gu" ? "પેટ્રોલિંગ વિતરણ" : "Patrol Distribution"}
         </Text>
-        <Row gutter={8}>
+        <Row gutter={[16, 16]}>
           {[
-            { type: "Day Patrolling", percent: dayPercentage, color: '#00b3ffff' },
-            { type: "Night Patrolling", percent: nightPercentage, color: '#00ffa2ff' },
-            { type: "Beat Checking", percent: beatPercentage, color: '#4000ffff' }
-          ].map((item) => (
-            <Col span={8} key={item.type}>
-              <div style={{ textAlign: 'center', padding: '0 8px' }}>
-                <div style={{
-                  position: 'relative',
-                  display: 'inline-block',
-                  marginBottom: 8,
-                  padding: 20,
-                }}>
-                  <Progress
-                    type="dashboard"
-                    percent={parseInt(item.percent)}
-                    strokeColor={item.color}
-                    trailColor="rgba(255, 255, 255, 0.1)"
-                    strokeWidth={8}
-                    format={percent => (
-                      <div style={{
-                        color: '#000000ff',
-                        fontSize: '20px',
-                        fontWeight: 'bold',
-                        textShadow: '0 2px 4px rgba(185, 166, 166, 0.3)'
-                      }}>
-                        {percent}%
+            { stats: dayStats, type: "Day Patrolling", percent: dayPercentage, color: '#17a8f5', icon: <FaSun /> },
+            { stats: nightStats, type: "Night Patrolling", percent: nightPercentage, color: '#2fb36b', icon: <FaMoon /> },
+            { stats: beatStats, type: "Beat Checking", percent: beatPercentage, color: '#64748b', icon: <FaShieldAlt /> }
+          ].map(({ stats, type, percent, color, icon }) => {
+            const hasData = stats !== null;
+            return (
+              <Col xs={24} lg={8} key={type}>
+                <div className="patrol-distribution-card" style={{ borderColor: hasData ? color : '#d9d9d9' }}>
+                  <div className="patrol-progress-pane">
+                    <Progress
+                      type="circle"
+                      percent={parseInt(percent)}
+                      width={108}
+                      strokeColor={color}
+                      trailColor="#e5e7eb"
+                      strokeWidth={8}
+                      format={value => <span className="patrol-progress-text">{value}%</span>}
+                    />
+                  </div>
+
+                  <div className="patrol-card-body">
+                    <div className="patrol-type-header">
+                      <span className="patrol-type-icon" style={{ color }}>{icon}</span>
+                      <div>
+                        <div className="patrol-type-name">{getTypeDisplayName(type)}</div>
+                        <div className="patrol-type-label">{language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"}</div>
+                        <div className="patrol-type-count">{hasData ? stats.totalPatrols : '0'}</div>
                       </div>
-                    )}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '50%',
-                    background: 'rgba(136, 108, 108, 0.05)',
-                    backdropFilter: 'blur(4px)',
-                    border: '1px solid rgba(173, 159, 159, 0.1)'
-                  }} />
+                    </div>
+
+                    <div className="patrol-mini-stats">
+                      {[
+                        { label: language === "gu" ? "સરેરાશ અંતર" : "Avg Distance", value: hasData ? `${stats.avgDistance} km` : '0.0 km' },
+                        { label: language === "gu" ? "સરેરાશ સમય" : "Avg Time", value: hasData ? `${stats.avgHours} hrs` : '0.0 hrs' },
+                        { label: language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff", value: hasData ? stats.avgStaff : '0' },
+                        { label: language === "gu" ? "કુલ અંતર" : "Total Distance", value: hasData ? `${stats.totalDistance} km` : '0.0 km' }
+                      ].map((item) => (
+                        <div className="patrol-mini-stat" key={item.label}>
+                          <span>{item.label}</span>
+                          <strong>{item.value}</strong>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="patrol-top-officer">
+                      <FaUserTie />
+                      <span>{language === "gu" ? "શ્રેષ્ઠ અધિકારી:" : "Top Officer:"}</span>
+                      <strong>{hasData && stats.topOfficer ? stats.topOfficer : 'N/A'}</strong>
+                    </div>
+                  </div>
                 </div>
-                <Text style={{ 
-                  color: 'rgba(0, 0, 0, 0.9)',
-                  fontSize: '25px',
-                  display: 'block',
-                  marginTop: 8
-                }}>
-                  {getTypeDisplayName(item.type)}
-                </Text>
-              </div>
-            </Col>
-          ))}
+              </Col>
+            );
+          })}
         </Row>
       </div>
 
-      {/* Detailed Type Analysis */}
-      <Row gutter={[16, 16]}>
-        {[
-          { stats: dayStats, type: "Day Patrolling", color: '#00b3ffff' },
-          { stats: nightStats, type: "Night Patrolling", color: '#00ffa2ff' },
-          { stats: beatStats, type: "Beat Checking", color: '#4000ffff' }
-        ].map(({ stats, type, color }, index) => {
-          const hasData = stats !== null;
-          
-          return (
-            <Col xs={24} md={8} key={type}>
-              <div style={{
-                background: hasData 
-                  ? `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.15)`
-                  : 'rgba(128, 128, 128, 0.15)',
-                backdropFilter: 'blur(12px)',
-                borderRadius: 16,
-                padding: 0,
-                border: hasData
-                  ? `1px solid rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.3)`
-                  : '1px solid rgba(128, 128, 128, 0.3)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                height: '100%',
-                overflow: 'hidden'
-              }}>
-                {/* Header */}
-                <div style={{
-                  padding: '16px 20px',
-                  background: hasData
-                    ? `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.25)`
-                    : 'rgba(128, 128, 128, 0.25)',
-                  borderBottom: hasData
-                    ? `1px solid rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.4)`
-                    : '1px solid rgba(128, 128, 128, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <div style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    backgroundColor: hasData ? color : 'gray',
-                    marginRight: 12,
-                    boxShadow: hasData ? `0 0 12px ${color}` : 'none'
-                  }} />
-                  <span style={{ 
-                    color: 'rgba(0, 0, 0, 0.95)',
-                    fontWeight: 600,
-                    fontSize: '25px'
-                  }}>
-                    {getTypeDisplayName(type)}
-                  </span>
-                </div>
-                
-                {/* Content - Show N/A when no data */}
-                <div style={{ padding: 20 }}>
-                  <div style={{ 
-                    textAlign: 'center',
-                    marginBottom: 20,
-                    padding: '16px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: 12,
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
-                  }}>
-                    <div style={{ 
-                      color: 'rgba(0, 0, 0, 0.7)',
-                      fontSize: '25px',
-                      marginBottom: 4
-                    }}>
-                      {language === "gu" ? "કુલ પેટ્રોલિંગ" : "Total Patrols"}
-                    </div>
-                    <div style={{ 
-                      color: '#000000ff',
-                      fontSize: '50px',
-                      fontWeight: 'bold',
-                      textShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                    }}>
-                      {hasData ? stats.totalPatrols : '0'}
-                    </div>
-                  </div>
-                  
-                  <Row gutter={[12, 12]}>
-                    {[
-                      {
-                        label: language === "gu" ? "સરેરાશ અંતર" : "Avg Distance",
-                        value: hasData ? `${stats.avgDistance} km` : '0.0 km'
-                      },
-                      {
-                        label: language === "gu" ? "સરેરાશ સમય" : "Avg Time",
-                        value: hasData ? `${stats.avgHours} hrs` : '0.0 hrs'
-                      },
-                      {
-                        label: language === "gu" ? "સરેરાશ સ્ટાફ" : "Avg Staff",
-                        value: hasData ? stats.avgStaff : '0'
-                      },
-                      {
-                        label: language === "gu" ? "કુલ અંતર" : "Total Distance",
-                        value: hasData ? `${stats.totalDistance} km` : '0.0 km'
-                      }
-                    ].map((item, idx) => (
-                      <Col span={12} key={idx}>
-                        <div style={{
-                          padding: '12px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          borderRadius: 8,
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
-                          height: '100%'
-                        }}>
-                          <div style={{ 
-                            color: 'rgba(0, 0, 0, 0.7)',
-                            fontSize: '25px',
-                            marginBottom: 4
-                          }}>
-                            {item.label}
-                          </div>
-                          <div style={{ 
-                            color: '#000000ff',
-                            fontSize: '25px',
-                            fontWeight: 600
-                          }}>
-                            {item.value}
-                          </div>
-                        </div>
-                      </Col>
-                    ))}
-                  </Row>
-                  
-                  {/* Top Officer - Show N/A when no data */}
-                  <div style={{
-                    marginTop: 16,
-                    padding: '12px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: 8,
-                    border: '1px solid rgba(255, 255, 255, 0.08)'
-                  }}>
-                    <div style={{ 
-                      color: 'rgba(0, 0, 0, 0.7)',
-                      fontSize: '25px',
-                      marginBottom: 4
-                    }}>
-                      {language === "gu" ? "શ્રેષ્ઠ અધિકારી" : "Top Officer"}
-                    </div>
-                    <div style={{ 
-                      color: '#000000ff',
-                      fontSize: '16px',
-                      fontWeight: 500,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {hasData && stats.topOfficer ? stats.topOfficer : 'N/A'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Col>
-          );
-        })}
-      </Row>
-
-      {/* Additional Insights */}
+      {/* Quick Insights */}
       {(dayStats || nightStats || beatStats) && (
-        <div style={{
-          marginTop: 16,
-          background: 'rgba(255, 255, 255, 0.08)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: 16,
-          padding: 0,
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            padding: '16px 20px',
-            background: 'rgba(255, 255, 255, 0.12)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <span style={{ 
-              color: 'rgba(0, 0, 0, 0.95)',
-              fontWeight: 600,
-              fontSize: '25px',
-              textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px"
-            }}>
-              {language === "gu" ? "વધારાની જાણકારી" : "Additional Insights"}
-            </span>
-          </div>
-          
-          <div style={{ padding: 20, borderRadius: 12, }}>
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12}>
-                <div style={{
-                  padding: '16px',
-                  background: 'rgba(56, 189, 248, 0.3)',
-                  borderRadius: 12,
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  height: '100%'
-                }}>
-                  <div style={{ 
-                    color: 'rgba(0, 0, 0, 0.7)',
-                    fontSize: '18px',
-                    marginBottom: 8
-                  }}>
-                    {language === "gu" ? "સૌથી વધુ પેટ્રોલિંગ" : "Most Active Type"}
-                  </div>
-                  {(() => {
-                    const types = [
-                      { name: "Day Patrolling", count: dayStats?.totalPatrols || 0 },
-                      { name: "Night Patrolling", count: nightStats?.totalPatrols || 0 },
-                      { name: "Beat Checking", count: beatStats?.totalPatrols || 0 }
-                    ];
-                    const mostActive = types.reduce((prev, current) => 
-                      prev.count > current.count ? prev : current
-                    );
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          backgroundColor: getTypeColor(mostActive.name),
-                          marginRight: 8,
-                          boxShadow: `0 0 8px ${getTypeColor(mostActive.name)}`
-                        }} />
-                        <span style={{ 
-                          color: '#000000ff',
-                          fontSize: '20px',
-                          fontWeight: 600
-                        }}>
-                          {getTypeDisplayName(mostActive.name)}
-                        </span>
-                        <span style={{ 
-                          color: 'rgba(0, 0, 0, 0.7)',
-                          marginLeft: 8,
-                          fontSize: '20px'
-                        }}>
-                          ({mostActive.count} {language === "gu" ? "પેટ્રોલિંગ" : "patrols"})
-                        </span>
+        <div className="patrol-quick-insights">
+          <Text strong className="patrol-quick-insights-heading">
+            {language === "gu" ? "ઝડપી જાણકારી" : "Quick Insights"}
+          </Text>
+          <Row gutter={[24, 16]}>
+            <Col xs={24} md={12}>
+              {(() => {
+                const types = [
+                  { name: "Day Patrolling", count: dayStats?.totalPatrols || 0 },
+                  { name: "Night Patrolling", count: nightStats?.totalPatrols || 0 },
+                  { name: "Beat Checking", count: beatStats?.totalPatrols || 0 }
+                ];
+                const mostActive = types.reduce((prev, current) => 
+                  prev.count > current.count ? prev : current
+                );
+                return (
+                  <div className="patrol-insight-card">
+                    <div className="patrol-insight-icon"><FaTrophy /></div>
+                    <div className="patrol-insight-content">
+                      <div className="patrol-insight-label">{language === "gu" ? "સૌથી સક્રિય પ્રકાર" : "Most Active Type"}</div>
+                      <div className="patrol-insight-main">
+                        <span>{getTypeDisplayName(mostActive.name)}</span>
+                        <em>{mostActive.count} {language === "gu" ? "પેટ્રોલિંગ" : "patrols"}</em>
                       </div>
-                    );
-                  })()}
-                </div>
-              </Col>
-              <Col xs={24} sm={12}>
-                <div style={{
-                  padding: '16px',
-                  background: 'rgba(0, 255, 162, 0.3)',
-                  borderRadius: 12,
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  height: '100%'
-                }}>
-                  <div style={{ 
-                    color: 'rgba(0, 0, 0, 0.7)',
-                    fontSize: '18px',
-                    marginBottom: 8
-                  }}>
-                    {language === "gu" ? "સૌથી વધુ અંતર" : "Longest Distance Type"}
-                  </div>
-                  {(() => {
-                    const types = [
-                      { name: "Day Patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
-                      { name: "Night Patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
-                      { name: "Beat Checking", distance: parseFloat(beatStats?.totalDistance || 0) }
-                    ];
-                    const longestDistance = types.reduce((prev, current) => 
-                      prev.distance > current.distance ? prev : current
-                    );
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <div style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          backgroundColor: getTypeColor(longestDistance.name),
-                          marginRight: 8,
-                          boxShadow: `0 0 8px ${getTypeColor(longestDistance.name)}`
-                        }} />
-                        <span style={{ 
-                          color: '#000000ff',
-                          fontSize: '20px',
-                          fontWeight: 600
-                        }}>
-                          {getTypeDisplayName(longestDistance.name)}
-                        </span>
-                        <span style={{ 
-                          color: 'rgba(0, 0, 0, 0.7)',
-                          marginLeft: 8,
-                          fontSize: '20px'
-                        }}>
-                          ({longestDistance.distance} km)
-                        </span>
+                      <div className="patrol-insight-subtitle">
+                        {language === "gu" ? "કુલ પેટ્રોલિંગ પ્રવૃત્તિમાં સૌથી વધુ હિસ્સો." : `Accounts for ${totalPatrols ? Math.round((mostActive.count / totalPatrols) * 100) : 0}% of all patrol activities.`}
                       </div>
-                    );
-                  })()}
-                </div>
-              </Col>
-            </Row>
-          </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </Col>
+            <Col xs={24} md={12}>
+              {(() => {
+                const types = [
+                  { name: "Day Patrolling", distance: parseFloat(dayStats?.totalDistance || 0) },
+                  { name: "Night Patrolling", distance: parseFloat(nightStats?.totalDistance || 0) },
+                  { name: "Beat Checking", distance: parseFloat(beatStats?.totalDistance || 0) }
+                ];
+                const longestDistance = types.reduce((prev, current) => 
+                  prev.distance > current.distance ? prev : current
+                );
+                return (
+                  <div className="patrol-insight-card">
+                    <div className="patrol-insight-icon"><FaMapMarkedAlt /></div>
+                    <div className="patrol-insight-content">
+                      <div className="patrol-insight-label">{language === "gu" ? "સૌથી લાંબું અંતર" : "Longest Distance Type"}</div>
+                      <div className="patrol-insight-main">
+                        <span>{getTypeDisplayName(longestDistance.name)}</span>
+                        <em>{longestDistance.distance} km</em>
+                      </div>
+                      <div className="patrol-insight-subtitle">
+                        {language === "gu" ? "સૌથી વધુ કુલ અંતર આવરી લેવામાં આવ્યું." : "Highest total distance covered."}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </Col>
+          </Row>
         </div>
       )}
     </div>
@@ -1000,6 +710,38 @@ const buildFilters = useCallback(() => {
   return filters;
 }, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
 
+const applyPatrolFilters = useCallback((records) => {
+  const search = searchText?.trim().toLowerCase();
+  const startDate = startFilter ? startFilter.startOf('day') : null;
+  const endDate = endFilter ? endFilter.endOf('day') : null;
+
+  return records.filter((item) => {
+    if (!item || !(item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name)) return false;
+
+    if (search) {
+      const officer = (item.patrol_officer_name || '').toLowerCase();
+      if (!officer.includes(search)) return false;
+    }
+
+    if (typeFilter && item.type_name !== typeFilter) return false;
+    if (divisionFilter && item.division !== divisionFilter) return false;
+    if (rangeFilter && item.range !== rangeFilter) return false;
+    if (roundFilter && item.round !== roundFilter) return false;
+    if (beatFilter && item.beat !== beatFilter) return false;
+    if (forestId && String(item.forest_id || '') !== String(forestId)) return false;
+
+    if (startDate || endDate) {
+      const start = item.start_time ? dayjs(item.start_time) : null;
+      const end = item.end_time ? dayjs(item.end_time) : start;
+      if (!start?.isValid()) return false;
+      if (startDate && end.isBefore(startDate)) return false;
+      if (endDate && start.isAfter(endDate)) return false;
+    }
+
+    return true;
+  });
+}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
+
   // Fetch filtered data for dashboard (all records without pagination)
   // In fetchDashboardData function, add the same filtering logic
 const fetchDashboardData = useCallback(async () => {
@@ -1026,16 +768,18 @@ const fetchDashboardData = useCallback(async () => {
       const data = await response.json();
       
       let formattedData = Array.isArray(data.data) ? data.data : [];
-      formattedData = formattedData.map((item, index) => ({
-        key: item.patrol_id || `patrol-${index}`,
-        ...item,
-        patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-        division: stripHtmlTags(item.division),
-        range: stripHtmlTags(item.range),
-        beat: stripHtmlTags(item.beat),
-        start_location: stripHtmlTags(item.start_location),
-        end_location: stripHtmlTags(item.end_location)
-      }));
+      formattedData = formattedData
+        .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
+        .map((item, index) => ({
+          key: item.patrol_id || `patrol-${index}`,
+          ...item,
+          patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+          division: stripHtmlTags(item.division),
+          range: stripHtmlTags(item.range),
+          beat: stripHtmlTags(item.beat),
+          start_location: stripHtmlTags(item.start_location),
+          end_location: stripHtmlTags(item.end_location)
+        }));
       
       // ========== ADD SAME DATE FILTER HERE ==========
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
@@ -1048,7 +792,7 @@ const fetchDashboardData = useCallback(async () => {
       }
       // ========== END OF ADDED CODE ==========
       
-      setDashboardData(formattedData);
+      setDashboardData(applyPatrolFilters(formattedData));
     } else {
       // Similar filtering for filtered data
       const queryParams = new URLSearchParams({
@@ -1073,16 +817,18 @@ const fetchDashboardData = useCallback(async () => {
       const data = await response.json();
       
       let formattedData = Array.isArray(data.data) ? data.data : [];
-      formattedData = formattedData.map((item, index) => ({
-        key: item.patrol_id || `patrol-filtered-${index}`,
-        ...item,
-        patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-        division: stripHtmlTags(item.division),
-        range: stripHtmlTags(item.range),
-        beat: stripHtmlTags(item.beat),
-        start_location: stripHtmlTags(item.start_location),
-        end_location: stripHtmlTags(item.end_location)
-      }));
+      formattedData = formattedData
+        .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
+        .map((item, index) => ({
+          key: item.patrol_id || `patrol-filtered-${index}`,
+          ...item,
+          patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+          division: stripHtmlTags(item.division),
+          range: stripHtmlTags(item.range),
+          beat: stripHtmlTags(item.beat),
+          start_location: stripHtmlTags(item.start_location),
+          end_location: stripHtmlTags(item.end_location)
+        }));
       
       // ========== ADD SAME DATE FILTER HERE ==========
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
@@ -1095,14 +841,14 @@ const fetchDashboardData = useCallback(async () => {
       }
       // ========== END OF ADDED CODE ==========
       
-      setDashboardData(formattedData);
+      setDashboardData(applyPatrolFilters(formattedData));
     }
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
   } finally {
     setIsDashboardLoading(false);
   }
-}, [buildFilters, startFilter, endFilter]); // Add dependencies
+}, [buildFilters, applyPatrolFilters, startFilter, endFilter]); // Add dependencies
 
   // Fetch patrol data with pagination
   // Fetch patrol data with pagination
@@ -1139,16 +885,18 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     
     let formattedData = Array.isArray(data.data) ? data.data : [];
     console.log(formattedData);
-    formattedData = formattedData.map((item, index) => ({
-      key: item.patrol_id || `patrol-${index}`,
-      ...item,
-      patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-      division: stripHtmlTags(item.division),
-      range: stripHtmlTags(item.range),
-      beat: stripHtmlTags(item.beat),
-      start_location: stripHtmlTags(item.start_location),
-      end_location: stripHtmlTags(item.end_location)
-    }));
+    formattedData = formattedData
+      .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
+      .map((item, index) => ({
+        key: item.patrol_id || `patrol-${index}`,
+        ...item,
+        patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+        division: stripHtmlTags(item.division),
+        range: stripHtmlTags(item.range),
+        beat: stripHtmlTags(item.beat),
+        start_location: stripHtmlTags(item.start_location),
+        end_location: stripHtmlTags(item.end_location)
+      }));
     
     // ========== ADD THE DATE FILTER HERE ==========
     // Filter for same date selection
@@ -1821,6 +1569,112 @@ const exportTableToExcel = () => {
     },
   ].filter(Boolean);
 
+  // Officer Patrol Summary Report sheet (multi-level grouped headers)
+  const computeTypeStats = (records, type) => {
+    const matched = records.filter((r) => r.type_name === type);
+    const total = matched.length;
+    if (total === 0) {
+      return { total: 0, avgStaff: "0.0", avgHours: "0.0", avgDist: "0.0" };
+    }
+
+    const totalStaff = matched.reduce((sum, r) => sum + (parseInt(r.number_of_staff) || 0), 0);
+    const totalHours = matched.reduce((sum, r) => {
+      const start = new Date(r.start_time);
+      const end = new Date(r.end_time);
+      const hours = (end - start) / (1000 * 60 * 60);
+      return sum + (isNaN(hours) || hours < 0 ? 0 : hours);
+    }, 0);
+    const totalDist = matched.reduce((sum, r) => sum + parseFloat(r.distance_kms || 0), 0);
+
+    return {
+      total,
+      avgStaff: (totalStaff / total).toFixed(1),
+      avgHours: (totalHours / total).toFixed(1),
+      avgDist: (totalDist / total).toFixed(1),
+    };
+  };
+
+  const officerMap = {};
+  filteredData.forEach((item) => {
+    const name = item.patrol_officer_name || "Unknown";
+    if (!officerMap[name]) officerMap[name] = [];
+    officerMap[name].push(item);
+  });
+
+  const officerNames = Object.keys(officerMap).sort();
+  const dayLabel = language === "gu" ? "દિવસ પેટ્રોલિંગ" : "Day Patrolling";
+  const nightLabel = language === "gu" ? "રાત પેટ્રોલિંગ" : "Night Patrolling";
+  const beatLabel = language === "gu" ? "બીટ ચેકિંગ" : "Beat Checking";
+  const totalPatrolsLabel = language === "gu" ? "કુલ પેટ્રોલ" : "Total Patrols";
+  const totalChecksLabel = language === "gu" ? "કુલ ચેક્સ" : "Total Checks";
+  const avgStaffLabel = language === "gu" ? "સરેરાસ સ્ટાફ" : "Avg Staff";
+  const avgHoursLabel = language === "gu" ? "સરેરાસ કલાક" : "Avg Hours";
+  const avgDistLabel = language === "gu" ? "સરેરાસ અંતર" : "Avg Dist";
+
+  const summaryData = [];
+  summaryData.push([
+    language === "gu" ? "અધિકારી પેટ્રોલ સારાંશ રિપોર્ટ" : "Officer Patrol Summary Report",
+    "", "", "", "", "", "", "", "", "", "", "", "",
+  ]);
+  summaryData.push([
+    language === "gu" ? "અધિકારીનું નામ" : "Officer Name",
+    dayLabel, "", "", "",
+    nightLabel, "", "", "",
+    beatLabel, "", "", "",
+  ]);
+  summaryData.push([
+    "",
+    totalPatrolsLabel, avgStaffLabel, avgHoursLabel, avgDistLabel,
+    totalPatrolsLabel, avgStaffLabel, avgHoursLabel, avgDistLabel,
+    totalChecksLabel, avgStaffLabel, avgHoursLabel, avgDistLabel,
+  ]);
+
+  officerNames.forEach((name) => {
+    const records = officerMap[name];
+    const day = computeTypeStats(records, "Day patrolling");
+    const night = computeTypeStats(records, "Night patrolling");
+    const beat = computeTypeStats(records, "Beat checking");
+    summaryData.push([
+      name,
+      day.total, day.avgStaff, day.avgHours, day.avgDist,
+      night.total, night.avgStaff, night.avgHours, night.avgDist,
+      beat.total, beat.avgStaff, beat.avgHours, beat.avgDist,
+    ]);
+  });
+
+  const dayTotal = computeTypeStats(filteredData, "Day patrolling");
+  const nightTotal = computeTypeStats(filteredData, "Night patrolling");
+  const beatTotal = computeTypeStats(filteredData, "Beat checking");
+
+  summaryData.push([
+    language === "gu" ? "કુલ" : "TOTAL",
+    dayTotal.total, dayTotal.avgStaff, dayTotal.avgHours, dayTotal.avgDist,
+    nightTotal.total, nightTotal.avgStaff, nightTotal.avgHours, nightTotal.avgDist,
+    beatTotal.total, beatTotal.avgStaff, beatTotal.avgHours, beatTotal.avgDist,
+  ]);
+
+  summaryData.push(["", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  summaryData.push([
+    language === "gu" ? "રિપોર્ટ જનરેટ:" : "Report Generated:",
+    new Date().toLocaleString(),
+    "", "", "", "", "", "", "", "", "", "", "",
+  ]);
+
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+  summarySheet["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
+    { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
+    { s: { r: 1, c: 1 }, e: { r: 1, c: 4 } },
+    { s: { r: 1, c: 5 }, e: { r: 1, c: 8 } },
+    { s: { r: 1, c: 9 }, e: { r: 1, c: 12 } },
+    { s: { r: summaryData.length - 1, c: 1 }, e: { r: summaryData.length - 1, c: 12 } },
+  ];
+  summarySheet["!cols"] = [
+    { wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+  ];
+
   // Sheet 4: Filter Criteria Applied
   const filterCriteria = [
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "અધિકારીનું નામ" : "Officer Name", [language === "gu" ? "મૂલ્ય" : "Value"]: searchText || "N/A" },
@@ -1863,8 +1717,12 @@ const exportTableToExcel = () => {
 
   // Create workbook with multiple sheets
   const workbook = XLSX.utils.book_new();
+
+  // Sheet 1: Officer Patrol Summary Report (multi-level grouped headers)
+  workbook.SheetNames.unshift("Officer Patrol Summary Report");
+  workbook.Sheets["Officer Patrol Summary Report"] = summarySheet;
   
-  // Sheet 1: Patrol Logs (with separate date and time columns)
+  // Sheet 2: Patrol Logs (with separate date and time columns)
   const patrolSheet = XLSX.utils.json_to_sheet(patrolLogsData);
   XLSX.utils.book_append_sheet(workbook, patrolSheet, "Patrol Logs");
   
@@ -1922,7 +1780,7 @@ const exportTableToExcel = () => {
   }
   
   // Auto-size columns for all sheets
-  const sheets = ['Patrol Logs', 'Analysis Summary', 'Patrol Type Breakdown', 'Filter Criteria', 'Coverage Analysis', 'Covering Patrols'];
+  const sheets = ['Officer Patrol Summary Report', 'Patrol Logs', 'Analysis Summary', 'Patrol Type Breakdown', 'Filter Criteria', 'Coverage Analysis', 'Covering Patrols'];
   sheets.forEach(sheetName => {
     const sheet = workbook.Sheets[sheetName];
     if (sheet) {
@@ -1954,9 +1812,9 @@ const exportTableToExcel = () => {
 
 
   return (
-    <div className="container">
+    <div className="container patrol-logs-page">
       {isLoading && <Loader />}
-      <div className="section">
+      <div className="section patrol-logs-section">
         <h3 className="main-heading" style={{textShadow: "rgba(0, 0, 0, 0.3) 0px 2px 4px", fontSize: '25px',marginLeft: "20px", marginBottom: "10px"}}>
           {language === "gu" ? "પેટ્રોલિંગ નોંધણી" : "Detail Level Patrolling Logs"}
         </h3>
@@ -1967,10 +1825,10 @@ const exportTableToExcel = () => {
     : "Select the start and end dates for the division to perform coverage analysis"}
         </div>
 
-        <div className="heading-container" style={{height:"50px"}}>
+        <div className="heading-container patrol-filter-card" style={{height:"50px"}}>
           <Input
             placeholder={language === "gu" ? "અધિકારીના નામ પ્રમાણે શોધો" : "Search by Officer Name"}
-            style={{ width: "200px", background: "rgba(255, 255, 255, 0.2)", border: "1px solid #d9d9d9", borderRadius: "4px" }}
+            style={{ width: "180px", background: "#fff", border: "1px solid #d9d9d9", borderRadius: "4px" }}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             suffix={<SearchOutlined style={{ color: "rgba(0, 0, 0, 0.45)", fontSize: "16px", cursor: "pointer" }} />}
@@ -1978,7 +1836,7 @@ const exportTableToExcel = () => {
 
           <Select
             placeholder={language === "gu" ? "વિભાગ પસંદ કરો" : "Select Division"}
-            style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
+            style={{ width: "180px", borderRadius: "4px", background: "#fff" }}
             value={divisionFilter}
             onChange={handleDivisionFilterChange}
             allowClear
@@ -2012,7 +1870,7 @@ const exportTableToExcel = () => {
 
           <Select
             placeholder={language === "gu" ? "રેંજ પસંદ કરો" : "Select Range"}
-            style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
+            style={{ width: "180px", borderRadius: "4px", background: "#fff" }}
             value={rangeFilter}
             onChange={handleRangeFilterChange}
             allowClear
@@ -2041,7 +1899,7 @@ const exportTableToExcel = () => {
 
           <Select
             placeholder={language === "gu" ? "બીટ પસંદ કરો" : "Select Beat"}
-            style={{ width: "150px", borderRadius: "4px", background: "#fff" }}
+            style={{ width: "180px", borderRadius: "4px", background: "#fff" }}
             value={beatFilter}
             onChange={handleBeatFilterChange}
             allowClear
@@ -2070,7 +1928,7 @@ const exportTableToExcel = () => {
 
           <DatePicker
             placeholder={language === "gu" ? "શરૂઆતની તારીખ" : "Search By Start Date"}
-            style={{ width: "150px", border: "1px solid #d9d9d9", borderRadius: "4px", background: "#fff" }}
+            style={{ width: "180px", border: "1px solid #d9d9d9", borderRadius: "4px", background: "#fff" }}
             value={startFilter}
             onChange={(date) => setStartFilter(date)}
             allowClear
@@ -2078,7 +1936,7 @@ const exportTableToExcel = () => {
 
           <DatePicker
             placeholder={language === "gu" ? "સમાપ્તિ તારીખ" : "Search By End Date"}
-            style={{ width: "150px", border: "1px solid #d9d9d9", borderRadius: "4px", background: "#fff" }}
+            style={{ width: "180px", border: "1px solid #d9d9d9", borderRadius: "4px", background: "#fff" }}
             value={endFilter}
             onChange={(date) => setEndFilter(date)}
             allowClear
@@ -2086,7 +1944,7 @@ const exportTableToExcel = () => {
           
           <Select
             placeholder={language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrolling Type"}
-            style={{ width: "150px", borderRadius: "0px", background: "#fff" }}
+            style={{ width: "180px", borderRadius: "4px", background: "#fff" }}
             value={typeFilter}
             onChange={(value) => setTypeFilter(value)}
             allowClear
@@ -2120,10 +1978,13 @@ const exportTableToExcel = () => {
           
         </div>
 
+        <div className="patrol-table-card">
+        <div className="patrol-table-title">{language === "gu" ? "પેટ્રોલ લોગ્સ" : "Patrol Logs"}</div>
         <Table
-          className="transparent-table"
+          className="transparent-table patrol-modern-table"
           columns={columns}
           dataSource={filteredData}
+          rowKey={(record) => record.key || record.patrol_id}
           pagination={false}
           bordered
           scroll={{ x: 'max-content' }}
@@ -2322,6 +2183,7 @@ const exportTableToExcel = () => {
           </a>
         </div>
       </footer>
+    </div>
     </div>
   );
 };

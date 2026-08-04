@@ -97,7 +97,7 @@ input[type="password"] {
   flex-direction: row;
   justify-content: space-evenly;
   align-items: center;
-  background: linear-gradient(135deg, #eef2f7, #f9fbfd);
+  background: #ffffff;
   min-height: calc(100vh - 11.2vh);
   height: auto;
   gap: 30px;

@@ -1776,6 +1776,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
   const [activeCoupeGroups, setActiveCoupeGroups] = useState({});
   const [availableCoupeLayers, setAvailableCoupeLayers] = useState([]);
   const [coupeGroups, setCoupeGroups] = useState([]);
+  const [adminCoupeBoundaryLayers, setAdminCoupeBoundaryLayers] = useState([]);
   const [isLoadingCoupes, setIsLoadingCoupes] = useState(false);
   // Add state for legend visibility
   const [isLegendVisible, setIsLegendVisible] = useState(true);
@@ -1811,6 +1812,65 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
     fetchNDVIChangeLayers();
   }, []);
 
+  useEffect(() => {
+    const fetchAdminCoupeBoundaries = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_BASE_URL}/api/admincoupes`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!response.ok) throw new Error('Failed to fetch uploaded coupe boundaries');
+
+        const result = await response.json();
+        const dynamicLayers = (result.data || [])
+          .map((item) => item.coupe_name)
+          .filter(Boolean)
+          .map((tableName) => {
+            const cleanName = tableName.replace(/^Recap4NDC:/, '');
+            const label = cleanName
+              .replace(/_table$/i, '')
+              .replace(/_coupe$/i, '')
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, (char) => char.toUpperCase());
+
+            return {
+              Name: cleanName,
+              Layer: label,
+              wmsLayer: `Recap4NDC:${cleanName}`,
+            };
+          });
+
+        setAdminCoupeBoundaryLayers(dynamicLayers);
+      } catch (error) {
+        console.error('Error fetching uploaded coupe boundaries:', error);
+      }
+    };
+
+    fetchAdminCoupeBoundaries();
+  }, []);
+
+  // Merge dynamic admin-uploaded coupe boundary layers into the static "Coupe Boundaries" group
+  const mergedGroups = useMemo(() => {
+    if (!adminCoupeBoundaryLayers.length) return layersData.groups;
+
+    return layersData.groups.map((group) => {
+      if (group.title !== "Coupe Boundaries") return group;
+
+      const existingNames = new Set(
+        (group.children || []).map((c) => (c.Name || "").toLowerCase())
+      );
+
+      const dynamicChildren = adminCoupeBoundaryLayers.filter(
+        (layer) => !existingNames.has((layer.Name || "").toLowerCase())
+      );
+
+      return {
+        ...group,
+        children: [...(group.children || []), ...dynamicChildren],
+      };
+    });
+  }, [adminCoupeBoundaryLayers]);
+
   // Initialize open groups for nested structure
   useEffect(() => {
     const initialOpenState = {};
@@ -1828,10 +1888,10 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
       });
     };
     
-    initializeNestedGroups(layersData.groups);
+    initializeNestedGroups(mergedGroups);
     
     setOpenGroups(initialOpenState);
-  }, []);
+  }, [mergedGroups]);
 
 // Generate coupe groups dynamically from available layers
 const generateCoupeGroups = (layers) => {
@@ -2199,7 +2259,7 @@ const handleMapClick = useCallback(async (e) => {
       return null;
     };
     
-    const layerTitle = findInLayers(layersData.groups);
+    const layerTitle = findInLayers(mergedGroups);
     if (layerTitle) return layerTitle;
     
     // If not found in regular layers, check in dynamic coupe layers
@@ -2216,11 +2276,11 @@ const handleMapClick = useCallback(async (e) => {
     return 1000 + layerCounterRef.current;
   };
 
-  const createLayer = (layerName, layerLabel, zIndex) => {
+  const createLayer = (layerName, layerLabel, zIndex, wmsLayerName) => {
     try {
      
 return L.nonTiledLayer.wms(GEOSERVER_WMS, {
-  layers: layerName,
+  layers: wmsLayerName || layerName,
   format: "image/png",
   transparent: true,
   version: "1.3.0"
@@ -2232,7 +2292,7 @@ return L.nonTiledLayer.wms(GEOSERVER_WMS, {
   };
 
 const layerManager = {
-  addLayer: async (layerName, layerLabel) => {
+  addLayer: async (layerName, layerLabel, wmsLayerName) => {
     if (!mapRef.current) {
       console.error("[addLayer] Map reference not initialized.");
       return null;
@@ -2240,7 +2300,7 @@ const layerManager = {
 
     try {
       const zIndex = calculateZIndex();
-      const newLayer = createLayer(layerName, layerLabel, zIndex);
+      const newLayer = createLayer(layerName, layerLabel, zIndex, wmsLayerName);
       if (!newLayer) throw new Error("Layer creation failed");
 
       newLayer.addTo(mapRef.current);
@@ -2422,7 +2482,7 @@ const toggleLayer = useCallback(
         setIsLayerLoading(true);
 
         // Add the new layer
-        const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer);
+        const layer = await layerManager.addLayer(layerConfig.Name, layerConfig.Layer, layerConfig.wmsLayer);
         if (!layer) {
           setIsLayerLoading(false); // Turn off loading if layer addition fails
           throw new Error(`Failed to add layer: ${layerConfig.Name}`);
@@ -3072,7 +3132,7 @@ const renderGroup = (group, index, section = "layers") => {
         </h3>
         
         <div className="layer-groups-container">
-          {layersData.groups.map((group, idx) => renderGroup(group, idx, "layers"))}
+          {mergedGroups.map((group, idx) => renderGroup(group, idx, "layers"))}
         </div>
         
         <div className="coupe-section">

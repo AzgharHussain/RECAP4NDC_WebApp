@@ -1789,7 +1789,7 @@ const handleExportToPDF = () => {
             }
             
             .report-container {
-              max-width: 1400px;
+              width: 100%;
               margin: 0 auto;
               background: white;
               box-shadow: 0 20px 40px rgba(0,0,0,0.1);
@@ -2393,11 +2393,11 @@ const handleExportToPDF = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3,
+    <Container className="ndvi-dashboard-page" maxWidth="xl" sx={{ py: 3,
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column' }}>
-        <div className="main-content">
+        <div className="main-content ndvi-dashboard-content">
       {/* Header */}
       <Card sx={{ mb: 4, bgcolor: 'transparent', color: 'black', borderRadius: 3, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
   <CardContent>
@@ -2661,9 +2661,29 @@ const handleExportToPDF = () => {
 
       {/* Summary Cards - Show only if data is available */}
       {summaryStats && !loading && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ borderRadius: 3, borderLeft: '6px solid #ef4444', boxShadow: '0 8px 24px rgba(239, 68, 68, 0.1)', height: '100%' }}>
+        <Grid container spacing={3} sx={{ mb: 4 }} className="ndvi-summary-grid">
+          <Grid item xs={12} sm={6} md={2.4}>
+            <Card className="ndvi-stat-card ndvi-stat-total" sx={{ borderRadius: 3, borderLeft: '6px solid #16a34a', boxShadow: '0 8px 24px rgba(22, 163, 74, 0.1)', height: '100%' }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography color="text.secondary" variant="body2" sx={{ fontWeight: 600 }}>
+                      {t.totalArea}
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#14532d' }}>
+                      {totalArea.toFixed(2)}
+                      <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
+                        km²
+                      </Typography>
+                    </Typography>
+                  </Box>
+                  <Forest sx={{ fontSize: 40, color: '#16a34a', opacity: 0.8 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={2.4}>
+            <Card className="ndvi-stat-card ndvi-stat-degraded" sx={{ borderRadius: 3, borderLeft: '6px solid #ef4444', boxShadow: '0 8px 24px rgba(239, 68, 68, 0.1)', height: '100%' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
@@ -2684,8 +2704,8 @@ const handleExportToPDF = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ borderRadius: 3, borderLeft: '6px solid #22c55e', boxShadow: '0 8px 24px rgba(34, 197, 94, 0.1)', height: '100%' }}>
+          <Grid item xs={12} sm={6} md={2.4}>
+            <Card className="ndvi-stat-card ndvi-stat-afforested" sx={{ borderRadius: 3, borderLeft: '6px solid #22c55e', boxShadow: '0 8px 24px rgba(34, 197, 94, 0.1)', height: '100%' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
@@ -2706,8 +2726,8 @@ const handleExportToPDF = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ borderRadius: 3, borderLeft: '6px solid #3b82f6', boxShadow: '0 8px 24px rgba(59, 130, 246, 0.1)', height: '100%' }}>
+          <Grid item xs={12} sm={6} md={2.4}>
+            <Card className="ndvi-stat-card ndvi-stat-notes" sx={{ borderRadius: 3, borderLeft: '6px solid #3b82f6', boxShadow: '0 8px 24px rgba(59, 130, 246, 0.1)', height: '100%' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
@@ -2725,8 +2745,8 @@ const handleExportToPDF = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ borderRadius: 3, borderLeft: '6px solid #f59e0b', boxShadow: '0 8px 24px rgba(245, 158, 11, 0.1)', height: '100%' }}>
+          <Grid item xs={12} sm={6} md={2.4}>
+            <Card className="ndvi-stat-card ndvi-stat-images" sx={{ borderRadius: 3, borderLeft: '6px solid #f59e0b', boxShadow: '0 8px 24px rgba(245, 158, 11, 0.1)', height: '100%' }}>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
                   <Box>

@@ -1,0 +1,208 @@
+{
+  "info": {
+    "_postman_id": "b2f8c2f5-1f3f-4f64-a9c3-0a1f2d0a4f3d",
+    "name": "RECAP4NDC API Collection",
+    "description": "Postman collection generated from D:\\recap4ndc_new\\RECAP4NDC_WebApp\\api\\index.js and routers mounted by index.js. Set baseUrl and token in collection variables before running protected APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5002",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Core",
+      "item": [
+        {
+          "name": "Root",
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/", "host": ["{{baseUrl}}"], "path": [""] } }
+        },
+        {
+          "name": "Test GET",
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/test", "host": ["{{baseUrl}}"], "path": ["api", "test"] } }
+        },
+        {
+          "name": "Test POST",
+          "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"message\": \"hello\"\n}" }, "url": { "raw": "{{baseUrl}}/api/test-post", "host": ["{{baseUrl}}"], "path": ["api", "test-post"] } }
+        },
+        {
+          "name": "Admin Login",
+          "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password\"\n}" }, "url": { "raw": "{{baseUrl}}/api/admin", "host": ["{{baseUrl}}"], "path": ["api", "admin"] } }
+        },
+        {
+          "name": "Change Password",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"currentPassword\": \"oldPassword\",\n  \"newPassword\": \"newPassword\"\n}" }, "url": { "raw": "{{baseUrl}}/api/changepassword", "host": ["{{baseUrl}}"], "path": ["api", "changepassword"] } }
+        },
+        {
+          "name": "Villages By Coupe Name",
+          "request": { "method": "GET", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"coupe_name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/villages", "host": ["{{baseUrl}}"], "path": ["api", "villages"] } }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Forest SOAP Login Proxy",
+          "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"forest_user\",\n  \"password\": \"password\"\n}" }, "url": { "raw": "{{baseUrl}}/api/forest-login", "host": ["{{baseUrl}}"], "path": ["api", "forest-login"] } }
+        },
+        {
+          "name": "Save Forest User Login",
+          "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"forest_user\",\n  \"password\": \"password\"\n}" }, "url": { "raw": "{{baseUrl}}/api/saveuser", "host": ["{{baseUrl}}"], "path": ["api", "saveuser"] } }
+        },
+        {
+          "name": "Logout",
+          "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/api/logout", "host": ["{{baseUrl}}"], "path": ["api", "logout"] } }
+        }
+      ]
+    },
+    {
+      "name": "Patrol",
+      "item": [
+        {
+          "name": "Create Patrol With Images",
+          "request": { "method": "POST", "header": [], "body": { "mode": "formdata", "formdata": [ { "key": "patrol_officer_name", "value": "Officer Name", "type": "text" }, { "key": "start_time", "value": "2026-08-04T10:00:00Z", "type": "text" }, { "key": "end_time", "value": "2026-08-04T11:00:00Z", "type": "text" }, { "key": "start_location", "value": "Start", "type": "text" }, { "key": "end_location", "value": "End", "type": "text" }, { "key": "distance_kms", "value": "5", "type": "text" }, { "key": "geom", "value": "23.0 72.0,23.1 72.1", "type": "text" }, { "key": "user_id", "value": "1", "type": "text" }, { "key": "patrolling_type_id", "value": "1", "type": "text" }, { "key": "number_of_staff", "value": "2", "type": "text" }, { "key": "beat", "value": "Beat Name", "type": "text" }, { "key": "range", "value": "Range Name", "type": "text" }, { "key": "division", "value": "Division Name", "type": "text" }, { "key": "patrol_images", "type": "file", "src": [] } ] }, "url": { "raw": "{{baseUrl}}/api/patrol-post", "host": ["{{baseUrl}}"], "path": ["api", "patrol-post"] } }
+        },
+        { "name": "Get All Patrols", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrol-info-all", "host": ["{{baseUrl}}"], "path": ["api", "patrol-info-all"] } } },
+        { "name": "Get Patrols With Images", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrol-info", "host": ["{{baseUrl}}"], "path": ["api", "patrol-info"] } } },
+        { "name": "Get Patrols Page", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrol-info-page?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["api", "patrol-info-page"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "10" }] } } },
+        { "name": "Filter Patrols", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrol-info/filter", "host": ["{{baseUrl}}"], "path": ["api", "patrol-info", "filter"] } } },
+        { "name": "Get Patrols By User", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrol-info-user/1", "host": ["{{baseUrl}}"], "path": ["api", "patrol-info-user", "1"] } } },
+        { "name": "Get Patrol By ID", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrols/1", "host": ["{{baseUrl}}"], "path": ["api", "patrols", "1"] } } },
+        { "name": "Patrolling Types", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrolling-types", "host": ["{{baseUrl}}"], "path": ["api", "patrolling-types"] } } },
+        { "name": "Patrolling Division", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrolling-division", "host": ["{{baseUrl}}"], "path": ["api", "patrolling-division"] } } },
+        { "name": "Patrolling Range", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrolling-range", "host": ["{{baseUrl}}"], "path": ["api", "patrolling-range"] } } },
+        { "name": "Patrolling Beat", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrolling-beat", "host": ["{{baseUrl}}"], "path": ["api", "patrolling-beat"] } } },
+        { "name": "Patrolling Round", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrolling-round", "host": ["{{baseUrl}}"], "path": ["api", "patrolling-round"] } } },
+        { "name": "Patrolling Range By Division", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrolling-range-by-division?division=Division%20Name", "host": ["{{baseUrl}}"], "path": ["api", "patrolling-range-by-division"], "query": [{ "key": "division", "value": "Division Name" }] } } },
+        { "name": "Patrolling Beat By Range", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrolling-beat-by-range?range=Range%20Name", "host": ["{{baseUrl}}"], "path": ["api", "patrolling-beat-by-range"], "query": [{ "key": "range", "value": "Range Name" }] } } },
+        { "name": "Patrolling Hierarchy", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrolling-hierarchy", "host": ["{{baseUrl}}"], "path": ["api", "patrolling-hierarchy"] } } },
+        { "name": "Patrolling DRB", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrolling-drb", "host": ["{{baseUrl}}"], "path": ["api", "patrolling-drb"] } } }
+      ]
+    },
+    {
+      "name": "Dropdowns And Hierarchy",
+      "item": [
+        { "name": "Divisions By Forest Type", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"forest_id\": 1\n}" }, "url": { "raw": "{{baseUrl}}/api/divisions", "host": ["{{baseUrl}}"], "path": ["api", "divisions"] } } },
+        { "name": "Hierarchy Coupes", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/hierarchy_coupes", "host": ["{{baseUrl}}"], "path": ["api", "hierarchy_coupes"] } } },
+        { "name": "Hierarchy Divisions", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/hierarchy-divisions", "host": ["{{baseUrl}}"], "path": ["api", "hierarchy-divisions"] } } },
+        { "name": "Coupe Numbers", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"village\": \"Village Name\",\n  \"coupe_name\": \"coupe_table\"\n}" }, "url": { "raw": "{{baseUrl}}/api/coupe-numbers", "host": ["{{baseUrl}}"], "path": ["api", "coupe-numbers"] } } },
+        { "name": "Hierarchy Ranges", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/hierarchy-ranges", "host": ["{{baseUrl}}"], "path": ["api", "hierarchy-ranges"] } } },
+        { "name": "Hierarchy Rounds", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/hierarchy-rounds", "host": ["{{baseUrl}}"], "path": ["api", "hierarchy-rounds"] } } },
+        { "name": "Hierarchy Beats", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/hierarchy-beats", "host": ["{{baseUrl}}"], "path": ["api", "hierarchy-beats"] } } },
+        { "name": "Hierarchy Villages", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\",\n  \"beat\": \"Beat Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/hierarchy-villages", "host": ["{{baseUrl}}"], "path": ["api", "hierarchy-villages"] } } },
+        { "name": "Ranges", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"forest_id\": 1,\n  \"division\": \"Division Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/ranges", "host": ["{{baseUrl}}"], "path": ["api", "ranges"] } } },
+        { "name": "Rounds", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"forest_id\": 1,\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/rounds", "host": ["{{baseUrl}}"], "path": ["api", "rounds"] } } },
+        { "name": "Beats", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"forest_id\": 1,\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/beats", "host": ["{{baseUrl}}"], "path": ["api", "beats"] } } },
+        { "name": "Coupes", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"forest_id\": 1,\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\",\n  \"beat\": \"Beat Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/coupes", "host": ["{{baseUrl}}"], "path": ["api", "coupes"] } } },
+        { "name": "Get Divisions", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"forest_id\": 1\n}" }, "url": { "raw": "{{baseUrl}}/api/get-divisions", "host": ["{{baseUrl}}"], "path": ["api", "get-divisions"] } } },
+        { "name": "Hierarchy", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"forest_id\": 1\n}" }, "url": { "raw": "{{baseUrl}}/api/hierarchy", "host": ["{{baseUrl}}"], "path": ["api", "hierarchy"] } } },
+        { "name": "Forest Types", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/forest-types", "host": ["{{baseUrl}}"], "path": ["api", "forest-types"] } } },
+        { "name": "Get Centroid", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"layerName\": \"layer_name\",\n  \"attribute\": \"name\",\n  \"value\": \"value\"\n}" }, "url": { "raw": "{{baseUrl}}/api/get-centroid", "host": ["{{baseUrl}}"], "path": ["api", "get-centroid"] } } },
+        { "name": "Layer Bounds", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/layer-bounds/layer_name", "host": ["{{baseUrl}}"], "path": ["api", "layer-bounds", "layer_name"] } } },
+        { "name": "Get Coupe Area", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"coupe_name\": \"coupe_name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/get-coupe-area", "host": ["{{baseUrl}}"], "path": ["api", "get-coupe-area"] } } },
+        { "name": "Coupe Divisions", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/coupe-divisions", "host": ["{{baseUrl}}"], "path": ["api", "coupe-divisions"] } } },
+        { "name": "Coupe Ranges", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/coupe-ranges", "host": ["{{baseUrl}}"], "path": ["api", "coupe-ranges"] } } },
+        { "name": "Coupe Rounds", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/coupe-rounds", "host": ["{{baseUrl}}"], "path": ["api", "coupe-rounds"] } } },
+        { "name": "Coupe Beats", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/coupe-beats", "host": ["{{baseUrl}}"], "path": ["api", "coupe-beats"] } } },
+        { "name": "Beat Coupe Divisions", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/beat-coupe-divisions", "host": ["{{baseUrl}}"], "path": ["api", "beat-coupe-divisions"] } } },
+        { "name": "Beat Coupe Ranges", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/beat-coupe-ranges", "host": ["{{baseUrl}}"], "path": ["api", "beat-coupe-ranges"] } } },
+        { "name": "Beat Coupe Rounds", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/beat-coupe-rounds", "host": ["{{baseUrl}}"], "path": ["api", "beat-coupe-rounds"] } } },
+        { "name": "Beat Coupe Beats", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/beat-coupe-beats", "host": ["{{baseUrl}}"], "path": ["api", "beat-coupe-beats"] } } },
+        { "name": "Coupe Metadata Location", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/coupe_metadata/location", "host": ["{{baseUrl}}"], "path": ["api", "coupe_metadata", "location"] } } }
+      ]
+    },
+    {
+      "name": "NDVI",
+      "item": [
+        { "name": "NDVI Change Points", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"coupename\": \"coupe_table\",\n  \"village_name\": \"Village Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/ndvi-change", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change"] } } },
+        { "name": "NDVI Change Get Filtered", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"tableName\": \"2026-01-01_aravalli_coupe_NDVI_Change\",\n  \"division\": \"aravalli\",\n  \"range\": \"Range Name\",\n  \"round\": \"Round Name\",\n  \"beat\": \"Beat Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/ndvi-change-get-filtered", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change-get-filtered"] } } },
+        { "name": "NDVI Change Degraded Area", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"tableName\": \"2026-01-01_aravalli_coupe_NDVI_Change\",\n  \"division\": \"aravalli\"\n}" }, "url": { "raw": "{{baseUrl}}/api/ndvi-change-degraded-area", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change-degraded-area"] } } },
+        { "name": "Coupe Area", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"tableName\": \"coupe_table\"\n}" }, "url": { "raw": "{{baseUrl}}/api/coupe-area", "host": ["{{baseUrl}}"], "path": ["api", "coupe-area"] } } },
+        { "name": "NDVI Change Get", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"tableName\": \"2026-01-01_aravalli_coupe_NDVI_Change\"\n}" }, "url": { "raw": "{{baseUrl}}/api/ndvi-change-get", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change-get"] } } },
+        { "name": "Get NDVI Change", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/ndvi-change", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change"] } } },
+        { "name": "NDVI Change Tables", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/ndvi-change-tables", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change-tables"] } } },
+        { "name": "Update NDVI Change Multipart", "request": { "method": "PUT", "header": [], "body": { "mode": "formdata", "formdata": [ { "key": "tableName", "value": "2026-01-01_aravalli_coupe_NDVI_Change", "type": "text" }, { "key": "recordId", "value": "1", "type": "text" }, { "key": "note", "value": "Inspection note", "type": "text" }, { "key": "status", "value": "true", "type": "text" }, { "key": "image_data", "type": "file", "src": [] } ] }, "url": { "raw": "{{baseUrl}}/api/ndvi-change", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change"] } } },
+        { "name": "Update NDVI Change Base64", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"tableName\": \"2026-01-01_aravalli_coupe_NDVI_Change\",\n  \"note\": \"Inspection note\",\n  \"image_data\": \"base64-data\",\n  \"status\": true\n}" }, "url": { "raw": "{{baseUrl}}/api/ndvi-change-base64/1", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change-base64", "1"] } } },
+        { "name": "Delete NDVI Change", "request": { "method": "DELETE", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"tableName\": \"2026-01-01_aravalli_coupe_NDVI_Change\"\n}" }, "url": { "raw": "{{baseUrl}}/api/ndvi-change/1", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change", "1"] } } },
+        { "name": "NDVI Change Layer Bounds", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/ndvi-change-layer-bounds/layer_name", "host": ["{{baseUrl}}"], "path": ["api", "ndvi-change-layer-bounds", "layer_name"] } } }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        { "name": "Send Notifications", "request": { "method": "POST", "header": [], "body": { "mode": "formdata", "formdata": [ { "key": "firebase_token", "value": "firebase-token", "type": "text" }, { "key": "user_id", "value": "1", "type": "text" }, { "key": "village_name", "value": "Village Name", "type": "text" }, { "key": "coupe_name", "value": "aravalli_coupe", "type": "text" } ] }, "url": { "raw": "{{baseUrl}}/api/send-notifications", "host": ["{{baseUrl}}"], "path": ["api", "send-notifications"] } } },
+        { "name": "Update Notification User", "request": { "method": "PUT", "header": [], "body": { "mode": "formdata", "formdata": [ { "key": "firebase_token", "value": "firebase-token", "type": "text" }, { "key": "user_id", "value": "1", "type": "text" }, { "key": "village_name", "value": "Village Name", "type": "text" }, { "key": "coupe_name", "value": "aravalli_coupe", "type": "text" } ] }, "url": { "raw": "{{baseUrl}}/api/update-notification-user", "host": ["{{baseUrl}}"], "path": ["api", "update-notification-user"] } } },
+        { "name": "Test FCM", "request": { "method": "POST", "header": [], "body": { "mode": "formdata", "formdata": [ { "key": "firebase_token", "value": "firebase-token", "type": "text" } ] }, "url": { "raw": "{{baseUrl}}/api/test-fcm", "host": ["{{baseUrl}}"], "path": ["api", "test-fcm"] } } }
+      ]
+    },
+    {
+      "name": "User Locations",
+      "item": [
+        { "name": "Get User Locations", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/user-locations", "host": ["{{baseUrl}}"], "path": ["api", "user-locations"] } } },
+        { "name": "Create User Location", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"user1\",\n  \"latitude\": 23.0225,\n  \"longitude\": 72.5714\n}" }, "url": { "raw": "{{baseUrl}}/api/user-locations", "host": ["{{baseUrl}}"], "path": ["api", "user-locations"] } } },
+        { "name": "Update User Location", "request": { "auth": { "type": "noauth" }, "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"user1\",\n  \"latitude\": 23.0300,\n  \"longitude\": 72.5800\n}" }, "url": { "raw": "{{baseUrl}}/api/user-locations/1", "host": ["{{baseUrl}}"], "path": ["api", "user-locations", "1"] } } }
+      ]
+    },
+    {
+      "name": "Change NDVI CRUD",
+      "item": [
+        { "name": "Init NDVI Change Table", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/init-table", "host": ["{{baseUrl}}"], "path": ["api", "init-table"] } } },
+        { "name": "Create Change NDVI", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"state\": \"Gujarat\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": \"2026-02-01\",\n  \"start_month_ndvi\": 0.5,\n  \"end_month_ndvi\": 0.4,\n  \"change_layer_name\": \"layer_name\",\n  \"coupe_name\": \"coupe_name\",\n  \"longitude\": 72.5714,\n  \"latitude\": 23.0225\n}" }, "url": { "raw": "{{baseUrl}}/api/create_changendvi", "host": ["{{baseUrl}}"], "path": ["api", "create_changendvi"] } } },
+        { "name": "Get Change NDVI Records", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/changendvi", "host": ["{{baseUrl}}"], "path": ["api", "changendvi"] } } },
+        { "name": "Get Change NDVI By ID", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/changendvi/1", "host": ["{{baseUrl}}"], "path": ["api", "changendvi", "1"] } } },
+        { "name": "Update Change NDVI", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"state\": \"Gujarat\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": \"2026-02-01\",\n  \"start_month_ndvi\": 0.5,\n  \"end_month_ndvi\": 0.45,\n  \"change_layer_name\": \"layer_name\",\n  \"coupe_name\": \"coupe_name\",\n  \"longitude\": 72.5714,\n  \"latitude\": 23.0225\n}" }, "url": { "raw": "{{baseUrl}}/api/update_changendvi/1", "host": ["{{baseUrl}}"], "path": ["api", "update_changendvi", "1"] } } },
+        { "name": "Delete Change NDVI", "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/delete_changendvi/1", "host": ["{{baseUrl}}"], "path": ["api", "delete_changendvi", "1"] } } }
+      ]
+    },
+    {
+      "name": "Patrol Coverage",
+      "item": [
+        { "name": "Beats Coverage", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"forest_id\": 1\n}" }, "url": { "raw": "{{baseUrl}}/api/beatscoverage", "host": ["{{baseUrl}}"], "path": ["api", "beatscoverage"] } } },
+        { "name": "Beat Patrol Coverage", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"beat\": \"Beat Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/beat-patrol-coverage", "host": ["{{baseUrl}}"], "path": ["api", "beat-patrol-coverage"] } } },
+        { "name": "Coupe Patrol Coverage", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"coupe_table\": \"Beat Name\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": \"2026-08-04\",\n  \"division\": \"Division Name\",\n  \"range\": \"Range Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/coupe-patrol-coverage", "host": ["{{baseUrl}}"], "path": ["api", "coupe-patrol-coverage"] } } },
+        { "name": "Boundary Patrol Coverage", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"boundary_table\": \"boundary_table\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": \"2026-08-04\"\n}" }, "url": { "raw": "{{baseUrl}}/api/boundary-patrol-coverage", "host": ["{{baseUrl}}"], "path": ["api", "boundary-patrol-coverage"] } } }
+      ]
+    },
+    {
+      "name": "GIS Upload And Boundaries",
+      "item": [
+        { "name": "Upload SHP Boundary", "request": { "method": "PUT", "header": [], "body": { "mode": "formdata", "formdata": [ { "key": "boundary_name", "value": "Boundary Name", "type": "text" }, { "key": "color", "value": "#ff0000", "type": "text" }, { "key": "files", "type": "file", "src": [] } ] }, "url": { "raw": "{{baseUrl}}/api/upload-shp", "host": ["{{baseUrl}}"], "path": ["api", "upload-shp"] } } },
+        { "name": "Upload SHP NDVI", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [], "body": { "mode": "formdata", "formdata": [ { "key": "layer_name", "value": "Layer Name", "type": "text" }, { "key": "color", "value": "#00ff00", "type": "text" }, { "key": "files", "type": "file", "src": [] } ] }, "url": { "raw": "{{baseUrl}}/api/upload-shp", "host": ["{{baseUrl}}"], "path": ["api", "upload-shp"] } } },
+        { "name": "Check Patrol Boundary Name", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"boundary_name\": \"Boundary Name\"\n}" }, "url": { "raw": "{{baseUrl}}/api/patrol-boundaries/check-name", "host": ["{{baseUrl}}"], "path": ["api", "patrol-boundaries", "check-name"] } } },
+        { "name": "List Patrol Boundaries", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrol-boundaries", "host": ["{{baseUrl}}"], "path": ["api", "patrol-boundaries"] } } },
+        { "name": "Get Patrol Boundary", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/patrol-boundaries/1", "host": ["{{baseUrl}}"], "path": ["api", "patrol-boundaries", "1"] } } },
+        { "name": "Delete Patrol Boundary", "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/patrol-boundaries/1", "host": ["{{baseUrl}}"], "path": ["api", "patrol-boundaries", "1"] } } },
+        { "name": "Test GDAL Boundary Router", "request": { "auth": { "type": "noauth" }, "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/test-gdal", "host": ["{{baseUrl}}"], "path": ["api", "test-gdal"] } } },
+        { "name": "Create Boundary", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"boundary_name\": \"Boundary Name\",\n  \"color\": \"#ff0000\"\n}" }, "url": { "raw": "{{baseUrl}}/api/create-boundary", "host": ["{{baseUrl}}"], "path": ["api", "create-boundary"] } } },
+        { "name": "Admin Coupes", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/admincoupes", "host": ["{{baseUrl}}"], "path": ["api", "admincoupes"] } } }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        { "name": "List Audit Logs", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/audit-logs?page=1&limit=50", "host": ["{{baseUrl}}"], "path": ["api", "audit-logs"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "50" }] } } },
+        { "name": "Audit Log Stats", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/audit-logs/stats", "host": ["{{baseUrl}}"], "path": ["api", "audit-logs", "stats"] } } },
+        { "name": "Export Audit Logs CSV", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/audit-logs/export", "host": ["{{baseUrl}}"], "path": ["api", "audit-logs", "export"] } } }
+      ]
+    }
+  ]
+}
