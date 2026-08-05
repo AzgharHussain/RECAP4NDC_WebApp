@@ -1,11 +1,11 @@
-/* ===== Root and Global Styles ===== */
+/* ===== Global Reset for Login Page ===== */
 :root {
   overflow-x: hidden;
   overflow-y: auto;
   font-family: 'Arial', sans-serif;
 }
 
-/* Hide password toggle icons in password fields */
+/* Suppress browser password reveal icons */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,
 input[type="password"]::-webkit-contacts-auto-fill-button,
@@ -21,7 +21,6 @@ input[type="password"]::-webkit-strong-password-view-button {
   opacity: 0 !important;
 }
 
-/* For Microsoft Edge and IE */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
   display: none !important;
@@ -29,16 +28,18 @@ input[type="password"]::-ms-clear {
   height: 0 !important;
 }
 
-/* General hide for any browser default icons */
 input[type="password"] {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
 }
 
-/* ===== Header Styles ===== */
+/* ===== Unified Header ===== */
 #header {
-  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: white;
 }
 
 .newcontainer {
@@ -46,8 +47,10 @@ input[type="password"] {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  padding: 10px 0;
+  padding: 5px;
+  height: 82px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .headAssets {
@@ -60,6 +63,8 @@ input[type="password"] {
   gap: 10px;
   padding: 2px;
   width: 97%;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .logo {
@@ -72,6 +77,7 @@ input[type="password"] {
 .portal-header h2 {
   letter-spacing: 2px;
   margin: 0;
+  font-size: clamp(12px, 1.3vw, 20px);
 }
 
 .portal-header h2 b {
@@ -91,68 +97,239 @@ input[type="password"] {
   height: auto;
 }
 
-/* ===== Login Screen Layout ===== */
+/* Header Language Switcher */
+.header-lang-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #00a651;
+  border-radius: 20px;
+  padding: 2px;
+}
+
+.header-lang-btn {
+  min-width: 30px;
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 18px;
+  background: #f0f0f0;
+  color: #006400;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-lang-btn:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.header-lang-btn.active {
+  background: #00a651;
+  color: #fff;
+}
+
+.header-lang-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ===== Login Page Wrapper ===== */
 .login-screen2222 {
   display: flex;
   flex-direction: row;
-  justify-content: space-evenly;
-  align-items: center;
-  background: #ffffff;
-  min-height: calc(100vh - 11.2vh);
-  height: auto;
-  gap: 30px;
-  padding: 20px;
-  padding-bottom: 40px;
+  width: 100%;
+  height: calc(100vh - 82px);
+  overflow: hidden;
 }
 
-.image22222222 {
-  border-radius: 20px;
-  max-width: 100%;
-  height: auto;
+/* ===================================================
+   LEFT PANEL  50% — forest aerial photo + dark overlay
+   =================================================== */
+.login-left-panel {
+  position: relative;
+  width: 67%;
+  flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.login-left-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  background-color: white;
+  z-index: 0;
 }
 
-/* ===== Login Card ===== */
-.right-Panel {
-  width: 100%;
-  max-width: 400px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+.login-left-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    170deg,
+    rgba(5, 46, 22, 0.72) 0%,
+    rgba(5, 46, 22, 0.85) 60%,
+    rgba(5, 46, 22, 0.92) 100%
+  );
+  z-index: 1;
 }
 
-/* ===== Brand ===== */
-.brand {
-  display: block;
-  margin: 0 auto 5px;
-  max-width: 160px;
+.login-left-content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 36px 40px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.login-left-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Partner logos card */
+.login-partners {
+  width: 100%;
+  max-width: 500px;
   height: auto;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 16px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
 }
 
-/* ===== Heading ===== */
+/* ===================================================
+   RIGHT PANEL  50% — off-white background, centered card
+   =================================================== */
+.right-Panel {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f0;
+  overflow-y: auto;
+  box-sizing: border-box;
+  scrollbar-width: none;
+  padding: 24px 20px;
+}
+
+.right-Panel::-webkit-scrollbar {
+  display: none;
+}
+
+/* × close button — on the panel */
+.login-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid #d0d0d0;
+  background: #ffffff;
+  color: #888;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  z-index: 10;
+}
+
+.login-close:hover {
+  background: #eeeeee;
+  color: #222;
+  border-color: #aaa;
+}
+
+/* Floating white form card */
+.login-card {
+  width: 100%;
+  max-width: 300px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.10);
+  padding: 28px 28px 22px;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* RECAP4NDC logo inside card */
+.login-form-logo {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+
+.login-recap-logo {
+  height: 76px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* "WELCOME BACK" */
+.login-welcome {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #4caf7d;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+  text-align: left;
+}
+
+/* "Sign In" */
 .login-heading {
-  text-align: center;
-  font-size: 26px;
-  font-weight: 600;
-  margin-bottom: 25px;
-  color: #2c3e50;
-  font-family: "Arial";
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: #1a2e1a;
+  font-family: "Arial", sans-serif;
+  line-height: 1.1;
+  text-align: left;
 }
 
-/* ===== Labels ===== */
+/* "Access your patrol dashboard" */
+.login-subtitle {
+  font-size: 13px;
+  color: #5a9b6e;
+  margin-bottom: 24px;
+  font-weight: 400;
+  text-align: left;
+}
+
+.brand {
+  display: none;
+}
+
+/* ===== Form Labels ===== */
 .input-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #2c3e50;
-  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #999;
+  margin-bottom: 4px;
   display: block;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
 }
 
-/* ===== Fields ===== */
+/* ===== Underline-style Fields ===== */
 .field {
   position: relative;
   margin-bottom: 20px;
@@ -160,335 +337,196 @@ input[type="password"] {
 
 .field input {
   width: 100%;
-  padding: 13px 45px 13px 14px;
-  border-radius: 10px;
-  border: 2px solid #e0e0e0;
-  font-size: 15px;
-  transition: 0.3s ease;
+  padding: 8px 36px 8px 0;
+  border: none;
+  border-bottom: 1.5px solid #d8d8d8;
+  border-radius: 0;
+  font-size: 14px;
+  color: #333;
+  background: transparent;
+  transition: border-color 0.25s ease;
   box-sizing: border-box;
+  outline: none;
+}
+
+.field input::placeholder {
+  color: #c0c0c0;
+  font-size: 13.5px;
 }
 
 .field input:focus {
-  outline: none;
-  border-color: #309059;
+  border-bottom-color: #309059;
 }
 
-/* Icons */
-.icon,
-.eye {
+/* Icons (user / eye) — scoped to login form fields only */
+.field .icon,
+.field .eye {
   position: absolute;
-  right: 14px;
+  right: 0;
   top: 50%;
   transform: translateY(-50%);
+  color: #bbb;
 }
 
-.eye {
+.field .eye {
   background: none;
   border: none;
   cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
 }
 
-/* ===== Button ===== */
+/* ===== Login Button ===== */
 .btn-login {
   width: 100%;
-  padding: 14px;
+  padding: 13px 20px;
   border-radius: 10px;
   border: none;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 15px;
   cursor: pointer;
   color: #fff;
-  background: linear-gradient(135deg, #309059, #4CAF50);
-  font-family: 'Arial';
-  transition: 0.3s;
+  background: linear-gradient(135deg, #2d7a48 0%, #1a5c32 100%);
+  font-family: 'Arial', sans-serif;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  letter-spacing: 0.5px;
+  margin-top: 6px;
 }
 
 .btn-login:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(48, 144, 89, 0.35);
+  box-shadow: 0 8px 22px rgba(46, 125, 74, 0.38);
 }
 
 .btn-login:disabled {
-  background: #bdbdbd;
+  background: #b0b0b0;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-/* Spinner */
+/* Loading spinner inside button */
 .btn-login span {
   display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid #fff;
-  border-top: 2px solid transparent;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top: 2px solid #fff;
   border-radius: 50%;
   margin-right: 8px;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
 }
 
-/* ===== Error ===== */
+/* ===== Error Message ===== */
 .error-message {
-  background: #ffebee;
-  color: #d32f2f;
+  background: #fff0f0;
+  color: #c62828;
   padding: 10px 14px;
   border-radius: 8px;
-  margin-bottom: 18px;
-  font-size: 14px;
-  border-left: 4px solid #f44336;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  border-left: 3px solid #e53935;
 }
 
-/* ===== Language Toggle ===== */
-.lang-chip {
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: 2px solid #e0e0e0;
-  background: #fff;
-  cursor: pointer;
-  font-weight: 500;
-  transition: 0.3s;
-}
-
-.lang-chip.active,
-.lang-chip:hover {
-  background: #309059;
-  color: #fff !important;
-  border-color: #309059;
-}
-
-/* ===== Login Links ===== */
+/* ===== Privacy / Links ===== */
 .login-links {
   display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 18px;
-  margin-bottom: 10px;
-  padding-bottom: 10px;
+  justify-content: flex-start;
+  margin-top: 16px;
 }
 
 .login-links a {
-  color: #309059;
-  font-size: 13px;
+  color: #b0b0b0;
+  font-size: 12px;
   text-decoration: none;
-  font-weight: 500;
-  transition: 0.3s;
+  font-weight: 400;
+  transition: color 0.2s ease;
 }
 
 .login-links a:hover {
+  color: #5a9b6e;
   text-decoration: underline;
-  color: #1e6b3e;
+}
+
+/* Hide unused legacy elements */
+.login-row-link,
+.login-lang-row,
+.lang-chip,
+.login-recap-tag,
+.login-recap-sub,
+.login-hero-title,
+.login-hero-subtitle {
+  display: none;
 }
 
 /* ===== Animations ===== */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
-/* ===== Responsive Design ===== */
-
-/* Large screens (desktops) */
-@media screen and (min-width: 1920px) {
-  .login-screen2222 {
-    padding: 40px;
-  }
-
-  .right-Panel {
-    max-width: 450px;
-    padding: 50px;
-  }
-
-  .image22222222 {
-    max-width: 450px;
-  }
-}
-
-/* Standard laptop screens (1366x768 to 1600x900) */
-@media screen and (min-width: 1366px) and (max-width: 1600px) {
-  .login-screen2222 {
-    gap: 20px;
-  }
-
-  .right-Panel {
-    max-width: 380px;
-    padding: 35px;
-  }
-
-  .image22222222 {
-    max-width: 350px;
-  }
-}
-
-/* HP Envy x360 13-ar0118au and similar 13-inch laptops */
-@media screen and (min-width: 1366px) and (max-width: 1366px) and (min-height: 768px) and (max-height: 768px) {
-  .login-screen2222 {
-    padding: 15px;
-    gap: 15px;
-    min-height: calc(100vh - 11.2vh);
-  }
-
-  .right-Panel {
-    max-width: 340px;
-    padding: 30px;
-  }
-
-  .image22222222 {
-    max-width: 320px;
-  }
-
-  .login-heading {
-    font-size: 24px;
-    margin-bottom: 20px;
-  }
-
-  .field input {
-    padding: 10px 45px 10px 12px;
-  }
-
-  .btn-login {
-    padding: 12px;
-  }
-}
-
-/* iPad Air (Portrait and Landscape) */
-@media only screen and (min-width: 820px) and (max-width: 1180px) {
-  .login-screen2222 {
-    flex-direction: column;
-    justify-content: center;
-    gap: 30px;
-    padding: 40px 20px;
-  }
-
-  .right-Panel {
-    max-width: 400px;
-    padding: 35px;
-  }
-
-  .image22222222 {
-    max-width: 350px;
-    max-height: auto;
-  }
-}
-
-/* Tablets */
+/* ===== Responsive ===== */
 @media screen and (max-width: 1024px) {
   .login-screen2222 {
     flex-direction: column;
-    justify-content: center;
-    gap: 30px;
-  }
-
-  .image22222222 {
-    max-width: 300px;
-  }
-}
-
-/* Mobile devices */
-@media (max-width: 768px) {
-  :root {
-    overflow-y: auto;
-  }
-
-  html, body {
-    overflow-y: auto !important;
-    height: auto !important;
-  }
-
-  .login-screen2222 {
-    flex-direction: column;
-    padding: 20px;
-    min-height: auto;
     height: auto;
+    min-height: calc(100vh - 82px);
     overflow-y: auto;
   }
 
+  .login-left-panel,
   .right-Panel {
+    width: 100%;
+    height: auto;
+    flex-shrink: unset;
+  }
+
+  .login-left-panel {
+    min-height: 50vh;
+  }
+
+  .login-left-content {
+    height: auto;
+    padding: 32px 28px;
+  }
+
+  .right-Panel {
+    padding: 50px 28px 40px;
+    justify-content: flex-start;
+  }
+
+  .login-card {
     max-width: 100%;
-    padding: 25px;
-  }
-
-  .image22222222 {
-    display: none;
-  }
-
-  .login-heading {
-    font-size: 22px;
-  }
-
-  .headAssets h2 {
-    font-size: 14px;
-  }
-
-  .ministryLogo img {
-    width: 80px !important;
   }
 }
 
-/* Small mobile devices */
-@media (max-width: 480px) {
+@media screen and (max-width: 600px) {
+  .login-heading {
+    font-size: 26px;
+  }
+
   .right-Panel {
-    padding: 20px;
+    padding: 40px 16px;
   }
 
-  .login-heading {
-    font-size: 20px;
-  }
-
-  .brand {
-    max-width: 120px;
-  }
-
-  .field input {
-    font-size: 14px;
-    padding: 10px 40px 10px 12px;
-  }
-}
-
-/* Fix for header responsive */
-@media (max-width: 992px) {
-  .headAssets {
-    flex-direction: column;
-    border-radius: 20px;
-    padding: 10px !important;
-  }
-
-  .headAssets > div {
-    padding: 5px !important;
+  .login-card {
+    padding: 28px 20px 20px;
   }
 
   .portal-header h2 {
-    font-size: 14px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
   }
 
   .ministryLogo {
-    gap: 10px !important;
-    padding-right: 10px !important;
-  }
-
-  .ministryLogo img {
-    width: 60px !important;
+    gap: 10px;
+    padding-right: 12px;
   }
 }
-

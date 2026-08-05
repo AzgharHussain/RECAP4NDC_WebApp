@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate ,NavLink} from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import "../App.css";
 import { useLanguage } from "../context/LanguageContext";
 import "./Login.css";
@@ -7,14 +7,10 @@ import axios from "axios";
 import { API_BASE_URL } from '../config';
 
 // === Images ===
-import brand from "../assets/logo-giz.png";
-import backImage from "../assets/G2.jpg";
-import leftLogos from "../assets/Logo.png";
+import loginBg from "../assets/loginpage/image(6).png";
+import partnerLogos from "../assets/loginpage/image(7).png";
 import Eyeclose from "../assets/Eyeclose.png";
 import user from "../assets/user.png";
-
-// import "../layouts/DashboardLayout.css";
-
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
 import giz from "../assets/giz.png";
@@ -31,41 +27,30 @@ function Login() {
   const userIdRef = useRef(null);
 
   const setSecureCookie = () => {
-  const cookieValue = "session_active=true";
-  
-  // Set cookies for each path your app uses
-  const paths = ['/petrolling-incident', '/geo', '/ndvi-dashboard', '/admin', '/petrolling-incident/patrolling'];
-  
-  paths.forEach(path => {
-    const cookieAttributes = [
-      `path=${path}`,        // Path-specific cookie ✓
-      "Secure",
-"SameSite=Strict",
-"Max-Age=86400"
-    ];
-    document.cookie = `${cookieValue}; ${cookieAttributes.join('; ')}`;
-  });
-  
-  // Also set a general API cookie if needed
-  document.cookie = `session_active=true; path=/api; secure; samesite=strict; max-age=86400`;
-};
+    const cookieValue = "session_active=true";
+    const paths = ['/petrolling-incident', '/geo', '/ndvi-dashboard', '/admin', '/petrolling-incident/patrolling'];
+    paths.forEach(path => {
+      const cookieAttributes = [`path=${path}`, "Secure", "SameSite=Strict", "Max-Age=86400"];
+      document.cookie = `${cookieValue}; ${cookieAttributes.join('; ')}`;
+    });
+    document.cookie = `session_active=true; path=/api; secure; samesite=strict; max-age=86400`;
+  };
 
-  // Focus on user ID input on mount
   useEffect(() => {
-    if (userIdRef.current) {
-      userIdRef.current.focus();
-    }
+    if (userIdRef.current) userIdRef.current.focus();
   }, []);
 
   const text = {
     en: {
-      title: "Login",
-      userId: "User ID",
-      userPlaceholder: "Enter User ID",
-      password: "Password",
-      passPlaceholder: "Enter Password",
+      welcome: "WELCOME BACK",
+      title: "Sign In",
+      subtitle: "Access your patrol dashboard",
+      userId: "USER ID",
+      userPlaceholder: "Enter your User ID",
+      password: "PASSWORD",
+      passPlaceholder: "Enter your password",
       loginButton: "Login",
-      footer: "2025 © All Rights Reserved By | RECAP4NDC",
+      privacyTerms: "Privacy Notice & Terms of Use",
       errorRequired: "Please enter both User ID and Password",
       errorInvalid: "Invalid credentials. Please check your User ID and Password",
       errorUserNotFound: "User not found in the system",
@@ -79,13 +64,15 @@ function Login() {
       forestAuthFailed: "Forest authentication failed"
     },
     gu: {
-      title: "લૉગિન",
+      welcome: "પાછા સ્વાગત છે",
+      title: "સાઇન ઇન",
+      subtitle: "તમારું પેટ્રોલ ડેશબોર્ડ ઍક્સેસ કરો",
       userId: "વપરાશકર્તા ID",
-      userPlaceholder: "વપરાશકર્તા ID દાખલ કરો",
+      userPlaceholder: "તમારું વપરાશકર્તા ID દાખલ કરો",
       password: "પાસવર્ડ",
-      passPlaceholder: "પાસવર્ડ દાખલ કરો",
-      loginButton: "લૉગિન કરો",
-      footer: "૨૦૨૫ © સર્વ અધિકારો સુરક્ષિત | RECAP4NDC",
+      passPlaceholder: "તમારું પાસવર્ડ દાખલ કરો",
+      loginButton: "લૉગિન",
+      privacyTerms: "ગોપનીયતા સૂચના અને વપરાશની શરતો",
       errorRequired: "કૃપા કરીને વપરાશકર્તા ID અને પાસવર્ડ દાખલ કરો",
       errorInvalid: "અમાન્ય લૉગિન વિગતો. કૃપા કરીને તમારું વપરાશકર્તા ID અને પાસવર્ડ તપાસો.",
       errorUserNotFound: "સિસ્ટમમાં વપરાશકર્તા મળ્યો નથી",
@@ -100,34 +87,19 @@ function Login() {
     },
   };
 
-  // Session management functions
+  // Session management
   const createSession = (userData, isAdmin = false) => {
     const sessionData = {
-      user: {
-        ...userData,
-        isAdmin,
-        loginTime: new Date().toISOString()
-      },
+      user: { ...userData, isAdmin, loginTime: new Date().toISOString() },
       sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString(),
       lastActivity: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       isActive: true
     };
-
     setSecureCookie();
-
-    // Store session in localStorage
     localStorage.setItem('session', JSON.stringify(sessionData));
-    
     localStorage.setItem('userData', JSON.stringify(sessionData.user));
-    
-    if (isAdmin) {
-      console.log("✅ Admin session created:");
-    } else {
-      console.log("✅ User session created:");
-    }
-    
     return sessionData;
   };
 
@@ -135,25 +107,12 @@ function Login() {
     try {
       const sessionStr = localStorage.getItem('session');
       if (!sessionStr) return false;
-      
       const session = JSON.parse(sessionStr);
-      
-      // Check if session is expired
-      if (new Date(session.expiresAt) < new Date()) {
-        console.log("❌ Session expired");
-        clearSession();
-        return false;
-      }
-      
-      // Update last activity
+      if (new Date(session.expiresAt) < new Date()) { clearSession(); return false; }
       session.lastActivity = new Date().toISOString();
       localStorage.setItem('session', JSON.stringify(session));
-      
       return true;
-    } catch (error) {
-      console.error("❌ Session validation error:", error);
-      return false;
-    }
+    } catch { return false; }
   };
 
   const clearSession = () => {
@@ -161,300 +120,101 @@ function Login() {
     localStorage.removeItem('userData');
     localStorage.removeItem('token');
     localStorage.removeItem('authToken');
-    console.log("✅ Session cleared");
   };
 
-  // Event Handlers
-  const handleUserIdChange = (e) => {
-    setUserId(e.target.value);
-    setError("");
-  };
+  // Handlers
+  const handleUserIdChange = (e) => { setUserId(e.target.value); setError(""); };
+  const handlePasswordChange = (e) => { setPassword(e.target.value); setError(""); };
+  const handleKeyPress = (e) => { if (e.key === 'Enter') handleLogin(); };
+  const handleLanguageToggle = (lang) => { if (!loading) toggleLanguage(lang); };
 
-  const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
-    setError("");
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleLogin();
-    }
-  };
-
-  const handleLanguageToggle = (lang) => {
-    if (!loading) {
-      toggleLanguage(lang);
-    }
-  };
-
-  // SOAP authentication via backend API (works in both dev and production)
+  // Forest SOAP auth via backend
   const forestLogin = async (username, password) => {
     try {
-      console.log("🌲 Making forest login request via backend API...");
-
-      const response = await axios.post(
-        `${API_BASE_URL}/api/forest-login`,
-        { username, password },
-        { timeout: 30000 }
-      );
-
-      console.log('Forest login response status:', response.status);
-
-      if (response.status !== 200) {
-        throw new Error('FOREST_SERVICE_UNAVAILABLE');
-      }
-
+      const response = await axios.post(`${API_BASE_URL}/api/forest-login`, { username, password }, { timeout: 30000 });
+      if (response.status !== 200) throw new Error('FOREST_SERVICE_UNAVAILABLE');
       const data = response.data;
-
-      if (!data.success) {
-        throw new Error('FOREST_AUTH_FAILED');
-      }
-
+      if (!data.success) throw new Error('FOREST_AUTH_FAILED');
       const userData = data.jsonMap;
-      console.log('Extracted user data:', userData);
-
-      if (!userData || !userData.NAME || userData.NAME === '-') {
-        throw new Error('FOREST_AUTH_FAILED');
-      }
-
+      if (!userData || !userData.NAME || userData.NAME === '-') throw new Error('FOREST_AUTH_FAILED');
       return userData;
-
     } catch (error) {
-      console.error('Forest login error:', error.message);
-
-      if (error.message === 'FOREST_AUTH_FAILED') {
-        throw new Error('FOREST_AUTH_FAILED');
-      } else if (error.code === 'ECONNABORTED') {
-        throw new Error('FOREST_TIMEOUT');
-      } else if (error.code === 'ENOTFOUND') {
-        throw new Error('FOREST_CONNECTION_FAILED');
-      } else if (error.message.includes('Network Error')) {
-        throw new Error('FOREST_CONNECTION_FAILED');
-      } else if (error.message.includes('502') || error.message.includes('504') || error.message.includes('503')) {
-        throw new Error('FOREST_SERVICE_UNAVAILABLE');
-      }
-
+      if (error.message === 'FOREST_AUTH_FAILED') throw new Error('FOREST_AUTH_FAILED');
+      else if (error.code === 'ECONNABORTED') throw new Error('FOREST_TIMEOUT');
+      else if (error.code === 'ENOTFOUND' || error.message.includes('Network Error')) throw new Error('FOREST_CONNECTION_FAILED');
+      else if (error.message.includes('502') || error.message.includes('504') || error.message.includes('503')) throw new Error('FOREST_SERVICE_UNAVAILABLE');
       throw new Error(error.message || 'FOREST_AUTH_FAILED');
     }
   };
 
-const saveUser = async (username, password) => {
-  try {
-    console.log("📝 Attempting to save user:", username);
-    console.log("📝 Attempting to save password:", password);
-    
-    // Validate input
-    if (!username || !password) {
-      console.error("❌ Username or password is empty or invalid");
-      return null;
-    }
-
-    // Log the request details
-    console.log("Sending request to:", `${API_BASE_URL}/api/saveuser`);
-    console.log("Request payload:", { username: username, password: password });
-
-    const response = await axios.post(
-      `${API_BASE_URL}/api/saveuser`,
-      { username: username ,password: password},  // Send as object with trimmed username
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'x-temp-token': 'RECAP4NDC_TEMP_TOKEN' // Custom header for temporary token verification
-        },
-        timeout: 10000 // 10 second timeout
-      }
-    );  
-       
-    
-
-    console.log("✅ Save user response received:", {
-      status: response.status,
-      statusText: response.statusText,
-      data: response.data
-    });
-
-    const { token, user } = response.data;
-
-    if (token) {
-      localStorage.setItem("token", token);
-      console.log("🔐 JWT saved to localStorage");
-    }
-
-    return response.data;
-  } catch (err) {
-    // Detailed error logging
-    console.error("❌ Failed to save user:");
-    
-    if (err.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error("Server responded with error:", {
-        status: err.response.status,
-        statusText: err.response.statusText,
-        data: err.response.data,
-        headers: err.response.headers
-      });
-      
-      // Check if it's a validation error from backend
-      if (err.response.status === 400) {
-        console.error("Validation error:", err.response.data.error);
-      }
-    } else if (err.request) {
-      // The request was made but no response was received
-      console.error("No response received from server:", {
-        request: err.request,
-        message: err.message
-      });
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      console.error("Request setup error:", err.message);
-    }
-    
-    return null;
-  }
-};
+  const saveUser = async (username, password) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/api/saveuser`,
+        { username, password },
+        { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'x-temp-token': 'RECAP4NDC_TEMP_TOKEN' }, timeout: 10000 }
+      );
+      const { token } = response.data;
+      if (token) localStorage.setItem("token", token);
+      return response.data;
+    } catch { return null; }
+  };
 
   const handleLogin = async () => {
-    // Validation
-    if (!userId || !password) {
-      setError(text[language].errorRequired);
-      return;
-    }
-
+    if (!userId || !password) { setError(text[language].errorRequired); return; }
     setLoading(true);
     setError("");
-
     try {
-      console.log("👑 Checking admin credentials...");
-      
+      // Admin check
       try {
-        const adminResponse = await axios.post(`${API_BASE_URL}/api/admin`, {
-          username: userId,
-          password: password
-        });
-        
+        const adminResponse = await axios.post(`${API_BASE_URL}/api/admin`, { username: userId, password });
         if (adminResponse.data.success) {
-          const adminUserData = {
-            username: userId,
-            name: adminResponse.data.user.name || "Administrator",
-            isAdmin: true,
-            permissions: adminResponse.data.user.permissions || ['all'],
-            source: 'admin_api'
-          };
-          
-          // Create session
+          const adminUserData = { username: userId, name: adminResponse.data.user.name || "Administrator", isAdmin: true, permissions: adminResponse.data.user.permissions || ['all'], source: 'admin_api' };
           createSession(adminUserData, true);
-          
-          // Store the token
           localStorage.setItem('token', adminResponse.data.token);
-          
-          // Test authenticated request
-          await axios.get(
-            `${API_BASE_URL}/api/admincoupes`,
-            {
-              headers: {
-                Authorization: `Bearer ${adminResponse.data.token}`,
-              },
-            }
-          );
-          
-          console.log("✅ Admin session created successfully");
+          await axios.get(`${API_BASE_URL}/api/admincoupes`, { headers: { Authorization: `Bearer ${adminResponse.data.token}` } });
           navigate("/admin");
           setLoading(false);
           return;
         }
-      } catch (adminError) {
-        console.log('👑 Admin login failed, trying regular user authentication...');
-        // Continue to forest authentication
-      }
+      } catch { /* Continue to forest auth */ }
 
-      console.log("🌲 Proceeding with Forest authentication...");
+      // Forest auth
       const jsonMap = await forestLogin(userId, password);
-      
-      if (!jsonMap || Object.keys(jsonMap).length === 0) {
-        throw new Error("INVALID_CREDENTIALS");
-      }
+      if (!jsonMap || Object.keys(jsonMap).length === 0) throw new Error("INVALID_CREDENTIALS");
 
-      console.log("✅ Forest authentication successful, user data:", jsonMap);
-
-      // Extract user data
       const userData = {
-        name: jsonMap.NAME || "-",
-        post: jsonMap.NameOfPost || "-",
-        cadre: jsonMap.CadreName || "-",
-        circle: jsonMap.CircleName || "-",
-        division: jsonMap.DivisionName || "-",
-        range: jsonMap.RangeName || "-",
-        round: jsonMap.RoundName || "-",
-        beat: jsonMap.BeatName || "-",
-        mobile: jsonMap.MobileNo || "-",
-        email: jsonMap.EmailID || "-",
-        userId: jsonMap.USER_ID || userId,
-        userType: jsonMap.USER_TYPE || "-",
-        forestId: jsonMap.F_ID || "-",
-        username: userId,
-        isAdmin: false,
-        source: 'forest_service_frontend'
+        name: jsonMap.NAME || "-", post: jsonMap.NameOfPost || "-", cadre: jsonMap.CadreName || "-",
+        circle: jsonMap.CircleName || "-", division: jsonMap.DivisionName || "-", range: jsonMap.RangeName || "-",
+        round: jsonMap.RoundName || "-", beat: jsonMap.BeatName || "-", mobile: jsonMap.MobileNo || "-",
+        email: jsonMap.EmailID || "-", userId: jsonMap.USER_ID || userId, userType: jsonMap.USER_TYPE || "-",
+        forestId: jsonMap.F_ID || "-", username: userId, isAdmin: false, source: 'forest_service_frontend'
       };
 
-      // Check if user data is valid
-      if (userData.name === "-" && userData.mobile === "-") {
-        throw new Error("INVALID_CREDENTIALS");
-      }
+      if (userData.name === "-" && userData.mobile === "-") throw new Error("INVALID_CREDENTIALS");
 
-      // Create user session
       createSession(userData, false);
-      
-      // Store authentication token
       localStorage.setItem("authToken", "forest_authenticated");
+      await saveUser(userId, password);
 
-      // Save user to backend
-      await saveUser(userId,password);
-
-      console.log("✅ User session created successfully");
-      
-      // Validate session before navigation
-      if (validateSession()) {
-        navigate("/geo");
-      } else {
-        throw new Error("SESSION_CREATION_FAILED");
-      }
+      if (validateSession()) navigate("/geo");
+      else throw new Error("SESSION_CREATION_FAILED");
 
     } catch (error) {
-      console.error("🔴 Login Error:", error);
-      
-      // Clear any partial session data on error
       clearSession();
-      
-      // Handle specific error cases
-      if (error.code === 'ECONNABORTED') {
-        setError(text[language].timeout);
-      } else if (error.message === 'INVALID_CREDENTIALS' || error.message === 'FOREST_AUTH_FAILED') {
-        setError(text[language].errorInvalid);
-      } else if (error.message === 'FOREST_TIMEOUT') {
-        setError(text[language].timeout);
-      } else if (error.message === 'FOREST_CONNECTION_FAILED') {
-        setError(text[language].forestConnectionFailed);
-      } else if (error.message === 'FOREST_SERVICE_UNAVAILABLE') {
-        setError(text[language].forestServiceUnavailable);
-      } else if (error.message === 'SESSION_CREATION_FAILED') {
-        setError("Failed to create session. Please try again.");
-      } else if (error.response) {
-        if (error.response.status === 401 || error.response.status === 403) {
-          setError(text[language].errorInvalid);
-        } else if (error.response.status === 404) {
-          setError("API endpoint not found");
-        } else if (error.response.status >= 500) {
-          setError(text[language].errorServer);
-        } else {
-          setError(`Error: ${error.response.status}`);
-        }
-      } else if (error.request) {
-        setError(text[language].errorNetwork);
-      } else {
-        setError(error.message || text[language].errorServer);
-      }
+      if (error.code === 'ECONNABORTED') setError(text[language].timeout);
+      else if (error.message === 'INVALID_CREDENTIALS' || error.message === 'FOREST_AUTH_FAILED') setError(text[language].errorInvalid);
+      else if (error.message === 'FOREST_TIMEOUT') setError(text[language].timeout);
+      else if (error.message === 'FOREST_CONNECTION_FAILED') setError(text[language].forestConnectionFailed);
+      else if (error.message === 'FOREST_SERVICE_UNAVAILABLE') setError(text[language].forestServiceUnavailable);
+      else if (error.message === 'SESSION_CREATION_FAILED') setError("Failed to create session. Please try again.");
+      else if (error.response) {
+        if (error.response.status === 401 || error.response.status === 403) setError(text[language].errorInvalid);
+        else if (error.response.status === 404) setError("API endpoint not found");
+        else if (error.response.status >= 500) setError(text[language].errorServer);
+        else setError(`Error: ${error.response.status}`);
+      } else if (error.request) setError(text[language].errorNetwork);
+      else setError(error.message || text[language].errorServer);
     } finally {
       setLoading(false);
     }
@@ -462,80 +222,95 @@ const saveUser = async (username, password) => {
 
   return (
     <>
-  <header id="header" >
-                <div className="newcontainer">
-                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'97%'}}>
-                        <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'35px'}}>
-                            {/* <a href="indexs.aspx">
-                                </a> */}
-                                <img src={gujaratlogo} alt="logo picture" style={{width:'50px'}}></img>
-                      
-                        <div className="portal-header">
-                            <div className="icon" aria-hidden="true"></div>
-                            <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>FOREST PATROLLING & MONITORING SYSTEM</b></h2>
-                        </div>  </div>
-                      
-                        <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', paddingRight:'45px'}}>
-                            <div className="l_1">
-                                {/* <a href="https://moef.gov.in/" target="_blank">
-                                    </a> */}
-                                    <img src={Moef} alt="picture" style={{width:'120px'}}></img>
-                            </div>
-                            <div className="l_2">
-                                {/* <a href="https://www.giz.de/de/html/index.html" target="_blank">
-                                    </a> */}
-                                    <img src={giz} alt="giz logo" style={{width:'160px'}}></img>
-                            </div>
-                            <div className="l_3">
-                                {/* <a href="#!" target="_blank">
-                                    </a> */}
-                                     <a href="/" ><img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img></a>
-                            </div>
-                            {/* <div>
-<button
-              className="logout-btn"
-              onClick={handleLogout}
-            >
-              {text[language].logout}
-            </button>
-                            </div> */}
-                            
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-    
-      {/* Left logos container */}
-      <div className="login-screen2222"> 
-           <img 
-          src={leftLogos} 
-          alt="Partner Logos" 
-         style={{
-          width:"350px",
-          height:"620px",
-           
-           backgroundColor:"white"
-         }}
-         className="image22222222"
-        />
-
-       
-       <div
-       className="right-Panel"
-        
-      >
-     
-            <img src={brand} alt="RECAP4NDC" className="brand" />
-            <h2 className="login-heading">{text[language].title}</h2>
-
-            {/* Error Message Display */}
-            {error && (
-              <div className="error-message" >
-                {error}
+      {/* ===== HEADER ===== */}
+      <header id="header">
+        <div className="newcontainer">
+          <div className="headAssets">
+            {/* Left: Logo + Title */}
+            <div className="logo">
+              <img src={gujaratlogo} alt="Gujarat Forest Department logo" style={{ width: '50px' }} />
+              <div className="portal-header">
+                <h2><b>FOREST PATROLLING &amp; MONITORING SYSTEM</b></h2>
               </div>
-            )}
+            </div>
 
+            {/* Right: Language selector + Ministry logos */}
+            <div className="ministryLogo">
+              <div className="header-lang-selector">
+                <button
+                  id="login-lang-en"
+                  className={`header-lang-btn ${language === "en" ? "active" : ""}`}
+                  onClick={() => handleLanguageToggle("en")}
+                  disabled={loading}
+                  title="English"
+                >
+                  English
+                </button>
+                <button
+                  id="login-lang-gu"
+                  className={`header-lang-btn ${language === "gu" ? "active" : ""}`}
+                  onClick={() => handleLanguageToggle("gu")}
+                  disabled={loading}
+                  title="ગુજરાતી"
+                >
+                  ગુજ
+                </button>
+              </div>
+              <div className="l_1">
+                <img src={Moef} alt="Ministry of Environment, Forest and Climate Change" style={{ width: '120px' }} />
+              </div>
+              <div className="l_2">
+                <img src={giz} alt="GIZ logo" style={{ width: '160px' }} />
+              </div>
+              <div className="l_3">
+                <a href="/"><img src={recap4NDC} alt="RECAP4NDC" style={{ height: '60px' }} /></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ===== LOGIN BODY ===== */}
+      <div className="login-screen2222">
+
+        {/* ── LEFT PANEL: forest bg + partner logos ── */}
+        <div className="login-left-panel">
+          <img src={loginBg} alt="Forest background" className="login-left-bg" />
+          <div className="login-left-overlay" />
+          <div className="login-left-content">
+            <img src={partnerLogos} alt="Partner Logos" className="login-partners" />
+          </div>
+        </div>
+
+        {/* ── RIGHT PANEL: sign-in form ── */}
+        <div className="right-Panel">
+
+          {/* × Close */}
+          <button
+            className="login-close"
+            onClick={() => navigate("/")}
+            aria-label="Close login"
+            type="button"
+          >
+            ×
+          </button>
+
+          {/* Floating white card */}
+          <div className="login-card">
+
+            {/* RECAP4NDC logo */}
+            <div className="login-form-logo">
+              <img src={recap4NDC} alt="RECAP4NDC logo" className="login-recap-logo" />
+            </div>
+
+            <p className="login-welcome">{text[language].welcome}</p>
+            <h2 className="login-heading">{text[language].title}</h2>
+            <p className="login-subtitle">{text[language].subtitle}</p>
+
+            {/* Error */}
+            {error && <div className="error-message">{error}</div>}
+
+            {/* USER ID */}
             <label className="input-label">{text[language].userId}</label>
             <div className="field">
               <input
@@ -547,13 +322,13 @@ const saveUser = async (username, password) => {
                 onKeyPress={handleKeyPress}
                 disabled={loading}
                 autoComplete="username"
-                style={{ fontSize: "16px" }}
               />
               <span className="icon">
-                <img src={user} alt="User" width="20" height="20" />
+                <img src={user} alt="User" width="18" height="18" />
               </span>
             </div>
 
+            {/* PASSWORD */}
             <label className="input-label">{text[language].password}</label>
             <div className="field">
               <input
@@ -564,78 +339,37 @@ const saveUser = async (username, password) => {
                 onKeyPress={handleKeyPress}
                 disabled={loading}
                 autoComplete="current-password"
-                style={{ fontSize: "16px", padding: "12px" }}
               />
               <button
                 type="button"
                 className="eye"
                 onClick={() => setShowPwd((s) => !s)}
                 disabled={loading}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  padding: "5px"
-                }}
               >
-                {showPwd ? (
-                  "👁"
-                ) : (
-                  <img
-                    src={Eyeclose}
-                    alt="Closed Eye"
-                    width="20"
-                    height="20"
-                  />
-                )}
+                {showPwd
+                  ? "👁"
+                  : <img src={Eyeclose} alt="Closed Eye" width="18" height="18" />
+                }
               </button>
             </div>
 
-            <button 
-              className="btn-login" 
-              onClick={handleLogin}
-              disabled={loading}
-            >
-              {loading && (
-                <span></span> // The span for spinner will be styled by CSS
-              )}
+            {/* Login Button */}
+            <button className="btn-login" onClick={handleLogin} disabled={loading}>
+              {loading && <span></span>}
               {loading ? text[language].loggingIn : text[language].loginButton}
             </button>
-            <div 
-           style={{display:"flex",justifyContent:"space-between",marginTop:"20px"}}
-           
-          >
-            <button
-              className={`lang-chip ${language === "en" ? "active" : ""}`}
-              onClick={() => handleLanguageToggle("en")}
-              disabled={loading}
-            >
-              EN
-            </button>
-            
-            <button
-              className={`lang-chip ${language === "gu" ? "active" : ""}`}
-              onClick={() => handleLanguageToggle("gu")}
-              disabled={loading}
-            >
-              જીયુ
-            </button>
-       
-      </div>
 
+            {/* Privacy Notice */}
             <div className="login-links">
-              <NavLink to="/privacy-policy">Privacy Notice &amp; Terms of Use</NavLink>
+              <NavLink to="/privacy-policy">{text[language].privacyTerms}</NavLink>
             </div>
-          </div>
 
-          
+          </div>{/* end .login-card */}
 
+        </div>{/* end .right-Panel */}
 
-       
-
-    
-    </div>
-  </>
+      </div>{/* end .login-screen2222 */}
+    </>
   );
 }
 

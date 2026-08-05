@@ -1,49 +1,27 @@
 
-
-
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate ,NavLink} from "react-router-dom";
+import React, { useState } from "react";
 import "../App.css";
 import { useLanguage } from "../context/LanguageContext";
 import "./Login.css";
-import axios from "axios";
-import { API_BASE_URL } from '../config';
 import "./Homepage.css";
 
 // === Images ===
-import brand from "../assets/logo-giz.png";
-import backImage from "../assets/G2.jpg";
-import leftLogos from "../assets/Logo.png";
-import Eyeclose from "../assets/Eyeclose.png";
-import user from "../assets/user.png";
-
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
 import giz from "../assets/giz.png";
 import recap4NDC from "../assets/re.png";
 
 import Geospacial from "../assets/Geospacial.png";
-import Vegetation from "../assets/vegetation.jpg";
 import Incident from "../assets/incident-monitoring.png";
-import forestmonitoring from "../assets/p1.jpg";
 import pm from "../assets/p-m.png";
 import fm from "../assets/f-m.png";
 import nv from "../assets/n-v.png";
 import gisfylogo from "../assets/Gisfylogo.png";
 import cb from "../assets/cb.png";
-import curve from "../assets/curve.png";
+import heroVideo from "../assets/download.mp4";
+import forestmonitoring from "../assets/p1.jpg";
 
-
-const FAQ_CATEGORIES = [
-  { id: 'general',         label: 'General & Setup' },
-  { id: 'forest-cover',   label: 'Forest Cover Module' },
-  { id: 'patrolling',     label: 'Patrolling Module' },
-  { id: 'coupe',          label: 'Coupe Module' },
-  { id: 'activities',     label: 'Activities & Profile' },
-  { id: 'web',            label: 'Web Application' },
-  { id: 'troubleshooting', label: 'Troubleshooting & Logout' },
-];
-
+// === FAQ DATA (static, no language dependency) ===
 const FAQ_DATA = [
   { id: 1,  category: 'general',         q: 'What is the RECAP4NDC Forest Patrolling & Monitoring System?', a: "It's a mobile and web-based application designed for the forest department to monitor forest areas, track vegetation changes using NDVI, and manage patrolling activities. It helps in forest protection, management, and evidence-based decision-making." },
   { id: 2,  category: 'general',         q: 'How do I install the mobile application?', a: 'You need to install the "Forest Patrolling & Monitoring Mobile App" from the Google Play Store. Once installed, open the app to begin the setup process.' },
@@ -74,43 +52,112 @@ const FAQ_DATA = [
 ];
 
 const Homepage = () => {
+  const { language, toggleLanguage } = useLanguage();
+
+  // faqCategories must be INSIDE the component so `language` is accessible
+  const faqCategories = [
+    { id: 'general',         label: language === 'gu' ? 'સામાન્ય અને સેટઅપ' : 'General & Setup' },
+    { id: 'forest-cover',   label: language === 'gu' ? 'વન આવરણ મોડ્યુલ' : 'Forest Cover Module' },
+    { id: 'patrolling',     label: language === 'gu' ? 'પેટ્રોલિંગ મોડ્યુલ' : 'Patrolling Module' },
+    { id: 'coupe',          label: language === 'gu' ? 'કૂપ મોડ્યુલ' : 'Coupe Module' },
+    { id: 'activities',     label: language === 'gu' ? 'પ્રવૃત્તિઓ અને પ્રોફાઇલ' : 'Activities & Profile' },
+    { id: 'web',            label: language === 'gu' ? 'વેબ એપ્લિકેશન' : 'Web Application' },
+    { id: 'troubleshooting', label: language === 'gu' ? 'સમસ્યા નિવારણ અને લોગઆઉટ' : 'Troubleshooting & Logout' },
+  ];
+
+  const translations = {
+    en: {
+      headerTitle: "FOREST PATROLLING & MONITORING SYSTEM",
+      heroTag: "Implemented by Gujarat Forest Department",
+      heroTitle1: "Forest Patrolling",
+      heroTitle2: "Monitoring Platform",
+      heroDesc: "The Forest Patrolling & Monitoring System under the RECAP4NDC initiative integrates satellite-derived vegetation indicators, field patrolling data, incident reporting, and working plan spatial boundaries into a unified web-based monitoring environment. The WebGIS dashboard integrates spatial data services and geo-intelligence for operational forest management.",
+      launchApp: "Launch App",
+      overviewTitle: "Forest Monitoring",
+      overviewTitleHighlight: "Overview",
+      overviewSubtitle: "The application dashboards transform integrated spatial and field data into actionable monitoring indicators.",
+      overview1: "Real-time Monitoring",
+      overview1Desc: "Track forest health through integrated satellite and field data streams for proactive forest protection.",
+      overview2: "Forest Intelligence",
+      overview2Desc: "Data-driven analytics that reveal vegetation trends, patrol coverage, and restoration progress.",
+      overview3: "Incident Management",
+      overview3Desc: "Log, track, and respond to forest incidents with geo-tagged evidence and mobile field reports.",
+      overview4: "Stakeholder Collaboration",
+      overview4Desc: "Shared dashboards and reports enable coordinated action across departments and partners.",
+      toolsLabel: "PLATFORM",
+      toolsTitle1: "Comprehensive Tools for",
+      toolsTitle2: "Forest Monitoring",
+      faqTitle1: "Frequently Asked",
+      faqTitle2: "Questions",
+      faqSubtitle: "These FAQs are organized by topic for easy reference.",
+      footerCopy: "© 2026 Gujarat Forest Department",
+      footerPowered: "Powered by",
+      langEn: "English",
+      langGu: "ગુજ"
+    },
+    gu: {
+      headerTitle: "વન પેટ્રોલિંગ અને મોનિટરિંગ સિસ્ટમ",
+      heroTag: "ગુજરાત વન વિભાગ દ્વારા અમલમાં મૂકાયેલ",
+      heroTitle1: "વન પેટ્રોલિંગ",
+      heroTitle2: "મોનિટરિંગ પ્લેટફોર્મ",
+      heroDesc: "RECAP4NDC પહેલ હેઠળ વન પેટ્રોલિંગ અને મોનિટરિંગ સિસ્ટમ ઉપગ્રહ-આધારિત વનસ્પતિ સૂચકાંક, ક્ષેત્ર પેટ્રોલિંગ ડેટા, ઘટના રિપોર્ટિંગ અને કામગીરી પ્લાન સ્પેશિયલ બાઉન્ડરીઝને એકીકૃત વેબ-આધારિત મોનિટરિંગ વાતાવરણમાં જોડે છે.",
+      launchApp: "એપ શરૂ કરો",
+      overviewTitle: "વન મોનિટરિંગ",
+      overviewTitleHighlight: "અવલોકન",
+      overviewSubtitle: "એપ્લિકેશન ડેશબોર્ડ સંકલિત સ્પેશિયલ અને ક્ષેત્ર ડેટાને કાર્યક્ષમ મોનિટરિંગ સૂચકાંકોમાં રૂપાંતરિત કરે છે.",
+      overview1: "રિયલ-ટાઇમ મોનિટરિંગ",
+      overview1Desc: "સંકલિત ઉપગ્રહ અને ક્ષેત્ર ડેટા સ્ટ્રીમ દ્વારા વન સ્વાસ્થ્ય ટ્રૅક કરો.",
+      overview2: "વન બુદ્ધિ",
+      overview2Desc: "ડેટા-આધારિત ઍનલિટિક્સ જે વનસ્પતિ વલણો, પેટ્રોલ કવરેજ અને પુનઃસ્થાપન પ્રગતિ દર્શાવે છે.",
+      overview3: "ઘટના વ્યવસ્થાપન",
+      overview3Desc: "જીઓ-ટૅગ કરેલ પુરાવા અને મોબાઇલ ક્ષેત્ર રિપોર્ટ સાથે વન ઘટનાઓ નોંધો, ટ્રૅક કરો અને જવાબ આપો.",
+      overview4: "હિતધારક સહયોગ",
+      overview4Desc: "સામૂહિક ડેશબોર્ડ અને રિપોર્ટ વિભાગો અને ભાગીદારો વચ્ચે સુસંગત કાર્યવાહી સક્ષમ બનાવે છે.",
+      toolsLabel: "પ્લેટફોર્મ",
+      toolsTitle1: "વન મોનિટરિંગ માટે",
+      toolsTitle2: "વ્યાપક સાધનો",
+      faqTitle1: "વારંવાર પૂછાતા",
+      faqTitle2: "પ્રશ્નો",
+      faqSubtitle: "આ FAQ વિષયો અનુસાર ગોઠવાયેલ છે સરળ સંદર્ભ માટે.",
+      footerCopy: "© 2026 ગુજરાત વન વિભાગ",
+      footerPowered: "Powered by",
+      langEn: "English",
+      langGu: "ગુજ"
+    }
+  };
+
+  const t = translations[language];
 
   const cards = [
     {
       title: "GEOSPATIAL FOREST MONITORING MAP",
       img: Geospacial,
       desc: "Interactive WebGIS interface for exploring forest cover changes, administrative boundaries, working plan areas, and field patrol routes across Gujarat.",
-      desc1: "The GeoServer integration publishes spatial layers including beat boundaries, patrol routes, and vegetation datasets for visualization and analysis."
     },
     {
-      title: " PATROLLING MONITORING",
+      title: "PATROLLING MONITORING",
       img: pm,
       desc: "Real-time monitoring of field patrol operations including route coverage, patrol frequency, officer participation, and patrol utilization across forest divisions.",
-      desc1: "Patrolling integration captures GPS-based field movements and activity logs for monitoring and enforcement planning."
     },
     {
       title: "INCIDENT & OBSERVATION MONITORING",
       img: Incident,
-      desc: "Overview of field-reported incidents including illegal logging, encroachment, wildlife threats, and ecological observations submitted through the mobile application with geo-tagged multimedia evidence.",
-      desc1: "The patrolling module integrates field observations and incident reporting workflows into the monitoring platform."
+      desc: "Overview of field-reported incidents including illegal logging, encroachment, wildlife threats, and ecological observations submitted through the mobile application.",
     },
     {
       title: "FOREST MONITORING INSIGHTS",
       img: fm,
-      desc: "Integrated analytics combining NDVI vegetation trends, patrolling coverage, incident distribution, and working plan status to support restoration planning, enforcement prioritization, and forest protection strategies.",
-      desc1: "The application layer delivers analytical dashboards transforming integrated datasets into decision-support insights."
+      desc: "Integrated analytics combining NDVI vegetation trends, patrolling coverage, incident distribution, and working plan status to support restoration planning.",
     },
     {
       title: "NDVI VEGETATION MONITORING",
       img: nv,
-      desc: "Satellite-based NDVI analysis visualizing vegetation density, degradation patterns, and restoration progress across forest coupes using Sentinel-2 imagery and temporal analysis.",
-      desc1: "The NDVI module integrates satellite vegetation indicators for forest health and climate monitoring."
+      desc: "Satellite-based NDVI analysis visualizing vegetation density, degradation patterns, and restoration progress across forest coupes using Sentinel-2 imagery.",
     },
     {
       title: "COUPE MONITORING",
       img: cb,
-      desc: "Monitoring of working plan areas and coupe-level observations including uploaded spatial boundaries and field-reported ecological conditions such as tree disease or degradation.",
-      desc1: "Users can visualize coupe boundaries and record observations linked to forest management hierarchy."
+      desc: "Monitoring of working plan areas and coupe-level observations including uploaded spatial boundaries and field-reported ecological conditions.",
     }
   ];
 
@@ -119,255 +166,215 @@ const Homepage = () => {
 
   return (
     <>
-      {/* HEADER (UNCHANGED) */}
- <header id="header" >
-                 <div className="newcontainer">
-                     <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'97%'}}>
-                         <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'35px'}}>
-                             {/* <a href="indexs.aspx">
-                                 </a> */}
-                                 <img src={gujaratlogo} alt="logo picture" style={{width:'50px'}}></img>
-                       
-                         <div className="portal-header">
-                             <div className="icon" aria-hidden="true"></div>
-                             <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>FOREST PATROLLING & MONITORING SYSTEM</b></h2>
-                         </div>  </div>
-                       
-                         <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', paddingRight:'45px'}}>
-                             <div className="l_1">
-                                 {/* <a href="https://moef.gov.in/" target="_blank">
-                                     </a> */}
-                                     <img src={Moef} alt="picture" style={{width:'120px'}}></img>
-                             </div>
-                             <div className="l_2">
-                                 {/* <a href="https://www.giz.de/de/html/index.html" target="_blank">
-                                     </a> */}
-                                     <img src={giz} alt="giz logo" style={{width:'160px'}}></img>
-                             </div>
-                             <div className="l_3">
-                                 {/* <a href="#!" target="_blank">
-                                     </a> */}
-                                     <a href="/" ><img src={recap4NDC} alt="recap4NDC" style={{ height:'60px'}}></img></a>
-                             </div>
-                             {/* <div>
- <button
-               className="logout-btn"
-               onClick={handleLogout}
-             >
-               {text[language].logout}
-             </button>
-                             </div> */}
-                             
-                         </div>
-                     </div>
-                    
-                 </div>
-                 
-             </header>
+      {/* ===== HEADER ===== */}
+      <header id="header">
+        <div className="newcontainer">
+          <div className="headAssets">
+            {/* Left: Logo + Title */}
+            <div className="logo">
+              <img src={gujaratlogo} alt="Gujarat Forest Department logo" style={{ width: '50px' }} />
+              <div className="portal-header">
+                <div className="icon" aria-hidden="true"></div>
+                <h2><b>{t.headerTitle}</b></h2>
+              </div>
+            </div>
 
-      {/* HERO SECTION */}
-{/* HERO SECTION */}
-<section className="hero-section">
-  <div className="hero-overlay">
-    <h1>RECAP4NDC Forest Patrolling </h1>
-    <h1>Monitoring Platform</h1>
-
-    <p>
-      The Forest Patrolling & Monitoring System developed under the RECAP4NDC initiative provides a unified web-based monitoring environment integrating satellite-derived vegetation indicators, field patrolling data, incident reporting, and working plan spatial boundaries. The platform enables Gujarat Forest Department officials to visualize forest conditions, monitor patrol coverage, track incidents, and assess restoration progress through interactive geospatial dashboards and analytics tools.
-</p><br></br>
-<p>
-The WebGIS dashboard integrates spatial data services and field intelligence for operational forest management.
-    </p>
-<div style={{ 
-  display: 'flex', 
-  justifyContent: 'flex-end', 
-  padding: '1rem 9rem',
-}}>
-  <a 
-    href="/login" 
-    style={{ 
-      color: 'white', 
-      textDecoration: 'none',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      fontWeight: 500,
-      padding: '1rem 1rem',
-      borderRadius: '14px',
-      transition: 'all 0.3s ease',
-  backgroundImage: 'linear-gradient(180.29deg, #5CFFA9 0.25%, rgba(0, 146, 69, 0.8) 99.75%)'
-    }}
-    onMouseEnter={(e) => {
-      e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-    }}
-    onMouseLeave={(e) => {
-      e.target.style.background = 'linear-gradient(180.29deg, #5CFFA9 0.25%, rgba(0, 146, 69, 0.8) 99.75%)';
-    }}
-  >
-    Launch App
-  </a>
-</div>
-    
-  </div>
-  
-
-  <div className="hero-overlay2">
-<p>Implemented by: Gujarat Forest Department</p>
-    <p>Supported by: GIZ | ICIMOD | IKI | IUCN | TERI</p>
-    <p>Programme: RECAP4NDC – Restore to Prosper</p>
-
-</div >
-
-</section>
-
-
-
-{/* WAVE */}
-{/* <div className="green-wave"></div> */}
-
-
-{/* FOREST OVERVIEW */}
-<section className="overview-section">
-<div className="overview-header">
-                                 <h2 className="overview-heading">Forest Monitoring Overview</h2>
-  <p>The application dashboards transform integrated spatial and field data into actionable monitoring indicators.</p>
-
-</div>
- 
-  <div className="overview-container">
-
-    <div className="overview-image">
-      <img src={forestmonitoring} alt="forest patrol"/>
-    </div>
-
-    <div className="overview-text-grid">
-
-      <div className="overview-item">
-        <h4>Forest Cover Change Alerts</h4>
-        <p>Satellite-derived vegetation change hotspots detected using NDVI-based temporal analysis of forest condition.</p>
-      </div>
-
-      <div className="overview-item">
-        <h4>Total Patrols Conducted</h4>
-        <p>Field patrol activities captured through mobile patrolling integration and synchronized to the web dashboard.</p>
-      </div>
-
-      <div className="overview-item">
-        <h4>Incidents Reported</h4>
-        <p>Geo-tagged incidents such as encroachment, illegal logging, or forest degradation reported during patrol operations.</p>
-      </div>
-
-      <div className="overview-item">
-        <h4>Active Monitoring Coupes</h4>
-        <p>Working plan coupes currently under vegetation monitoring and restoration assessment.</p>
-      </div>
-
-    </div>
-
-  </div>
-
-</section>
-
-
-{/* MODULE CARDS */}
-<section className="modules-section">
-
-  <div className="modules-grid">
-
-    {cards.map((card,index)=>(
-      <div className="module-card" key={index}>
-
-        <div className="module-image">
-          {card.img && <img src={card.img} alt={card.title}/>}
-        </div>
-        <div className="module-title">
-            <h3>{card.title}</h3>
-
-        <p>{card.desc}</p>
-        <p>{card.desc1}</p>
-        </div>
-        
-
-      </div>
-    ))}
-
-  </div>
-
-</section>
-
-
-
-{/* FAQ SECTION */}
-<section className="faq-section">
-  <div className="faq-header">
-    <h2 className="faq-heading">Frequently Asked Questions</h2>
-    <p className="faq-subheading">These FAQs are organized by topic for easy reference.</p>
-  </div>
-
-  <div className="faq-categories">
-    {FAQ_CATEGORIES.map(cat => (
-      <button
-        key={cat.id}
-        className={`faq-cat-btn${activeFaqCat === cat.id ? ' faq-cat-btn--active' : ''}`}
-        onClick={() => { setActiveFaqCat(cat.id); setOpenFaqId(null); }}
-      >
-        {cat.label}
-        <span className="faq-cat-count">
-          {FAQ_DATA.filter(f => f.category === cat.id).length}
-        </span>
-      </button>
-    ))}
-  </div>
-
-  <div className="faq-list">
-    {FAQ_DATA.filter(f => f.category === activeFaqCat).map(faq => (
-      <div key={faq.id} className={`faq-item${openFaqId === faq.id ? ' faq-item--open' : ''}`}>
-        <button
-          className="faq-question"
-          onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)}
-          aria-expanded={openFaqId === faq.id}
-        >
-          <span className="faq-q-num">Q{faq.id}</span>
-          <span className="faq-q-text">{faq.q}</span>
-          <span className="faq-chevron" aria-hidden="true">{openFaqId === faq.id ? '▲' : '▼'}</span>
-        </button>
-        <div className="faq-answer">
-          <div className="faq-answer-inner">
-            <p>{faq.a}</p>
-            {faq.list && (
-              <ul>
-                {faq.list.map((item, i) => <li key={i}>{item}</li>)}
-              </ul>
-            )}
-            {faq.extra && <p className="faq-extra">{faq.extra}</p>}
+            {/* Right: Language + Ministry logos */}
+            <div className="ministryLogo">
+              <div className="header-lang-selector">
+                <button
+                  className={`header-lang-btn ${language === "en" ? "active" : ""}`}
+                  onClick={() => toggleLanguage("en")}
+                  title="English"
+                  id="lang-btn-en"
+                >
+                  {t.langEn}
+                </button>
+                <button
+                  className={`header-lang-btn ${language === "gu" ? "active" : ""}`}
+                  onClick={() => toggleLanguage("gu")}
+                  title="ગુજરાતી"
+                  id="lang-btn-gu"
+                >
+                  {t.langGu}
+                </button>
+              </div>
+              <div className="l_1">
+                <img src={Moef} alt="Ministry of Environment, Forest and Climate Change" style={{ width: '120px' }} />
+              </div>
+              <div className="l_2">
+                <img src={giz} alt="GIZ logo" style={{ width: '160px' }} />
+              </div>
+              <div className="l_3">
+                <a href="/"><img src={recap4NDC} alt="RECAP4NDC" style={{ height: '60px' }} /></a>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    ))}
-  </div>
-</section>
+      </header>
 
-{/* FOOTER */}
-<footer className="footer" style={{color:'black',
-        textAlign:'center',
-        padding:'15px',
-        display: 'flex',
-        justifyContent: 'space-around',
-        alignItems: 'center'}}>
-          <div>
-        <p style={{display: 'flex',alignItems: 'center',gap: '6px' }}> © 2026 Gujarat Forest Department <img src={gujaratlogo} alt="logo picture" style={{width:'40px'}}></img> </p>
-
+      {/* ===== HERO SECTION — Full-width video background ===== */}
+      <section className="hero-section-new" id="hero">
+        <video
+          src={heroVideo}
+          className="hero-bg-video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster={forestmonitoring}
+          aria-label="Forest Patrolling and Monitoring background video"
+        />
+        <div className="hero-bg-overlay" />
+        <div className="hero-content hero-content--over-video">
+          <div className="hero-left">
+            <div className="hero-tag">
+              <span className="hero-tag-dot">●</span>
+              <span>{t.heroTag}</span>
+            </div>
+            <h1 className="hero-title">
+              {t.heroTitle1}
+              <br />
+              <span className="hero-title-green">{t.heroTitle2}</span>
+            </h1>
+            <p className="hero-desc">{t.heroDesc}</p>
+            <a href="/login" className="hero-cta" id="hero-launch-btn">
+              {t.launchApp} →
+            </a>
           </div>
-        <div style={{display:'flex', alignItems:'center',gap: '6px'}}>
-          <p>Powered by  </p>
+        </div>
+      </section>
+
+      {/* ===== FOREST MONITORING OVERVIEW ===== */}
+      <section className="overview-section-new" id="overview">
+        <div className="section-header">
+          <h2 className="section-title">
+            {t.overviewTitle}
+            <br />
+            <span className="section-title-green">{t.overviewTitleHighlight}</span>
+          </h2>
+          <p className="section-subtitle">{t.overviewSubtitle}</p>
+        </div>
+
+        <div className="overview-grid">
+          <div className="overview-card">
+            <div className="overview-icon">📡</div>
+            <h4>{t.overview1}</h4>
+            <p>{t.overview1Desc}</p>
+          </div>
+          <div className="overview-card">
+            <div className="overview-icon">🌿</div>
+            <h4>{t.overview2}</h4>
+            <p>{t.overview2Desc}</p>
+          </div>
+          <div className="overview-card">
+            <div className="overview-icon">⚠️</div>
+            <h4>{t.overview3}</h4>
+            <p>{t.overview3Desc}</p>
+          </div>
+          <div className="overview-card">
+            <div className="overview-icon">🤝</div>
+            <h4>{t.overview4}</h4>
+            <p>{t.overview4Desc}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== COMPREHENSIVE TOOLS ===== */}
+      <section className="tools-section-new" id="tools">
+        <div className="section-header">
+          <p className="tools-label">{t.toolsLabel}</p>
+          <h2 className="section-title">
+            {t.toolsTitle1}
+            <br />
+            <span className="section-title-green">{t.toolsTitle2}</span>
+          </h2>
+        </div>
+
+        <div className="tools-grid">
+          {cards.map((card, index) => (
+            <div className="tool-card" key={index}>
+              <div className="tool-icon">
+                {card.img && <img src={card.img} alt={card.title} />}
+              </div>
+              <div className="tool-card-body">
+                <h4>{card.title}</h4>
+                <p>{card.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ===== FAQ SECTION ===== */}
+      <section className="faq-section" id="faq">
+        <div className="faq-header">
+          <h2 className="faq-heading">
+            {t.faqTitle1}
+            <br />
+            <span className="faq-heading-green">{t.faqTitle2}</span>
+          </h2>
+          <p className="faq-subheading">{t.faqSubtitle}</p>
+        </div>
+
+        <div className="faq-categories">
+          {faqCategories.map(cat => (
+            <button
+              key={cat.id}
+              id={`faq-cat-${cat.id}`}
+              className={`faq-cat-btn${activeFaqCat === cat.id ? ' faq-cat-btn--active' : ''}`}
+              onClick={() => { setActiveFaqCat(cat.id); setOpenFaqId(null); }}
+            >
+              {cat.label}
+              <span className="faq-cat-count">
+                {FAQ_DATA.filter(f => f.category === cat.id).length}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="faq-list">
+          {FAQ_DATA.filter(f => f.category === activeFaqCat).map(faq => (
+            <div key={faq.id} className={`faq-item${openFaqId === faq.id ? ' faq-item--open' : ''}`}>
+              <button
+                className="faq-question"
+                id={`faq-q-${faq.id}`}
+                onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)}
+                aria-expanded={openFaqId === faq.id}
+              >
+                <span className="faq-q-num">Q{faq.id}</span>
+                <span className="faq-q-text">{faq.q}</span>
+                <span className="faq-chevron" aria-hidden="true">{openFaqId === faq.id ? '▲' : '▼'}</span>
+              </button>
+              <div className="faq-answer" style={{ maxHeight: openFaqId === faq.id ? '500px' : '0' }}>
+                <div className="faq-answer-inner">
+                  <p>{faq.a}</p>
+                  {faq.list && (
+                    <ul>
+                      {faq.list.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  )}
+                  {faq.extra && <p className="faq-extra">{faq.extra}</p>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ===== FOOTER ===== */}
+      <footer className="footer-new">
+        <div className="footer-left">
+          <img src={gujaratlogo} alt="Gujarat Forest Department" />
+          <p>{t.footerCopy}</p>
+        </div>
+        <div className="footer-right">
+          <p>{t.footerPowered}</p>
           <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
-            <img 
-              src={gisfylogo} 
-              alt="logo picture" 
-              style={{ width: '100px', height: '40px' }} 
-            />
+            <img src={gisfylogo} alt="GISFY" />
           </a>
         </div>
       </footer>
-
     </>
   );
 };
