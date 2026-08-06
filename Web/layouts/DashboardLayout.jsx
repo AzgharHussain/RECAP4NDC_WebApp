@@ -44,6 +44,7 @@ const [contentHeight, setContentHeight] = useState(0);
   // Language Texts
   const text = {
     en: {
+      appTitle: "FOREST MONITORING & PATROLLING SYSTEM",
       overview: "Overview",
       geoDashboard: "Geo Dashboard",
       patrollingLogs: "Patrolling Logs",
@@ -58,25 +59,26 @@ const [contentHeight, setContentHeight] = useState(0);
       language: "Language",
       english: "English",
       gujarati: "Gujarati",
-      NDVIDashboard: "NDVI Dashboard",           // Added
+      NDVIDashboard: "NDVI Dashboard",
       PatrolCoverageAnalysis: "Plantation Coverage Analysis"
     },
     gu: {
+      appTitle: "વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ",
       overview: "સારાંશ",
       geoDashboard: "ભૂગોળ ડેશબોર્ડ",
       patrollingLogs: "પેટ્રોલિંગ લોગ્સ",
       incidentLogs: "ઘટના લોગ્સ",
       workingPlan: "કામ કરવાના વિસ્તારમાં",
       uploadCoupe: "કૂપ બાઉન્ડરી અપલોડ કરો",
-      viewCoupe: "કૂપ બાઉન્ડરી જુઓ",
+      viewCoupe: "કૂપ બાઉન્ડરી જુાા",
       coupeLog: "કૂપ અવલોકન લોગ",
       patrollingIncident: "પેટ્રોલિંગ",
-      logout: "લૉગઆઉટ",
+      logout: "લ಼ોગઆઉટ",
       admin: "એડમિન",
       language: "ભાષા",
       english: "અંગ્રેજી",
       gujarati: "ગુજરાતી",
-      NDVIDashboard: "NDVI ડેશબોર્ડ",        // Added (Gujarati translation)
+      NDVIDashboard: "NDVI ડેશબોર્ડ",
       PatrolCoverageAnalysis: "પ્લાન્ટેશન આવરણનું વિશ્લેષણ"
     },
   };
@@ -311,7 +313,7 @@ useEffect(() => {
                       
                         <div className="portal-header">
                             <div className="icon" aria-hidden="true"></div>
-                            <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>FOREST PATROLLING & MONITORING SYSTEM</b></h2>
+                            <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>{text[language].appTitle}</b></h2>
                         </div>  </div>
                       
                         <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', paddingRight:'45px'}}>

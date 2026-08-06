@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAccessibility } from '../context/AccessibilityContext';
+import { useLanguage } from '../context/LanguageContext';
 import { MdClose, MdInvertColors, MdHideImage, MdRefresh } from 'react-icons/md';
 import { FaUniversalAccess, FaLink, FaMousePointer, FaPause } from 'react-icons/fa';
 import { BsDroplet } from 'react-icons/bs';
@@ -33,7 +34,6 @@ const DyslexiaIcon = () => (
 const OPTIONS = [
   {
     key: 'biggerText',
-    label: 'Bigger Text',
     maxLevel: 4,
     icon: (
       <span className="a11y-text-aa" aria-hidden="true">
@@ -44,7 +44,6 @@ const OPTIONS = [
   },
   {
     key: 'smallerText',
-    label: 'Smaller Text',
     maxLevel: 3,
     icon: (
       <span className="a11y-text-aa" aria-hidden="true">
@@ -53,15 +52,15 @@ const OPTIONS = [
       </span>
     ),
   },
-  { key: 'textSpacing',      label: 'Text Spacing',      maxLevel: 3, icon: <TextSpacingIcon /> },
-  { key: 'lineHeight',       label: 'Line Height',        maxLevel: 3, icon: <LineHeightIcon /> },
-  { key: 'dyslexiaFriendly', label: 'Dyslexia Friendly',              icon: <DyslexiaIcon /> },
-  { key: 'saturation',       label: 'Saturation',                     icon: <BsDroplet size={22} aria-hidden="true" /> },
-  { key: 'invertColors',     label: 'Invert Colors',                  icon: <MdInvertColors size={24} aria-hidden="true" /> },
-  { key: 'highlightLinks',   label: 'Highlight Links',                icon: <FaLink size={20} aria-hidden="true" /> },
-  { key: 'bigCursor',        label: 'Big Cursor',                     icon: <FaMousePointer size={20} aria-hidden="true" /> },
-  { key: 'pauseAnimation',   label: 'Pause Animation',                icon: <FaPause size={20} aria-hidden="true" /> },
-  { key: 'hideImages',       label: 'Hide Images',                    icon: <MdHideImage size={24} aria-hidden="true" /> },
+  { key: 'textSpacing',      maxLevel: 3, icon: <TextSpacingIcon /> },
+  { key: 'lineHeight',       maxLevel: 3, icon: <LineHeightIcon /> },
+  { key: 'dyslexiaFriendly',              icon: <DyslexiaIcon /> },
+  { key: 'saturation',                    icon: <BsDroplet size={22} aria-hidden="true" /> },
+  { key: 'invertColors',                  icon: <MdInvertColors size={24} aria-hidden="true" /> },
+  { key: 'highlightLinks',                icon: <FaLink size={20} aria-hidden="true" /> },
+  { key: 'bigCursor',                     icon: <FaMousePointer size={20} aria-hidden="true" /> },
+  { key: 'pauseAnimation',                icon: <FaPause size={20} aria-hidden="true" /> },
+  { key: 'hideImages',                    icon: <MdHideImage size={24} aria-hidden="true" /> },
 ];
 
 function LevelDots({ level, max }) {
@@ -80,6 +79,40 @@ function LevelDots({ level, max }) {
 export default function AccessibilityWidget() {
   const [open, setOpen] = useState(false);
   const { settings, toggle, reset } = useAccessibility();
+  const { language } = useLanguage();
+
+  const text = {
+    en: {
+      biggerText: 'Bigger Text',
+      smallerText: 'Smaller Text',
+      textSpacing: 'Text Spacing',
+      lineHeight: 'Line Height',
+      dyslexiaFriendly: 'Dyslexia Friendly',
+      saturation: 'Saturation',
+      invertColors: 'Invert Colors',
+      highlightLinks: 'Highlight Links',
+      bigCursor: 'Big Cursor',
+      pauseAnimation: 'Pause Animation',
+      hideImages: 'Hide Images',
+      options: 'Accessibility options',
+      reset: 'Reset All Settings'
+    },
+    gu: {
+      biggerText: 'મોટું લખાણ',
+      smallerText: 'નાનું લખાણ',
+      textSpacing: 'લખાણ વચ્ચે જગ્યા',
+      lineHeight: 'લાઇન ઊંચાઈ',
+      dyslexiaFriendly: 'ડિસ્લેક્સીયા અનુકૂળ',
+      saturation: 'રંગ સંતૃપ્તિ',
+      invertColors: 'રંગ ઉલટાવો',
+      highlightLinks: 'લિંક હાઈલાઈટ કરો',
+      bigCursor: 'મોટો કર્સર',
+      pauseAnimation: 'એનિમેશન બંધ કરો',
+      hideImages: 'ઇમેજ છુપાવો',
+      options: 'એક્સેસિબિલિટી વિકલ્પો',
+      reset: 'બધા સેટિંગ્સ રીસેટ કરો'
+    }
+  };
 
   // count stepped features (level > 0) and boolean features (=== true)
   const activeCount = Object.entries(settings).filter(([, v]) =>
@@ -112,10 +145,10 @@ export default function AccessibilityWidget() {
         className={`a11y-panel${open ? ' a11y-panel--open' : ''}`}
         role="dialog"
         aria-modal="true"
-        aria-label="Accessibility Options"
+        aria-label={text[language].options}
       >
         <div className="a11y-panel-header">
-          <h2 className="a11y-panel-title">Accessibility options</h2>
+          <h2 className="a11y-panel-title">{text[language].options}</h2>
           <button
             className="a11y-close-btn"
             onClick={() => setOpen(false)}
@@ -126,10 +159,11 @@ export default function AccessibilityWidget() {
         </div>
 
         <div className="a11y-options-grid">
-          {OPTIONS.map(({ key, label, icon, maxLevel }) => {
+          {OPTIONS.map(({ key, icon, maxLevel }) => {
             const val = settings[key];
             const isActive = typeof val === 'number' ? val > 0 : val === true;
             const level   = typeof val === 'number' ? val : 0;
+            const label = text[language][key];
             return (
               <button
                 key={key}
@@ -149,10 +183,10 @@ export default function AccessibilityWidget() {
         <button
           className="a11y-reset-btn"
           onClick={reset}
-          aria-label="Reset all accessibility settings"
+          aria-label={text[language].reset}
         >
           <MdRefresh size={18} aria-hidden="true" />
-          Reset All Settings
+          {text[language].reset}
         </button>
       </div>
     </>

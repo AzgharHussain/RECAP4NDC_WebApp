@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useLanguage } from "../context/LanguageContext";
 import { MapContainer, TileLayer, useMap,ScaleControl ,WMSTileLayer  } from "react-leaflet";
 import {FaInfoCircle} from 'react-icons/fa';
 import html2canvas from "html2canvas";
@@ -71,7 +72,30 @@ const getLegendUrl = (layerName) =>
     layerName
   )}`;
 export default function MapView() {
+  const { language } = useLanguage();
   const mapRef = useRef(null);
+
+  const text = {
+    en: {
+      search: "Search",
+      zoomIn: "Zoom In",
+      zoomOut: "Zoom Out",
+      pan: "Pan/Drag",
+      measure: "Measurement",
+      info: "Attribute Information",
+      home: "Home"
+    },
+    gu: {
+      search: "શોધો",
+      zoomIn: "ઝૂમ ઇન",
+      zoomOut: "ઝૂમ આઉટ",
+      pan: "પાન/ખસેડો",
+      measure: "માપન",
+      info: "ગુણધર્મની માહિતી",
+      home: "હોમ"
+    }
+  };
+
   const [activeBasemap, setActiveBasemap] = useState("LightGray");
   const [activeTool, setActiveTool] = useState("layers");
   const [activetoolone, setActivetoolone] = useState("");
@@ -715,7 +739,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
   {/* Search */}
  <button
-  title="Search"
+  title={text[language].search}
   type="button"
   onClick={() => handleToolSidebarClick("search")}
   className={activeToolSidebar === "search" ? "tool-button-active" : "tool-button"}
@@ -726,7 +750,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
   {/* Zoom In */}
   <button
-    title="Zoom In"
+    title={text[language].zoomIn}
     type="button"
     onClick={() => {
       zoomIn();
@@ -739,7 +763,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
   {/* Zoom Out */}
   <button
-    title="Zoom Out"
+    title={text[language].zoomOut}
     type="button"
     onClick={() => {
       zoomOut();
@@ -752,7 +776,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
   {/* Pan Tool */}
   <button
-    title="Pan/Drag"
+    title={text[language].pan}
     type="button"
     onClick={() => handleToolSidebarClick("pan")}
     className={activeToolSidebar === "pan" ? "tool-button-active" : "tool-button"}
@@ -762,7 +786,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
   {/* Measurement Tool */}
 <button
-  title="Measurement"
+  title={text[language].measure}
   type="button"
   onClick={() => {
     if (activeToolSidebar === "measure") {
@@ -780,7 +804,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 </button>
 
 <button
-  title="Attribute Information"
+  title={text[language].info}
   type="button"
   onClick={handleInfoToolClick}
   className={isInfoToolActive ? "tool-button-active" : "tool-button"}
@@ -791,7 +815,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
   {/* Home */}
   <button
-    title="Home"
+    title={text[language].home}
     type="button"
     onClick={() => {
       resetView();

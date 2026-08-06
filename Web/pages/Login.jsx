@@ -42,6 +42,7 @@ function Login() {
 
   const text = {
     en: {
+      appTitle: "FOREST MONITORING & PATROLLING SYSTEM",
       welcome: "WELCOME BACK",
       title: "Sign In",
       subtitle: "Access your patrol dashboard",
@@ -64,6 +65,7 @@ function Login() {
       forestAuthFailed: "Forest authentication failed"
     },
     gu: {
+      appTitle: "વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ",
       welcome: "પાછા સ્વાગત છે",
       title: "સાઇન ઇન",
       subtitle: "તમારું પેટ્રોલ ડેશબોર્ડ ઍક્સેસ કરો",
@@ -230,7 +232,7 @@ function Login() {
             <div className="logo">
               <img src={gujaratlogo} alt="Gujarat Forest Department logo" style={{ width: '50px' }} />
               <div className="portal-header">
-                <h2><b>FOREST PATROLLING &amp; MONITORING SYSTEM</b></h2>
+                <h2><b>{text[language].appTitle}</b></h2>
               </div>
             </div>
 

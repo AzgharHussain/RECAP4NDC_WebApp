@@ -57,7 +57,7 @@ export default function DashboardLayoutAdmin() {
       english: "English",
       gujarati: "ગુજરાતી",
       logout: "Logout",
-      forestPatrollingSystem: "FOREST PATROLLING & MONITORING SYSTEM"
+      forestPatrollingSystem: "FOREST MONITORING & PATROLLING SYSTEM"
     },
     gu: {
       overview: "સારાંશ",
@@ -76,7 +76,7 @@ export default function DashboardLayoutAdmin() {
       english: "English",
       gujarati: "ગુજરાતી",
       logout: "લોગઆઉટ",
-      forestPatrollingSystem: "વન પેટ્રોલિંગ અને મોનિટરિંગ સિસ્ટમ"
+      forestPatrollingSystem: "વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ"
     },
   };
  const getUserName = () => {
