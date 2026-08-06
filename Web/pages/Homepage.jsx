@@ -174,27 +174,26 @@ const Homepage = () => {
             <div className="logo">
               <img src={gujaratlogo} alt="Gujarat Forest Department logo" style={{ width: '50px' }} />
               <div className="portal-header">
-                <div className="icon" aria-hidden="true"></div>
                 <h2><b>{t.headerTitle}</b></h2>
               </div>
             </div>
 
-            {/* Right: Language + Ministry logos */}
+            {/* Right: Language selector + Ministry logos */}
             <div className="ministryLogo">
               <div className="header-lang-selector">
                 <button
+                  id="home-lang-en"
                   className={`header-lang-btn ${language === "en" ? "active" : ""}`}
                   onClick={() => toggleLanguage("en")}
                   title="English"
-                  id="lang-btn-en"
                 >
                   {t.langEn}
                 </button>
                 <button
+                  id="home-lang-gu"
                   className={`header-lang-btn ${language === "gu" ? "active" : ""}`}
                   onClick={() => toggleLanguage("gu")}
                   title="ગુજરાતી"
-                  id="lang-btn-gu"
                 >
                   {t.langGu}
                 </button>
