@@ -299,7 +299,7 @@ useEffect(() => {
           </div>
         </div> */}
         <div>
-<div className="newcontainer">
+<div className="after-login-container">
 
         <header id="header">
                 <div className="container-fluid22">

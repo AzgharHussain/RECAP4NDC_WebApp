@@ -168,7 +168,7 @@ const Homepage = () => {
     <>
       {/* ===== HEADER ===== */}
       <header id="header">
-        <div className="newcontainer">
+        <div className="before-login-container">
           <div className="headAssets">
             {/* Left: Logo + Title */}
             <div className="logo">
