@@ -42,7 +42,7 @@ input[type="password"] {
   background: white;
 }
 
-.newcontainer {
+.before-login-container {
   background-image: url("../assets/Frame 100.jpg");
   background-size: cover;
   background-position: center;

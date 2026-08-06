@@ -238,7 +238,7 @@ background: rgb(255, 255, 255);
   
 }
 
-.newcontainer {
+.after-login-container {
   background-image: url("../assets/Frame 100.jpg");
   background-size: cover; /* or 100% 100% if you want to force fit */
   background-position: center;
@@ -246,6 +246,11 @@ background: rgb(255, 255, 255);
   padding: 1px 0; /* Adjust padding as needed */
   /* Remove fixed height: 18vh; */
   width: 100%;
+}
+
+.after-login-container #header {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 
@@ -699,14 +704,14 @@ body{
   and (min-width: 834px) 
   and (max-width: 1024px) {
   
-  .newcontainer {
+  .after-login-container {
     height: 11vh;
   }
 } */
 /* ===== UPDATED MEDIA QUERIES FOR RESPONSIVENESS ===== */
 /* Mobile screens */
 @media only screen and (max-width: 600px) {
-  .newcontainer {
+  .after-login-container {
     padding: 1px 0;
   }
   .header-bottom2 {
@@ -716,7 +721,7 @@ body{
 
 /* Tablets */
 @media only screen and (min-width: 601px) and (max-width: 834px) {
-  .newcontainer {
+  .after-login-container {
     /* REMOVED: height: 28vh; */
     padding: 1px 0;
   }
@@ -727,7 +732,7 @@ body{
 
 /* iPad / small laptops */
 @media only screen and (min-width: 768px) and (max-width: 1024px) {
-  .newcontainer {
+  .after-login-container {
     /* REMOVED: height: 14vh; */
     padding: 1px 0;
   }
@@ -738,7 +743,7 @@ body{
 
 /* Large screens */
 @media only screen and (min-width: 1025px) and (max-width: 1440px) {
-  .newcontainer {
+  .after-login-container {
     /* REMOVED: height: 14vh; */
     padding: 1px 0;
   }
@@ -746,14 +751,14 @@ body{
 
 /* Extra large screens */
 /* @media only screen and (min-width: 1441px) and (max-width: 1700px) {
-  .newcontainer {
+  .after-login-container {
     padding: 20px 0;
   }
 } */
 
 /* Ultra wide screens */
 @media only screen and (min-width: 1700px) {
-  .newcontainer {
+  .after-login-container {
     /* REMOVED: height: 14vh; */
     padding: 1px 0;
   }
