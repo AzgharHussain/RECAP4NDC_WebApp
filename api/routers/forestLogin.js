@@ -4,6 +4,8 @@ const router = express.Router();
 const axios = require('axios');
 const xml2js = require('xml2js');
 const { logFromRequest } = require('../utils/auditLogger');
+const { sequelize } = require('../config/database');
+const bcrypt = require('bcrypt');
 
 // SOAP proxy endpoint for Gujarat Forest Service
 router.post('/forest-login', async (req, res) => {
@@ -35,8 +37,9 @@ router.post('/forest-login', async (req, res) => {
     console.log('Sending SOAP request...');
     
     // Make SOAP request
+    const soapUrl = process.env.SOAP_API_URL || 'https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx';
     const response = await axios.post(
-      'https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx',
+      soapUrl,
       soapRequest,
       {
         headers: {
@@ -176,13 +179,63 @@ router.post('/forest-login', async (req, res) => {
     console.error('SOAP proxy error:', error.message);
 
     logFromRequest(req, {
-      action: 'LOGIN_FAILED',
+      action: 'LOGIN_FAILED_SOAP',
       status: 'ERROR',
       statusCode: error.code === 'ECONNABORTED' ? 504 : 502,
       username: req.body?.username || null,
       errorMessage: error.message,
     });
-    
+
+    // Fallback: Check local database (admin table) if SOAP fails
+    try {
+      const trimmedUsername = req.body.username.trim();
+      const [localUsers] = await sequelize.query(
+        `SELECT username, password FROM admin WHERE username = :trimmedUsername`,
+        { replacements: { trimmedUsername } }
+      );
+
+      if (localUsers.length > 0) {
+        const user = localUsers[0];
+        const isPasswordValid = await bcrypt.compare(req.body.password.trim(), user.password);
+
+        if (isPasswordValid) {
+          console.log('Fallback to local database authentication successful for:', trimmedUsername);
+          
+          // Fake user data for successful local login
+          const userData = {
+            NAME: user.username,
+            NameOfPost: "Admin (Fallback)",
+            CadreName: "-",
+            CircleName: "-",
+            DivisionName: "-",
+            RangeName: "-",
+            RoundName: "-",
+            BeatName: "-",
+            MobileNo: "-",
+            EmailID: "-"
+          };
+
+          logFromRequest(req, {
+            action: 'LOGIN_FALLBACK',
+            status: 'SUCCESS',
+            statusCode: 200,
+            username: trimmedUsername,
+            resourceType: 'user_session',
+            details: { name: userData.NAME }
+          });
+
+          return res.json({
+            success: true,
+            jsonMap: userData,
+            message: 'Authentication successful (Local Fallback)'
+          });
+        }
+      }
+    } catch (fallbackError) {
+      console.error('Local fallback failed:', fallbackError.message);
+    }
+
+    // If local fallback also fails, return the original SOAP error
     let errorMessage = error.message;
     let errorCode = 500;
     

@@ -11,8 +11,6 @@ import { FaCalendarCheck, FaRoute, FaUsers, FaSun, FaMoon, FaShieldAlt, FaUserTi
 import "./PatrolIncidentLogs.css";
 import exportIcon from "../assets/excel.png";
 import dayjs from "dayjs";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
@@ -1226,8 +1224,13 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     }
   };
 
-  const exportCoverageToExcel = () => {
+  const exportCoverageToExcel = async () => {
     if (!coverageData) return;
+
+    const [XLSX, { saveAs }] = await Promise.all([
+      import("xlsx"),
+      import("file-saver"),
+    ]);
 
     const formatDateTime = (dateTime) => {
       if (!dateTime) return "N/A";
@@ -1450,11 +1453,16 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
 
   // Add this function after your existing exportCoverageToExcel function
 // Add this function after your existing exportCoverageToExcel function
-const exportTableToExcel = () => {
+const exportTableToExcel = async () => {
   if (!filteredData || filteredData.length === 0) {
     message.warning(language === "gu" ? "કોઈ ડેટા નિકાસ કરવા માટે ઉપલબ્ધ નથી" : "No data available to export");
     return;
   }
+
+  const [XLSX, { saveAs }] = await Promise.all([
+    import("xlsx"),
+    import("file-saver"),
+  ]);
 
   const formatDateForExport = (datetime) => {
     if (!datetime) return "N/A";

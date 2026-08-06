@@ -15,9 +15,9 @@ import logos8 from "../assets/logos8.png";
 import logos9 from "../assets/logos9.png";
 import logos10 from "../assets/logos10.png";
 import logos11 from "../assets/logos11.png";
-import userIcon from "../assets/user.png"; // ✅ import your image
 import patrollingIcon from "../assets/Patrolling.png";  // Import the Patrolling image
 import incidentIcon from "../assets/incident.png";  // Import the Incident image
+import { FiUser } from "react-icons/fi";
 import { useLanguage } from "../context/LanguageContext";
 import "./DashboardLayout.css";
 
@@ -294,7 +294,7 @@ useEffect(() => {
       className="dropdown-trigger"
       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
     >
-      <img src={userIcon} alt="User Icon" className="user-icon-img" />
+      <FiUser className="user-icon-img" style={{ fontSize: '28px', color: '#1b4332', background: 'white', borderRadius: '50%', padding: '4px' }} />
      
     </div>
     

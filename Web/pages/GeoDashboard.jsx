@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useLanguage } from "../context/LanguageContext";
 import { MapContainer, TileLayer, useMap,ScaleControl ,WMSTileLayer  } from "react-leaflet";
 import {FaInfoCircle} from 'react-icons/fa';
-import html2canvas from "html2canvas";
 import L, { icon } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-easyprint";
@@ -19,7 +18,6 @@ import { saveAs } from 'file-saver';
 import 'leaflet-measure/dist/leaflet-measure.css';
 import "./RightSidebar.css";
 import SearchControlWithInput from './SearchControl';
-import Swal from "sweetalert2";
 import  DraggableZoomControl from "./DraggableZoomControl";
 import LatLngDisplay from "./LatLngDisplay";
 import 'leaflet/dist/leaflet.css';
@@ -474,6 +472,7 @@ const handleDrawingToolClick = (toolType) => {
 
     const handleDelete = async (id) => {
       try {
+        const { default: Swal } = await import("sweetalert2");
         const result = await Swal.fire({
           title: 'Are you sure?',
           text: 'You will not be able to Login again',
@@ -679,6 +678,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 
   const handlePrint = async () => {
     if (!mapWrapperRef.current) return;
+    const { default: html2canvas } = await import("html2canvas");
     const canvas = await html2canvas(mapWrapperRef.current, { useCORS: true });
     const link = document.createElement("a");
     link.download = "map_with_legend_compass.png";

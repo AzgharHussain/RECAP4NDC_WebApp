@@ -16,8 +16,6 @@ import {
 } from "@ant-design/icons";
 import { Table, Tag, Image as AntImage, Modal, Button, message, Row, Col, Pagination } from "antd";
 import axios from "axios";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 import "./RouterMap.css";
 import "./BeatPatrolCoverage.css";
 import { API_BASE_URL } from "../config";
@@ -917,8 +915,13 @@ const BeatPatrolCoverage = () => {
   };
 
   // Export to Excel
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (!coverageData) return;
+
+    const [XLSX, { saveAs }] = await Promise.all([
+      import("xlsx"),
+      import("file-saver"),
+    ]);
 
     const summaryData = [{
       [selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel]:

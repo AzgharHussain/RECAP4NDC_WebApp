@@ -13,6 +13,7 @@ process.on('uncaughtException', (err) => {
 
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -65,7 +66,11 @@ app.use(auditMiddleware);
 // ================= SECURITY HEADERS ================= //
 
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false,
+}));
+app.use(compression({ threshold: 1024 }));
 /* Content Security Policy */
 // app.use(
 //   helmet.contentSecurityPolicy({
@@ -137,19 +142,32 @@ const validateNoDuplicateParams = (req, res, next) => {
   next();
 };
 
-const allowedOrigins = ['https://gisfy.co.in:8445/geoserver/wms',
+const allowedOrigins = [
+  'https://gisfy.co.in:8445',
+  'https://gisfy.co.in:8445/geoserver/wms',
   'https://forestrecap.gisfy.co.in',
   'http://localhost:5002',
   'http://68.178.167.216:5002',
-'http://localhost:5173', 'http://localhost:5174','http://13.235.78.63:5002', 'http://localhost:5176',
-'http://3.108.143.116:8082'
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5176',
+  'http://13.235.78.63:5002',
+  'http://3.108.143.116:8082',
+  ...(process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean),
 ];
 
 app.use(cors({
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  maxAge: 86400,
 }));
+
+
 
 // Use express built-in JSON parser (remove body-parser)
 app.use(express.json({ 
@@ -160,8 +178,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logger
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Request Body:', req.body); // Add this for debugging
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - startedAt}ms`);
+  });
   next();
 });
 
@@ -225,8 +245,18 @@ const incidentImageDir = path.join(__dirname, '..', 'Incidentimage');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-app.use('/Patrolimage', express.static(patrolImageDir));
-app.use('/Incidentimage', express.static(incidentImageDir));
+const staticImageOptions = {
+  fallthrough: false,
+  etag: true,
+  maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+  setHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', process.env.NODE_ENV === 'production' ? 'public, max-age=604800, immutable' : 'no-store');
+  },
+};
+
+app.use('/Patrolimage', express.static(patrolImageDir, staticImageOptions));
+app.use('/Incidentimage', express.static(incidentImageDir, staticImageOptions));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -237,11 +267,20 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + '_' + file.originalname);
+    const safeExt = path.extname(file.originalname || '').toLowerCase();
+    cb(null, `${Date.now()}_${crypto.randomUUID()}${safeExt}`);
   }
 });
 
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
+const allowedImageMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024, files: 25 },
+  fileFilter: (req, file, cb) => {
+    if (allowedImageMimeTypes.has(file.mimetype)) return cb(null, true);
+    cb(new Error('Only image uploads are allowed'));
+  }
+});
 
 // ==================== JWT CONFIG ==================== //
 const SECRET_KEY = process.env.JWT_SECRET;
@@ -390,7 +429,8 @@ app.post("/api/changepassword", verifyJwt, async (req, res) => {
 
     // Verify the user exists and get current password hash
     const [users] = await sequelize.query(
-      `SELECT username, password FROM admin WHERE username = '${username}'`,
+      `SELECT username, password FROM admin WHERE username = :username`,
+      { replacements: { username } }
     );
 
     if (users.length === 0) {
@@ -427,7 +467,8 @@ app.post("/api/changepassword", verifyJwt, async (req, res) => {
 
     // Update password in database
     await sequelize.query(
-      `UPDATE admin SET password = '${hashedNewPassword}' WHERE username = '${username}'`,
+      `UPDATE admin SET password = :hashedNewPassword WHERE username = :username`,
+      { replacements: { hashedNewPassword, username } }
     );
 
     console.log(`Password changed successfully for user: ${username}`);
@@ -487,7 +528,8 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
 
     // Query database
     const [result] = await sequelize.query(
-      `SELECT username, password FROM admin WHERE username = '${username}'`,
+      `SELECT username, password FROM admin WHERE username = :username`,
+      { replacements: { username } }
     );
 
     if (result.length === 0) {
@@ -529,9 +571,9 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
         username: admin.username
       },
       SECRET_KEY,
-      // {
-      //   expiresIn: "24h"
-      // }
+      {
+        expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "24h"
+      }
     );
 
     logFromRequest(req, {

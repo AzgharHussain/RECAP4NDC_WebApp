@@ -4,8 +4,6 @@ import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
 import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
 import dayjs from "dayjs"; // For date formatting
-import * as XLSX from "xlsx"; // Import xlsx
-import { saveAs } from "file-saver"; // Import file-saverz
 import { useLanguage } from "../context/LanguageContext"; // Import language context
 
 const { Option } = Select;
@@ -236,11 +234,16 @@ const CoupeObservation = () => {
   };
 
   // Export data to Excel
-  const handleExport = () => {
+  const handleExport = async () => {
     if (filteredData.length === 0) {
       alert(text[language].noDataText);
       return;
     }
+
+    const [XLSX, { saveAs }] = await Promise.all([
+      import("xlsx"),
+      import("file-saver"),
+    ]);
 
     // Format the filtered data to match the columns you want in the export
     const exportData = filteredData.map((item) => ({

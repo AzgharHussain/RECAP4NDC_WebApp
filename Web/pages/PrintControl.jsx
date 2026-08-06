@@ -1,6 +1,5 @@
 import React, { useEffect, useCallback, useRef } from "react";
 import L from "leaflet";
-import * as htmlToImage from "html-to-image";
 import "./printControl.css";
 
 const PrintControl = ({ mapRef }) => {
@@ -53,7 +52,8 @@ const PrintControl = ({ mapRef }) => {
       clearTimeout(timeoutRef.current);
     }
 
-    timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = setTimeout(async () => {
+      const htmlToImage = await import("html-to-image");
       htmlToImage
         .toPng(mapContainer, {
           quality: 1,

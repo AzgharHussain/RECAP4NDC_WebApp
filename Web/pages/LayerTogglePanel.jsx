@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { FaChevronDown, FaChevronUp, FaLayerGroup, FaCircle, FaFolder, FaFolderOpen } from "react-icons/fa";
-import { BsGraphDownArrow } from "react-icons/bs";
-import { MdForest } from "react-icons/md";
+import { FaChevronDown, FaChevronUp, FaLayerGroup, FaCircle, FaFolder, FaFolderOpen, FaLeaf } from "react-icons/fa";
+import { BsGraphDownArrow, BsShieldFill, BsInfoCircle } from "react-icons/bs";
+import { MdForest, MdLocationOn, MdBusiness, MdTerrain, MdClose } from "react-icons/md";
+import { FiX, FiMapPin, FiLayers, FiTrendingUp, FiTrendingDown, FiCompass, FiMap, FiInfo, FiArrowLeft, FiSearch, FiMinimize2, FiTrash2 } from "react-icons/fi";
 import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
@@ -165,6 +166,15 @@ const MonthRangeSelector = ({ onMonthSelect, selectedMonth, selectedYear, langua
 };
 
 // Nested Layer Group Component - UPDATED to remove coupe layer items
+const getGroupIcon = (title) => {
+  const t = (title || "").toLowerCase();
+  if (t.includes('forest')) return <MdForest style={{ marginRight: "8px", color: '#2e7d32', fontSize: '18px' }} />;
+  if (t.includes('circle') || t.includes('division')) return <BsShieldFill style={{ marginRight: "8px", color: '#2e7d32', fontSize: '16px' }} />;
+  if (t.includes('range')) return <MdTerrain style={{ marginRight: "8px", color: '#2e7d32', fontSize: '18px' }} />;
+  if (t.includes('gujarat')) return <FiMap style={{ marginRight: "8px", color: '#2e7d32', fontSize: '16px' }} />;
+  return <FaLayerGroup style={{ marginRight: "8px", color: '#2e7d32' }} />;
+};
+
 const NestedLayerGroup = React.memo(({
   group,
   groupId,
@@ -189,9 +199,14 @@ const NestedLayerGroup = React.memo(({
         onClick={() => toggleGroup(groupId)}
         aria-expanded={isExpanded}
       >
-        <span className="group-title-content">
-          <FaLayerGroup style={{ marginRight: "8px" }} />
-          {group.title}
+        <span className="group-title-content" style={{ display: 'flex', alignItems: 'center' }}>
+          {getGroupIcon(group.title)}
+          <span style={{ fontWeight: 600, color: '#111' }}>{group.title}</span>
+          {group.children && (
+            <span className="badge" style={{ marginLeft: '8px', background: '#e8f5e9', color: '#2e7d32', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+              {group.children.length}
+            </span>
+          )}
         </span>
         <span className="arrow-icon">
           {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
@@ -355,12 +370,32 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
       return false;
     }
     
+    // Skip layer name as we display it separately
+    if (key === 'layer_1_name' || key === 'coordinates') {
+      return false;
+    }
+    
     return true;
   });
 
   // Separate coordinates for display at the top
   const coordinates = data.coordinates || 
                      (data.layer_1_coordinates ? data.layer_1_coordinates : null);
+
+  const getIconForKey = (keyStr, value) => {
+    const k = keyStr.toLowerCase();
+    if (k.includes('ndvi')) {
+      const num = parseFloat(value);
+      if (!isNaN(num) && num < 0) return <FiTrendingDown style={{ color: '#2e7d32' }} />;
+      return <FiTrendingUp style={{ color: '#2e7d32' }} />;
+    }
+    if (k.includes('category') || k.includes('change')) return <FaLeaf style={{ color: '#4caf50' }} />;
+    if (k.includes('lat')) return <FiCompass style={{ color: '#555' }} />;
+    if (k.includes('lon') || k.includes('lng')) return <FiCompass style={{ color: '#555' }} />;
+    if (k.includes('div')) return <MdBusiness style={{ color: '#555' }} />;
+    if (k.includes('range')) return <MdTerrain style={{ color: '#555' }} />;
+    return <FiInfo style={{ color: '#555' }} />;
+  };
 
   return (
     <div
@@ -373,26 +408,24 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
         top: `${position.y}px`,
         zIndex: 10000,
         backgroundColor: 'white',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        padding: '15px',
-        minWidth: '300px',
+        border: '1px solid #eee',
+        borderRadius: '12px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        padding: '16px',
+        minWidth: '320px',
         maxWidth: '400px',
-        maxHeight: '300px',
+        maxHeight: '450px',
         overflow: 'auto',
-        fontFamily: 'arial'
+        fontFamily: "'Inter', 'Arial', sans-serif"
       }}
     >
       <div className="attribute-popup-header" style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '10px',
-        borderBottom: '1px solid #eee',
-        paddingBottom: '8px'
+        marginBottom: '16px'
       }}>
-        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
+        <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111' }}>
           Feature Information
         </h4>
         <button
@@ -403,10 +436,17 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
             fontSize: '20px',
             cursor: 'pointer',
             color: '#666',
-            padding: '0 5px'
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            transition: 'background 0.2s'
           }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
-          ×
+          <MdClose />
         </button>
       </div>
       
@@ -414,15 +454,19 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
         {/* Display coordinates at the top if available */}
         {coordinates && (
           <div style={{
-            marginBottom: '15px',
-            padding: '8px',
-            backgroundColor: '#f5f5f5',
-            borderRadius: '4px',
-            fontSize: '12px'
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: '12px',
+            padding: '12px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            border: '1px solid #eee',
+            fontSize: '13px'
           }}>
-            <strong style={{ color: '#333' }}>Location:</strong>
-            <span style={{ marginLeft: '8px', color: '#666' }}>
-              {coordinates}
+            <MdLocationOn style={{ fontSize: '18px', color: '#333', marginRight: '10px' }} />
+            <strong style={{ color: '#333', minWidth: '70px' }}>Location</strong>
+            <span style={{ color: '#555', marginLeft: 'auto' }}>
+              {coordinates.replace(/Lat:/, 'Lat: ').replace(/Lng:/, ', Lng: ')}
             </span>
           </div>
         )}
@@ -430,67 +474,85 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
         {/* Display layer name if available */}
         {data.layer_1_name && (
           <div style={{
-            marginBottom: '10px',
-            padding: '8px',
-            backgroundColor: '#e3f2fd',
-            borderRadius: '4px',
-            borderLeft: '4px solid #2196f3'
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: '16px',
+            padding: '12px',
+            backgroundColor: '#eef6fc',
+            borderRadius: '8px',
+            border: '1px solid #d6eaf8'
           }}>
-            <strong style={{ color: '#1976d2' }}>Layer:</strong>
-            <span style={{ marginLeft: '8px', color: '#0d47a1' }}>
-              {data.layer_1_name}
-            </span>
+            <FiLayers style={{ fontSize: '20px', color: '#1976d2', marginRight: '12px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '11px', color: '#1976d2', fontWeight: '600', textTransform: 'uppercase' }}>Layer</span>
+              <strong style={{ fontSize: '15px', color: '#0d47a1', marginTop: '2px' }}>
+                {data.layer_1_name}
+              </strong>
+            </div>
           </div>
         )}
 
-        {/* Display all other attributes in a clean table */}
+        {/* Display all other attributes in a grid */}
         {filteredEntries.length > 0 ? (
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '13px'
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '10px'
           }}>
-            <tbody>
-              {filteredEntries.map(([key, value], index) => {
-                // Skip coordinates and layer name as they're already displayed
-                if (key === 'coordinates' || key === 'layer_1_name') {
-                  return null;
-                }
-                
-                const formattedKey = formatKeyName(key);
-                const formattedValue = formatValue(value);
-                
-                if (!formattedValue || formattedValue === 'N/A') {
-                  return null;
-                }
+            {filteredEntries.map(([key, value], index) => {
+              const formattedKey = formatKeyName(key);
+              const formattedValue = formatValue(value);
+              
+              if (!formattedValue || formattedValue === 'N/A') {
+                return null;
+              }
 
-                return (
-                  <tr key={index} style={{
-                    borderBottom: '1px solid #f0f0f0'
+              // Special styling for change category
+              const isCategory = key.toLowerCase().includes('category') || key.toLowerCase().includes('change');
+              const isNDVI = key.toLowerCase().includes('ndvi');
+
+              return (
+                <div key={index} style={{
+                  padding: '12px',
+                  backgroundColor: '#fff',
+                  border: '1px solid #eee',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ marginRight: '6px', display: 'flex' }}>
+                      {getIconForKey(key, formattedValue)}
+                    </span>
+                    <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>{formattedKey}</span>
+                  </div>
+                  <div style={{ 
+                    fontSize: isNDVI ? '18px' : '14px', 
+                    fontWeight: isNDVI ? '700' : '600', 
+                    color: isNDVI ? '#2e7d32' : '#333',
+                    textAlign: 'center',
+                    marginTop: 'auto'
                   }}>
-                    <td style={{
-                      padding: '8px 8px 8px 0',
-                      fontWeight: '600',
-                      color: '#555',
-                      verticalAlign: 'top',
-                      width: '40%',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {formattedKey}
-                    </td>
-                    <td style={{
-                      padding: '8px 0 8px 8px',
-                      color: '#333',
-                      verticalAlign: 'top',
-                      wordBreak: 'break-word'
-                    }}>
-                      {formattedValue}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    {isCategory ? (
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '4px 10px',
+                        backgroundColor: '#fff4e5',
+                        color: '#f57c00',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        {formattedValue}
+                      </span>
+                    ) : (
+                      formattedValue
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div style={{
             padding: '20px',
@@ -1762,6 +1824,243 @@ const text = {
   },
 };
 
+// Component for Coupe Group with checkbox on the group title - FIXED
+const CoupeGroupWithoutCheckbox = ({ 
+  group, 
+  groupId, 
+  selection, 
+  onMonthChange, 
+  language, 
+  addedLayers, 
+  toggleLayer,
+  openGroups,
+  toggleGroup,
+  layerManager,
+  mapRef,
+  setAddedLayers,
+  setOpacity,
+  setActiveCoupeGroups,
+  getLayerBoundsFromAPI,
+  setIsLayerLoading,
+  getAvailableMonthsForCoupe
+}) => {
+  const isExpanded = openGroups[groupId] || false;
+  const firstLayer = group.children[0];
+  const baseName = firstLayer.baseName || firstLayer.Name;
+  const availableMonths = getAvailableMonthsForCoupe(baseName);
+  
+  const monthNames = {
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    gu: ['જાન', 'ફેબ', 'માર્ચ', 'એપ્રિલ', 'મે', 'જૂન', 'જુલાઈ', 'ઑગસ્ટ', 'સપ્ટે', 'ઑક્ટો', 'નવે', 'ડિસે']
+  };
+  
+  const months = monthNames[language] || monthNames.en;
+  
+  // Get unique years
+  const availableYears = useMemo(() => {
+    return [...new Set(availableMonths.map(item => item.year))].sort();
+  }, [availableMonths]);
+
+  // Find the first available month/year if current selection is invalid
+  const validSelection = useMemo(() => {
+    if (!selection) return { month: 0, year: availableYears[0] || 2025 };
+    
+    const isValid = availableMonths.some(m => 
+      m.month === selection.month && m.year === selection.year
+    );
+    
+    if (isValid) return selection;
+    
+    // Return first available month/year
+    const firstAvailable = availableMonths[0];
+    return firstAvailable 
+      ? { month: firstAvailable.month, year: firstAvailable.year }
+      : { month: 0, year: availableYears[0] || 2025 };
+  }, [selection, availableMonths, availableYears]);
+
+  // Get the layer name for the current selection
+  const currentLayerName = useMemo(() => {
+    const selectedMonthData = availableMonths.find(m => 
+      m.month === validSelection.month && m.year === validSelection.year
+    );
+    return selectedMonthData?.layerName;
+  }, [availableMonths, validSelection]);
+
+  // Check if this group has any active layer
+  const isChecked = useMemo(() => {
+    return Object.keys(addedLayers).some(key => key.includes(`-${groupId}-`));
+  }, [addedLayers, groupId]);
+
+  // Get the currently active month/year for display
+  const activeInfo = useMemo(() => {
+    const activeKey = Object.keys(addedLayers).find(key => key.includes(`-${groupId}-`));
+    if (!activeKey) return null;
+    
+    // Extract month and year from layer name
+    const match = activeKey.match(/(\d{4})[_-](\d{2})/);
+    if (match) {
+      const year = parseInt(match[1]);
+      const month = parseInt(match[2]) - 1;
+      return { month, year };
+    }
+    return null;
+  }, [addedLayers, groupId]);
+
+  // Handle checkbox toggle
+// In the handleGroupCheckbox function inside CoupeGroupWithoutCheckbox, update the zoom call:
+
+// Handle checkbox toggle - with NDVI change layer bounds
+const handleGroupCheckbox = useCallback(async (e) => {
+  e.stopPropagation();
+  
+  if (isChecked) {
+    // Remove all layers from this group
+    const keysToRemove = Object.keys(addedLayers).filter(key => key.includes(`-${groupId}-`));
+    
+    for (const key of keysToRemove) {
+      const layer = addedLayers[key];
+      if (layer && mapRef.current) {
+        mapRef.current.removeLayer(layer);
+        layer.off();
+      }
+    }
+    
+    // Update state
+    setAddedLayers((prev) => {
+      const newState = { ...prev };
+      keysToRemove.forEach(key => delete newState[key]);
+      return newState;
+    });
+    
+    setOpacity((prev) => {
+      const newState = { ...prev };
+      keysToRemove.forEach(key => delete newState[key]);
+      return newState;
+    });
+    
+    setActiveCoupeGroups((prev) => ({
+      ...prev,
+      [groupId]: false
+    }));
+  } else {
+    // Add the current layer
+    if (!currentLayerName) return;
+    
+    // Set loading to true BEFORE adding layer
+    setIsLayerLoading(true);
+    
+    try {
+      const layer = await layerManager.addLayer(
+        currentLayerName, 
+        `${group.title} (${months[validSelection.month]} ${validSelection.year})`
+      );
+      
+      if (layer) {
+        const newKey = `${currentLayerName}-${groupId}-0`;
+        setAddedLayers((prev) => ({ ...prev, [newKey]: layer }));
+        setOpacity((prev) => ({ ...prev, [newKey]: 1 }));
+        layer.setOpacity(1);
+        
+        setActiveCoupeGroups((prev) => ({
+          ...prev,
+          [groupId]: true
+        }));
+
+        // Get bounds and zoom
+        try {
+          const bounds = await getLayerBoundsFromAPI(currentLayerName, true);
+          
+          if (bounds && mapRef.current) {
+            const sw = L.latLng(bounds.minY, bounds.minX);
+            const ne = L.latLng(bounds.maxY, bounds.maxX);
+            const layerBounds = L.latLngBounds(sw, ne);
+            
+            // Create a promise that resolves when zoom animation completes
+            await new Promise((resolve) => {
+              const onZoomEnd = () => {
+                mapRef.current.off('zoomend', onZoomEnd);
+                // Add a small delay to ensure everything is rendered
+                setTimeout(resolve, 300);
+              };
+              
+              mapRef.current.on('zoomend', onZoomEnd);
+              
+              // Start the initial fitBounds animation
+              mapRef.current.fitBounds(layerBounds, {
+                padding: [50, 50],
+                animate: true,
+                duration: 1
+              });
+            });
+            
+            console.log(`✅ Successfully zoomed to ${currentLayerName}`);
+          }
+        } catch (error) {
+          console.error('Error zooming to layer:', error);
+        } finally {
+          // Turn off loader ONLY after zoom animation is complete
+          setIsLayerLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error adding layer:', error);
+      setIsLayerLoading(false);
+    }
+  }
+}, [isChecked, groupId, addedLayers, currentLayerName, group.title, validSelection, months, layerManager, mapRef, setAddedLayers, setOpacity, setActiveCoupeGroups, getLayerBoundsFromAPI]);
+
+  return (
+    <div className="layer-group flat-group coupe-group-no-checkbox">
+      <button
+        type="button"
+        className="group-title"
+        onClick={() => toggleGroup(groupId)}
+        aria-expanded={isExpanded ? "true" : "false"}
+      >
+        <span className="group-title-content">
+          {/* Checkbox for the group */}
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={handleGroupCheckbox}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.preventDefault()}
+            style={{ marginRight: "8px", cursor: 'pointer' }}
+          />
+          {/* <FaLayerGroup style={{ marginRight: "8px" }} /> */}
+          {group.title}
+          {isChecked && activeInfo && (
+            <span className="active-indicator" style={{
+              marginLeft: '8px',
+              color: '#4CAF50',
+              fontSize: '12px'
+            }}>
+              ● Active ({months[activeInfo.month]} {activeInfo.year})
+            </span>
+          )}
+        </span>
+        <span className="arrow-icon">
+          {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+        </span>
+      </button>
+      
+      {isExpanded && (
+        <div className="layer-list-wrapper expanded">
+          <MonthRangeSelector
+            onMonthSelect={(month, year) => onMonthChange(groupId, month, year)}
+            selectedMonth={validSelection.month}
+            selectedYear={validSelection.year}
+            language={language}
+            groupTitle={group.title}
+            availableMonths={availableMonths}
+          />
+         
+        </div>
+      )}
+    </div>
+  );
+};
+
 const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolSidebar, isInfoToolActive, setIsInfoToolActive   }) => {
   const { language } = useLanguage();
   const [addedLayers, setAddedLayers] = useState({});
@@ -1780,6 +2079,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
   const [isLoadingCoupes, setIsLoadingCoupes] = useState(false);
   // Add state for legend visibility
   const [isLegendVisible, setIsLegendVisible] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   
   const layerCounterRef = useRef(0);
   const clickHandlerRef = useRef(null);
@@ -2677,241 +2977,7 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
 }, [coupeGroups, getAvailableMonthsForCoupe, layerManager, mapRef, groupSelections, addedLayers, getLayerBoundsFromAPI]);
 
 
-// Component for Coupe Group with checkbox on the group title - FIXED
-const CoupeGroupWithoutCheckbox = ({ 
-  group, 
-  groupId, 
-  selection, 
-  onMonthChange, 
-  language, 
-  addedLayers, 
-  toggleLayer,
-  openGroups,
-  toggleGroup,
-  layerManager,
-  mapRef,
-  setAddedLayers,
-  setOpacity,
-  setActiveCoupeGroups,
-  getLayerBoundsFromAPI,
-  setIsLayerLoading 
-}) => {
-  const isExpanded = openGroups[groupId] || false;
-  const firstLayer = group.children[0];
-  const baseName = firstLayer.baseName || firstLayer.Name;
-  const availableMonths = getAvailableMonthsForCoupe(baseName);
-  
-  const monthNames = {
-    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    gu: ['જાન', 'ફેબ', 'માર્ચ', 'એપ્રિલ', 'મે', 'જૂન', 'જુલાઈ', 'ઑગસ્ટ', 'સપ્ટે', 'ઑક્ટો', 'નવે', 'ડિસે']
-  };
-  
-  const months = monthNames[language] || monthNames.en;
-  
-  // Get unique years
-  const availableYears = useMemo(() => {
-    return [...new Set(availableMonths.map(item => item.year))].sort();
-  }, [availableMonths]);
 
-  // Find the first available month/year if current selection is invalid
-  const validSelection = useMemo(() => {
-    if (!selection) return { month: 0, year: availableYears[0] || 2025 };
-    
-    const isValid = availableMonths.some(m => 
-      m.month === selection.month && m.year === selection.year
-    );
-    
-    if (isValid) return selection;
-    
-    // Return first available month/year
-    const firstAvailable = availableMonths[0];
-    return firstAvailable 
-      ? { month: firstAvailable.month, year: firstAvailable.year }
-      : { month: 0, year: availableYears[0] || 2025 };
-  }, [selection, availableMonths, availableYears]);
-
-  // Get the layer name for the current selection
-  const currentLayerName = useMemo(() => {
-    const selectedMonthData = availableMonths.find(m => 
-      m.month === validSelection.month && m.year === validSelection.year
-    );
-    return selectedMonthData?.layerName;
-  }, [availableMonths, validSelection]);
-
-  // Check if this group has any active layer
-  const isChecked = useMemo(() => {
-    return Object.keys(addedLayers).some(key => key.includes(`-${groupId}-`));
-  }, [addedLayers, groupId]);
-
-  // Get the currently active month/year for display
-  const activeInfo = useMemo(() => {
-    const activeKey = Object.keys(addedLayers).find(key => key.includes(`-${groupId}-`));
-    if (!activeKey) return null;
-    
-    // Extract month and year from layer name
-    const match = activeKey.match(/(\d{4})[_-](\d{2})/);
-    if (match) {
-      const year = parseInt(match[1]);
-      const month = parseInt(match[2]) - 1;
-      return { month, year };
-    }
-    return null;
-  }, [addedLayers, groupId]);
-
-  // Handle checkbox toggle
-// In the handleGroupCheckbox function inside CoupeGroupWithoutCheckbox, update the zoom call:
-
-// Handle checkbox toggle - with NDVI change layer bounds
-const handleGroupCheckbox = useCallback(async (e) => {
-  e.stopPropagation();
-  
-  if (isChecked) {
-    // Remove all layers from this group
-    const keysToRemove = Object.keys(addedLayers).filter(key => key.includes(`-${groupId}-`));
-    
-    for (const key of keysToRemove) {
-      const layer = addedLayers[key];
-      if (layer && mapRef.current) {
-        mapRef.current.removeLayer(layer);
-        layer.off();
-      }
-    }
-    
-    // Update state
-    setAddedLayers((prev) => {
-      const newState = { ...prev };
-      keysToRemove.forEach(key => delete newState[key]);
-      return newState;
-    });
-    
-    setOpacity((prev) => {
-      const newState = { ...prev };
-      keysToRemove.forEach(key => delete newState[key]);
-      return newState;
-    });
-    
-    setActiveCoupeGroups((prev) => ({
-      ...prev,
-      [groupId]: false
-    }));
-  } else {
-    // Add the current layer
-    if (!currentLayerName) return;
-    
-    // Set loading to true BEFORE adding layer
-    setIsLayerLoading(true);
-    
-    try {
-      const layer = await layerManager.addLayer(
-        currentLayerName, 
-        `${group.title} (${months[validSelection.month]} ${validSelection.year})`
-      );
-      
-      if (layer) {
-        const newKey = `${currentLayerName}-${groupId}-0`;
-        setAddedLayers((prev) => ({ ...prev, [newKey]: layer }));
-        setOpacity((prev) => ({ ...prev, [newKey]: 1 }));
-        layer.setOpacity(1);
-        
-        setActiveCoupeGroups((prev) => ({
-          ...prev,
-          [groupId]: true
-        }));
-
-        // Get bounds and zoom
-        try {
-          const bounds = await getLayerBoundsFromAPI(currentLayerName, true);
-          
-          if (bounds && mapRef.current) {
-            const sw = L.latLng(bounds.minY, bounds.minX);
-            const ne = L.latLng(bounds.maxY, bounds.maxX);
-            const layerBounds = L.latLngBounds(sw, ne);
-            
-            // Create a promise that resolves when zoom animation completes
-            await new Promise((resolve) => {
-              const onZoomEnd = () => {
-                mapRef.current.off('zoomend', onZoomEnd);
-                // Add a small delay to ensure everything is rendered
-                setTimeout(resolve, 300);
-              };
-              
-              mapRef.current.on('zoomend', onZoomEnd);
-              
-              // Start the initial fitBounds animation
-              mapRef.current.fitBounds(layerBounds, {
-                padding: [50, 50],
-                animate: true,
-                duration: 1
-              });
-            });
-            
-            console.log(`✅ Successfully zoomed to ${currentLayerName}`);
-          }
-        } catch (error) {
-          console.error('Error zooming to layer:', error);
-        } finally {
-          // Turn off loader ONLY after zoom animation is complete
-          setIsLayerLoading(false);
-        }
-      }
-    } catch (error) {
-      console.error('Error adding layer:', error);
-      setIsLayerLoading(false);
-    }
-  }
-}, [isChecked, groupId, addedLayers, currentLayerName, group.title, validSelection, months, layerManager, mapRef, setAddedLayers, setOpacity, setActiveCoupeGroups, getLayerBoundsFromAPI]);
-
-  return (
-    <div className="layer-group flat-group coupe-group-no-checkbox">
-      <button
-        type="button"
-        className="group-title"
-        onClick={() => toggleGroup(groupId)}
-        aria-expanded={isExpanded ? "true" : "false"}
-      >
-        <span className="group-title-content">
-          {/* Checkbox for the group */}
-          <input
-            type="checkbox"
-            checked={isChecked}
-            onChange={handleGroupCheckbox}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.preventDefault()}
-            style={{ marginRight: "8px", cursor: 'pointer' }}
-          />
-          {/* <FaLayerGroup style={{ marginRight: "8px" }} /> */}
-          {group.title}
-          {isChecked && activeInfo && (
-            <span className="active-indicator" style={{
-              marginLeft: '8px',
-              color: '#4CAF50',
-              fontSize: '12px'
-            }}>
-              ● Active ({months[activeInfo.month]} {activeInfo.year})
-            </span>
-          )}
-        </span>
-        <span className="arrow-icon">
-          {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-        </span>
-      </button>
-      
-      {isExpanded && (
-        <div className="layer-list-wrapper expanded">
-          <MonthRangeSelector
-            onMonthSelect={(month, year) => onMonthChange(groupId, month, year)}
-            selectedMonth={validSelection.month}
-            selectedYear={validSelection.year}
-            language={language}
-            groupTitle={group.title}
-            availableMonths={availableMonths}
-          />
-         
-        </div>
-      )}
-    </div>
-  );
-};
 
 
 
@@ -2940,6 +3006,7 @@ const renderGroup = (group, index, section = "layers") => {
         setActiveCoupeGroups={setActiveCoupeGroups}
         getLayerBoundsFromAPI={getLayerBoundsFromAPI}
         setIsLayerLoading={setIsLayerLoading} 
+        getAvailableMonthsForCoupe={getAvailableMonthsForCoupe}
       />
     );
   }
@@ -2965,20 +3032,24 @@ const renderGroup = (group, index, section = "layers") => {
     // Flat group for regular layers
     return (
       <div key={groupId} className="layer-group flat-group">
-        <button
-          type="button"
+        <div role="button" tabIndex={0}
           className="group-title"
           onClick={() => toggleGroup(groupId)}
           aria-expanded={openGroups[groupId] ? "true" : "false"}
         >
-          <span className="group-title-content">
-            <FaLayerGroup style={{ marginRight: "8px" }} />
-            {group.title}
+          <span className="group-title-content" style={{ display: 'flex', alignItems: 'center' }}>
+            {getGroupIcon(group.title)}
+            <span style={{ fontWeight: 600, color: '#111' }}>{group.title}</span>
+            {group.children && (
+              <span className="badge" style={{ marginLeft: '8px', background: '#e8f5e9', color: '#2e7d32', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+                {group.children.length}
+              </span>
+            )}
           </span>
           <span className="arrow-icon">
             {openGroups[groupId] ? <FaChevronUp /> : <FaChevronDown />}
           </span>
-        </button>
+        </div>
         
         {openGroups[groupId] && (
           <div className="layer-list-wrapper expanded">
@@ -3088,51 +3159,48 @@ const renderGroup = (group, index, section = "layers") => {
       {isLegendVisible && <LegendPanel />}
       
     <aside className="leftpanel">
-        <h3 className="sidebar-title">
-          <FaLayerGroup style={{ marginRight: "8px" }} />
-          {text[language].exploreData}
-          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-            {/* Add Legend Toggle Button */}
-            <button 
-              style={{
-                backgroundColor: isLegendVisible ? '#3498db' : '#95a5a6',
-                color: '#fff',
-                border: 'none', 
-                padding: '5px 10px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                whiteSpace: 'nowrap'
-              }}
-              onClick={() => setIsLegendVisible(!isLegendVisible)}
-              className="legend-toggle-btn"
-              title={isLegendVisible ? "Hide legend" : "Show legend"}
-            >
-              {isLegendVisible 
-    ? text[language].hideLegend 
-    : text[language].showLegend}
-            </button>
-            <button 
-              style={{
-                backgroundColor: '#e74c3c',
-                color: '#fff',
-                border: 'none', 
-                padding: '5px 10px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-              onClick={clearAllLayers}
-              className="clear-all-btn"
-              title="Clear all layers"
-              disabled={Object.keys(addedLayers).length === 0}
-            >
-              {text[language].clearAll}
-            </button>
-          </div>
-        </h3>
+        <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '10px', marginBottom: '10px' }}>
+          <h3 className="sidebar-title" style={{ margin: 0, display: 'flex', alignItems: 'center', fontSize: '18px', color: '#111' }}>
+            <FiLayers style={{ marginRight: "10px", fontSize: '20px', color: '#2e7d32' }} />
+            Layer Explorer
+          </h3>
+      
+        </div>
+
+        <div className="search-container" style={{ position: 'relative', marginBottom: '15px' }}>
+          <FiSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+          <input 
+            type="text" 
+            placeholder="Search layers..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px 10px 35px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', outline: 'none' }}
+          />
+        </div>
+
+        <div className="action-buttons" style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+          <button 
+            className="action-btn collapse-btn"
+            onClick={() => setOpenGroups({})}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', border: '1px solid #4CAF50', color: '#2e7d32', background: '#e8f5e9', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
+          >
+            <FiMinimize2 /> Collapse all
+          </button>
+          <button 
+            className="action-btn clear-btn"
+            onClick={clearAllLayers}
+            disabled={Object.keys(addedLayers).length === 0}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', border: '1px solid #e74c3c', color: '#e74c3c', background: '#ffebee', cursor: 'pointer', fontWeight: 600, fontSize: '13px', opacity: Object.keys(addedLayers).length === 0 ? 0.5 : 1 }}
+          >
+            <FiTrash2 /> Clear
+          </button>
+        </div>
         
         <div className="layer-groups-container">
-          {mergedGroups.map((group, idx) => renderGroup(group, idx, "layers"))}
+          {mergedGroups.filter(g => 
+            g.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (g.children && g.children.some(c => (c.Name || c.title || "").toLowerCase().includes(searchQuery.toLowerCase())))
+          ).map((group, idx) => renderGroup(group, idx, "layers"))}
         </div>
         
         <div className="coupe-section">
@@ -3154,13 +3222,30 @@ const renderGroup = (group, index, section = "layers") => {
                 </div>
               ) : (
                 <div className="layer-groups-container coupe-groups">
-                  {coupeGroups.map((group, idx) => renderGroup(group, idx, "coupes"))}
+                  {coupeGroups.filter(g => 
+                    g.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    (g.children && g.children.some(c => (c.Name || c.title || "").toLowerCase().includes(searchQuery.toLowerCase())))
+                  ).map((group, idx) => renderGroup(group, idx, "coupes"))}
                 </div>
               )}
             </div>
           )}
         </div>
         
+        <div style={{ position: 'sticky', bottom: '-10px', left: 0, right: 0, padding: '12px', background: 'rgba(232, 245, 233, 0.95)', borderTop: '1px solid #c8e6c9', borderRadius: '0 0 12px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#1b5e20', fontSize: '13px', fontWeight: 500, backdropFilter: 'blur(5px)', marginTop: 'auto', zIndex: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FiLayers style={{ fontSize: '16px' }} /> 
+            <span>{Object.keys(addedLayers).length} active {Object.keys(addedLayers).length === 1 ? 'layer' : 'layers'}</span>
+          </div>
+          <button 
+            onClick={() => setIsLegendVisible(!isLegendVisible)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #c8e6c9', borderRadius: '20px', padding: '4px 12px', color: '#2e7d32', cursor: 'pointer', fontWeight: 600, fontSize: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
+            title="Toggle Legend"
+          >
+            <FiMap /> {isLegendVisible ? "Hide Legend" : "Show Legend"}
+          </button>
+        </div>
+
         {isLayerLoading && <Loader />}
       </aside>
       

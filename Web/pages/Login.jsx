@@ -11,6 +11,7 @@ import loginBg from "../assets/loginpage/image(6).png";
 import partnerLogos from "../assets/loginpage/image(7).png";
 import Eyeclose from "../assets/Eyeclose.png";
 import user from "../assets/user.png";
+import { FiUser, FiLock, FiEye, FiEyeOff, FiLogIn } from "react-icons/fi";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
 import giz from "../assets/giz.png";
@@ -325,8 +326,8 @@ function Login() {
                 disabled={loading}
                 autoComplete="username"
               />
-              <span className="icon">
-                <img src={user} alt="User" width="18" height="18" />
+              <span className="icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingRight: '10px' }}>
+                <FiUser style={{ fontSize: '18px', color: '#666' }} />
               </span>
             </div>
 
@@ -347,18 +348,25 @@ function Login() {
                 className="eye"
                 onClick={() => setShowPwd((s) => !s)}
                 disabled={loading}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingRight: '10px', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 {showPwd
-                  ? "👁"
-                  : <img src={Eyeclose} alt="Closed Eye" width="18" height="18" />
+                  ? <FiEye style={{ fontSize: '18px', color: '#666' }} />
+                  : <FiEyeOff style={{ fontSize: '18px', color: '#666' }} />
                 }
               </button>
             </div>
 
             {/* Login Button */}
-            <button className="btn-login" onClick={handleLogin} disabled={loading}>
-              {loading && <span></span>}
-              {loading ? text[language].loggingIn : text[language].loginButton}
+            <button className="btn-login" onClick={handleLogin} disabled={loading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              {loading ? (
+                <span>Logging in...</span>
+              ) : (
+                <>
+                  <FiLogIn style={{ fontSize: '18px' }} />
+                  {text[language].loginButton}
+                </>
+              )}
             </button>
 
             {/* Privacy Notice */}

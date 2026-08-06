@@ -1,22 +1,33 @@
 const { Sequelize } = require('sequelize');
 
+const isProduction = process.env.NODE_ENV === 'production';
+const sslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+
 const sequelize = new Sequelize(
-  'Recap4NDC', // Database name
-  'postgres', // Username
-  'P$DB@25%$#!26', // Password
+  process.env.DB_NAME || 'Recap4NDC',
+  process.env.DB_USER || 'postgres',
+  process.env.DB_PASSWORD || 'P$DB@25%$#!26',
   {
-    host: '68.178.167.216',
+    host: process.env.DB_HOST || '68.178.167.216',
+    port: Number(process.env.DB_PORT || 5432),
     dialect: 'postgres',
-    logging: console.log,
-    dialectOptions: {
-      ssl: false,
-    },
+    logging: isProduction ? false : console.log,
+    dialectOptions: sslEnabled
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized: String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false',
+          },
+        }
+      : {},
     pool: {
-      max: 20,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    }
+      max: Number(process.env.DB_POOL_MAX || 20),
+      min: Number(process.env.DB_POOL_MIN || 0),
+      acquire: Number(process.env.DB_POOL_ACQUIRE || 30000),
+      idle: Number(process.env.DB_POOL_IDLE || 10000),
+      evict: Number(process.env.DB_POOL_EVICT || 10000),
+    },
+    benchmark: !isProduction,
   }
 );
 
@@ -27,7 +38,7 @@ const testConnection = async () => {
     console.log('✅ Database connection established successfully.');
     return true;
   } catch (error) {
-    console.error('❌ Unable to connect to the database:', error);
+    console.error('❌ Unable to connect to the database:', error.message);
     return false;
   }
 };

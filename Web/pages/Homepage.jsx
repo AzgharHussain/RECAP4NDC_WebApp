@@ -19,6 +19,7 @@ import nv from "../assets/n-v.png";
 import gisfylogo from "../assets/Gisfylogo.png";
 import cb from "../assets/cb.png";
 import heroVideo from "../assets/download.mp4";
+import { FiArrowRight, FiChevronUp, FiChevronDown, FiRadio, FiMap, FiAlertTriangle, FiUsers } from "react-icons/fi";
 
 // === FAQ DATA (static, no language dependency) ===
 // FAQ data is now language-aware — defined inside the component
@@ -243,6 +244,7 @@ const Homepage = () => {
           muted
           loop
           playsInline
+          preload="metadata"
           preload="auto"
           aria-label="Forest Patrolling and Monitoring background video"
         />
@@ -259,8 +261,8 @@ const Homepage = () => {
               <span className="hero-title-green">{t.heroTitle2}</span>
             </h1>
             <p className="hero-desc">{t.heroDesc}</p>
-            <a href="/login" className="hero-cta" id="hero-launch-btn">
-              {t.launchApp} →
+            <a href="/login" className="hero-cta" id="hero-launch-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              {t.launchApp} <FiArrowRight />
             </a>
           </div>
         </div>
@@ -279,22 +281,22 @@ const Homepage = () => {
 
         <div className="overview-grid">
           <div className="overview-card">
-            <div className="overview-icon">📡</div>
+            <div className="overview-icon" style={{ fontSize: '24px', color: '#2e7d32' }}><FiRadio /></div>
             <h4>{t.overview1}</h4>
             <p>{t.overview1Desc}</p>
           </div>
           <div className="overview-card">
-            <div className="overview-icon">🌿</div>
+            <div className="overview-icon" style={{ fontSize: '24px', color: '#2e7d32' }}><FiMap /></div>
             <h4>{t.overview2}</h4>
             <p>{t.overview2Desc}</p>
           </div>
           <div className="overview-card">
-            <div className="overview-icon">⚠️</div>
+            <div className="overview-icon" style={{ fontSize: '24px', color: '#2e7d32' }}><FiAlertTriangle /></div>
             <h4>{t.overview3}</h4>
             <p>{t.overview3Desc}</p>
           </div>
           <div className="overview-card">
-            <div className="overview-icon">🤝</div>
+            <div className="overview-icon" style={{ fontSize: '24px', color: '#2e7d32' }}><FiUsers /></div>
             <h4>{t.overview4}</h4>
             <p>{t.overview4Desc}</p>
           </div>
@@ -316,7 +318,7 @@ const Homepage = () => {
           {cards.map((card, index) => (
             <div className="tool-card" key={index}>
               <div className="tool-icon">
-                {card.img && <img src={card.img} alt={card.title} />}
+                {card.img && <img src={card.img} alt={card.title} loading="lazy" decoding="async" />}
               </div>
               <div className="tool-card-body">
                 <h4>{card.title}</h4>
@@ -365,7 +367,7 @@ const Homepage = () => {
               >
                 <span className="faq-q-num">Q{faq.id}</span>
                 <span className="faq-q-text">{faq.q}</span>
-                <span className="faq-chevron" aria-hidden="true">{openFaqId === faq.id ? '▲' : '▼'}</span>
+                <span className="faq-chevron" aria-hidden="true">{openFaqId === faq.id ? <FiChevronUp /> : <FiChevronDown />}</span>
               </button>
               <div className="faq-answer" style={{ maxHeight: openFaqId === faq.id ? '500px' : '0' }}>
                 <div className="faq-answer-inner">
@@ -386,13 +388,13 @@ const Homepage = () => {
       {/* ===== FOOTER ===== */}
       <footer className="footer-new">
         <div className="footer-left">
-          <img src={gujaratlogo} alt="Gujarat Forest Department" />
+          <img src={gujaratlogo} alt="Gujarat Forest Department" loading="lazy" decoding="async" />
           <p>{t.footerCopy}</p>
         </div>
         <div className="footer-right">
           <p>{t.footerPowered}</p>
           <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
-            <img src={gisfylogo} alt="GISFY" />
+            <img src={gisfylogo} alt="GISFY" loading="lazy" decoding="async" />
           </a>
         </div>
       </footer>

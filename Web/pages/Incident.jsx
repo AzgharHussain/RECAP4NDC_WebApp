@@ -3,8 +3,6 @@ import { Table, Button, Input, Select, DatePicker, Modal } from "antd";
 import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
 import "./PatrolIncidentLogs.css"; // Import the CSS for styling
 import exportIcon from "../assets/excel.png";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -120,11 +118,16 @@ const PatrolIncidentLogs = () => {
     setFilteredData(data);
   }, [searchText, categoryFilter, incidentDate, incidentData]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!filteredData.length) {
       alert(text[language].noDataText);
       return;
     }
+
+    const [XLSX, { saveAs }] = await Promise.all([
+      import("xlsx"),
+      import("file-saver"),
+    ]);
 
     const exportData = filteredData.map((item) => ({
       [text[language].incidentId]: item.p_incident_id,
