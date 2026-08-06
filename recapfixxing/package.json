@@ -1,0 +1,13 @@
+{
+  "name": "recapfixxing-gee-ndvi",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "ndvi:monthly": "node run_all_coupes_monthly_onefile.js"
+  },
+  "dependencies": {
+    "@google/earthengine": "^0.1.393",
+    "pg": "^8.12.0"
+  }
+}

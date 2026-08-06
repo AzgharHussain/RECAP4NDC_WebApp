@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "giz-gujarat",
+  "private_key_id": "638109c5420af8f1db97f756683289a36a13927a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDotbpiJdYF48bz\nDtCP+FiN/lWLT4fO66aikLzQZLARQ2gWkKPEiKRJB3DQuzC8bEWEC+Wq4MFSTX2j\nRMjHfqiEBacdkcQA+199KNDahFN2tFMC5IYRsluLbN6XHwp17vteit5ay8KTrT1c\nAff/6ktHIpqqzhvL/RXLru1gqsVzwI4uK6WMAFV5rndeRWuNOLSrwT8UBDuf85iq\nYFcIMbZSGZ4vXKjzFj7v5qj+n2MX+Coukp2MUID6ebxWdenKMppOJb7TH+HyHJ1t\nzOJQilKiNuMcT0j0W0arflVrPDgq8q7P44T21C4rsDNngjIRSq6Gh83vo8DvHDzP\nIpRXIvQ/AgMBAAECggEALOQltNpMq60xi2DPvf4wAxBNq0an0bRm3FRkgCT0TBg/\nQ58aYIblfksHqdR6hdazIFJ1Nx4NXRWix3S08LsPwgwfHVapw3C6jnfptkWxniQS\nIWw5Kr/H5iEV3Xw49eAosKfEViqZegiA3jdpAn7Nj8bupEWHWjYT1suDclLvLTFZ\nbiahVYAsQhBbE7SH6gc6HThRwOO4C6+EOXTmZJdGoqObb82qz20Rd4NO0LfpqHKK\nErUbdUJkaAFhzUZ9Pb2oKWtp/Ft4G+QEh2C6aPFNSPHGLzAi3A5HLTf31ikYHqZK\nh8ya1nxyMJcTltFsuvTDSM235ZZfDGDotvdtfDCUcQKBgQD3t9zzuZ6OonPQ8oe6\nhPNcre5LFfnVNJXEJ7B/KskY+GknAeXF88jyf5cVhYQzLgR+mvfr1/gbwx9ZHhf9\na918uj3bgba2fZ1eegvx0Ll878JLL0FuXW2i7BmDxosCMhgd9DCANT/vdPVOugXB\n9Pvp7RGi36vscwHhIettn1SkDwKBgQDwfWnjuSQnPgBcKnxitRWfqhrwfCm/QSAh\n+/ypVR5GgOBslDd2y0OZ9gKu8MYsbxDZTecsAIFi7h28MRoHDV5Hvr3KuEw20VOm\nrjushPcCi0MSUAu3dBEKZAQ9S54ZnkqM2NdnTpamrBgGkRizIKlRPRhRxcek9w6F\nRVrH1pK80QKBgQDj9RHiQ11S2tIDZTxb+z7Mec6A0F9QwQxVL0TvMVtPnEF/wPJG\ngLnZ1modRvnJ8z31l/wvz1WljqDJbLUc42c2AVktJ6gRNXVc3KkjRTV8cFJ2x6zJ\nuDZNKEGuj0Wapqik3/LF+Lq2TAX2BZ+Ixj4QHbYOERDwDUGcgI9bGLVWJwKBgDXO\naY2o07zv81arrs7K4z6o6YQa06BV6uGPppUgVTjDBvNkKhCrI8Hjt+/6MOyqIOPt\nuSYwKsK+sep0NfWT+R8mPwKHP44YQZYOb42G5lksXWJQhH6UOmfPvt8T9xiWQOnI\nblFP1QcPhAScHCGf0iI6ACHzlVqEaDxLKyeBC62xAoGAeEkLjdZkCEB8MjhngLtH\nrFRXfNo2gzyRplwrop4u+QXEzWG8shYoDR5Gn/XyybZZLbIC5249fUs02XgBavhF\nkpl+/Z2yT2UaPC/RvF5Tj7qp70uQDtUTXUPQeWnFtt5v/36pTB7+WtlviEGGtvhz\n3A4at45zfQMWpSmeC52eFZs=\n-----END PRIVATE KEY-----\n",
+  "client_email": "giz-941@giz-gujarat.iam.gserviceaccount.com",
+  "client_id": "102739548274737323951",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/giz-941%40giz-gujarat.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
