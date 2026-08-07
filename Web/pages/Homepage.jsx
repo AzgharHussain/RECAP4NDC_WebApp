@@ -18,7 +18,7 @@ import fm from "../assets/f-m.png";
 import nv from "../assets/n-v.png";
 import gisfylogo from "../assets/Gisfylogo.png";
 import cb from "../assets/cb.png";
-import heroVideo from "../assets/download.mp4";
+import heroVideo from "../assets/homesectionvideo.mp4";
 import { FiArrowRight, FiChevronUp, FiChevronDown, FiRadio, FiMap, FiAlertTriangle, FiUsers } from "react-icons/fi";
 
 // === FAQ DATA (static, no language dependency) ===
