@@ -1,0 +1,333 @@
+100644 blob 62cd99592bf29611d2ab5514bc6ff916e41ffc3e    6636	api/scheduler/ndviNotificationScheduler.js
+100644 blob 51fa07973fc5b65bee05b3a37f107ff5e35ff6c4     132	Web/assets/hdquality 1.png
+100644 blob 23e8b2a7d210688733a588ad02d864343d0fef27    3244	Web/context/AccessibilityContext.jsx
+100644 blob 4c5795632778e90e5c4f7af7341b29e12d5fd395   40864	api/routers/ndviRouter.js
+100644 blob 741144b4f91eadcf2d210f4b7b0a887caa5fd281     131	Incidentimage/bd2.jpg
+100644 blob 4a191e16fe0ae4fad032db5b317c2ae52b5fcc52     178	api/config/db.js
+100644 blob 8703043311ca1177aca333a2662eef74e13f9ee0   63701	Web/assets/fonts/gravure-4.woff2
+100644 blob 01df9aa4c4f29b27c29f24c76bad8cf78e1f70e2     129	Web/assets/logos4.png
+100644 blob d81d127bfee3dee785e4745d5443e360215f5c1f   31593	api/RECAP4NDC_API_Postman_Collection.json
+100644 blob 1a3824230a5399be4506cbc7ae483ea351cf59a1     129	Incidentimage/Fire.png
+100644 blob c533a9590bcf968b1e07d5b308f181093f4f4895     183	api/config/r_quire.js
+100644 blob 2bddc0a72e3c897e65dd3ec51e16b6afcc9f095e     131	Web/assets/p2.jpg
+100644 blob f33272d240fda1dafebd0a40bb1ddf242b7efd71   11421	api/routers/mon2.js
+100644 blob 9d51d14256003397f15ec285344ad25e656eef8c     189	api/config/ndvidatabase.js
+100644 blob 2a53dd4a00f0d09a0744ab16d21583aeb70ed92f   17516	Web/pages/Login.jsx
+100644 blob 4c4c5e9d456f8974f55e2347c0194258cc4ed871     366	Web/pages/RouterMap.css
+100644 blob 0437a728ab0cb6ab46a91050f496f1ad78aed2b8   16784	Web/pages/Legend.jsx
+100644 blob 5aec4f44c2eb7eb6467022ee6a220b6d8c9ec7c5     732	Web/web.config
+100644 blob c890cff1eac9d00ad79dae5fb6c75ed5857ebb7b    2434	Web/package.json
+100644 blob c0a63f6c4860341174c3e24c8b9f58d7912e9402     129	Web/assets/Legend.png
+100644 blob 4ad2804e408dca58eda09ed73f9a8644e28e7c16   18616	Web/pages/PrivacyPolicy.jsx
+100644 blob a053d4b4f995de0162d072afd32994f0debe6ca6     131	Web/assets/headerlogo.jpg
+100644 blob 9c8a25b59bb6b265649c69e986b1934bb29e4ae8  388131	api/package-lock.json
+100644 blob 70fe59367954f21b420002ebbc3ed246397e4999     130	Web/assets/Logogiz.png
+100644 blob bb8c969f41ee45517b762a3e35b7fedbf9fe3682     129	Web/assets/Eyeclose.png
+100644 blob 3020174f8ec6d04fa2905fafb089e1c7de7e3603 3379567	api/routers/output_geojson/ndvi_poly_jan_2025_poly_75.geojson
+100644 blob 848d84061fc9f4111e6f4865f3655b0389be1e1a  444739	Web/package-lock.json
+100644 blob b0a00923b7ac52a1d4c4fd3212329a89f25e0bbe     130	Web/assets/forest logo.png
+100644 blob bb85c92516de0482c610fa43ae5a32a0242e0b92    2367	api/routers/recap4ndc-ad332-d882dbe98b5e.json
+100644 blob bb85c92516de0482c610fa43ae5a32a0242e0b92    2367	api/recap4ndc-ad332-d882dbe98b5e.json
+100644 blob 6a9c64628533bce229ddc40df9fecbbd085dede2   36537	api/routers/dropdownapis.js
+100644 blob 03731e518c7f92fbb0bfada1198340e439ade919     132	Web/assets/homesectionvideo.mp4
+100644 blob 9bed1b0428de65cef04298f960aa52f8f83de809     129	Web/assets/Petrolling.png
+100644 blob a58aa8ac54b7009798fae3dc7e96c042761de388     131	Web/assets/coupe1.png
+100644 blob 4b74899324e39ac30cb113f3026f59bd639dd943     131	Incidentimage/1000007953.jpg
+100644 blob 9549d26225ec5cacecbef4ebece0f66ef92dcc43    3245	api/middlewares/auditMiddleware.js
+100644 blob a5f794ac5c17cc7924211e4cdca0d520eabdc5b3     130	ER_Diagram and Flow chart/WP 3/GET_Coupe_data_Images.png
+100644 blob dd4ab9c5774b7056936cb350311347ebd4adc3ee    8825	Web/pages/search.jsx
+100644 blob b7c7fe5f53687a8e5d7b90b9dd95151fbc0dc2e7     132	Web/assets/backimage.jpg
+100644 blob 668102daeb3dd32945ab183af6573e9d2dcdbd26     131	Web/assets/logos3.png
+100644 blob 2805aaddca4279b20e8252e4dcf99680f05daced     131	ER_Diagram and Flow chart/WP 3/ER Diagram coupe.png
+100644 blob 2df7a48f6fbaf539486e836b2f9a7b425abda78c     131	Web/assets/logo2.png
+100644 blob a7b5b87f24525c8941acdb90514bf63105bd7e58   32921	soap-proxy/package-lock.json
+100644 blob 9aa348631ba6760e003d0721125fd09bba4d7760     132	Web/assets/Logo.png
+100644 blob 7237753b1fe08c31e96701d5756517e87c6d7416    3778	Web/App.jsx
+100644 blob 825858654b1cc7213759e0267dca16957c4d660f   20251	recapfixxing/run_all_coupes_monthly_onefile.js
+100644 blob 6b3fd6bc453241793099d1599ec30a77617d5f24     128	Web/assets/Forest.png
+100644 blob 2423ccba626e7c84002449430ae34267a31d48d0    5630	Web/pages/CoupeObservation.css
+100644 blob 7d4e291a16cf0ffad838bfd8ba01e40a6e5d3d99    8832	api/scripts/migrate-images-to-mongo.js
+100644 blob c290d3fa83f802a82241ca2b396bfbecb8fd37e9     131	Web/assets/p-m.png
+100644 blob b692f05b1edb09fe057f0d6cd62585d2159d297e   11856	Web/pages/EditBoundaryModal.jsx
+100644 blob 08cf137c1065f1235358908f2010e401bccd1d11     132	Web/assets/Generated image.png
+100644 blob 08cf137c1065f1235358908f2010e401bccd1d11     132	Incidentimage/Generated image.png
+100644 blob 5dfd14574c7dbd5f40184e894e86ecb8c2bd134a   14278	Web/pages/AdminDashboard.css
+100644 blob ddd744bb89f82a5793c0864d2d9d0fff22acfdbf     128	Web/assets/Overview.png
+100644 blob cff8aed891a17be0852bafe609337f1c62ecf27c     717	api/routers/notifications_ndvi.js
+100644 blob 326b89ec62fa92a2d6b3076fa69458bfd61ceec1   31576	Web/pages/GeoDashboard.jsx
+100644 blob d249662f8dd8d99b5048797238040a33648ce978     130	Incidentimage/Illegal.png
+100644 blob 90e97e3645415403850dc37c41c16d85f0dcd735    3564	Web/pages/SearchControl.jsx
+100644 blob f83c49dfbb25ec050783e1fabd65434815dcc9fd   41500	Web/assets/fonts/gravure-4.woff
+100644 blob 33d8f8f1b4c1bf3fff3f29c4916ef61174fc9c2a     129	Web/assets/no-data.png
+100644 blob e64518140933cfb27a0222c937f22caa141c7daa     130	ER_Diagram and Flow chart/WP 3/Coupe_Layer_GET.png
+100644 blob a68fb101cd9224aa7bb6ca80356b5132c40c6f3f   24356	Web/assets/fonts/inter-v20-latin-700-1.woff2
+100644 blob 5fcb00acd020535d9736388c5ede20b5676c6eba     734	Web/context/LanguageContext.jsx
+100644 blob db2f38d7b384f8681cbea65081cff0940a5c6953     242	Web/config.js
+100644 blob a1c95a09143c2a8bf32e5886d4b24e79f28c679c    1298	Web/pages/DraggableZoomControl.jsx
+100644 blob 14a303e5ecf52440ed588dd1ec536d8b3a0c6753    4014	api/routers/userlocations.js
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391       0	git
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391       0	api/routers/admin.js
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391       0	api/routers/.node-xmlhttprequest-sync-300
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391       0	api/routers/.node-xmlhttprequest-sync-29636
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391       0	api/routers/.node-xmlhttprequest-sync-29400
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391       0	api/routers/.node-xmlhttprequest-sync-28208
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391       0	api/routers/.node-xmlhttprequest-sync-23240
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391       0	api/routers/.node-xmlhttprequest-sync-21536
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391       0	api/routers/.node-xmlhttprequest-sync-16692
+100644 blob f24caa275419c0c6cafb5bafc7a7cf09d3dc4b71    6125	Web/pages/Dashboard.css
+100644 blob fa05d74ba8df8ea1e6deda3b25c4681baf3c3e28   11877	Web/pages/RouterMap.jsx
+100644 blob 2dc832c8347d1a194d96ef59b48f89ffbb4c375e    8439	Web/components/AccessibilityWidget.css
+100644 blob 802fd57499bd232960b30598a822da13bd4c3047   12888	Web/layouts/DashboardLayoutAdmin.jsx
+100644 blob 4936a60bee52847bd834ddd4f2025d97e7ec2861     393	backend/package.json
+100644 blob 09c37c6149ef30d7e29c84a9f4e1c607d6ec15ac   16382	api/routers/mon.js
+100644 blob 395a0e8cee6bc387be4c4a71a3d0a9b9f82c0678   16076	Web/assets/fonts/staatliches-v15-latin-regular-1.woff2
+100644 blob 1ae8160d55f73e8fdae5801f411c7e71251bf409   15728	api/routers/notifications.js
+100644 blob 1fcad58be9e071a220b4f8309ce90ca7a58bf2d9     131	Incidentimage/1000000041.jpg
+100644 blob 5185bed4038aabd73d8f7f395ffa7e57df8bd937   13202	Web/pages/CoupeObservation.jsx
+100644 blob ee07ad94236b2931eaaadec8b3e2ccdf1bbbcdb7     992	Web/pages/printControl.css
+100644 blob 0049e093944a7f975be7de4b7ba382a847ebc65a    1447	soap-proxy/server.js
+100644 blob 55d4c73d41ca14b48727715c3c8a7a31153bbdeb     130	Incidentimage/bd3.jpg
+100644 blob 472442ff5204c47d9fb026214c3122eec2ebbb3b   11955	api/routers/forestLogin.js
+100644 blob 07aa367ad51a959052c048d7fdd0bc9f560bb9c5    3473	Web/pages/UploadCoupe.css
+100644 blob 798b640fd3d7dc5b0bc280e6c069a9ee668b8251     130	ER_Diagram and Flow chart/WP 4/View_Boundaries.png
+100644 blob 22dda77d50cf90c74c526e1bb618c8b693bb6b1d    1285	api/models/Image.js
+100644 blob 8e46dd1d33f0897cf7798dfe0bf2ee0aca3b5aeb    9795	Web/pages/WeatherLayers.jsx
+100644 blob 7ac66e6f68e7615996b27f5b72ca5e34bacb55f7  116854	package-lock.json
+100644 blob f99cfc4223e2e2e9ec56f6fad5d633d6b33b5516   21284	api/RECAP4NDC_Selected_APIs_Postman_Collection.json
+100644 blob 7c56850b8adf5c6fd48b8aa4c80fb6886b2b4eb5     131	Incidentimage/1000000052.jpg
+100644 blob 13825cd9127f8c8e63124b657222805cfe6b439e     131	Incidentimage/Screenshot-0919-130317.png
+100644 blob 1715e5e4bb7a9e0daba8199b7ff08b7d3b1b41eb    4024	Web/pages/MyCoups_dropdown.jsx
+100644 blob 6a16e0c2b7192452f4c2f0098c9e3508511b3d62     130	Incidentimage/Ganda.png
+100644 blob 6a16e0c2b7192452f4c2f0098c9e3508511b3d62     130	Incidentimage/Ganda 2.png
+100644 blob 8593361850049f8927557de7745ab97e8e9b2569     132	Web/assets/images3.png
+100644 blob 96db0056eceecf7c9354f178dc90ca91444b0f56     423	Web/main.jsx
+100644 blob 2d9a64cffd1bdb52dc5ea1a78c9a3fe7690afbec    2345	api/routers/private-key.json
+100644 blob 2d9a64cffd1bdb52dc5ea1a78c9a3fe7690afbec    2345	api/routers/giz-gujarat-7624cd92559c.json
+100644 blob 52310b05dfb0b5333ec51eae3ed8b7b5befaf76c     132	Web/assets/images1.png
+100644 blob 10536ec7a87625cbb093e4d6017b76a4aa0ae92a     131	Web/assets/re.png
+100644 blob 00001ae560bde2a4d0ddf2aefdbb4fc9c8fad5c1     131	Web/assets/logo3.png
+100644 blob 628df653248299dd4121fedd3985fda034fad230   23750	Web/pages/LayerTogglePanel.css
+100644 blob f12f7348cc56239bff3cf4c4c74078c84d7ac4e5     131	Web/assets/forest-m.png
+100644 blob 73a2256adc70ea4aa394cadc4105ce033d3aae44     130	Incidentimage/1000012699.jpg
+100644 blob cc143c1380fa7e3c60148074b71ad35dfe7aa760    9742	Web/pages/Login.css
+100644 blob 48f37ff35f4bf7b6dee041954eae20c3825aa07f    1472	api/package.json
+100644 blob 6da08bed991caa4331f7f2f7e181ddaff53a9ab9     130	ER_Diagram and Flow chart/WP 4/Overview_Dashboard.png
+100644 blob ffcddaaa1c5f33f9575f64e4de031f9eca6a94d6     129	Web/assets/react.svg
+100644 blob 70714cf93e011dacdc59c32bcb51ccf8fa9a90c3     129	Incidentimage/1000008028.jpg
+100644 blob f7fb7bbb8c060985c4b3370e20d5fc80c87a81ab     130	Incidentimage/1000007495.jpg
+100644 blob c3b66b5c3baaa7f9c403383cc3324044444a7c36    1397	Web/pages/IncidentLayer.jsx
+100644 blob af625dd04a697748b6b8f7c50809fc52d8ea6d77     130	Web/assets/image (2).png
+100644 blob a62e268ed64dc55664d88725f838b4ab76da6bb3     128	Web/assets/Upload.png
+100644 blob 722ed2e2e6fc138c0016d54b76cb5096c54a6ab6     131	Web/assets/incident-monitoring.png
+100644 blob 9748def39f4ed434459047b147e6b34bb91a689d    5513	api/routers/changendvi.js
+100644 blob 5212c5fb6ddc1500be1c9b3eb0464e235ffa60be     130	Incidentimage/GET API DRopdown.png
+100644 blob cc4d3f2cb1fcdf974312420cb723d2ff0b2a5f51      50	README.md
+100644 blob 587277afe208a87b8f4cd282fb9505d1bc3a5595    2679	Web/pages/Basemapgallery.jsx
+100644 blob 5ff467c34a6c52ec940783af03120217b37a4bbd   16376	Web/layouts/DashboardLayout.jsx
+100644 blob 2563c1dea669045f9cbdd4befb18841af69a45ee    1696	Web/pages/PrivacyPolicy.css
+100644 blob b1fe8f5917b012f958ba1b9583b4a22c78ea2e46     130	Web/assets/marker-icon-end.png
+100644 blob 7d528f6471672de87115642fe296c0c1877a2b79     131	Incidentimage/1000000037.jpg
+100644 blob 124255dce787884cde0f0dd256205e5fef0a1e8f   24051	Web/pages/ChangePassword.jsx
+100644 blob faab16cee84f778c0f16e1733da168e858ea1cf5     128	Web/assets/user.png
+100644 blob b404749d03e3929af256581f277c1cf38bba1cd0     131	Incidentimage/1000000034.jpg
+100644 blob ae772c5b09de5e2bb842551c8eb6b546cbba1aa7     266	recapfixxing/package.json
+100644 blob fb9dc4e5f2af7335a6bb4a2d1afdc4c063c9fe11     769	api/middlewares/sanitize.js
+100644 blob 0812a8367f4f46439db709caebfe966c7099fd84     131	Web/assets/coupe2.png
+100644 blob 9e60800100325d62dcbd7c8dfe79bc50ba59fb64     132	Web/assets/images6.png
+100644 blob a64e52c4061a4aa6164c7e8394c7872b2b29d6f0     130	ER_Diagram and Flow chart/WP 4/Geo Dashboard.png
+100644 blob 77f6431f273bbd3852d2c61c89bd785d1b39d23f    3572	Web/pages/search.css
+100644 blob 4840ec9266f624501f3d29d9ab83e7d0a5f9af73    3407	Web/pages/PatrollingLayer.jsx
+100644 blob c84c9b3e7af9119af6e0fcabf56e2b8538899c41   24762	Web/pages/AdminDashboard.jsx
+100644 blob d4dacea64d25612afa95d295b24b94e3a7c9927f     130	python-services.zip
+100644 blob c28561fa0e3992bf34562c89347c3b95b0b98a9f     131	Web/assets/Gisfylogo.png
+100644 blob 4efadf74757db9e3dac85807f0f89e29bdd97cf9    5543	Web/pages/NDVIDashboard.css
+100644 blob 06879e3f728768d2ecdcec969cd8cd45458973ab     131	Incidentimage/1000000036.jpg
+100644 blob f40aa2da5a952f3f4af7217a41b1c557c2297140     130	Web/assets/login-background1.png
+100644 blob da2cbd79f84e83aa95cd63751e8d1315e9f95b6a     128	Web/assets/incident.png
+100644 blob cfa5ef084606d1cba2ea0b3d8d71fa354db94fe6     807	Web/pages/LatLngDisplay.jsx
+100644 blob 71c1ec893c9976549d2ab33134923f2545894c2a     131	Web/assets/Group1.jpg
+100644 blob 0390b24e22a34b2894687a17002d36845009383e     128	Web/assets/search.png
+100644 blob 99756b61a510bd1d7eaa58bf7f4ba28f236934a2     131	Incidentimage/1000014512.jpg
+100644 blob e59f9c2e9dfbc1204a76e674b1c2e4a3e1092589    2385	api/routers/recap4ndc-add07-firebase-adminsdk-fbsvc-5a8fab9fe1_1967.json
+100644 blob d20e2ebe34890f580cd924dfb5fb03c3937923ce   26111	api/index.js
+100644 blob 0b848a846c9824f93ff35fb41aa5a21305a91654   16029	Web/layouts/DashboardLayout.css
+100644 blob 306f084f6470ba38b513b27daaae666582a90621   31644	Web/assets/fonts/gravur-condensed-regular.otf
+100644 blob 3310273727f3f083746dc1ccb43bb0a45ea8f7aa     132	Web/assets/Group.png
+100644 blob f059116813a9ff914afa175885009c6049b8eddc    4736	Web/pages/PrintControl.jsx
+100644 blob 320604dd53ae67902081f8e80a53c6305128e0e8    8122	backend/server.js
+100644 blob 6bc23bc3eb9b9c9ca3a87a7d56c09fa4aab8e061     130	Incidentimage/Screenshot 2025-07-25 233150.png
+100644 blob 1c72c9c601160bfaff3a431bf654929845d8cb76    8736	Web/pages/BeatPatrolCoverage.css
+100644 blob 313997fedf2b8de8b8ed1e1f6796b5891828afd6     131	Web/assets/Frame 100.jpg
+100644 blob 8c34e1c9886d5e776b40fb9449f46c07dbb8abbe    1366	Web/pages/ViewCoupe.jsx
+100644 blob 8a7a84f7a7632632328e2727b3e8a5526ee89192     130	Incidentimage/Screenshot 2025-08-01 113123.png
+100644 blob 1b08120ae0c1aa296de8a14e13e5bc4a9378907d     677	api/config/mongo.js
+100644 blob fae895b6b31782cf432cd1ae0699c2520f988b44    7279	Web/components/AccessibilityWidget.jsx
+100644 blob 7aa6fef8a509e4c28a3f84937fddae8218188388     130	Web/assets/cb.png
+100644 blob dc2ca36d382237d4a93550729067003d93c882dd     131	Web/assets/images4.png
+100644 blob fcb99030ef36682f465ee1f2abeaab2aefd87ce7     130	Incidentimage/1000012171.jpg
+100644 blob cf26c62c1333b1575e0dc95983e46a24396876ce   10764	Web/pages/searchmapview.jsx
+100644 blob 1024bdc0c08a0d14e6b181095e5d5d9c70085e07    1736	Web/pages/Basemapgallery.css
+100644 blob cabf8909b11bf3dcd6561d4aa28b9ac9ea5848c9     345	soap-proxy/package.json
+100644 blob 04f662fd00293be9499266340b4d59e51a584553    1146	api/middlewares/verifyJwt.js
+100644 blob 419e5eea542973a34543182a808ab07961a83add     130	Incidentimage/Elephant.png
+100644 blob c5ed8bca93da9f0eaf06a23e0826fe0b91b81d63    1640	api/middlewares/validateHttpHeaders.js
+100644 blob 36cfddf92bbb7f87eba7c081541d65b894181a18    2341	recapfixxing/giz-gujarat-638109c5420a.json
+100644 blob 3f00e5e39c191dfcbac9ad0723f0ae23324815ec    1228	Web/pages/AttributeInfo.css
+100644 blob 3736136252cfdf3c998e0c25537e1b5340381201   27786	python-services/process2.log
+100644 blob fa7fcab504c8587f628659099cee8ce85bb7f1a0     131	Incidentimage/Screenshot 2025-07-26 002906.png
+100644 blob 1e5cc8a45c788efa4c72fb34495d6f010f07e6cb    5579	Web/pages/Changepassword.css
+100644 blob 4ddbd6bf5e418c2a406ee9f6e23458555037db07   93173	Web/pages/Patrolling.jsx
+100644 blob 1d4bda9a1f7474cbd4ea01be6ac25fcc70a7d8bc    2533	python-services/test_db.py
+100644 blob 7367b0d693e215584de798578df102a894a7d0b4     130	Web/assets/GISFY Main LOGO.png
+100644 blob 382ebabdd8b1ab6d74bcb60deb9fa1fa18e7cb2e     815	api/middlewares/validateAlphaNumSpaceUnderscore.js
+100644 blob 7c6749d353c347e94c36927f41ac2d2feb77b1fa     131	Incidentimage/Screenshot 2025-08-21 184009.png
+100644 blob e09a6f5839cf9df91fa2ccd7531ad13177879771     129	Web/assets/Working.png
+100644 blob 907920becfc0566bd5a96fa1038b50c895878fa4    1162	python-services/install_deps.py
+100644 blob fae0aa1eaccab3cd966d2828669c7a0343f789c2    5228	Web/pages/NDVIMyCoups_dropdown.jsx
+100644 blob 5badf97a134653ff5c6a4065f4adf041f8376bb9     131	Web/assets/hero-3d-scene.png
+100644 blob 438ba0827d4a3dbdcbee0749239bae4deb8764b4     129	Web/assets/logos8.png
+100644 blob 53a52d58ae4e905cd16163c332de2c1f40676127     131	Incidentimage/1000018985.jpg
+100644 blob 878fe8734cc907560f4a2858221b8dcc08d749e2    1556	Web/pages/ViewCoupeBoundaries.css
+100644 blob cb79832b393d9169e895a178e0a65f2d3ae7447a    1829	api/config/database.js
+100644 blob 50b0d41fbb4f2d957eff543eb6bf23c788373aad     131	Web/assets/Geospacial.png
+100644 blob f2bc57f89afe3814422cfa52c4fbdde3488738ba      73	api/middlewares/tokenBlacklist.js
+100644 blob 30a3d784d1d871178fe32feb0e5d42586ce73423     128	Web/assets/field.png
+100644 blob 798c0ad95181750a954cf343838b4aea75172127     130	Incidentimage/house.png
+100644 blob b7b7ad7db2f2368d8609b6b669734c5450c71e4d    3381	Web/pages/Legend.css
+100644 blob bbcd545023dc276a7f7a645e2c647fcd3e26f95a     129	Web/assets/filter.png
+100644 blob 1d467d223e91ad8a5dcc39d43c4e67de65b6ec89    6222	Web/pages/RightSidebar.css
+100644 blob 54f0a595dd3c76344a980109e7517ed42416de93   24272	Web/assets/fonts/inter-v20-latin-500-1.woff2
+100644 blob 7b2175368541c0bf5ab72fcf8bf7ae255cc6ddbb     130	Incidentimage/Screenshot 2025-08-01 104124.png
+100644 blob 2d4576a2c159af8152a44a866f8778468b86ce2d     130	ER_Diagram and Flow chart/WP 4/Coupe Observation Log.png
+100644 blob 0904fc608f9439d9acc294bc5a5b6796e446c719     130	Web/assets/FOREST DEPT.jpg
+100644 blob 8587d860dcce36a727b168e72bc90fdb2266c3d0    1779	api/utils/auditLogger.js
+100644 blob 022384504697e09b48e35d7d5f69002dc1d6c2ef    1599	Web/pages/components/ProtectedRoute.jsx
+100644 blob 92f4f555dd49882352eb82c648c66de990f6ba70   27962	api/RECAP4NDC_Remaining_APIs_Postman_Collection.json
+100644 blob 70691c02e447af16bcc400891663ba31e5a6b3d1     132	Incidentimage/Rectangle 218.png
+100644 blob 6336d84ceb8dad17ed6063dada55f717d606ac7e     130	Web/assets/G2.jpg
+100644 blob 476d7b41f190d52618a1406452436f77e4c6a874     132	Web/assets/b1.jpg
+100644 blob 4549eed0c1e191606f4da4e0e8cab286b756a511  119912	Web/pages/LayerTogglePanel.jsx
+100644 blob ddd0009a537a647f3a8b7ef5ce243d83900694d0    9008	Web/pages/RightSidebar.jsx
+100644 blob 2ba25e050435176b98a7bff5ff629c7f04c68976     132	Web/assets/loginpage/image(6).png
+100644 blob 27d3807ba2f50d44765884b05eabd26afbc67fb5    3292	Web/pages/WeatherLayers.css
+100644 blob 1d1cc314969f71f7aad91f319992552ba6466346     131	Patrolimage/Screenshot 2025-08-26 162314.png
+100644 blob 65cd1f9c6b9009ab6c9f8bae43d1d7739fe64948     131	Incidentimage/p0dy8t3f.jpg
+100644 blob 2e706b568f1c113c8e807b0d02657b6533264885     130	ER_Diagram and Flow chart/WP 2/GET APIs FOR PATROLS, INCIDENTS,  INCIDENT_IMAGES and DROPDOWN.png
+100644 blob 3410dc9586016ca0ff282c3a361f92222b76308b     130	Web/assets/curve.png
+100644 blob ab11fe525e4b7c8467a590263dd7ebb9cf261ddf     131	Web/assets/images2.png
+100644 blob b1bf93867f16ab1d4c9de1c193284af57d7612f6     130	ER_Diagram and Flow chart/WP 4/Login.png
+100644 blob 73761797a9ba995d379c7d312f6eb01d5ea60fa2     129	Web/assets/Explor.png
+100644 blob 52539b1fd14ae455aa8e38ea15424e3889a60973     618	Web/components/LoadingSpinner.jsx
+100644 blob 554d3aa96c24fc34930fcec552a1cacd3ce600f7     131	Incidentimage/1000000051.jpg
+100644 blob a0bbdfeea1e02318703894824558dc1b8fa5ed65     130	Web/assets/giz.png
+100644 blob e0d65457d3e5623dbf6991701e4cc8d42f25de29    4542	api/routers/auditLogs.js
+100644 blob 87bf87342043adf24f482b0f94a9824d1b75c1d6     128	Web/assets/Vector.png
+100644 blob 3f224d21529d1ea7e767dc0b1855bfc53265b491   30037	recapfixxing/package-lock.json
+100644 blob adfa6e65aac0565c9d56c9264c39fd8aa6f5b433      80	Web/assets/fdjlgnkj.txt
+100644 blob a604d93085034dbb23fdba85795ec1cd9fa5a8f2     344	Web/index.html
+100644 blob 521ef1f7c69a037428713cd131221b22bcc5a1d7     129	Web/assets/logos10.png
+100644 blob 8e5cf3bbfdfd9c586f15108468924dfdcab59e87     131	Web/assets/loginpage/image(7).png
+100644 blob 68fcb7edb13ee100dd2cc817d4c1e3202375870f     132	Web/assets/forest-monitoring.png
+100644 blob 0d5c4fbe18976638c68cb1cf8073a83284756d32     598	python-services/process.log
+100644 blob b7d1160db1aa8873b0d73efcb2294a7407256900     131	Web/assets/Gujarath tree.jpg
+100644 blob c51803fd1e3bcd46545f971e4dc06e6595f54d78     131	Incidentimage/bg image comp 2.jpg
+100644 blob 372450813954fa5407941360a2e4d31044d54604     130	Web/assets/b2.jpg
+100644 blob 2024463b09b062801b8332cb6fd1123fec151feb     129	Web/assets/logos2.png
+100644 blob 9c7dc83923aba64026984755b7525c24e465015f     130	Web/assets/vegetation.jpg
+100644 blob e351946a1474a30ff6222dfdd59be1047d850025     774	python-services/check_auth.py
+100644 blob c5674dab8f2f52729f1fc6339b8e155ab424e3bc     493	.vscode/launch.json
+100644 blob 84d1f4e58396250454aaa9d6fb7fe107c494df64  128931	Web/pages/NDVIDashboard.jsx
+100644 blob d57e548f2493bfeecc06c66ba2783a0a94c4d54a     130	ER_Diagram and Flow chart/WP 3/Coupe_POST.png
+100644 blob 6adbbbfc3d2bc19ced12570d729e20bdbfb4d520     128	Web/assets/Geo.png
+100644 blob 7ef10b5fd48d925657827747cc0285214bd4c0a4     172	package.json
+100644 blob 53f0dbfee3767dc050bc0bad19ebb07eafd4bd72   11837	python-services/ser.py
+100644 blob f5d2830203dd8f45efa7c33bf09e555394f47f9f     130	Incidentimage/sddefault.jpg
+100644 blob 4fc0b7d5c9c0627a1a7ad9ed3efe707a08947f04     805	api/middlewares/errorHandler.js
+100644 blob cdb88c03b4d317036f474587990cb307d7947efb     131	Incidentimage/1000000044.jpg
+100644 blob cc607635f2c6d89b950eb48ea2eb69934a347cf7     131	Incidentimage/1000015280.jpg
+100644 blob f470cc31e607ce83ee397cb52e107a9a4ae459f1     128	Web/assets/Patrolling.png
+100644 blob ae886910e45d56e75debaec3916866b6fcf45965     130	Incidentimage/1000007496.jpg
+100644 blob 6c962c02bfc549ec53a034184bf5f7634404581c     130	Web/assets/logos1.png
+100644 blob 7de893a7a81c434582ef2a7f12e5f06415f44a90     485	Web/pages/LatLngDisplay.css
+100644 blob f15b025d666269fb07daf0263e54231481e4289c   23664	Web/assets/fonts/inter-v20-latin-regular-1.woff2
+100644 blob 016c7dc1a36f07d4f66689ffbdb6ea991e43f2a0     132	Web/assets/download.mp4
+100644 blob e638cad97c7c05cd332d1ba601a43bd26053dfcf     129	Web/assets/Boundry.png
+100644 blob b5d76078d25494970797d165dd20bc6d9de3dba4   12373	Web/pages/Incident.jsx
+100644 blob ab4a16922fa147aaeb194d6dddf647c2a523d82f     669	.gitattributes
+100644 blob cf375f3d47090387cec589affe4ea86c1ae3ca24     133	Web/assets/login-background.jpg
+100644 blob c05dec951163d72bf40ffc95846bf86f8d53b4ea   37649	Web/pages/Homepage.jsx
+100644 blob 810f0e3e547d5a652e2ed6925eed979404239b9c     130	Incidentimage/Screenshot 2025-08-01 113117.png
+100644 blob 1f226d6ce810394a2ca70755cdf0ac75163396d8   18629	api/routers/beat-patrol-coverage.js
+100644 blob cd3d0f380fad14e6195e8f31aa0fcc5328338178     130	Incidentimage/1000007493.jpg
+100644 blob a1f9535be7db9e45aabde1bb85c102966d53672a     130	ER_Diagram and Flow chart/WP 4/Incident.png
+100644 blob 33213586daeb615f1e44f01f0e9fdf6326935adb   14982	api/server.js
+100644 blob 2115840920df483d77e16fabd149e8841fc340ba     548	api/middlewares/cacheControl.js
+100644 blob 7b3c078ea16e9fef83d38663b7fde14675c33b7e    9365	api/coupe.js
+100644 blob 6bab3a7e7b6cde95b79b993d8c6bc438c6d33122     131	Web/assets/logo1.png
+100644 blob 6830cd952169e9409389976c5efb10c9cad3203d     130	ER_Diagram and Flow chart/WP 2/POST  API FOR PATROLS, INCIDENTS, and INCIDENT_IMAGES.png
+100644 blob e412894d1f5a01bed6150810963a0e3a53b30467    5282	Web/pages/EditBoundaryModal.css
+100644 blob 7fa43a4593019b3c3deea85ff509ac8aef82fcad   11385	Web/pages/UploadCoupe.jsx
+100644 blob 66c24926245fb6bf31844d4b2ba96f352fa2f1e0     130	Incidentimage/climate.png
+100644 blob 1ea4a17854537b45facb96e5cf24931f6e02dc9d     129	Web/assets/excel.png
+100644 blob 2a5702d8dd26f75400cdb55e1efa13ee10d2d23e     129	Web/assets/image (1).png
+100644 blob 89860c9a4fb447ba06a0e132b99ef518eee2cbba    2894	api/models/AuditLog.js
+100644 blob c79602ea65632e98c5478c3c2bc719823232c608     131	Web/assets/logo-giz.png
+100644 blob de508615b7b76e0d718237d75adbf2cb65f2bd1c     131	Incidentimage/Screenshot 2025-07-26 001918.png
+100644 blob 92938848a13bc6dff3121cfb572af8cfe202b1ab     130	Web/assets/Moef.jpg
+100644 blob 83250a09c1d3298c64ac86c8fadafeea3c12a72c     372	Web/.gitignore
+100644 blob 83250a09c1d3298c64ac86c8fadafeea3c12a72c     372	backend/.gitignore
+100644 blob 83250a09c1d3298c64ac86c8fadafeea3c12a72c     372	api/.gitignore
+100644 blob 24f19de01ade466ab95883ef521896e0d74274f4     334	api/api.js
+100644 blob 4f27a496a63b40d80485f263c0e412ad4ce266bb     129	Web/assets/Explor1.png
+100644 blob 30749b9afe89c87de45aca9b764257b21b82605d    1026	api/scripts/backfill-image-ids.js
+100644 blob 80266844e8df0da934d28b434f7f2e4f2c025a33    7641	api/routers/forest-login.js
+100644 blob c94aae879be2a3a1a37f43993e1ed6c988c2481a    2018	Web/pages/hooks/useSessionMonitor.jsx
+100644 blob 3d6ae90b2b56a975cdb1518723b7266bf0223167     128	Web/assets/Analyze_patroll.png
+100644 blob ba2a6c013c3059e4256ab303ebb1d55ca2621e9c     104	.vscode/settings.json
+100644 blob 16caf96266b6e41fb68da3750c9e04d461f21174     129	Web/assets/logos7.png
+100644 blob 7dc9151c03a31ed66dc485083a67240466620bf4   28038	api/routers/patrolRoutes.js
+100644 blob c2638b185a0a68cea76301ee85ac7e4170720730     130	ER_Diagram and Flow chart/WP 4/Upload_Boundaries.png
+100644 blob d733cb245bd122a2301fe016286ad471e781fbda     132	Web/assets/p3.jpg
+100644 blob 05ac7870c2fa06176f68678d9cb7f47b6011f15d     131	Web/assets/images5.png
+100644 blob 51bd8c04ac7348a8c0905a9c92b6bb412441ea68   49924	api/routers/gisupload.js
+100644 blob e98246e1f98299ba1400968ad671b0a4ff31e8bc     130	Web/assets/logos9.png
+100644 blob d32f52be260d4fdaafb8c3f3d6cd766eaff1e5cc     130	Incidentimage/Screenshot 2025-07-28 000811.png
+100644 blob 37451a444bd0353031fe6e6cb6bde98acd91e0c7     130	Web/assets/logos11.png
+100644 blob 6f3a99eb8406f3080da1aa255fbf75d4c141cec9    1306	Web/index.css
+100644 blob 3880705ea6c1c25c8ad4e37150fe3e504981c495    1735	api/routers/ndvichange.js
+100644 blob d44b9486679c2c88e81d6d4e3ad6471b0df1c294  155276	Web/assets/fonts/material-icons-outlined-v110-latin-regular-1.woff2
+100644 blob 51f51e603e31e525ef0036f92f222f8f3a31949c    6614	api/routers/publishlayer.js
+100644 blob 1df4dcab008296e0076568a939d0fd7605518ef7     130	ER_Diagram and Flow chart/WP 4/Patrollimg.png
+100644 blob 55d1ab784bd71659a756be5152ad152ca6d18aa2     207	python-services/checkpoint_all_coupes.json
+100644 blob 0696ec7eade7f56b8b4a4c9a99f2969449518624     131	Web/assets/p1.jpg
+100644 blob 6f0e5c6080d8c8561db5162e0d47ea3363a1849f   17766	Web/pages/UploadPatrolBoundary.jsx
+100644 blob 3f7fa7af4ad5f5f3135ae03c0e24ba5177415fe5     131	ER_Diagram and Flow chart/WP 2/Patrolling and Incidents_NEW ER Diagram DBMS_30-08-2025.png
+100644 blob 7766fc6ea532484ae4e72d01a00d3f50e8315782    5274	Web/App.css
+100644 blob 7a6f151c3a54fbc00a8a8f8f54504c3faab15219     130	Incidentimage/1000008307.jpg
+100644 blob e5a7303d634c4adf26ad59ac5020ae1b0a61504f     131	Incidentimage/1000005091.jpg
+100644 blob 4686fad832c1daeb7bf2397847563c7a90c14486     130	Web/assets/image (3).png
+100644 blob 1ccd15f00a2328a5743c4c4798336868c4914170     130	Web/assets/f-m.png
+100644 blob 278e18be5349c913d56af19963a007088cf12731   32725	python-services/degradation_analysis.py
+100644 blob 597327513ec152a7b4c32a4e768f728af8a11aa5     129	Web/assets/logos6.png
+100644 blob 01958e91a3b76e8964a9d9286056475b57811700   27499	Web/pages/GeoDashboard.css
+100644 blob 276b5db551e1590456904e2e92f4bb88cc110434     133	Web/assets/b3.png
+100644 blob 7a80194da25d0184f54e157712ea8a6500a100dc    2690	Web/pages/AttributeInformation.jsx
+100644 blob 99e2b2901a87dcfa6701757e37491f7cfb80f96e   21357	api/routers/gis-upload1.js
+100644 blob 2dfe376565ec5a7165346eedf9d091853830f438   22651	api/index1.js
+100644 blob 35984a5ffdd68199e8a87f594f2365924520e951    9863	Web/pages/Homepage.css
+100644 blob 257164f8eb310556efa065f27be59896ef10e6a1     131	Web/assets/tree.jpg
+100644 blob bf5fa363252e11190ee8a96cb0a4b2f5ecd0e3be    1772	recapfixxing/logs/ndvi_2026-07-01_2026-08-07T07-25-33-687Z.log
+100644 blob ade284ce058ee0b1517426b01f9e41a9ad60df50     131	Incidentimage/245c56c80e4b292301c672e410d7ffc75af18515.jpg
+100644 blob 95831ddb79b86debcd59275ccfab697a5280cb3e    3494	Web/vite.config.js
+100644 blob 260d4ca3c7165fe529f732897af23fae2a40c634     129	Web/assets/marker-icon.png
+100644 blob ba6086c8a04ee8be179bc95b6c988c0d43a0b3f5     130	Web/assets/logos5.png
+100644 blob 0d6d1de5f371642b74211620b5cc9a1e65b09a57      91	.gitignore
+100644 blob ffd332f50be21746a9884b0725132550f7a08758     131	Incidentimage/1000018986.jpg
+100644 blob 8a16e1406fff8ce7876eeeb340a772a148a08650   54664	Web/pages/BeatPatrolCoverage.jsx
+100644 blob 3d15fff541a2f044036493030e8b9c0b03f0825f     131	Web/assets/n-v.png
+100644 blob f4fe8eedf1fa0ddacce7fc099bd9d439fd404fe8   34667	Web/pages/Dashboard.jsx
+100644 blob 1cd22e992bde595929683c29d6e51e5287804aaf   49549	backend/package-lock.json
+100644 blob 4ca41137fab46673dbd62fed2931a3535e2032de    1080	Web/fonts.css
+100644 blob a3852b165160d22ca9eaac9bcf2389ace3002d30   18831	Web/pages/dropdown.jsx
+100644 blob 97157512a21186d5c49ba3d1d8b9b33d8420193e   14710	Web/pages/PatrolIncidentLogs.css
+100644 blob 4b5c4775ab32ded9edd61b99695251cb27001173     132	Web/assets/Background.png
