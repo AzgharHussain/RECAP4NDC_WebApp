@@ -1,31 +1,43 @@
+/**
+ * database.js — SINGLE PostgreSQL connection for the entire application.
+ *
+ * All other config files (db.js, ndvidatabase.js, r_quire.js) re-export
+ * from this file so that only ONE connection pool is used throughout.
+ *
+ * Configure via .env:
+ *   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_SSL, NODE_ENV
+ */
+
+require('dotenv').config();
 const { Sequelize } = require('sequelize');
 
 const isProduction = process.env.NODE_ENV === 'production';
 const sslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME || 'Recap4NDC',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASSWORD || 'P$DB@25%$#!26',
+  process.env.DB_NAME     || 'Recap4NDC',
+  process.env.DB_USER     || 'postgres',
+  process.env.DB_PASSWORD || '',
   {
-    host: process.env.DB_HOST || '68.178.167.216',
-    port: Number(process.env.DB_PORT || 5432),
+    host:    process.env.DB_HOST || 'localhost',
+    port:    Number(process.env.DB_PORT || 5432),
     dialect: 'postgres',
     logging: isProduction ? false : console.log,
     dialectOptions: sslEnabled
       ? {
           ssl: {
             require: true,
-            rejectUnauthorized: String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false',
+            rejectUnauthorized:
+              String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false',
           },
         }
       : {},
     pool: {
-      max: Number(process.env.DB_POOL_MAX || 20),
-      min: Number(process.env.DB_POOL_MIN || 0),
+      max:     Number(process.env.DB_POOL_MAX     || 20),
+      min:     Number(process.env.DB_POOL_MIN     || 0),
       acquire: Number(process.env.DB_POOL_ACQUIRE || 30000),
-      idle: Number(process.env.DB_POOL_IDLE || 10000),
-      evict: Number(process.env.DB_POOL_EVICT || 10000),
+      idle:    Number(process.env.DB_POOL_IDLE    || 10000),
+      evict:   Number(process.env.DB_POOL_EVICT   || 10000),
     },
     benchmark: !isProduction,
   }

@@ -1,36 +1,5 @@
-// config/ndvidatabase.js
-const { Sequelize } = require('sequelize');
-
-const DB_NAME = 'Recap4NDC_Query';
-const DB_USER = 'postgres';
-const DB_PASS = 'pass@123';
-const DB_HOST = '68.178.167.216';
-const DB_PORT = 5435;
-
-// Create Sequelize instance
-const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
-  host: DB_HOST,
-  port: DB_PORT,
-  dialect: 'postgres',
-  logging: console.log, // Optional: remove or set to false for production
-  pool: {
-    max: 20,
-    min: 2,
-    acquire: 30000,
-    idle: 10000
-  }
-});
-
-// Test connection
-const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Database connection established successfully.');
-    return true;
-  } catch (error) {
-    console.error('❌ Unable to connect to the database:', error);
-    return false;
-  }
-};
-
-module.exports = { sequelize, testConnection };
+/**
+ * r_quire.js — Re-exports from the single shared database connection.
+ * All configuration is managed in config/database.js via .env
+ */
+module.exports = require('./database');

@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://venkateshgisfy_db_user:vKPhqG5oDfls92BS@cluster0.xvrevhx.mongodb.net/recap4ndc_images?retryWrites=true&w=majority&appName=Cluster0';
+// Use MONGO_URI from environment (set in .env for both dev and production)
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+  console.error('❌ MONGO_URI environment variable is not set. Please check your .env file.');
+  process.exit(1);
+}
 
 const connectMongo = async () => {
   try {
