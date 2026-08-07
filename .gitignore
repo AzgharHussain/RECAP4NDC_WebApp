@@ -4,3 +4,4 @@ Incidentimage/
 *.log 
 .env 
 .DS_Store 
+node_modules/ 
