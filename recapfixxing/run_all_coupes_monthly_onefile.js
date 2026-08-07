@@ -1,3 +1,5 @@
+require('dotenv').config({ path: path.join(__dirname, '..', 'api', '.env') });
+
 const ee = require('@google/earthengine');
 const { Client } = require('pg');
 const { execFileSync } = require('child_process');
@@ -5,21 +7,32 @@ const https = require('https');
 const path = require('path');
 const fs = require('fs');
 
-const DB_NAME = 'Recap4NDC_Query';
-const DB_USER = 'postgres';
-const DB_PASS = 'pass@123';
-const DB_HOST = '68.178.167.216';
-const DB_PORT = 5435;
-const SERVICE_ACCOUNT_KEY = 'D:/recapfixxing/giz-gujarat-638109c5420a.json';
-const SCALE = Number(process.env.SCALE || 10);
+// ── Database ──────────────────────────────────────────────────────────────────
+// Reads from the shared .env in api/.env  (same file used by the API server).
+// Override any value by setting the matching env variable before running.
+const DB_NAME = process.env.DB_NAME     || 'RECAP4NDC';
+const DB_USER = process.env.DB_USER     || 'recap4ndc_postgres';
+const DB_PASS = process.env.DB_PASSWORD || '';
+const DB_HOST = process.env.DB_HOST     || 'gsdc-psql.gujarat.gov.in';
+const DB_PORT = Number(process.env.DB_PORT || 9999);
+
+// ── Earth Engine service-account key ─────────────────────────────────────────
+const SERVICE_ACCOUNT_KEY = process.env.EE_SERVICE_ACCOUNT_KEY
+  || path.join(__dirname, 'giz-gujarat-638109c5420a.json');
+
+// ── Computation parameters ────────────────────────────────────────────────────
+const SCALE            = Number(process.env.SCALE            || 10);
 const CHANGE_THRESHOLD = Number(process.env.CHANGE_THRESHOLD || 0.3);
-const GEOSERVER_URL = 'https://gisfy.co.in:8445/geoserver';
-const GEOSERVER_USER = 'admin';
-const GEOSERVER_PASSWORD = 'Geo@$ecure#%26';
-const GEOSERVER_WORKSPACE = 'Recap4NDC';
-const GEOSERVER_STORE = 'Recap4NDC_Query';
-const GEOSERVER_STYLE_WORKSPACE = 'Recap4NDC_New';
-const GEOSERVER_STYLE = 'NDVI_CHANGE_NEW2222';
+
+// ── GeoServer ─────────────────────────────────────────────────────────────────
+const GEOSERVER_URL             = process.env.GEOSERVER_URL             || 'http://localhost:8080/geoserver';
+const GEOSERVER_USER            = process.env.GEOSERVER_USER            || 'admin';
+const GEOSERVER_PASSWORD        = process.env.GEOSERVER_PASSWORD        || 'geoserver';
+const GEOSERVER_WORKSPACE       = process.env.GEOSERVER_WORKSPACE       || 'Recap4NDC';
+const GEOSERVER_STORE           = process.env.GEOSERVER_STORE           || 'Recap4NDC_Query';
+const GEOSERVER_STYLE_WORKSPACE = process.env.GEOSERVER_STYLE_WORKSPACE || 'Recap4NDC_New';
+const GEOSERVER_STYLE           = process.env.GEOSERVER_STYLE           || 'NDVI_CHANGE_NEW2222';
+
 const TASK_NAME = 'Recap NDVI Monthly Coupe Computation';
 
 const COUPES = [

@@ -8,22 +8,22 @@ const router = express.Router();
 
 // ========== CONFIGURATION ==========
 const pgConfig = {
-  user: "postgres",
-  host: "68.178.167.216",
-  database: "Recap4NDC",
-  password: "pass@123",
-  port: 5432,
+  user:     process.env.DB_USER     || 'recap4ndc_postgres',
+  host:     process.env.DB_HOST     || 'gsdc-psql.gujarat.gov.in',
+  database: process.env.DB_NAME     || 'RECAP4NDC',
+  password: process.env.DB_PASSWORD || '',
+  port:     Number(process.env.DB_PORT || 9999),
 };
 
 const geoserver = {
-  url: "https://gisfy.co.in:8445/geoserver/rest",
-  workspace: "cite",
-  datastore: "Recap4NDC_DB",
+  url:       process.env.GEOSERVER_URL       || 'http://localhost:8080/geoserver/rest',
+  workspace: process.env.GEOSERVER_WORKSPACE || 'cite',
+  datastore: process.env.GEOSERVER_STORE     || 'Recap4NDC_DB',
   auth: {
-    username: "admin",
-    password: "Geo@$ecure#%26",
+    username: process.env.GEOSERVER_USER     || 'admin',
+    password: process.env.GEOSERVER_PASSWORD || 'geoserver',
   },
-  sld: "Arvalli_Coupe",
+  sld: process.env.GEOSERVER_SLD || 'Arvalli_Coupe',
 };
 
 const qgisPath = `"C:\\Program Files\\QGIS 3.44.2\\bin\\python-qgis.bat"`;
