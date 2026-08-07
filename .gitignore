@@ -5,3 +5,4 @@ Incidentimage/
 .env 
 .DS_Store 
 node_modules/ 
+geoserver/ 
