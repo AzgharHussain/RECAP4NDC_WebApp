@@ -25,21 +25,21 @@ const upload = multer({ dest: "uploads/" });
 // 🔧 PostgreSQL Pool Configuration
 // ============================
 const pool = new Pool({
-  user: "postgres",
-  host: "68.178.167.216",
-  database: "Recap4NDC",
-  password: "pass@123",
-  port: 5432,
+  user:     process.env.DB_USER     || 'recap4ndc_postgres',
+  host:     process.env.DB_HOST     || 'gsdc-psql.gujarat.gov.in',
+  database: process.env.DB_NAME     || 'RECAP4NDC',
+  password: process.env.DB_PASSWORD || '',
+  port:     Number(process.env.DB_PORT || 9999),
 });
 
 // ============================
 // 🌍 GeoServer Configuration
 // ============================
-const GEOSERVER_URL = "https://gisfy.co.in:8445/geoserver/rest";
-const WORKSPACE = "cite";
-const DATASTORE = "Recap4NDC_DB"; // Must exactly match your GeoServer datastore name
-const GEOSERVER_USER = "admin";
-const GEOSERVER_PASS = "geoserver";
+const GEOSERVER_URL  = process.env.GEOSERVER_URL       || 'http://localhost:8080/geoserver/rest';
+const WORKSPACE      = process.env.GEOSERVER_WORKSPACE  || 'cite';
+const DATASTORE      = process.env.GEOSERVER_STORE      || 'Recap4NDC_DB'; // Must exactly match your GeoServer datastore name
+const GEOSERVER_USER = process.env.GEOSERVER_USER       || 'admin';
+const GEOSERVER_PASS = process.env.GEOSERVER_PASSWORD   || 'geoserver';
 
 // ============================
 // 🚀 Upload API Endpoint

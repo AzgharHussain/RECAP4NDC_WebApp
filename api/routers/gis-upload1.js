@@ -16,16 +16,16 @@ const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // --- DB & GEOSERVER CONFIG ---
-const PG_HOST = "68.178.167.216";
-const PG_USER = "postgres";
-const PG_PASS = "P$DB@25%$#!26";
-const PG_DB = "Recap4NDC_new";
+const PG_HOST = process.env.DB_HOST     || 'gsdc-psql.gujarat.gov.in';
+const PG_USER = process.env.DB_USER     || 'recap4ndc_postgres';
+const PG_PASS = process.env.DB_PASSWORD || '';
+const PG_DB   = process.env.DB_NAME     || 'RECAP4NDC';
 
-const GEOSERVER_URL = "https://gisfy.co.in:8445/geoserver";
-const GEOSERVER_USER = "admin";
-const GEOSERVER_PASS = "geoserver";
-const WORKSPACE = "Recap4NDC";
-const DATASTORE = "Recap4NDC_New";
+const GEOSERVER_URL  = process.env.GEOSERVER_URL       || 'http://localhost:8080/geoserver';
+const GEOSERVER_USER = process.env.GEOSERVER_USER       || 'admin';
+const GEOSERVER_PASS = process.env.GEOSERVER_PASSWORD   || 'geoserver';
+const WORKSPACE      = process.env.GEOSERVER_WORKSPACE  || 'Recap4NDC';
+const DATASTORE      = process.env.GEOSERVER_STORE      || 'Recap4NDC_New';
 // --------------------------------
 
 // Multer storage
