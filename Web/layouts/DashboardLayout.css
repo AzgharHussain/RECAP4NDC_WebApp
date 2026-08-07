@@ -253,6 +253,18 @@ background: rgb(255, 255, 255);
   box-shadow: none !important;
 }
 
+.portal-header h2 {
+  letter-spacing: 2px;
+  margin: 0;
+  font-size: clamp(12px, 1.3vw, 20px);
+}
+
+.portal-header h2 b {
+  font-family: "Arial", sans-serif;
+  font-weight: 700;
+}
+
+
 
 
 a{

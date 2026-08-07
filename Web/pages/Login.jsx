@@ -360,7 +360,7 @@ function Login() {
             {/* Login Button */}
             <button className="btn-login" onClick={handleLogin} disabled={loading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               {loading ? (
-                <span>Logging in...</span>
+                <span></span>
               ) : (
                 <>
                   <FiLogIn style={{ fontSize: '18px' }} />
