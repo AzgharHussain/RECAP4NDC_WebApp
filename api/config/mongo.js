@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://venkateshgisfy_db_user:vKPhqG5oDfls92BS@cluster0.xvrevhx.mongodb.net/recap4ndc_images?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URI = process.env.MONGO_URI;
 
 const connectMongo = async () => {
   try {

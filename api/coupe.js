@@ -2,6 +2,7 @@
  * coupe.js — Final HTTPS-only version with PostgreSQL Pool + full TLS and network diagnostics
  */
 
+require('dotenv').config();
 const express = require("express");
 const { Pool } = require("pg");
 const shapefile = require("shapefile");
@@ -22,24 +23,24 @@ app.use(express.urlencoded({ extended: true }));
 const upload = multer({ dest: "uploads/" });
 
 // ============================
-// 🔧 PostgreSQL Pool Configuration
+// 🔧 PostgreSQL Pool Configuration (from .env)
 // ============================
 const pool = new Pool({
-  user: "postgres",
-  host: "68.178.167.216",
-  database: "Recap4NDC",
-  password: "pass@123",
-  port: 5432,
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT || 5432),
 });
 
 // ============================
-// 🌍 GeoServer Configuration
+// 🌍 GeoServer Configuration (from .env)
 // ============================
-const GEOSERVER_URL = "https://gisfy.co.in:8445/geoserver/rest";
+const GEOSERVER_URL = `${process.env.GEOSERVER_URL}/rest`;
 const WORKSPACE = "cite";
 const DATASTORE = "Recap4NDC_DB"; // Must exactly match your GeoServer datastore name
-const GEOSERVER_USER = "admin";
-const GEOSERVER_PASS = "geoserver";
+const GEOSERVER_USER = process.env.GEOSERVER_USER;
+const GEOSERVER_PASS = process.env.GEOSERVER_PASSWORD;
 
 // ============================
 // 🚀 Upload API Endpoint

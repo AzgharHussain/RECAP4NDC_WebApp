@@ -15,15 +15,15 @@ const { sequelize, testConnection } = require('../config/ndvidatabase');
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// --- DB & GEOSERVER CONFIG ---
-const PG_HOST = "68.178.167.216";
-const PG_USER = "postgres";
-const PG_PASS = "P$DB@25%$#!26";
-const PG_DB = "Recap4NDC_new";
+// --- DB & GEOSERVER CONFIG (from .env) ---
+const PG_HOST = process.env.NDVI_DB_HOST;
+const PG_USER = process.env.NDVI_DB_USER;
+const PG_PASS = process.env.NDVI_DB_PASSWORD;
+const PG_DB = process.env.NDVI_DB_NAME;
 
-const GEOSERVER_URL = "https://gisfy.co.in:8445/geoserver";
-const GEOSERVER_USER = "admin";
-const GEOSERVER_PASS = "geoserver";
+const GEOSERVER_URL = process.env.GEOSERVER_URL;
+const GEOSERVER_USER = process.env.GEOSERVER_USER;
+const GEOSERVER_PASS = process.env.GEOSERVER_PASSWORD;
 const WORKSPACE = "Recap4NDC";
 const DATASTORE = "Recap4NDC_New";
 // --------------------------------

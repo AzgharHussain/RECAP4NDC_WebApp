@@ -1,25 +1,23 @@
-// config/ndvidatabase.js
+// config/r_quire.js — Recap4NDC_Query database connection
 const { Sequelize } = require('sequelize');
 
-const DB_NAME = 'Recap4NDC_Query';
-const DB_USER = 'postgres';
-const DB_PASS = 'pass@123';
-const DB_HOST = '68.178.167.216';
-const DB_PORT = 5435;
-
-// Create Sequelize instance
-const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
-  host: DB_HOST,
-  port: DB_PORT,
-  dialect: 'postgres',
-  logging: console.log, // Optional: remove or set to false for production
-  pool: {
-    max: 20,
-    min: 2,
-    acquire: 30000,
-    idle: 10000
+const sequelize = new Sequelize(
+  process.env.QUERY_DB_NAME,
+  process.env.QUERY_DB_USER,
+  process.env.QUERY_DB_PASSWORD,
+  {
+    host: process.env.QUERY_DB_HOST,
+    port: Number(process.env.QUERY_DB_PORT || 5432),
+    dialect: 'postgres',
+    logging: console.log,
+    pool: {
+      max: 20,
+      min: 2,
+      acquire: 30000,
+      idle: 10000
+    }
   }
-});
+);
 
 // Test connection
 const testConnection = async () => {

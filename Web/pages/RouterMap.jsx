@@ -4,7 +4,7 @@ import L from "leaflet";
 import { Card, Tag, Typography, Row, Col, Button } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { useLanguage } from "../context/LanguageContext";
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL, geoserverUrl } from "../config";
 import "./RouterMap.css";
 
 const { Title, Text } = Typography;
@@ -267,7 +267,7 @@ const parseGeomCoordinates = (geom) => {
   whenCreated={(map) => {
     // ✅ ADD GEOSERVER WMS DIRECTLY
     const beatBoundaryLayer = L.tileLayer.wms(
-      "https://www.gisfy.co.in:8445/geoserver/wms",
+      `${geoserverUrl}/wms`,
       {
         layers: "Recap4NDC:Teritorial_Circle_Beat_Boundary",
         format: "image/png",

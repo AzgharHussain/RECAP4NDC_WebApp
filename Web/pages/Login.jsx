@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
 import "../App.css";
 import { useLanguage } from "../context/LanguageContext";
@@ -25,6 +25,10 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [captchaImage, setCaptchaImage] = useState("");
+  const [captchaId, setCaptchaId] = useState("");
+  const [captchaText, setCaptchaText] = useState("");
+  const [captchaLoading, setCaptchaLoading] = useState(false);
   const userIdRef = useRef(null);
 
   const setSecureCookie = () => {
@@ -37,9 +41,25 @@ function Login() {
     document.cookie = `session_active=true; path=/api; secure; samesite=strict; max-age=86400`;
   };
 
+  // Fetch CAPTCHA image from backend
+  const fetchCaptcha = useCallback(async () => {
+    setCaptchaLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/captcha`, { timeout: 10000 });
+      setCaptchaImage(response.data.image);
+      setCaptchaId(response.data.id);
+      setCaptchaText("");
+    } catch (err) {
+      console.error("Failed to load CAPTCHA:", err.message);
+    } finally {
+      setCaptchaLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (userIdRef.current) userIdRef.current.focus();
-  }, []);
+    fetchCaptcha();
+  }, [fetchCaptcha]);
 
   const text = {
     en: {
@@ -63,7 +83,10 @@ function Login() {
       errorCORS: "CORS error. Please contact administrator.",
       forestServiceUnavailable: "Gujarat Forest Service is currently unavailable",
       forestConnectionFailed: "Cannot connect to Gujarat Forest Service",
-      forestAuthFailed: "Forest authentication failed"
+      forestAuthFailed: "Forest authentication failed",
+      errorCaptcha: "Please complete the CAPTCHA verification",
+      captchaPlaceholder: "Enter the text shown above",
+      captchaRefresh: "Refresh"
     },
     gu: {
       appTitle: "વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ",
@@ -86,7 +109,10 @@ function Login() {
       errorCORS: "CORS એરર. એડમિનિસ્ટ્રેટરનો સંપર્ક કરો.",
       forestServiceUnavailable: "ગુજરાત ફોરેસ્ટ સેવા હાલમાં ઉપલબ્ધ નથી",
       forestConnectionFailed: "ફોરેસ્ટ ઓથેન્ટિકેશન સેવા સાથે કનેક્ટ થઈ શકતું નથી",
-      forestAuthFailed: "ફોરેસ્ટ ઓથેન્ટિકેશન નિષ્ફળ"
+      forestAuthFailed: "ફોરેસ્ટ ઓથેન્ટિકેશન નિષ્ફળ",
+      errorCaptcha: "કૃપા કરીને CAPTCHA ચકાસણી પૂર્ણ કરો",
+      captchaPlaceholder: "ઉપર બતાવેલો ટેક્સ્ટ દાખલ કરો",
+      captchaRefresh: "તાજો કરો"
     },
   };
 
@@ -128,13 +154,14 @@ function Login() {
   // Handlers
   const handleUserIdChange = (e) => { setUserId(e.target.value); setError(""); };
   const handlePasswordChange = (e) => { setPassword(e.target.value); setError(""); };
+  const handleCaptchaChange = (e) => { setCaptchaText(e.target.value); setError(""); };
   const handleKeyPress = (e) => { if (e.key === 'Enter') handleLogin(); };
   const handleLanguageToggle = (lang) => { if (!loading) toggleLanguage(lang); };
 
   // Forest SOAP auth via backend
-  const forestLogin = async (username, password) => {
+  const forestLogin = async (username, password, captchaData) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/forest-login`, { username, password }, { timeout: 30000 });
+      const response = await axios.post(`${API_BASE_URL}/api/forest-login`, { username, password, captchaId: captchaData.captchaId, captchaText: captchaData.captchaText }, { timeout: 30000 });
       if (response.status !== 200) throw new Error('FOREST_SERVICE_UNAVAILABLE');
       const data = response.data;
       if (!data.success) throw new Error('FOREST_AUTH_FAILED');
@@ -150,11 +177,11 @@ function Login() {
     }
   };
 
-  const saveUser = async (username, password) => {
+  const saveUser = async (username, password, captchaData) => {
     try {
       const response = await axios.post(
         `${API_BASE_URL}/api/saveuser`,
-        { username, password },
+        { username, password, captchaId: captchaData.captchaId, captchaText: captchaData.captchaText },
         { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'x-temp-token': 'RECAP4NDC_TEMP_TOKEN' }, timeout: 10000 }
       );
       const { token } = response.data;
@@ -165,12 +192,14 @@ function Login() {
 
   const handleLogin = async () => {
     if (!userId || !password) { setError(text[language].errorRequired); return; }
+    if (!captchaText.trim()) { setError(text[language].errorCaptcha); return; }
+    const captchaData = { captchaId, captchaText };
     setLoading(true);
     setError("");
     try {
       // Admin check
       try {
-        const adminResponse = await axios.post(`${API_BASE_URL}/api/admin`, { username: userId, password });
+        const adminResponse = await axios.post(`${API_BASE_URL}/api/admin`, { username: userId, password, captchaId, captchaText });
         if (adminResponse.data.success) {
           const adminUserData = { username: userId, name: adminResponse.data.user.name || "Administrator", isAdmin: true, permissions: adminResponse.data.user.permissions || ['all'], source: 'admin_api' };
           createSession(adminUserData, true);
@@ -183,7 +212,7 @@ function Login() {
       } catch { /* Continue to forest auth */ }
 
       // Forest auth
-      const jsonMap = await forestLogin(userId, password);
+      const jsonMap = await forestLogin(userId, password, captchaData);
       if (!jsonMap || Object.keys(jsonMap).length === 0) throw new Error("INVALID_CREDENTIALS");
 
       const userData = {
@@ -198,13 +227,15 @@ function Login() {
 
       createSession(userData, false);
       localStorage.setItem("authToken", "forest_authenticated");
-      await saveUser(userId, password);
+      await saveUser(userId, password, captchaData);
 
       if (validateSession()) navigate("/geo");
       else throw new Error("SESSION_CREATION_FAILED");
 
     } catch (error) {
       clearSession();
+      // Refresh captcha after any failed login attempt
+      fetchCaptcha();
       if (error.code === 'ECONNABORTED') setError(text[language].timeout);
       else if (error.message === 'INVALID_CREDENTIALS' || error.message === 'FOREST_AUTH_FAILED') setError(text[language].errorInvalid);
       else if (error.message === 'FOREST_TIMEOUT') setError(text[language].timeout);
@@ -355,6 +386,43 @@ function Login() {
                   : <FiEyeOff style={{ fontSize: '18px', color: '#666' }} />
                 }
               </button>
+            </div>
+
+            {/* CAPTCHA */}
+            <label className="input-label" style={{ marginTop: '10px' }}>CAPTCHA</label>
+            <div className="captcha-container" style={{ margin: '10px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {captchaLoading ? (
+                  <div style={{ width: 200, height: 70, background: '#e0e0e0', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#888' }}>
+                    Loading...
+                  </div>
+                ) : (
+                  <img
+                    src={captchaImage}
+                    alt="CAPTCHA"
+                    style={{ width: 200, height: 70, borderRadius: 4, border: '1px solid #ccc', userSelect: 'none' }}
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={fetchCaptcha}
+                  disabled={loading || captchaLoading}
+                  style={{ padding: '8px 12px', background: '#2d6a4f', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}
+                  title={text[language].captchaRefresh}
+                >
+                  {text[language].captchaRefresh}
+                </button>
+              </div>
+              <input
+                type="text"
+                placeholder={text[language].captchaPlaceholder}
+                value={captchaText}
+                onChange={handleCaptchaChange}
+                onKeyPress={handleKeyPress}
+                disabled={loading}
+                autoComplete="off"
+                style={{ padding: '10px', borderRadius: 4, border: '1px solid #ccc', fontSize: 16, textTransform: 'uppercase', letterSpacing: 2 }}
+              />
             </div>
 
             {/* Login Button */}

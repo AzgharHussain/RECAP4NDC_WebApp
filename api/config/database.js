@@ -4,11 +4,11 @@ const isProduction = process.env.NODE_ENV === 'production';
 const sslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME || 'Recap4NDC',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASSWORD || 'P$DB@25%$#!26',
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
   {
-    host: process.env.DB_HOST || '68.178.167.216',
+    host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT || 5432),
     dialect: 'postgres',
     logging: isProduction ? false : console.log,

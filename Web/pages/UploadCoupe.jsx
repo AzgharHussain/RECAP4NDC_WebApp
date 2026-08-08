@@ -3,6 +3,7 @@ import { FaCloudUploadAlt } from "react-icons/fa";
 import { Link } from "react-router-dom"; // <--- Add this
 import "./UploadCoupe.css";
 import { useLanguage } from "../context/LanguageContext"; // Import language context
+import { API_BASE_URL } from "../config";
 
 const UploadCoupe = () => {
   const fileInputRef = useRef(null);
@@ -115,7 +116,7 @@ const UploadCoupe = () => {
       fd.append("shapefile", file);
       fd.append("coupeName", coupeName);
 
-      const res = await fetch("http://68.178.167.216:6000/uploadShapefile", {
+      const res = await fetch(`${API_BASE_URL}/uploadShapefile`, {
         method: "POST",
         body: fd,
       });

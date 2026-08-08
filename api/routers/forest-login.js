@@ -1,11 +1,13 @@
 const express = require("express");
 const axios = require("axios");
+const https = require("https");
 const xml2js = require("xml2js");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const router = express.Router();
 const { sequelize } = require('../config/database');
 const { logFromRequest } = require('../utils/auditLogger');
+const { verifyCaptcha } = require('../middlewares/captchaMiddleware');
 // Define secret key (should be in environment variables in production)
 const SECRET_KEY = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
 
@@ -20,7 +22,7 @@ const saveUserLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.post("/saveuser", saveUserLimiter, async (req, res) => {
+router.post("/saveuser", verifyCaptcha, saveUserLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   // Validate input
@@ -40,19 +42,21 @@ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
 xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
   <soap12:Body>
     <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
-      <username>${username}</username>
-      <password>${password}</password>
+      <UserName>${username}</UserName>
+      <Password>${password}</Password>
     </LOGIN_EGUJFOREST>
   </soap12:Body>
 </soap12:Envelope>`;
 
+    const soapUrl = process.env.SOAP_API_URL || "https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx";
     const response = await axios.post(
-      "https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx",
+      soapUrl,
       soapRequest,
       {
         headers: {
-          "Content-Type": "text/xml; charset=utf-8",
+          "Content-Type": "application/soap+xml; charset=utf-8",
         },
+        httpsAgent: new https.Agent({ rejectUnauthorized: false }),
         timeout: 30000,
       }
     );

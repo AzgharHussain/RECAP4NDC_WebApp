@@ -5,6 +5,7 @@ import "./PatrolIncidentLogs.css"; // Import the CSS for styling
 import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
+import { API_BASE_URL } from "../config";
 
 const { Option } = Select;
 
@@ -63,7 +64,7 @@ const PatrolIncidentLogs = () => {
   const fetchIncidentData = async () => {
     try {
       const response = await fetch(
-        "http://68.178.167.39:5000/api/incidents-with-images?user_id=1"
+        `${API_BASE_URL}/api/incidents-with-images?user_id=1`
       );
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();

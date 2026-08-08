@@ -5,6 +5,7 @@ import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
 import dayjs from "dayjs"; // For date formatting
 import { useLanguage } from "../context/LanguageContext"; // Import language context
+import { API_BASE_URL } from "../config";
 
 const { Option } = Select;
 
@@ -70,7 +71,7 @@ const CoupeObservation = () => {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          "http://68.178.167.39:5000/api/coupe/log-with-images?user_id=2"
+          `${API_BASE_URL}/api/coupe/log-with-images?user_id=2`
         );
         const result = await response.json();
         if (result && Array.isArray(result)) {

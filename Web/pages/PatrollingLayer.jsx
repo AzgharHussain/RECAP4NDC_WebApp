@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Polyline, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
+import { API_BASE_URL } from "../config";
 
 const startIcon = new L.Icon({
   iconUrl:
@@ -29,7 +30,7 @@ export default function PatrollingLayer({ show }) {
 
   useEffect(() => {
     if (show) {
-      fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=1")
+      fetch(`${API_BASE_URL}/api/patrols-by-user?user_id=1`)
         .then((res) => res.json())
         .then((data) => setPatrols(data))
         .catch((err) => console.error("Error fetching patrol data", err));

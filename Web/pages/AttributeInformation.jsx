@@ -2,6 +2,7 @@ import { useMap } from "react-leaflet";
 import { useEffect } from "react";
 import L from "leaflet";
 import axios from "axios";
+import { geoserverUrl } from "../config";
 
 export default function AttributeInformation({
   isActive,
@@ -31,7 +32,7 @@ export default function AttributeInformation({
 
         // ✅ GeoServer URL (use SAME port as WMS tiles → 8445)
         const url =
-          "https://gisfy.co.in:8445/geoserver/cite/wms" +
+          `${geoserverUrl}/cite/wms` +
           "?SERVICE=WMS" +
           "&VERSION=1.1.1" +
           "&REQUEST=GetFeatureInfo" +

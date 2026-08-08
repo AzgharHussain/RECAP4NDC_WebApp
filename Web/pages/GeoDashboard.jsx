@@ -173,7 +173,7 @@ export default function MapView() {
   
   useEffect(() => {
     if (showIncidentLayer) {
-      fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
+      fetch(`${API_BASE_URL}/api/incidents-with-images?user_id=2`)
         .then((res) => res.json())
         .then((data) => setIncidentsData(data))
         .catch((err) => console.error("Error fetching incidents", err));
@@ -697,7 +697,7 @@ const handleLayerToggle = (layerType, isChecked) => {
       return;
     }
 
-    const response = await axios.get(`http://68.178.167.39:5000/api/tnc-users/${id}`, {
+    const response = await axios.get(`${API_BASE_URL}/api/tnc-users/${id}`, {
       headers: {
         Authorization: `Bearer ${token}`
       }

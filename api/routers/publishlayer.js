@@ -6,22 +6,22 @@ const { exec } = require("child_process");
 const express = require('express');
 const router = express.Router();
 
-// ========== CONFIGURATION ==========
+// ========== CONFIGURATION (from .env) ==========
 const pgConfig = {
-  user: "postgres",
-  host: "68.178.167.216",
-  database: "Recap4NDC",
-  password: "pass@123",
-  port: 5432,
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT || 5432),
 };
 
 const geoserver = {
-  url: "https://gisfy.co.in:8445/geoserver/rest",
+  url: `${process.env.GEOSERVER_URL}/rest`,
   workspace: "cite",
   datastore: "Recap4NDC_DB",
   auth: {
-    username: "admin",
-    password: "Geo@$ecure#%26",
+    username: process.env.GEOSERVER_USER,
+    password: process.env.GEOSERVER_PASSWORD,
   },
   sld: "Arvalli_Coupe",
 };
@@ -111,7 +111,7 @@ async function styleLayerInQGIS(viewName) {
   return new Promise((resolve, reject) => {
     const qgisScript = `
       from qgis.core import QgsProject, QgsVectorLayer, QgsLineSymbol, QgsRuleBasedRenderer
-      uri = "dbname='Recap4NDC' host=68.178.167.216 port=5432 user='postgres' password='pass@123' key='global_id' table=\\"public\\".\\"${viewName}\\" (geom) sql="
+      uri = "dbname='${process.env.DB_NAME}' host=${process.env.DB_HOST} port=${process.env.DB_PORT || 5432} user='${process.env.DB_USER}' password='${process.env.DB_PASSWORD}' key='global_id' table=\\"public\\".\\"${viewName}\\" (geom) sql="
       layer = QgsVectorLayer(uri, "${viewName}_layer", "postgres")
       if not layer.isValid():
           print("Layer failed to load!")

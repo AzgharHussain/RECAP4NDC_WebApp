@@ -1,33 +1,21 @@
 // config/ndvidatabase.js
 const { Sequelize } = require('sequelize');
 
-// const DB_NAME = 'Recap4NDC_new';
-// const DB_USER = 'postgres';
-// const DB_PASS = 'P$DB@25%$#!09';
-// const DB_HOST = '68.178.167.39';
-// const DB_PORT =  5432;
-
-
-
-// const DB_NAME = 'recapnew';
-// const DB_USER = 'postgres';
-// const DB_PASS = 'pass@123';
-// const DB_HOST = 'localhost';
-// const DB_PORT =  5432;
 // Configure pool and dialectOptions with keepAlive and optional SSL.
-// You can override SSL by setting DB_SSL=true in env.
-const useSsl = process.env.DB_SSL === 'true';
+// You can override SSL by setting NDVI_DB_SSL=true in env.
+const useSsl = String(process.env.NDVI_DB_SSL || process.env.DB_SSL || '').toLowerCase() === 'true';
 
 const sequelize = new Sequelize(
-  'Recap4NDC_new', // Database name
-  'postgres', // Username
-  'P$DB@25%$#!26', // Password
+  process.env.NDVI_DB_NAME,
+  process.env.NDVI_DB_USER,
+  process.env.NDVI_DB_PASSWORD,
   {
-    host: '68.178.167.216',
+    host: process.env.NDVI_DB_HOST,
+    port: Number(process.env.NDVI_DB_PORT || 5432),
     dialect: 'postgres',
     logging: console.log,
     dialectOptions: {
-      ssl: false,
+      ssl: useSsl,
     },
     pool: {
       max: 20,

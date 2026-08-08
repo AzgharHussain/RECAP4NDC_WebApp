@@ -21,6 +21,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const validateAlphaNumSpaceUnderscore = require("./middlewares/validateAlphaNumSpaceUnderscore");
 const { verifyJwt } = require("./middlewares/verifyJwt");
+const { captchaRoute, verifyCaptcha } = require("./middlewares/captchaMiddleware");
 const { sequelize, testConnection } = require('./config/database');
 const { connectMongo } = require('./config/mongo');
 const bcrypt = require('bcrypt');
@@ -143,16 +144,6 @@ const validateNoDuplicateParams = (req, res, next) => {
 };
 
 const allowedOrigins = [
-  'https://gisfy.co.in:8445',
-  'https://gisfy.co.in:8445/geoserver/wms',
-  'https://forestrecap.gisfy.co.in',
-  'http://localhost:5002',
-  'http://68.178.167.216:5002',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5176',
-  'http://13.235.78.63:5002',
-  'http://3.108.143.116:8082',
   ...(process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean),
 ];
 
@@ -505,7 +496,10 @@ app.post("/api/changepassword", verifyJwt, async (req, res) => {
   }
 });
 
-app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
+// ── CAPTCHA image generation endpoint ──
+app.get("/api/captcha", captchaRoute);
+
+app.post("/api/admin", verifyCaptcha, validateNoDuplicateParams22, async (req, res) => {
 
   try {
 

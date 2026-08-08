@@ -1,16 +1,25 @@
 const { Sequelize } = require('sequelize');
 
+const isProduction = process.env.NODE_ENV === 'production';
+const sslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+
 const sequelize = new Sequelize(
-  'Recap4NDC', // Database name
-  'postgres', // Username
-  'P$DB@25%$#!26', // Password
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
   {
-    host: '68.178.167.216',
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT || 5432),
     dialect: 'postgres',
-    logging: console.log,
-    dialectOptions: {
-      ssl: false,
-    },
+    logging: isProduction ? false : console.log,
+    dialectOptions: sslEnabled
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized: String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false',
+          },
+        }
+      : { ssl: false },
     pool: {
       max: 5,
       min: 0,

@@ -2,28 +2,29 @@
  * Auto-create Beat Views + Publish to GeoServer (with SSL fix)
  * Requirements: npm install pg axios
  */
- 
+
+require('dotenv').config();
 const { Client } = require("pg");
 const axios = require("axios");
 const https = require("https");
  
-// ========== PostgreSQL CONFIG ==========
+// ========== PostgreSQL CONFIG (from .env) ==========
 const pgClient = new Client({
-  user: "postgres",
-  host: "68.178.167.216",
-  database: "Recap4NDC",
-  password: "pass@123",
-  port: 5432,
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT || 5432),
 });
  
-// ========== GEOSERVER CONFIG ==========
+// ========== GEOSERVER CONFIG (from .env) ==========
 const geoserver = {
-  url: "https://gisfy.co.in:8445/geoserver/rest",
+  url: `${process.env.GEOSERVER_URL}/rest`,
   workspace: "cite",
   datastore: "Recap4NDC_DB",
   auth: {
-    username: "admin",
-    password: "geoserver",
+    username: process.env.GEOSERVER_USER,
+    password: process.env.GEOSERVER_PASSWORD,
   },
   sld: "Arvalli_Coupe",
 };
@@ -151,7 +152,7 @@ async function testGeoServerConnection() {
     } else if (err.request) {
       console.error("🔸 No response received. Check:");
       console.error("   - GeoServer is running");
-      console.error("   - URL is correct: https://gisfy.co.in:8445");
+      console.error(`   - URL is correct: ${process.env.GEOSERVER_URL}`);
       console.error("   - Port 8443 is accessible");
       console.error("🔸 Error:", err.message);
     } else {

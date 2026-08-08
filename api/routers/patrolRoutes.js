@@ -10,13 +10,13 @@ const { logFromRequest } = require("../utils/auditLogger");
 
 const router = express.Router();
 
-// PostgreSQL connection pool
+// PostgreSQL connection pool (from .env)
 const client = new Pool({
-  host: '68.178.167.216',
-  user: 'postgres',
-  password: 'P$DB@25%$#!26',
-  port: 5432,
-  database: 'Recap4NDC'
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT || 5432),
+  database: process.env.DB_NAME
 });
 client.on('error', (err) => {
   console.error('Unexpected PostgreSQL pool error:', err.message);
