@@ -457,7 +457,6 @@ input[type="password"] {
   -webkit-touch-callout: none;
   box-sizing: border-box;
   outline: none;
-  text-transform: lowercase;
   letter-spacing: 2px;
 }
 
