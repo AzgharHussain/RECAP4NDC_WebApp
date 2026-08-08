@@ -6,12 +6,12 @@ const rateLimit = require("express-rate-limit");
 const router = express.Router();
 const { sequelize } = require('../config/database');
 const { logFromRequest } = require('../utils/auditLogger');
-// Define secret key (should be in environment variables in production)
-const SECRET_KEY = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
+
+const SECRET_KEY = process.env.JWT_SECRET;
 
 const saveUserLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Allow only 5 requests per IP per 15 mins
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: {
     success: false,
     error: "Too many requests. Please try again after 15 minutes."
@@ -23,7 +23,6 @@ const saveUserLimiter = rateLimit({
 router.post("/saveuser", saveUserLimiter, async (req, res) => {
   const { username, password } = req.body;
 
-  // Validate input
   if (!username || !password) {
     return res.status(400).json({
       success: false,
@@ -32,12 +31,11 @@ router.post("/saveuser", saveUserLimiter, async (req, res) => {
   }
 
   try {
-    console.log("🌲 Calling EGUJ Forest SOAP service with username:", username);
+    console.log("=== FOREST LOGIN REQUEST ===");
+    console.log("Username:", username);
 
     const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
     <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
       <username>${username}</username>
@@ -46,61 +44,84 @@ xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   </soap:Body>
 </soap:Envelope>`;
 
-    const response = await axios.post(
-      "https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx",
-      soapRequest,
-      {
-        headers: {
-          "Content-Type": "text/xml; charset=utf-8",
-          "SOAPAction": "http://tempuri.org/LOGIN_EGUJFOREST"
-        },
-        timeout: 30000,
-      }
-    );
+    console.log("SOAP Request:");
+    console.log(soapRequest);
 
-    if (response.status !== 200) {
-      return res.status(500).json({ 
-        success: false,
-        error: "Forest service unavailable" 
-      });
-    }
+    const soapUrl = process.env.SOAP_API_URL;
+    const response = await axios.post(soapUrl, soapRequest, {
+      headers: {
+        "Content-Type": "text/xml; charset=utf-8",
+        "SOAPAction": "http://tempuri.org/LOGIN_EGUJFOREST"
+      },
+      timeout: 30000
+    });
 
-    // Parse XML — use stripPrefix to remove namespace prefixes (soap:, diffgr:, etc.)
-    console.log("Raw SOAP response:", response.data);
+    console.log("Response Status:", response.status);
+    console.log("Response Headers:", response.headers);
+    console.log("Raw SOAP Response:", response.data);
+
     const parsed = await xml2js.parseStringPromise(response.data, {
       explicitArray: false,
       mergeAttrs: true,
       tagNameProcessors: [xml2js.processors.stripPrefix]
     });
 
-    // Navigate through the response structure (prefixes stripped)
-    const envelope = parsed['Envelope'] || parsed;
-    const body = envelope?.['Body'];
-    const loginResponse = body?.['LOGIN_EGUJFORESTResponse'];
-    const loginResult = loginResponse?.['LOGIN_EGUJFORESTResult'];
+    console.log("Parsed XML structure:", JSON.stringify(parsed, null, 2).substring(0, 2000));
 
-    if (!loginResult) {
-      console.error("SOAP response missing LOGIN_EGUJFORESTResult. Parsed structure:", JSON.stringify(parsed, null, 2).substring(0, 1000));
+    const envelope = parsed['Envelope'] || parsed;
+    const body = envelope && envelope['Body'];
+
+    if (!body) {
+      console.error("No Body found in SOAP response");
+      return res.status(500).json({
+        success: false,
+        error: "Invalid SOAP response - no Body element"
+      });
+    }
+
+    // Check for SOAP Fault
+    if (body['Fault']) {
+      const fault = body['Fault'];
+      console.error("SOAP Fault:", JSON.stringify(fault, null, 2));
+      return res.status(500).json({
+        success: false,
+        error: "Forest service returned a fault",
+        faultCode: fault.faultcode || fault.code || "Unknown",
+        faultString: fault.faultstring || fault.reason || "Unknown error"
+      });
+    }
+
+    const loginResponse = body['LOGIN_EGUJFORESTResponse'];
+    if (!loginResponse) {
+      console.error("No LOGIN_EGUJFORESTResponse in body. Body keys:", Object.keys(body));
       return res.status(500).json({
         success: false,
         error: "Invalid response from forest service"
       });
     }
 
-    // The user data is in the diffgram (prefix stripped)
+    const loginResult = loginResponse['LOGIN_EGUJFORESTResult'];
+    if (!loginResult) {
+      console.error("No LOGIN_EGUJFORESTResult in response");
+      return res.status(401).json({
+        success: false,
+        error: "Invalid credentials - empty result"
+      });
+    }
+
+    // The user data is inside diffgram > DocumentElement > Result
     const diffgram = loginResult['diffgram'];
-    const documentElement = diffgram?.['DocumentElement'];
-    const result = documentElement?.['Result'] || documentElement?.['result'];
+    const documentElement = diffgram && diffgram['DocumentElement'];
+    const result = documentElement && (documentElement['Result'] || documentElement['result']);
 
     if (!result) {
       console.error("No Result in diffgram. loginResult keys:", Object.keys(loginResult));
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials - no user data found"
+        error: "Invalid credentials - no user data found"
       });
     }
 
-    // Extract user data (handling both array and object responses)
     const userResult = Array.isArray(result) ? result[0] : result;
 
     const userData = {
@@ -116,11 +137,9 @@ xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
       EmailID: userResult.EmailID || "-"
     };
 
-    console.log("User Data:", userData);
+    console.log("Extracted user data:", userData);
 
-    // ✅ VERIFY LOGIN
     if (!userData.NAME || userData.NAME === "-") {
-      console.error("NAME field empty or '-'. userResult:", JSON.stringify(userResult, null, 2).substring(0, 500));
       logFromRequest(req, {
         action: 'LOGIN_FAILED',
         status: 'FAILED',
@@ -130,46 +149,35 @@ xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
       });
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials"
+        error: "Invalid credentials"
       });
     }
 
-    // ✅ CHECK IF USER EXISTS IN DATABASE
+    // Check if user exists in database
     const trimmedUsername = username.trim();
-    
-    console.log('Checking if user exists in database with username:', trimmedUsername);
-    
-    // Check if user exists
+
     const [users] = await sequelize.query(
       `SELECT user_id, username FROM public.government_department_users WHERE username = $1`,
       { bind: [trimmedUsername] }
     );
 
-    console.log('User query result:', users);
-
     let user;
     let isNewUser = false;
-    
+
     if (users.length > 0) {
       user = users[0];
-      console.log('User already exists:', user);
     } else {
-      // Insert new user
-      const [result] = await sequelize.query(
-  `INSERT INTO public.government_department_users (username) 
-   VALUES ($1) 
-   RETURNING user_id, username`,
-  { bind: [trimmedUsername] }
-);
-      user = result[0];
+      const [insertResult] = await sequelize.query(
+        `INSERT INTO public.government_department_users (username) VALUES ($1) RETURNING user_id, username`,
+        { bind: [trimmedUsername] }
+      );
+      user = insertResult[0];
       isNewUser = true;
-      console.log('New user created:', user);
     }
 
-    // ✅ GENERATE JWT with user data including database user_id
     const token = jwt.sign(
       {
-        userId: user.user_id, // Use database user_id
+        userId: user.user_id,
         username: user.username,
         name: userData.NAME,
         cadre: userData.CadreName,
@@ -181,10 +189,7 @@ xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
         mobile: userData.MobileNo,
         email: userData.EmailID
       },
-      SECRET_KEY,
-      // {
-      //   expiresIn: "24h"
-      // }
+      SECRET_KEY
     );
 
     logFromRequest(req, {
@@ -210,38 +215,100 @@ xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   } catch (error) {
     console.error("Forest login error:", error.message);
 
-    logFromRequest(req, {
-      action: 'LOGIN_FAILED',
-      status: 'ERROR',
-      statusCode: error.code === 'ECONNABORTED' ? 504 : 500,
-      username: req.body?.username || null,
-      errorMessage: error.message,
-    });
-    
-    // Handle specific error types
+    // Axios throws on non-2xx responses — inspect error.response
+    if (error.response) {
+      console.error("HTTP Status:", error.response.status);
+      console.error("Response Headers:", error.response.headers);
+      console.error("Response Data:", error.response.data);
+
+      // Try to parse SOAP fault from error response
+      try {
+        const errorParsed = await xml2js.parseStringPromise(error.response.data, {
+          explicitArray: false,
+          mergeAttrs: true,
+          tagNameProcessors: [xml2js.processors.stripPrefix]
+        });
+        console.error("Parsed error response:", JSON.stringify(errorParsed, null, 2).substring(0, 2000));
+
+        const errBody = errorParsed['Envelope'] && errorParsed['Envelope']['Body'];
+        if (errBody && errBody['Fault']) {
+          const fault = errBody['Fault'];
+          logFromRequest(req, {
+            action: 'LOGIN_FAILED',
+            status: 'FAILED',
+            statusCode: error.response.status,
+            username: req.body && req.body.username,
+            errorMessage: fault.faultstring || fault.reason || 'SOAP Fault',
+          });
+          return res.status(error.response.status).json({
+            success: false,
+            error: "Forest service error",
+            faultCode: fault.faultcode || fault.code || "Unknown",
+            faultString: fault.faultstring || fault.reason || "Unknown error"
+          });
+        }
+      } catch (parseErr) {
+        console.error("Could not parse error response as XML:", parseErr.message);
+      }
+
+      logFromRequest(req, {
+        action: 'LOGIN_FAILED',
+        status: 'FAILED',
+        statusCode: error.response.status,
+        username: req.body && req.body.username,
+        errorMessage: error.message,
+      });
+
+      return res.status(error.response.status).json({
+        success: false,
+        error: "Forest service error: " + error.response.status
+      });
+    }
+
     if (error.code === 'ECONNABORTED') {
+      logFromRequest(req, {
+        action: 'LOGIN_FAILED',
+        status: 'ERROR',
+        statusCode: 504,
+        username: req.body && req.body.username,
+        errorMessage: 'Request timeout',
+      });
       return res.status(504).json({
         success: false,
         error: "Forest service timeout"
       });
     }
-    
-    if (error.response) {
-      console.error("Response status:", error.response.status);
-      console.error("Response data:", error.response.data);
-      return res.status(error.response.status).json({
+
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+      logFromRequest(req, {
+        action: 'LOGIN_FAILED',
+        status: 'ERROR',
+        statusCode: 502,
+        username: req.body && req.body.username,
+        errorMessage: 'Cannot connect to forest service',
+      });
+      return res.status(502).json({
         success: false,
-        error: `Forest service error: ${error.response.status}`
+        error: "Cannot connect to Gujarat Forest Service"
       });
     }
 
-    // Handle database errors
-    if (error.name === 'SequelizeError' || error.code?.startsWith('23')) {
+    // Database errors
+    if (error.name === 'SequelizeError' || (error.code && error.code.startsWith('23'))) {
+      console.error("Database error:", error.message);
       return res.status(500).json({
         success: false,
         error: "Database error occurred"
       });
     }
+
+    logFromRequest(req, {
+      action: 'LOGIN_FAILED',
+      status: 'ERROR',
+      statusCode: 500,
+      username: req.body && req.body.username,
+      errorMessage: error.message,
+    });
 
     return res.status(500).json({
       success: false,

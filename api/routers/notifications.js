@@ -15,11 +15,11 @@ const { logFromRequest } = require("../utils/auditLogger");
 // 2. Postgres Connection Pool
 // ----------------------------------------------------
 const client = new Pool({
-  host: '68.178.167.216',
-  user: 'postgres',
-  password: 'pass@123',
-  port: 5435,
-  database: 'Recap4NDC_Query',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT),
+  database: process.env.DB_NAME,
   max: 10,
   min: 0,
   acquire: 30000,

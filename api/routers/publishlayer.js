@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Client } = require("pg");
 const axios = require("axios");
 const https = require("https");
@@ -8,20 +9,20 @@ const router = express.Router();
 
 // ========== CONFIGURATION ==========
 const pgConfig = {
-  user:     process.env.DB_USER     || 'recap4ndc_postgres',
-  host:     process.env.DB_HOST     || 'gsdc-psql.gujarat.gov.in',
-  database: process.env.DB_NAME     || 'RECAP4NDC',
-  password: process.env.DB_PASSWORD || '',
-  port:     Number(process.env.DB_PORT || 9999),
+  user:     process.env.DB_USER,
+  host:     process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port:     Number(process.env.DB_PORT),
 };
 
 const geoserver = {
-  url:       process.env.GEOSERVER_URL       || 'http://localhost:8080/geoserver/rest',
+  url:       process.env.GEOSERVER_URL + '/rest',
   workspace: process.env.GEOSERVER_WORKSPACE || 'cite',
   datastore: process.env.GEOSERVER_STORE     || 'Recap4NDC_DB',
   auth: {
-    username: process.env.GEOSERVER_USER     || 'admin',
-    password: process.env.GEOSERVER_PASSWORD || 'geoserver',
+    username: process.env.GEOSERVER_USER,
+    password: process.env.GEOSERVER_PASSWORD,
   },
   sld: process.env.GEOSERVER_SLD || 'Arvalli_Coupe',
 };
@@ -111,7 +112,7 @@ async function styleLayerInQGIS(viewName) {
   return new Promise((resolve, reject) => {
     const qgisScript = `
       from qgis.core import QgsProject, QgsVectorLayer, QgsLineSymbol, QgsRuleBasedRenderer
-      uri = "dbname='Recap4NDC' host=68.178.167.216 port=5432 user='postgres' password='pass@123' key='global_id' table=\\"public\\".\\"${viewName}\\" (geom) sql="
+      uri = "dbname='${process.env.DB_NAME}' host=${process.env.DB_HOST} port=${process.env.DB_PORT} user='${process.env.DB_USER}' password='${process.env.DB_PASSWORD}' key='global_id' table=\\"public\\".\\"${viewName}\\" (geom) sql="
       layer = QgsVectorLayer(uri, "${viewName}_layer", "postgres")
       if not layer.isValid():
           print("Layer failed to load!")

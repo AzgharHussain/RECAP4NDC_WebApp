@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', 'api', '.env') });
 const express = require("express");
 const cors = require("cors");
 
@@ -23,7 +24,7 @@ app.post("/login-eguj", async (req, res) => {
 
   try {
     const response = await fetch(
-      "https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx",
+      process.env.SOAP_API_URL,
       {
         method: "POST",
         headers: {

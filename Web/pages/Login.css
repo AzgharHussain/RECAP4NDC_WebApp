@@ -430,6 +430,72 @@ input[type="password"] {
   border-left: 3px solid #e53935;
 }
 
+/* ===== Captcha ===== */
+.captcha-container {
+  margin-bottom: 20px;
+}
+
+.captcha-field {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.captcha-field input {
+  width: 100%;
+  padding: 8px 36px 8px 0;
+  border: none;
+  border-bottom: 1.5px solid #d8d8d8;
+  border-radius: 0;
+  font-size: 14px;
+  color: #333;
+  background: transparent;
+  transition: border-color 0.25s ease;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  box-sizing: border-box;
+  outline: none;
+  text-transform: lowercase;
+  letter-spacing: 2px;
+}
+
+.captcha-field input::placeholder {
+  color: #c0c0c0;
+  font-size: 13.5px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.captcha-field input:focus {
+  border-bottom-color: #309059;
+}
+
+.captcha-refresh {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.captcha-canvas {
+  width: 100%;
+  max-width: 200px;
+  height: 50px;
+  border-radius: 6px;
+  border: 1px solid #d8d8d8;
+  cursor: pointer;
+  display: block;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  pointer-events: auto;
+}
+
 /* ===== Privacy / Links ===== */
 .login-links {
   display: flex;

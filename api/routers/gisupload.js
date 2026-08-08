@@ -16,17 +16,17 @@ const { sequelize, testConnection } = require("../config/database");
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// --- DB & GEOSERVER CONFIG ---
-const PG_HOST = "68.178.167.216";
-const PG_USER = "postgres";
-const PG_PASS = "P$DB@25%$#!26";
-const PG_DB = "Recap4NDC";
+// --- DB & GEOSERVER CONFIG (from .env only) ---
+const PG_HOST = process.env.DB_HOST;
+const PG_USER = process.env.DB_USER;
+const PG_PASS = process.env.DB_PASSWORD;
+const PG_DB = process.env.DB_NAME;
 
-const GEOSERVER_URL = "http://68.178.167.216:8081/geoserver";
-const GEOSERVER_USER = "admin";
-const GEOSERVER_PASS = "Geo@$ecure#%26";
-const WORKSPACE = "Recap4NDC";
-const DATASTORE = "Recap4NDC_New_final1";
+const GEOSERVER_URL = process.env.GEOSERVER_URL;
+const GEOSERVER_USER = process.env.GEOSERVER_USER;
+const GEOSERVER_PASS = process.env.GEOSERVER_PASSWORD;
+const WORKSPACE = process.env.GEOSERVER_WORKSPACE || 'Recap4NDC';
+const DATASTORE = process.env.GEOSERVER_STORE || 'Recap4NDC_New_final1';
 
 // Create HTTPS agent that ignores SSL certificate errors
 const httpsAgent = new https.Agent({

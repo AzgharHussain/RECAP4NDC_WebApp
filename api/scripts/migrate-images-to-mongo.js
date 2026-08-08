@@ -8,6 +8,7 @@
  * Usage: node scripts/migrate-images-to-mongo.js
  */
 
+require('dotenv').config();
 const { Client } = require('pg');
 const { Sequelize } = require('sequelize');
 const { connectMongo, mongoose } = require('../config/mongo');
@@ -15,21 +16,21 @@ const MongoImage = require('../models/Image');
 
 // ── PostgreSQL client for Recap4NDC (patrol images) ──
 const pgClient = new Client({
-  host: '68.178.167.216',
-  user: 'postgres',
-  password: 'P$DB@25%$#!26',
-  port: 5432,
-  database: 'Recap4NDC',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT),
+  database: process.env.DB_NAME,
 });
 
 // ── Sequelize for Recap4NDC_Query (NDVI coupe tables) ──
 const querySequelize = new Sequelize(
-  'Recap4NDC_Query',
-  'postgres',
-  'pass@123',
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
   {
-    host: '68.178.167.216',
-    port: 5435,
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
     dialect: 'postgres',
     logging: false,
     pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },

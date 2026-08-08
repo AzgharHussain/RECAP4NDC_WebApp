@@ -11,7 +11,7 @@ import loginBg from "../assets/loginpage/image(6).png";
 import partnerLogos from "../assets/loginpage/image(7).png";
 import Eyeclose from "../assets/Eyeclose.png";
 import user from "../assets/user.png";
-import { FiUser, FiLock, FiEye, FiEyeOff, FiLogIn } from "react-icons/fi";
+import { FiUser, FiLock, FiEye, FiEyeOff, FiLogIn, FiRefreshCw } from "react-icons/fi";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
 import giz from "../assets/giz.png";
@@ -23,9 +23,12 @@ function Login() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaText, setCaptchaText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const userIdRef = useRef(null);
+  const captchaCanvasRef = useRef(null);
 
   const setSecureCookie = () => {
     const cookieValue = "session_active=true";
@@ -39,6 +42,68 @@ function Login() {
 
   useEffect(() => {
     if (userIdRef.current) userIdRef.current.focus();
+  }, []);
+
+  // === Captcha generation ===
+  // Use a ref to track the current captcha text so validation always
+  // compares against the latest value, avoiding React state race conditions.
+  const captchaTextRef = useRef("");
+
+  const generateCaptcha = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghjkmnpqrstuvwxyz';
+    let text = '';
+    for (let i = 0; i < 6; i++) {
+      text += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    captchaTextRef.current = text;
+    setCaptchaText(text);
+    setCaptchaInput("");
+    drawCaptcha(text);
+  };
+
+  const drawCaptcha = (text) => {
+    const canvas = captchaCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#f0f5f0';
+    ctx.fillRect(0, 0, width, height);
+    // Draw noise lines
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(${Math.floor(Math.random()*100)},${Math.floor(Math.random()*150)},${Math.floor(Math.random()*80)},0.4)`;
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * width, Math.random() * height);
+      ctx.lineTo(Math.random() * width, Math.random() * height);
+      ctx.stroke();
+    }
+    // Draw text
+    ctx.font = 'bold 24px Arial';
+    ctx.textBaseline = 'middle';
+    const charWidth = width / (text.length + 1);
+    for (let i = 0; i < text.length; i++) {
+      const x = charWidth * (i + 1);
+      const y = height / 2 + (Math.random() - 0.5) * 8;
+      const angle = (Math.random() - 0.5) * 0.5;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillStyle = `rgb(${20+Math.floor(Math.random()*60)},${80+Math.floor(Math.random()*60)},${30+Math.floor(Math.random()*40)})`;
+      ctx.fillText(text[i], 0, 0);
+      ctx.restore();
+    }
+    // Draw noise dots
+    for (let i = 0; i < 30; i++) {
+      ctx.fillStyle = `rgba(${Math.floor(Math.random()*150)},${Math.floor(Math.random()*150)},${Math.floor(Math.random()*150)},0.3)`;
+      ctx.beginPath();
+      ctx.arc(Math.random() * width, Math.random() * height, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+
+  useEffect(() => {
+    generateCaptcha();
   }, []);
 
   const text = {
@@ -61,6 +126,9 @@ function Login() {
       loggingIn: "Logging in...",
       timeout: "Request timeout. Please try again.",
       errorCORS: "CORS error. Please contact administrator.",
+      errorCaptcha: "Captcha does not match. Please try again.",
+      captchaLabel: "CAPTCHA",
+      captchaPlaceholder: "Enter text from image",
       forestServiceUnavailable: "Gujarat Forest Service is currently unavailable",
       forestConnectionFailed: "Cannot connect to Gujarat Forest Service",
       forestAuthFailed: "Forest authentication failed"
@@ -84,6 +152,9 @@ function Login() {
       loggingIn: "લૉગ ઇન થાય છે...",
       timeout: "રિક્વેસ્ટ ટાઈમઆઉટ. કૃપા કરીને ફરી પ્રયાસ કરો.",
       errorCORS: "CORS એરર. એડમિનિસ્ટ્રેટરનો સંપર્ક કરો.",
+      errorCaptcha: "કેપ્ચા મેળ ખાતુ નથી. કૃપા કરીને ફરી પ્રયાસ કરો.",
+      captchaLabel: "કેપ્ચા",
+      captchaPlaceholder: "છબીમાંથી લખાણ દાખલ કરો",
       forestServiceUnavailable: "ગુજરાત ફોરેસ્ટ સેવા હાલમાં ઉપલબ્ધ નથી",
       forestConnectionFailed: "ફોરેસ્ટ ઓથેન્ટિકેશન સેવા સાથે કનેક્ટ થઈ શકતું નથી",
       forestAuthFailed: "ફોરેસ્ટ ઓથેન્ટિકેશન નિષ્ફળ"
@@ -128,6 +199,7 @@ function Login() {
   // Handlers
   const handleUserIdChange = (e) => { setUserId(e.target.value); setError(""); };
   const handlePasswordChange = (e) => { setPassword(e.target.value); setError(""); };
+  const handleCaptchaChange = (e) => { setCaptchaInput(e.target.value); setError(""); };
   const handleKeyPress = (e) => { if (e.key === 'Enter') handleLogin(); };
   const handleLanguageToggle = (lang) => { if (!loading) toggleLanguage(lang); };
 
@@ -165,6 +237,11 @@ function Login() {
 
   const handleLogin = async () => {
     if (!userId || !password) { setError(text[language].errorRequired); return; }
+    if (captchaInput.trim().toLowerCase() !== captchaTextRef.current.toLowerCase()) {
+      setError(text[language].errorCaptcha);
+      generateCaptcha();
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -220,6 +297,7 @@ function Login() {
       else setError(error.message || text[language].errorServer);
     } finally {
       setLoading(false);
+      generateCaptcha();
     }
   };
 
@@ -355,6 +433,53 @@ function Login() {
                   : <FiEyeOff style={{ fontSize: '18px', color: '#666' }} />
                 }
               </button>
+            </div>
+
+            {/* CAPTCHA */}
+            <label className="input-label">{text[language].captchaLabel}</label>
+            <div className="captcha-container">
+              <div className="captcha-field">
+                <input
+                  type="text"
+                  placeholder={text[language].captchaPlaceholder}
+                  value={captchaInput}
+                  onChange={handleCaptchaChange}
+                  onKeyPress={handleKeyPress}
+                  onPaste={(e) => e.preventDefault()}
+                  onCopy={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  onDrop={(e) => e.preventDefault()}
+                  onDragStart={(e) => e.preventDefault()}
+                  disabled={loading}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  maxLength={6}
+                  style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}
+                />
+                <button
+                  type="button"
+                  className="captcha-refresh"
+                  onClick={generateCaptcha}
+                  disabled={loading}
+                  title="Refresh captcha"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '0 10px' }}
+                >
+                  <FiRefreshCw style={{ fontSize: '16px', color: '#666' }} />
+                </button>
+              </div>
+              <canvas
+                ref={captchaCanvasRef}
+                width={200}
+                height={50}
+                className="captcha-canvas"
+                onClick={generateCaptcha}
+                title="Click to refresh"
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+                style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', WebkitTouchCallout: 'none' }}
+              />
             </div>
 
             {/* Login Button */}

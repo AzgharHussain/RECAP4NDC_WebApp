@@ -3,27 +3,28 @@
  * Requirements: npm install pg axios
  */
  
+require('dotenv').config();
 const { Client } = require("pg");
 const axios = require("axios");
 const https = require("https");
  
 // ========== PostgreSQL CONFIG ==========
 const pgClient = new Client({
-  user:     process.env.DB_USER     || 'recap4ndc_postgres',
-  host:     process.env.DB_HOST     || 'gsdc-psql.gujarat.gov.in',
-  database: process.env.DB_NAME     || 'RECAP4NDC',
-  password: process.env.DB_PASSWORD || '',
-  port:     Number(process.env.DB_PORT || 9999),
+  user:     process.env.DB_USER,
+  host:     process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port:     Number(process.env.DB_PORT),
 });
  
 // ========== GEOSERVER CONFIG ==========
 const geoserver = {
-  url:       process.env.GEOSERVER_URL       || 'http://localhost:8080/geoserver/rest',
+  url:       process.env.GEOSERVER_URL + '/rest',
   workspace: process.env.GEOSERVER_WORKSPACE || 'cite',
   datastore: process.env.GEOSERVER_STORE     || 'Recap4NDC_DB',
   auth: {
-    username: process.env.GEOSERVER_USER     || 'admin',
-    password: process.env.GEOSERVER_PASSWORD || 'geoserver',
+    username: process.env.GEOSERVER_USER,
+    password: process.env.GEOSERVER_PASSWORD,
   },
   sld: process.env.GEOSERVER_SLD || 'Arvalli_Coupe',
 };

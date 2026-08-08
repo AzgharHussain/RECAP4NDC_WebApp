@@ -15,15 +15,15 @@ const { sequelize, testConnection } = require('../config/ndvidatabase');
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// --- DB & GEOSERVER CONFIG ---
-const PG_HOST = process.env.DB_HOST     || 'gsdc-psql.gujarat.gov.in';
-const PG_USER = process.env.DB_USER     || 'recap4ndc_postgres';
-const PG_PASS = process.env.DB_PASSWORD || '';
-const PG_DB   = process.env.DB_NAME     || 'RECAP4NDC';
+// --- DB & GEOSERVER CONFIG (from .env only) ---
+const PG_HOST = process.env.DB_HOST;
+const PG_USER = process.env.DB_USER;
+const PG_PASS = process.env.DB_PASSWORD;
+const PG_DB   = process.env.DB_NAME;
 
-const GEOSERVER_URL  = process.env.GEOSERVER_URL       || 'http://localhost:8080/geoserver';
-const GEOSERVER_USER = process.env.GEOSERVER_USER       || 'admin';
-const GEOSERVER_PASS = process.env.GEOSERVER_PASSWORD   || 'geoserver';
+const GEOSERVER_URL  = process.env.GEOSERVER_URL;
+const GEOSERVER_USER = process.env.GEOSERVER_USER;
+const GEOSERVER_PASS = process.env.GEOSERVER_PASSWORD;
 const WORKSPACE      = process.env.GEOSERVER_WORKSPACE  || 'Recap4NDC';
 const DATASTORE      = process.env.GEOSERVER_STORE      || 'Recap4NDC_New';
 // --------------------------------
