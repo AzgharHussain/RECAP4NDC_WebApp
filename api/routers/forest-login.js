@@ -35,16 +35,16 @@ router.post("/saveuser", saveUserLimiter, async (req, res) => {
     console.log("🌲 Calling EGUJ Forest SOAP service with username:", username);
 
     const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-  <soap12:Body>
+xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
     <LOGIN_EGUJFOREST xmlns="http://tempuri.org/">
       <username>${username}</username>
       <password>${password}</password>
     </LOGIN_EGUJFOREST>
-  </soap12:Body>
-</soap12:Envelope>`;
+  </soap:Body>
+</soap:Envelope>`;
 
     const response = await axios.post(
       "https://egujforest.gujarat.gov.in/FMIS/CommonService/forestcommonservice.asmx",
@@ -52,6 +52,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
       {
         headers: {
           "Content-Type": "text/xml; charset=utf-8",
+          "SOAPAction": "http://tempuri.org/LOGIN_EGUJFOREST"
         },
         timeout: 30000,
       }
@@ -65,6 +66,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
     }
 
     // Parse XML — use stripPrefix to remove namespace prefixes (soap:, diffgr:, etc.)
+    console.log("Raw SOAP response:", response.data);
     const parsed = await xml2js.parseStringPromise(response.data, {
       explicitArray: false,
       mergeAttrs: true,
@@ -226,6 +228,7 @@ xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
     
     if (error.response) {
       console.error("Response status:", error.response.status);
+      console.error("Response data:", error.response.data);
       return res.status(error.response.status).json({
         success: false,
         error: `Forest service error: ${error.response.status}`
