@@ -53,7 +53,6 @@ async function publishToGeoServer(viewName) {
     const response = await axiosInstance.post(publishUrl, xmlData, {
       headers: { "Content-Type": "text/xml" },
     });
-    console.log(`✅ Published ${viewName} to GeoServer (Status: ${response.status})`);
     return true;
   } catch (err) {
     console.error(`❌ GeoServer publish failed for ${viewName}: ${err.message}`);
@@ -74,7 +73,6 @@ async function applySLDToLayer(viewName) {
       `<layer><defaultStyle><name>${geoserver.sld}</name></defaultStyle></layer>`,
       { headers: { "Content-Type": "application/xml" } }
     );
-    console.log(`🎨 Applied SLD: ${geoserver.sld}`);
     return true;
   } catch (err) {
     console.error(`❌ Failed to apply SLD for ${viewName}: ${err.message}`);
@@ -88,14 +86,13 @@ async function applySLDToLayer(viewName) {
 
 // Upload SLD to GeoServer
 async function uploadSLDToGeoServer(viewName, sldFilePath) {
-  const sldData = fs.readFileSync(sldFilePath, "utf8");
+  const sldData = await fs.promises.readFile(sldFilePath, "utf8");
   const sldUrl = `${geoserver.url}/workspaces/${geoserver.workspace}/styles?name=${viewName}_style`;
 
   try {
     await axiosInstance.post(sldUrl, sldData, {
       headers: { "Content-Type": "application/vnd.ogc.sld+xml" },
     });
-    console.log(`✅ Uploaded SLD for ${viewName}`);
     return true;
   } catch (err) {
     console.error(`❌ Failed to upload SLD for ${viewName}: ${err.message}`);
@@ -123,13 +120,12 @@ async function styleLayerInQGIS(viewName) {
       layer.saveNamedStyle("${viewName}.sld", True)
       print("Style saved as ${viewName}.sld")
     `;
-    fs.writeFileSync("temp_style_script.py", qgisScript);
+    fs.promises.writeFile("temp_style_script.py", qgisScript).catch(() => {});
     exec(`${qgisPath} temp_style_script.py`, (error, stdout, stderr) => {
       if (error) {
         console.error(`❌ QGIS styling failed: ${error}`);
         reject(error);
       } else {
-        console.log(`✅ QGIS styling completed for ${viewName}`);
         resolve(`${viewName}.sld`);
       }
     });
@@ -160,10 +156,9 @@ async function createViewInPostgreSQL(pgClient, viewName, beats) {
     const createViewSQL = `
       CREATE OR REPLACE VIEW "${viewName}" AS
       SELECT * FROM public.merged_coupe_filter1
-      WHERE "beat" = '${beats}'
+      WHERE "beat" = $1
     `;
-    await pgClient.query(createViewSQL);
-    console.log(`✅ View ${viewName} created successfully.`);
+    await pgClient.query(createViewSQL, [beats]);
     return true;
   } catch (err) {
     console.error(`❌ Error creating view ${viewName}: ${err.message}`);
@@ -175,7 +170,6 @@ async function createViewInPostgreSQL(pgClient, viewName, beats) {
 (async () => {
   const pgClient = new Client(pgConfig);
   await pgClient.connect();
-  console.log("✅ Connected to PostgreSQL");
 
   // Example beats (replace with dynamic fetch)
   const beats = ["beat1", "beat2"];
@@ -200,5 +194,4 @@ async function createViewInPostgreSQL(pgClient, viewName, beats) {
   }
 
   await pgClient.end();
-  console.log("🔚 Process completed.");
 })();

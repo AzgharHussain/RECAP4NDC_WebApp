@@ -5,7 +5,6 @@ module.exports = function startNdviScheduler(admin) {
 
   cron.schedule("*/1000 * * * *", async () => {
 
-    console.log("🌿 Running NDVI notification scheduler...");
 
     try {
 
@@ -22,7 +21,6 @@ module.exports = function startNdviScheduler(admin) {
       `, { type: sequelize.QueryTypes.SELECT });
 
       if (!tables.length) {
-        console.log("📭 No NDVI tables found");
         return;
       }
 
@@ -36,7 +34,6 @@ module.exports = function startNdviScheduler(admin) {
       `, { type: sequelize.QueryTypes.SELECT });
 
       if (!users.length) {
-        console.log("👥 No subscribed users");
         return;
       }
 
@@ -47,7 +44,6 @@ module.exports = function startNdviScheduler(admin) {
 
         const tableName = table.table_name;
 
-        console.log("🔎 Checking table:", tableName);
 
         for (const user of users) {
 
@@ -105,7 +101,6 @@ module.exports = function startNdviScheduler(admin) {
           });
 
           if (alreadySent.length) {
-            console.log(`⏭️ Notification already sent to user ${user_id}`);
             continue;
           }
 
@@ -137,7 +132,6 @@ module.exports = function startNdviScheduler(admin) {
             // ------------------------------------------------
             await admin.messaging().send(message);
 
-            console.log(`📩 Notification sent to user ${user_id}`);
 
             // ------------------------------------------------
             // 8️⃣ Insert log record
@@ -175,7 +169,6 @@ module.exports = function startNdviScheduler(admin) {
                   bind: [user_id],
                   type: sequelize.QueryTypes.UPDATE
                 });
-                console.log(`🧹 Cleared invalid firebase_token for user ${user_id}`);
               } catch (cleanupErr) {
                 console.error("❌ Failed clearing invalid token:", cleanupErr.message);
               }

@@ -204,7 +204,6 @@ function AdminDashboard() {
         }
       );
       
-      console.log("Divisions API response:", response);
       
       let divisionsData = [];
       
@@ -220,7 +219,6 @@ function AdminDashboard() {
         }
       }
       
-      console.log("Extracted divisions data:", divisionsData);
       setDivisions(divisionsData);
       
     } catch (err) {

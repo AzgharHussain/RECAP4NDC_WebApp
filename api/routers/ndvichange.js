@@ -5,7 +5,6 @@ async function createNDVIChangeTable() {
   try {
   
 
-    console.log('🚀 Inserting NDVI change data (this may take time)...');
     console.time('⏱️ Insert Time');
     const [insertResult] = await sequelize.query(`
       INSERT INTO "${tableName}" (
@@ -42,10 +41,8 @@ async function createNDVIChangeTable() {
         AND ST_IsValid(feb.geom);
     `);
     console.timeEnd('⏱️ Insert Time');
-    console.log(`✅ Inserted ${insertResult.rowCount} rows`);
 
    
-    console.log('🎉 NDVI change table populated and indexed successfully!');
     process.exit(0);
   } catch (error) {
     console.error('❌ NDVI change table creation failed');

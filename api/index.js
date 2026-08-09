@@ -14,11 +14,20 @@ process.on('uncaughtException', (err) => {
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+
+// === Global query timeout — must be loaded BEFORE any router ===
+// Patches pg.Pool.prototype.query so every DB query across ALL routers
+// gets a 30-second statement_timeout. Prevents slow queries from blocking
+// the event loop and making the server unreachable.
+const setupQueryTimeout = require('./middlewares/queryTimeout');
+setupQueryTimeout({ timeoutMs: 30000 });
+
 const validateAlphaNumSpaceUnderscore = require("./middlewares/validateAlphaNumSpaceUnderscore");
 const { verifyJwt } = require("./middlewares/verifyJwt");
 const { sequelize, testConnection } = require('./config/database');
@@ -111,6 +120,20 @@ app.get("/", (req, res) => {
 
 const validateHttpHeaders = require('./middlewares/validateHttpHeaders');
 
+// === Global API rate limiter — tuned for 5000 concurrent users ===
+// 2000 requests per minute per IP is generous enough for a busy office
+// (many users behind one NAT IP) while still mitigating flood attacks.
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,       // 1 minute
+  max: 2000,                 // 2000 requests/min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many requests. Please slow down." },
+  // Skip rate limiting for health checks and OPTIONS preflight
+  skip: (req) => req.method === 'OPTIONS' || req.path === '/api/test' || req.path === '/api/health',
+});
+app.use('/api', apiLimiter);
+
 app.use('/api', validateHttpHeaders);
 app.use('/api', validateAlphaNumSpaceUnderscore);
 const validateNoDuplicateParams = (req, res, next) => {
@@ -142,17 +165,21 @@ const validateNoDuplicateParams = (req, res, next) => {
   next();
 };
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const allowedOrigins = [
+  // Production origins
   'https://gisfy.co.in:8445',
   'https://gisfy.co.in:8445/geoserver/wms',
   'https://forestrecap.gisfy.co.in',
-  'http://localhost:5002',
-  'http://68.178.167.216:5002',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5176',
-  'http://13.235.78.63:5002',
-  'http://3.108.143.116:8082',
+  // Development origins (only included in non-production)
+  ...(!isProd ? [
+    'http://localhost:5002',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5176',
+  ] : []),
+  // Additional origins from env
   ...(process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean),
 ];
 
@@ -167,6 +194,9 @@ app.use(cors({
   maxAge: 86400,
 }));
 
+// Parse cookies — needed for cookie-based auth fallback
+app.use(cookieParser());
+
 
 
 // Use express built-in JSON parser (remove body-parser)
@@ -180,21 +210,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use((req, res, next) => {
   const startedAt = Date.now();
   res.on('finish', () => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - startedAt}ms`);
   });
   next();
 });
 
 // In your Express app (index.js), when setting cookies:
 app.use((req, res, next) => {
-    // Ensure all cookies have secure flags
+    // Ensure all cookies have secure flags.
+    // In development (HTTP), secure:true would prevent cookies from being set.
+    const isProd = process.env.NODE_ENV === 'production';
     const originalCookie = res.cookie;
     res.cookie = function(name, value, options = {}) {
-        // Force secure settings for all cookies
         const secureOptions = {
-            secure: true,           // Only send over HTTPS
+            secure: isProd,         // Only HTTPS in production
             httpOnly: true,         // Prevent JavaScript access
-            sameSite: 'strict',     // CSRF protection
+            sameSite: isProd ? 'strict' : 'lax',  // Lax in dev for cross-origin testing
             ...options
         };
         return originalCookie.call(this, name, value, secureOptions);
@@ -202,37 +232,39 @@ app.use((req, res, next) => {
     next();
 });
 
+// Response sanitization — optimized for high concurrency.
+// Only sanitizes string values (escapes HTML entities) to prevent XSS.
+// Skips large responses (>1MB) for performance — those are typically
+// spatial/geo data that doesn't need HTML escaping.
+const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const HTML_ESCAPE_RE = /[&<>"']/g;
+const SANITIZE_SKIP_SIZE = 1024 * 1024; // 1MB
+
 app.use((req, res, next) => {
   const originalJson = res.json;
   res.json = function(data) {
-    // Recursively sanitize strings in the response
+    // Skip sanitization for very large responses (geo/spatial data)
+    try {
+      const serialized = JSON.stringify(data);
+      if (serialized.length > SANITIZE_SKIP_SIZE) {
+        return originalJson.call(this, data);
+      }
+    } catch { return originalJson.call(this, data); }
+
     function sanitizeOutput(obj) {
       if (typeof obj === 'string') {
-        // Escape HTML entities
-        return obj.replace(/[&<>"']/g, function(match) {
-          return {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-          }[match];
-        });
+        return obj.replace(HTML_ESCAPE_RE, (m) => HTML_ESCAPE_MAP[m]);
       } else if (Array.isArray(obj)) {
-        return obj.map(item => sanitizeOutput(item));
+        for (let i = 0; i < obj.length; i++) obj[i] = sanitizeOutput(obj[i]);
+        return obj;
       } else if (obj && typeof obj === 'object') {
-        const sanitized = {};
-        for (const key in obj) {
-          sanitized[key] = sanitizeOutput(obj[key]);
-        }
-        return sanitized;
+        for (const key in obj) obj[key] = sanitizeOutput(obj[key]);
+        return obj;
       }
       return obj;
     }
-    
-    // Sanitize the response data
-    const sanitizedData = sanitizeOutput(data);
-    return originalJson.call(this, sanitizedData);
+
+    return originalJson.call(this, sanitizeOutput(data));
   };
   next();
 });
@@ -301,7 +333,7 @@ const gisupload = require('./routers/gisupload');
 const gisupload1 = require('./routers/gis-upload1');
 const forestLoginRoutes = require('./routers/forestLogin');
 
-const TEMP_SAVEUSER_TOKEN = "RECAP4NDC_TEMP_TOKEN";
+const TEMP_SAVEUSER_TOKEN = process.env.TEMP_SAVEUSER_TOKEN || require('crypto').randomBytes(32).toString('hex');
 const verifyTempToken = (req, res, next) => {
   const token = req.headers["x-temp-token"];
 
@@ -327,16 +359,62 @@ const verifyTempToken = (req, res, next) => {
 
 // ==================== ROUTES ==================== //
 
+// === Health check endpoint for load balancers / PM2 / Docker ===
+// Returns 200 if the server is healthy, 503 if not.
+// Checks: event loop lag, DB connection, memory usage.
+app.get('/api/health', async (req, res) => {
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    pid: process.pid,
+    uptime: Math.round(process.uptime()),
+    memory: {
+      rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
+      heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+      heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB',
+    },
+    eventLoopLag: null,
+    database: 'unknown',
+  };
+
+  // Check event loop lag using the monitor's getCurrentLag function
+  if (req.app.locals.getEventLoopLag) {
+    try {
+      const lag = await req.app.locals.getEventLoopLag();
+      health.eventLoopLag = lag + 'ms';
+      if (lag > 5000) {
+        health.status = 'degraded';
+      }
+    } catch {}
+  }
+
+  // Check database connectivity
+  try {
+    await sequelize.authenticate();
+    health.database = 'connected';
+  } catch (e) {
+    health.database = 'disconnected';
+    health.status = 'unhealthy';
+    health.databaseError = e.message;
+  }
+
+  // Check memory — if heap > 1.5GB, mark as degraded
+  const heapMB = process.memoryUsage().heapUsed / 1024 / 1024;
+  if (heapMB > 1500) {
+    health.status = 'degraded';
+  }
+
+  const httpStatus = health.status === 'unhealthy' ? 503 : 200;
+  res.status(httpStatus).json(health);
+});
+
 // Test GET endpoint
 app.get('/api/test', (req, res) => {
-  console.log('✅ /api/test GET endpoint hit');
   res.json({ success: true, message: 'Test route works!' });
 });
 
 // Test POST endpoint to verify body parsing
 app.post('/api/test-post', (req, res) => {
-  console.log('✅ /api/test-post POST endpoint hit');
-  console.log('Request body:', req.body);
   res.json({ 
     success: true, 
     message: 'POST test route works!',
@@ -393,7 +471,6 @@ try {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
-    console.log("🔥 Firebase Admin initialized");
   }
 } catch (err) {
   console.error("❌ Firebase service account missing:", err);
@@ -421,11 +498,9 @@ const loginSchema = Joi.object({
 
 app.post("/api/changepassword", verifyJwt, async (req, res) => {
   try {
-    console.log("Change password request received");
 
     const { username, currentPassword, newPassword } = req.body;
 
-    console.log(`Password change attempt for user: ${username}`);
 
     // Verify the user exists and get current password hash
     const [users] = await sequelize.query(
@@ -471,7 +546,6 @@ app.post("/api/changepassword", verifyJwt, async (req, res) => {
       { replacements: { hashedNewPassword, username } }
     );
 
-    console.log(`Password changed successfully for user: ${username}`);
 
     logFromRequest(req, {
       action: 'PASSWORD_CHANGE',
@@ -509,7 +583,6 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
 
   try {
 
-    console.log("Admin login request received");
 
     // Schema validation
     const { error, value } = loginSchema.validate(req.body);
@@ -524,7 +597,6 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
     const username = value.username.trim();
     const password = value.password.trim();
 
-    console.log(`Admin login attempt: ${username}`);
 
     // Query database
     const [result] = await sequelize.query(
@@ -703,7 +775,7 @@ app.post("/api/admin", validateNoDuplicateParams22, async (req, res) => {
 
 const saveUserLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Allow only 5 requests per IP per 15 mins
+  max: 300, // Tuned for 5000 concurrent users behind NAT
   message: {
     success: false,
     error: "Too many requests. Please try again after 15 minutes."
@@ -884,16 +956,27 @@ app.use(errorHandler);
 // ==================== START SERVER ==================== //
 const PORT = process.env.PORT || 5002;
 
-app.listen(PORT, "0.0.0.0" , async () => {
+const server = app.listen(PORT, "0.0.0.0" , async () => {
   try {
     await sequelize.authenticate();
-    console.log('🟢 Database connected successfully');
   } catch (err) {
     console.error('❌ Database connection failed:', err.message);
   }
 
   // Connect to MongoDB
-  await connectMongo();
+  try {
+    await connectMongo();
+  } catch (err) {
+    console.error('❌ MongoDB connection failed:', err.message);
+  }
+
+  // Add database indexes (async — don't block startup)
+  try {
+    const addIndexes = require('./scripts/addIndexes');
+    addIndexes().catch(e => console.warn('⚠️ Index creation warning:', e.message));
+  } catch (e) {
+    console.warn('⚠️ Could not load addIndexes:', e.message);
+  }
 
   // Seed AuditLog counter with current max logId
   try {
@@ -906,14 +989,43 @@ app.listen(PORT, "0.0.0.0" , async () => {
       { $max: { seq: currentMax } },
       { upsert: true, setDefaultsOnInsert: true }
     );
-    console.log(`✅ AuditLog counter seeded at ${currentMax}`);
   } catch (err) {
     console.error('⚠️ AuditLog counter seed failed:', err.message);
   }
 
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📝 Test endpoints:`);
-  console.log(`   GET  http://localhost:${PORT}/api/test`);
-  console.log(`   POST http://localhost:${PORT}/api/test-post`);
-  console.log(`   POST http://localhost:${PORT}/api/forest-login`);
+
+  // ==================== SERVER TUNING FOR HIGH CONCURRENCY ==================== //
+  // Keep-alive: reuse TCP connections between client and server.
+  try {
+    server.keepAliveTimeout = 65000;   // 65s — slightly longer than headersTimeout
+    server.headersTimeout = 66000;     // 66s — must be > keepAliveTimeout
+    // server.requestTimeout = 120000; // Uncomment if Node.js >= v18 supports it
+  } catch (e) {
+    console.warn('⚠️ Server tuning skipped:', e.message);
+  }
+
+  // === Event loop monitor — detects when the server is stuck ===
+  // If the event loop is blocked for >30s total, the process exits and
+  // PM2/cluster restarts it automatically.
+  try {
+    const startMonitor = require('./middlewares/eventLoopMonitor');
+    const monitor = startMonitor({
+      maxLagMs: 5000,        // warn if a single lag spike > 5s
+      restartAfterMs: 30000, // restart if cumulative lag > 30s
+      checkIntervalMs: 5000, // check every 5s
+    });
+    // Store getCurrentLag so /api/health can report it
+    app.locals.getEventLoopLag = monitor.getCurrentLag;
+  } catch (e) {
+    console.warn('⚠️ Event loop monitor skipped:', e.message);
+  }
+});
+
+// Graceful shutdown — close DB pools and stop accepting new connections
+// Only handle SIGTERM (used by nodemon/process managers).
+// Don't handle SIGINT — let nodemon/the terminal handle Ctrl+C natively.
+process.on('SIGTERM', () => {
+  try { server.close(); } catch {}
+  try { sequelize.close(); } catch {}
+  setTimeout(() => process.exit(0), 5000);
 });

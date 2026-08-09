@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useRef } from "react";
 import L from "leaflet";
+import DOMPurify from "dompurify";
 import "./printControl.css";
 
 const PrintControl = ({ mapRef }) => {
@@ -9,7 +10,6 @@ const PrintControl = ({ mapRef }) => {
   // Export function
   const handleExport = useCallback(() => {
     if (isExportingRef.current) {
-      console.log("Export already in progress");
       return;
     }
 
@@ -134,7 +134,7 @@ const PrintControl = ({ mapRef }) => {
     const updateLegend = () => {
       const legendElement = document.getElementById("legend-container");
       if (legendElement && legendDiv) {
-        legendDiv.innerHTML = legendElement.innerHTML;
+        legendDiv.innerHTML = DOMPurify.sanitize(legendElement.innerHTML);
       }
     };
 

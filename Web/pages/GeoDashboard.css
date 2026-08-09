@@ -759,6 +759,7 @@ padding: 20px;
 }
 .feature-info-popup {
   max-height: 300px;
+  max-width: 400px;
   overflow-y: auto;
   padding: 10px;
 }

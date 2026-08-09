@@ -11,7 +11,6 @@ import { debounce, min } from 'lodash';
 import { API_BASE_URL } from "../config";
 import "leaflet.nontiledlayer";
 const Loader = () => {
-  console.log("loading");
   return (
     <div className="map-loader">
       <div className="map-loader__radar">
@@ -397,6 +396,42 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
     return <FiInfo style={{ color: '#555' }} />;
   };
 
+  // --- Boundary-aware positioning ---
+  // The popup is 320-400px wide and up to 450px tall. If the click point
+  // is near the right or bottom edge of the viewport, the popup would
+  // extend outside the window. We flip/reposition it to stay on-screen.
+  const POPUP_WIDTH = 380;   // estimated (min 320, max 400)
+  const POPUP_HEIGHT = 450;  // max height
+  const MARGIN = 10;         // px from edge
+
+  const viewportW = window.innerWidth;
+  const viewportH = window.innerHeight;
+
+  let popupLeft = position.x;
+  let popupTop = position.y;
+
+  // Horizontal: if popup would overflow right edge, flip to left of click
+  if (popupLeft + POPUP_WIDTH + MARGIN > viewportW) {
+    popupLeft = position.x - POPUP_WIDTH - MARGIN;
+    // If that also overflows left, clamp to left margin
+    if (popupLeft < MARGIN) {
+      popupLeft = Math.max(MARGIN, viewportW - POPUP_WIDTH - MARGIN);
+    }
+  }
+  // Clamp left
+  popupLeft = Math.max(MARGIN, popupLeft);
+
+  // Vertical: if popup would overflow bottom edge, flip above the click
+  if (popupTop + POPUP_HEIGHT + MARGIN > viewportH) {
+    popupTop = position.y - POPUP_HEIGHT - MARGIN;
+    // If that also overflows top, clamp to top margin
+    if (popupTop < MARGIN) {
+      popupTop = Math.max(MARGIN, viewportH - POPUP_HEIGHT - MARGIN);
+    }
+  }
+  // Clamp top
+  popupTop = Math.max(MARGIN, popupTop);
+
   return (
     <div
       ref={popupRef}
@@ -404,8 +439,8 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
       onClick={handlePopupClick}
       style={{
         position: 'absolute',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
+        left: `${popupLeft}px`,
+        top: `${popupTop}px`,
         zIndex: 10000,
         backgroundColor: 'white',
         border: '1px solid #eee',
@@ -1993,7 +2028,6 @@ const handleGroupCheckbox = useCallback(async (e) => {
               });
             });
             
-            console.log(`✅ Successfully zoomed to ${currentLayerName}`);
           }
         } catch (error) {
           console.error('Error zooming to layer:', error);
@@ -2267,7 +2301,6 @@ const generateCoupeGroups = (layers) => {
   setActiveCoupeGroups(prev => ({ ...prev, ...initialActiveGroups }));
   setGroupSelections(prev => ({ ...prev, ...initialSelections }));
   
-  console.log('Generated coupe groups:', generatedGroups);
 };
 
   // Get available months for a specific coupe
@@ -2330,7 +2363,6 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
     
     // Check cache first
     if (layersInfoCache.current.has(cacheKey)) {
-      console.log(`Cache hit for ${layerName}`);
       return layersInfoCache.current.get(cacheKey);
     }
 
@@ -2358,7 +2390,6 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
       });
 
       const url = `${GEOSERVER_WMS}?${params.toString()}`;
-      console.log('GetFeatureInfo URL:', url);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -2372,7 +2403,6 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
       }
       
       const data = await response.json();
-      console.log('GetFeatureInfo response:', data);
       
       if (data.features && data.features.length > 0) {
         const combinedProperties = {};
@@ -2442,7 +2472,6 @@ const handleMapClick = useCallback(async (e) => {
     const layerName = layer._metadata?.name;
     if (!layerName) return null;
     
-    console.log('Querying layer:', layerName);
     const featureInfo = await getFeatureInfo(latlng, layerName);
     if (featureInfo) {
       return {
@@ -2514,11 +2543,9 @@ const handleMapClick = useCallback(async (e) => {
           handleMapClick(e);
         };
         mapRef.current.on('click', clickHandlerRef.current);
-        console.log('Map click handler added for info tool');
       } else if (!isInfoToolActive && clickHandlerRef.current) {
         mapRef.current.off('click', clickHandlerRef.current);
         clickHandlerRef.current = null;
-        console.log('Map click handler removed');
         
         // Close any open popup when info tool is deactivated
         if (attributeData || clickPosition) {
@@ -2617,7 +2644,6 @@ const layerManager = {
         }, 15000);
 
         newLayer.on("load", () => {
-          console.log(`[addLayer] Layer "${layerName}" fully loaded`);
           clearTimeout(timeout);
           resolve(newLayer);
         });
@@ -2712,7 +2738,6 @@ const clearAllLayers = useCallback(async () => {
     setGroupSelections(resetSelections);
     setActiveCoupeGroups(resetActiveGroups);
     
-    console.log("All layers cleared successfully");
   } catch (error) {
     console.error("Error clearing all layers:", error);
   } finally {
@@ -2731,7 +2756,6 @@ const getLayerBoundsFromAPI = useCallback(async (layerName, isNdviChangeLayer = 
       ? `${API_BASE_URL}/api/ndvi-change-layer-bounds/${cleanLayerName}`
       : `${API_BASE_URL}/api/layer-bounds/${cleanLayerName}`;
     
-    console.log('Fetching bounds from:', apiEndpoint);
     const response = await fetch(apiEndpoint);
     
     if (!response.ok) {
@@ -2739,7 +2763,6 @@ const getLayerBoundsFromAPI = useCallback(async (layerName, isNdviChangeLayer = 
     }
     
     const result = await response.json();
-    console.log('Bounds API response:', result);
     
     // Handle your API response format (direct bounds object, not wrapped in success.data)
     if (result && result.minX !== undefined && result.minY !== undefined && 
@@ -2824,7 +2847,6 @@ const toggleLayer = useCallback(
               });
             });
 
-            console.log(`✅ Successfully zoomed to ${layerConfig.Name}`);
           }
         } catch (error) {
           console.error(`❌ Error zooming to layer ${layerConfig.Name}:`, error);
@@ -2919,7 +2941,6 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
       }
 
       // Add the new layer
-      console.log(`Auto-adding new layer: ${newMonthlyLayerName}`);
       const layer = await layerManager.addLayer(newMonthlyLayerName, group.title);
 
       if (layer) {
@@ -2960,7 +2981,6 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
               });
             });
 
-            console.log(`✅ Successfully zoomed to ${newMonthlyLayerName}`);
           }
         } catch (error) {
           console.error('Error zooming to layer:', error);

@@ -15,7 +15,6 @@ export const useSessionMonitor = () => {
 
         const sessionStr = localStorage.getItem('session');
         if (!sessionStr) {
-          console.log("No session found");
           clearSession();
           navigate('/', { replace: true });
           return;
@@ -24,9 +23,8 @@ export const useSessionMonitor = () => {
         const session = JSON.parse(sessionStr);
         const now = new Date();
         const expiresAt = new Date(session.expiresAt);
-        
+
         if (expiresAt < now) {
-          console.log("Session expired");
           clearSession();
           navigate('/', { replace: true });
           return;
@@ -37,7 +35,6 @@ export const useSessionMonitor = () => {
         localStorage.setItem('session', JSON.stringify(session));
 
       } catch (error) {
-        console.error("Session monitor error:", error);
         clearSession();
         navigate('/', { replace: true });
       }
@@ -50,24 +47,17 @@ export const useSessionMonitor = () => {
       localStorage.removeItem('authToken');
     };
 
-    // Check immediately
+    // Check immediately on mount
     checkSession();
 
-    // Check every 10 seconds
-    const intervalId = setInterval(checkSession, 10000);
-
-    // Check on user activity
-    const handleUserActivity = () => {
-      checkSession();
-    };
-
-    window.addEventListener('mousedown', handleUserActivity);
-    window.addEventListener('keydown', handleUserActivity);
+    // Check every 60 seconds (was 10s).
+    // Also removed mousedown/keydown listeners that fired checkSession on
+    // EVERY user interaction — at 50000 users this caused massive unnecessary
+    // localStorage reads and JSON.parse calls.
+    const intervalId = setInterval(checkSession, 60000);
 
     return () => {
       clearInterval(intervalId);
-      window.removeEventListener('mousedown', handleUserActivity);
-      window.removeEventListener('keydown', handleUserActivity);
     };
   }, [navigate]);
 

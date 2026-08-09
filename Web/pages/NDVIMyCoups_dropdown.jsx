@@ -26,7 +26,6 @@ const NDVIMyCoups_dropdown = () => {
             },
           }
         );
-        console.log("api/coupe-divisions", res.data);
         setDivisions(res.data[0]);
       } catch (error) {
         console.error("Error fetching divisions:", error);
@@ -62,7 +61,6 @@ const NDVIMyCoups_dropdown = () => {
           },
         }
       );
-      console.log("api/coupe-ranges", res.data);
       setRanges(res.data);
     } catch (error) {
       console.error("Error fetching ranges:", error);
@@ -94,7 +92,6 @@ const NDVIMyCoups_dropdown = () => {
           },
         }
       );
-      console.log("api/coupe-beats", res.data);
       setBeats(res.data);
     } catch (error) {
       console.error("Error fetching beats:", error);

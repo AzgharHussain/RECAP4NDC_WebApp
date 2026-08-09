@@ -29,7 +29,9 @@ export default function PatrollingLayer({ show }) {
 
   useEffect(() => {
     if (show) {
-      fetch("http://68.178.167.39:5000/api/patrols-by-user?user_id=1")
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const userId = userData.user_id || userData.id || '';
+      fetch(`${import.meta.env.VITE_API_URL}/api/patrols-by-user?user_id=${userId}`)
         .then((res) => res.json())
         .then((data) => setPatrols(data))
         .catch((err) => console.error("Error fetching patrol data", err));

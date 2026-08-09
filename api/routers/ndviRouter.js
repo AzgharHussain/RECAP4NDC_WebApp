@@ -99,7 +99,6 @@ const transformTableName = (tableName, division) => {
   }
 
   if (mappedCoupe) {
-    console.log(`[transformTableName] Mapping ${lowerDivision} to ${mappedCoupe}`);
     
     // Handle NDVI Change table format: YYYY-MM-DD_division_coupe_NDVI_Change
     if (tableName.includes('_NDVI_Change')) {
@@ -121,7 +120,6 @@ const transformTableName = (tableName, division) => {
         
         // Construct new table name with mapped coupe
         const newTableName = `${datePart}_${mappedCoupe}_coupe_${suffix}`;
-        console.log(`[transformTableName] Transformed: ${tableName} -> ${newTableName}`);
         return newTableName;
       }
     }
@@ -158,7 +156,6 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
         // Transform table name if needed based on division
         const actualTableName = transformTableName(tableName, division);
         
-        console.log(`[ndvi-change-get-filtered] Original: ${tableName}, Division: ${division}, Transformed to: ${actualTableName}`);
 
         // Check if the table exists before doing anything else.
         // NDVI change tables are only generated for divisions/dates that have
@@ -169,7 +166,6 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
         const tableExists = tableExistsResult[0] && tableExistsResult[0].regclass;
 
         if (!tableExists) {
-            console.log(`[ndvi-change-get-filtered] Table not found, returning empty data: ${actualTableName}`);
             return res.json({
                 success: true,
                 data: []
@@ -267,7 +263,6 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
         // Transform table name if needed based on division
         const actualTableName = transformTableName(tableName, division);
         
-        console.log(`[ndvi-change-degraded-area] Original: ${tableName}, Division: ${division}, Transformed to: ${actualTableName}`);
 
         // Build WHERE clause based on hierarchy filters
         let whereClause = '';
@@ -309,7 +304,6 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
         
         // If the first approach fails, try with ST_Transform
         try {
-            console.log('Trying with ST_Transform...');
             const { tableName, range, round, beat, division } = req.body;
             const actualTableName = transformTableName(tableName, division);
             
@@ -992,7 +986,7 @@ if (!tableRegex.test(coupename)) {
         });
       }
 
-      fs.unlinkSync(imageFile.path);
+      fs.promises.unlink(imageFile.path).catch(() => {});
     }
 
     if (status !== undefined) {
@@ -1311,7 +1305,6 @@ router.get('/ndvi-change-layer-bounds/:layerName', async (req, res) => {
     // Execute query - Sequelize returns [results, metadata]
     const [results, metadata] = await sequelize.query(query);
     
-    console.log('Query results:', results);
     
     // Check if we got any results
     if (!results || results.length === 0 || !results[0] || !results[0].min_x) {
@@ -1338,7 +1331,6 @@ router.get('/ndvi-change-layer-bounds/:layerName', async (req, res) => {
       }
     };
     
-    console.log('Sending bounds:', bounds);
     res.json(bounds);
   } catch (error) {
     console.error('Error fetching NDVI change layer bounds:', error);

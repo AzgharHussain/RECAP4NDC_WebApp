@@ -10,13 +10,17 @@ const { logFromRequest } = require("../utils/auditLogger");
 
 const router = express.Router();
 
-// PostgreSQL connection pool
+// PostgreSQL connection pool — sized for high concurrency
 const client = new Pool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   port: Number(process.env.DB_PORT),
-  database: process.env.DB_NAME
+  database: process.env.DB_NAME,
+  max: Number(process.env.DB_POOL_MAX || 50),
+  min: 5,
+  acquireTimeoutMillis: 60000,
+  idleTimeoutMillis: 30000,
 });
 client.on('error', (err) => {
   console.error('Unexpected PostgreSQL pool error:', err.message);
@@ -232,19 +236,18 @@ pat_data.division = clean(pat_data.division);
 
 router.get('/patrol-info-all', verifyJwt, async (req, res) => {
   try {
+    // Removed unnecessary GROUP BY — the LEFT JOIN is 1:1, no duplicates.
+    // Added timeout to prevent blocking the event loop on large tables.
     const query = `
       SELECT
         p.*,
         pt.type_name
-       
       FROM patrols p
-     
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
-      GROUP BY p.patrol_id, pt.type_name
       ORDER BY p.patrol_id DESC;
     `;
 
-    const result = await client.query(query);
+    const result = await client.query({ text: query, timeout: 30000 });
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
@@ -263,18 +266,18 @@ router.get('/patrol-info-all', verifyJwt, async (req, res) => {
 // GET all patrols with images and notes
 router.get('/patrol-info', verifyJwt, async (req, res) => {
   try {
+    // Removed unnecessary GROUP BY — LEFT JOIN is 1:1, no duplicates.
     const query = `
       SELECT
         p.*,
         pt.type_name
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
-      GROUP BY p.patrol_id, pt.type_name
       ORDER BY p.patrol_id DESC
       LIMIT 5;
     `;
 
-    const result = await client.query(query);
+    const result = await client.query({ text: query, timeout: 30000 });
 
     const patrolIds = result.rows.map(p => p.patrol_id);
     let imagesMap = {};
@@ -433,6 +436,9 @@ if (end_date) {
       : '';
 
     // Main query with pagination and filters (no image JOIN)
+    // Removed unnecessary GROUP BY — it forced a full sort/hash aggregation
+    // that made this query take 40-60 seconds. DISTINCT is not needed since
+    // the LEFT JOIN on patrolling_types is 1:1 (one type per patrol).
     const query = `
       SELECT
         p.*,
@@ -440,7 +446,6 @@ if (end_date) {
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ${whereClause}
-      GROUP BY p.patrol_id, pt.type_name
       ORDER BY p.patrol_id DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
     `;
@@ -450,16 +455,17 @@ if (end_date) {
 
     // Count query for total records with same filters
     const countQuery = `
-      SELECT COUNT(DISTINCT p.patrol_id) as total_count
+      SELECT COUNT(*) as total_count
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ${whereClause};
     `;
 
-    // Execute both queries
+    // Execute both queries with a 30-second timeout to prevent blocking the event loop
+    const queryTimeout = 30000;
     const [result, countResult] = await Promise.all([
-      client.query(query, values),
-      client.query(countQuery, values.slice(0, -2)) // Remove limit and offset for count query
+      client.query({ text: query, values, timeout: queryTimeout }),
+      client.query({ text: countQuery, values: values.slice(0, -2), timeout: queryTimeout })
     ]);
 
     const totalCount = parseInt(countResult.rows[0].total_count);

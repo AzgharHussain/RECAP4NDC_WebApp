@@ -37,6 +37,11 @@ body {
   object-fit: cover;
   object-position: top center;
   z-index: 0;
+  /* GPU acceleration for smooth playback */
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .hero-bg-overlay {

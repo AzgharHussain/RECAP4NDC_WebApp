@@ -27,7 +27,6 @@ const LocationSelector = ({ mapRef }) => {
         body: JSON.stringify({ [type]: name })
 
       }
-      console.log('Fetching centroid for:', type, name);
       const response = await fetch(`${BASE_URL}/api/centroid/${type}`, options);
 
       if (!response.ok) throw new Error(`Failed to fetch ${type} centroid`);

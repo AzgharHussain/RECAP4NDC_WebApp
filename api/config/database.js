@@ -33,12 +33,15 @@ const sequelize = new Sequelize(
         }
       : {},
     pool: {
-      max:     Number(process.env.DB_POOL_MAX     || 20),
-      min:     Number(process.env.DB_POOL_MIN     || 0),
-      acquire: Number(process.env.DB_POOL_ACQUIRE || 30000),
-      idle:    Number(process.env.DB_POOL_IDLE    || 10000),
+      max:     Number(process.env.DB_POOL_MAX     || 50),
+      min:     Number(process.env.DB_POOL_MIN     || 5),
+      acquire: Number(process.env.DB_POOL_ACQUIRE || 60000),
+      idle:    Number(process.env.DB_POOL_IDLE    || 30000),
       evict:   Number(process.env.DB_POOL_EVICT   || 10000),
     },
+    // Query timeout: abort any query that takes longer than 30 seconds.
+    // This prevents slow spatial/geo queries from blocking the event loop.
+    queryTimeout: 30000,
     benchmark: !isProduction,
   }
 );
@@ -47,7 +50,6 @@ const sequelize = new Sequelize(
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ Database connection established successfully.');
     return true;
   } catch (error) {
     console.error('❌ 888888Unable to connect to the database:', error.message);

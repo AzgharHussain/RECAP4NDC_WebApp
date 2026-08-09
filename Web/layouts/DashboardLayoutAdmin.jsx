@@ -227,7 +227,7 @@ useEffect(() => {
 
         <header id="header">
                 <div className="container-fluid22">
-                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'100%'}}>
+                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'100%',borderRadius:'50px'}}>
                         <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'25px'}}>
                             {/* <a href="indexs.aspx">
                                 </a> */}

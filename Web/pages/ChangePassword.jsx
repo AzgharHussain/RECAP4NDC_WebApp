@@ -308,7 +308,6 @@ function ChangePassword() {
         return;
       }
 
-      console.log("Sending password change request for:", userData.username);
       
       // Make API call to change password
       const response = await axios.post(
@@ -326,7 +325,6 @@ function ChangePassword() {
         }
       );
       
-      console.log("Password change response:", response.data);
       
       if (response.data.success) {
         setSuccess(t.successMessage);

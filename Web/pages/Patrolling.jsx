@@ -15,6 +15,7 @@ import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
 import axios from "axios";
+import { getAuthToken, getAuthHeaders, handleUnauthorized } from "../utils/authUtils";
 
 import startIconImg from "../assets/marker-icon.png";
 import endIconImg from "../assets/marker-icon-end.png";
@@ -40,7 +41,6 @@ import {
 import L from "leaflet";
 
 const Loader = () => {
-  console.log("loading")
   return (
     <div className="map-loader">
       <div className="map-loader__radar">
@@ -748,20 +748,18 @@ const fetchDashboardData = useCallback(async () => {
   
   setIsDashboardLoading(true);
   try {
-    const token = localStorage.getItem("token");
+    const token = getAuthToken();
+    if (!token) return;
     
     if (!hasActiveFilters) {
       // Fetch all patrol data without filters
       const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
       });
 
-      console.log("Dashboard API response status:", response.status);
       
+      if (handleUnauthorized(response.status)) return;
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       
@@ -799,18 +797,14 @@ const fetchDashboardData = useCallback(async () => {
         ...filters
       });
 
-      console.log("Fetching dashboard data with filters:", queryParams.toString());
       
       const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${queryParams}`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
       });
 
-      console.log("Dashboard API response status with filters:", response.status);
       
+      if (handleUnauthorized(response.status)) return;
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       
@@ -859,7 +853,8 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
   setIsFiltering(hasActiveFilters);
   
   try {
-    const token = localStorage.getItem("token");
+    const token = getAuthToken();
+    if (!token) return;
     
     const params = new URLSearchParams({
       page: page.toString(),
@@ -867,22 +862,17 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       ...filters
     });
     
-    console.log("Fetching patrol data with params:", params.toString());
     const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
     });
 
-    console.log("Patrol data API response status:", response.status);
     
+    if (handleUnauthorized(response.status)) return;
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
     
     let formattedData = Array.isArray(data.data) ? data.data : [];
-    console.log(formattedData);
     formattedData = formattedData
       .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
       .map((item, index) => ({
@@ -908,7 +898,6 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
         return itemStartDate === selectedDate || itemEndDate === selectedDate;
       });
       
-      console.log(`Date filter applied: ${selectedDate}, filtered from ${originalLength} to ${formattedData.length} records`);
       
       // Update pagination counts based on filtered data
       if (data.pagination) {
@@ -1086,7 +1075,8 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
 
   const fetchRangesByDivision = async (division) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getAuthToken();
+      if (!token) return;
       const response = await axios.get(
         `${API_BASE_URL}/api/patrolling-range-by-division?division=${encodeURIComponent(division)}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -1115,7 +1105,8 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
 
   const fetchBeatsByRange = async (range, division) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getAuthToken();
+      if (!token) return;
       const response = await axios.get(
         `${API_BASE_URL}/api/patrolling-beat-by-range?range=${encodeURIComponent(range)}&division=${encodeURIComponent(division)}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -1171,7 +1162,8 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
 
     setIsAnalyzingCoverage(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = getAuthToken();
+      if (!token) return;
       const requestPayload = { 
         start_date: startFilter.format('YYYY-MM-DD'),
         end_date: endFilter.format('YYYY-MM-DD')
@@ -1184,12 +1176,11 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       } else if (divisionFilter) requestPayload.division = divisionFilter;
       
       const response = await axios.post(`${API_BASE_URL}/api/coupe-patrol-coverage`, requestPayload, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+        headers: getAuthHeaders({ "Content-Type": "application/json" })
       });
 
       if (response.data.success) {
   const data = response.data.data;
-  console.log(data);
   
   // Check if we have actual data or zeros
   const hasValidData = data.coupe_area_sq_m && Number(data.coupe_area_sq_m) > 0;

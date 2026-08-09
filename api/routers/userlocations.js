@@ -16,7 +16,6 @@ const initTable = async () => {
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log("✔ user_locations table ready!");
     } catch (err) {
         console.error("❌ Error creating user_locations table:", err);
     }

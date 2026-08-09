@@ -6,7 +6,6 @@ const { sequelize } = require('../config/ndvidatabase');
 
 // Helper function to execute queries using Sequelize
 const executeQuery = async (myquery, params = []) => {
-   console.log('sequelize:', sequelize); 
   try {
     const results = await sequelize.query(myquery, {
       replacements: params,
@@ -130,19 +129,25 @@ router.post('/coupe-numbers', verifyJwt, async (req, res) => {
 
     // Validate input
     if (!village || !coupe_name) {
-      return res.status(400).json({ 
-        error: 'Village name and coupe_name (table name) are required' 
+      return res.status(400).json({
+        error: 'Village name and coupe_name (table name) are required'
       });
     }
 
-    // Simple query using the provided table name and village
+    // Validate table name to prevent SQL injection (only allow alphanumeric + underscore)
+    if (!/^[a-zA-Z0-9_]+$/.test(coupe_name)) {
+      return res.status(400).json({ error: 'Invalid coupe_name' });
+    }
+
+    // Use parameterized query for village value, validated table name for table
     const query = `
       SELECT DISTINCT "coupe_no"
-      FROM public.${coupe_name}
-      WHERE village = '${village}'
+      FROM public."${coupe_name}"
+      WHERE village = :village
     `;
 
     const result = await sequelize.query(query, {
+      replacements: { village },
       type: sequelize.QueryTypes.SELECT
     });
 
@@ -792,7 +797,7 @@ router.post('/hierarchy', async (req, res) => {
           //     wcvb."Village",
           //     cm.coupe_name
           // `;
-          myquery = `SELECT * FROM wildlife_final_metadata_new where "DIVISION"='${division_name}' and coupe_name is not null;`;
+          myquery = { sql: `SELECT * FROM wildlife_final_metadata_new where "DIVISION"= :division_name and coupe_name is not null`, replacements: { division_name } };
 
         break;
       case 2: // Territorial Forest
@@ -831,7 +836,7 @@ router.post('/hierarchy', async (req, res) => {
       //       cm.coupe_name
       //   `;
 
-      myquery = `SELECT * FROM teritorial_final_metadata_new where "DIVISION"='${division_name}' and coupe_name is not null;`;
+      myquery = { sql: `SELECT * FROM teritorial_final_metadata_new where "DIVISION"= :division_name and coupe_name is not null`, replacements: { division_name } };
         break;
       case 3: // Social Forestry
         myquery = `
@@ -859,7 +864,7 @@ router.post('/hierarchy', async (req, res) => {
             ON sfbb."BEAT" = sfvb."BEAT"
           LEFT JOIN public.coupe_metadata cm
             ON cm.social_village = sfvb."Village"
-          WHERE sfdb."DIVISION" = '${division_name}' and  social_village is not null
+          WHERE sfdb."DIVISION" = :division_name and  social_village is not null
           ORDER BY
             sfdb."DIVISION",
             sfrb."RANGE",
@@ -868,12 +873,22 @@ router.post('/hierarchy', async (req, res) => {
             sfvb."Village",
             cm.coupe_name
         `;
+        myquery = { sql: myquery, replacements: { division_name } };
         break;
       default:
         return res.status(400).json({ error: 'Invalid forest_id' });
     }
 
-    const result = await executeQuery(myquery);
+    // Execute query — handle both raw string and { sql, replacements } object
+    let result;
+    if (typeof myquery === 'string') {
+      result = await executeQuery(myquery);
+    } else {
+      result = await sequelize.query(myquery.sql, {
+        replacements: myquery.replacements,
+        type: sequelize.QueryTypes.SELECT
+      });
+    }
     res.json(result);
   } catch (error) {
     console.error('Error fetching hierarchy:', error);
@@ -960,7 +975,6 @@ router.get('/layer-bounds/:layerName', async (req, res) => {
     // Sanitize layer name to prevent SQL injection
     const validTableName = layerName.replace(/[^a-zA-Z0-9_]/g, '');
     
-    console.log(`Fetching bounds for table: ${validTableName}`);
     
     // IMPORTANT: Sequelize.query returns [results, metadata]
     // The first element is the actual data rows
@@ -979,7 +993,6 @@ router.get('/layer-bounds/:layerName', async (req, res) => {
     // Execute query - Sequelize returns [results, metadata]
     const [results, metadata] = await sequelize.query(query);
     
-    console.log('Query results:', results);
     
     // Check if we got any results
     if (!results || results.length === 0 || !results[0] || !results[0].min_x) {
@@ -1006,7 +1019,6 @@ router.get('/layer-bounds/:layerName', async (req, res) => {
       }
     };
     
-    console.log('Sending bounds:', bounds);
     res.json(bounds);
     
   } catch (error) {
@@ -1045,7 +1057,6 @@ router.post('/get-coupe-area', verifyJwt, async (req, res) => {
         if (DIVISION_TO_COUPE_MAP[division]) {
             const mappedCoupe = DIVISION_TO_COUPE_MAP[division];
             actualTableName = `${mappedCoupe}_coupe`;
-            console.log(`[get-coupe-area] Original: ${tableName}, Mapped to: ${actualTableName}`);
         }
 
         // Fetch all data
@@ -1291,22 +1302,25 @@ router.post('/beat-coupe-beats', async (req, res) => {
 });
 
 
-router.get('/coupe_metadata/location', async (req, res) => {
-  try {
-    const query = `
-      SELECT DISTINCT input_table_name, coupe_name, coupe_code
-      FROM public.coupe_metadata
-      WHERE input_table_name IS NOT NULL
-      ORDER BY input_table_name
-    `;
-    const result = await sequelize.query(query, {
-      type: sequelize.QueryTypes.SELECT
-    });
-    res.json(result);
-  } catch (error) {
-    console.error('Error fetching coupe_metadata location:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+// DISABLED: column "input_table_name" does not exist in coupe_metadata table.
+// This endpoint is not used by the frontend. Re-enable only if the column
+// is added to the database or the query is corrected.
+// router.get('/coupe_metadata/location', async (req, res) => {
+//   try {
+//     const query = `
+//       SELECT DISTINCT input_table_name, coupe_name, coupe_code
+//       FROM public.coupe_metadata
+//       WHERE input_table_name IS NOT NULL
+//       ORDER BY input_table_name
+//     `;
+//     const result = await sequelize.query(query, {
+//       type: sequelize.QueryTypes.SELECT
+//     });
+//     res.json(result);
+//   } catch (error) {
+//     console.error('Error fetching coupe_metadata location:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
 
 module.exports = router;

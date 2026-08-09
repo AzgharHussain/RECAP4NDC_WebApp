@@ -20,7 +20,6 @@ app.use('/api', NdviRouter);
 const PORT = 5002;
 app.listen(PORT, async () => {
 
-  console.log(`🚀 Server running on port ${PORT}`);
 });
 
 

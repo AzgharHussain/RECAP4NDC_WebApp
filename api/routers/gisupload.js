@@ -44,17 +44,22 @@ const GDAL_ENV = {
 };
 // --------------------------------
 
-// Multer storage
+// Multer storage — sanitize filename to prevent path traversal
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => cb(null, file.originalname),
+  filename: (req, file, cb) => {
+    // Remove path components, keep only basename, replace dangerous chars
+    const safeName = path.basename(file.originalname)
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .replace(/_{2,}/g, '_');
+    cb(null, safeName || `upload_${Date.now()}`);
+  },
 });
 const upload = multer({ storage });
 
 // --- Utility: Run shell commands ---
 function runCommand(cmd, env = GDAL_ENV) {
   return new Promise((resolve, reject) => {
-    console.log(`Running command: ${cmd.substring(0, 100)}...`);
     exec(cmd, { maxBuffer: 1024 * 1024 * 50, env }, (err, stdout, stderr) => {
       if (err) {
         if (
@@ -76,13 +81,10 @@ function runCommand(cmd, env = GDAL_ENV) {
 // --- Test GDAL Connection ---
 async function testGDALConnection() {
   try {
-    console.log("Testing GDAL installation...");
     const { stdout } = await runCommand("ogr2ogr --version");
-    console.log(`✓ GDAL Version: ${stdout.trim()}`);
 
     try {
       const { stdout: pgVersion } = await runCommand("psql --version");
-      console.log(`✓ PostgreSQL client: ${pgVersion.trim()}`);
     } catch (pgError) {
       console.warn("⚠ PostgreSQL client not found in PATH");
     }
@@ -163,7 +165,6 @@ async function fixPostgreSQLTable(tableName) {
     const env = { ...GDAL_ENV, PGPASSWORD: PG_PASS };
     const lowerTable = tableName.toLowerCase();
 
-    console.log(`Fixing PostgreSQL table: ${lowerTable}`);
 
     // Check if table exists with retry
     let tableExists = false;
@@ -177,12 +178,10 @@ async function fixPostgreSQLTable(tableName) {
         tableExists = stdout.trim().includes("t");
         
         if (!tableExists) {
-          console.log(`Table ${lowerTable} not found, retrying... (${retries} attempts left)`);
           await new Promise(resolve => setTimeout(resolve, 2000));
           retries--;
         }
       } catch (error) {
-        console.log(`Error checking table existence: ${error.message}`);
         retries--;
         if (retries > 0) {
           await new Promise(resolve => setTimeout(resolve, 2000));
@@ -195,7 +194,6 @@ async function fixPostgreSQLTable(tableName) {
       return false;
     }
 
-    console.log(`Table ${lowerTable} exists, proceeding with fixes...`);
 
     // Check and add geometry column if needed
     const checkGeomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name IN ('wkb_geometry', 'geom', 'geometry');"`;
@@ -206,7 +204,6 @@ async function fixPostgreSQLTable(tableName) {
       .map((col) => col.trim())
       .filter((col) => col);
 
-    console.log(`Geometry columns found: ${columns.join(', ')}`);
 
     if (columns.length === 0) {
       console.error(`No geometry column found in table ${lowerTable}`);
@@ -215,15 +212,11 @@ async function fixPostgreSQLTable(tableName) {
 
     // Standardize geometry column name to 'geom'
     if (columns.includes("wkb_geometry") && !columns.includes("geom")) {
-      console.log(`Renaming wkb_geometry to geom in ${lowerTable}...`);
       const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN wkb_geometry TO geom;"`;
       await runCommand(geomCmd, env);
-      console.log(`Renamed wkb_geometry to geom`);
     } else if (columns.includes("geometry") && !columns.includes("geom")) {
-      console.log(`Renaming geometry to geom in ${lowerTable}...`);
       const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN geometry TO geom;"`;
       await runCommand(geomCmd, env);
-      console.log(`Renamed geometry to geom`);
     }
 
     // Check if fid exists and add if needed
@@ -231,25 +224,18 @@ async function fixPostgreSQLTable(tableName) {
     const { stdout: fidResult } = await runCommand(checkFidCmd, env);
 
     if (!fidResult.trim()) {
-      console.log(`Adding fid column to ${lowerTable}...`);
       const createFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL PRIMARY KEY;"`;
       await runCommand(createFidCmd, env);
-      console.log(`Fid column added`);
     }
 
     // Create spatial index
-    console.log(`Creating spatial index for ${lowerTable}...`);
     const indexCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "CREATE INDEX IF NOT EXISTS idx_${lowerTable}_geom ON ${lowerTable} USING GIST (geom);"`;
     await runCommand(indexCmd, env);
-    console.log(`Spatial index created`);
     
     // Update SRID to 4326
-    console.log(`Updating SRID to 4326...`);
     const updateSridCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "SELECT UpdateGeometrySRID('${lowerTable}', 'geom', 4326);"`;
     await runCommand(updateSridCmd, env);
-    console.log(`SRID updated`);
 
-    console.log(`PostgreSQL table ${lowerTable} fixed successfully`);
     return true;
   } catch (error) {
     console.error(
@@ -264,7 +250,6 @@ async function fixPostgreSQLTable(tableName) {
 async function publishToGeoServer(tableName, color) {
   try {
     const lowerTable = tableName.toLowerCase();
-    console.log(`Publishing ${lowerTable} to GeoServer...`);
 
     const axiosInstance = axios.create({
       httpsAgent,
@@ -283,11 +268,9 @@ async function publishToGeoServer(tableName, color) {
       await axiosInstance.get(
         `${GEOSERVER_URL}/rest/layers/${WORKSPACE}:${lowerTable}`,
       );
-      console.log(`Layer ${lowerTable} already exists, will update if needed`);
       layerExists = true;
     } catch (error) {
       if (error.response?.status === 404) {
-        console.log(`Layer ${lowerTable} does not exist, will create`);
       }
     }
 
@@ -303,24 +286,18 @@ async function publishToGeoServer(tableName, color) {
     const featureTypeUrl = `${GEOSERVER_URL}/rest/workspaces/${WORKSPACE}/datastores/${DATASTORE}/featuretypes`;
 
     try {
-      console.log(`Creating feature type at: ${featureTypeUrl}`);
       await axiosInstance.post(featureTypeUrl, featureTypeXml, {
         headers: { "Content-Type": "application/xml" },
       });
-      console.log(`Feature type ${lowerTable} created successfully`);
     } catch (postError) {
       // If feature type already exists (409 Conflict) or other non-fatal errors
       if (postError.response?.status === 409) {
-        console.log(`Feature type ${lowerTable} already exists, skipping creation`);
       } else if (postError.response?.status === 500) {
-        console.log("Feature type may already exist, checking...");
         // Try to verify if it exists by getting it
         try {
           const checkUrl = `${GEOSERVER_URL}/rest/workspaces/${WORKSPACE}/datastores/${DATASTORE}/featuretypes/${lowerTable}`;
           await axiosInstance.get(checkUrl);
-          console.log(`Feature type ${lowerTable} exists, continuing...`);
         } catch (checkError) {
-          console.log(`Feature type check failed, but continuing: ${checkError.message}`);
         }
       } else {
         console.error("Error creating feature type:", postError.response?.data || postError.message);
@@ -332,24 +309,20 @@ async function publishToGeoServer(tableName, color) {
     const styleName = `${lowerTable}_style`;
     const sld = generateSLD(lowerTable, color);
 
-    console.log(`Checking if style exists: ${styleName}`);
 
     // First, check if style exists
     let styleExists = false;
     try {
       await axiosInstance.get(`${GEOSERVER_URL}/rest/styles/${styleName}`);
-      console.log(`Style ${styleName} already exists, will update`);
       styleExists = true;
     } catch (error) {
       if (error.response?.status === 404) {
-        console.log(`Style ${styleName} does not exist, will create`);
       }
     }
 
     try {
       if (styleExists) {
         // Update existing style with PUT
-        console.log(`Updating existing style: ${styleName}`);
         await axiosInstance.put(
           `${GEOSERVER_URL}/rest/styles/${styleName}`,
           sld,
@@ -359,10 +332,8 @@ async function publishToGeoServer(tableName, color) {
             },
           },
         );
-        console.log(`Style ${styleName} updated successfully`);
       } else {
         // Create new style with POST
-        console.log(`Creating new style: ${styleName}`);
         await axiosInstance.post(
           `${GEOSERVER_URL}/rest/styles?name=${styleName}`,
           sld,
@@ -372,13 +343,11 @@ async function publishToGeoServer(tableName, color) {
             },
           },
         );
-        console.log(`Style ${styleName} created successfully`);
       }
     } catch (styleError) {
       // If we get 403 with message that style already exists, it means our check missed it
       if (styleError.response?.status === 403 && 
           styleError.response?.data?.includes("already exists")) {
-        console.log(`Style ${styleName} already exists, attempting to update instead...`);
         
         try {
           // Try to update with PUT
@@ -391,7 +360,6 @@ async function publishToGeoServer(tableName, color) {
               },
             },
           );
-          console.log(`Style ${styleName} updated successfully on retry`);
         } catch (updateError) {
           console.error("Failed to update style:", updateError.response?.data || updateError.message);
           throw updateError;
@@ -406,7 +374,6 @@ async function publishToGeoServer(tableName, color) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Apply style to layer
-    console.log(`Applying style to layer ${WORKSPACE}:${lowerTable}`);
 
     const layerXml = `<layer>
   <defaultStyle>
@@ -423,11 +390,9 @@ async function publishToGeoServer(tableName, color) {
           headers: { "Content-Type": "application/xml" },
         },
       );
-      console.log(`Style applied to layer successfully`);
     } catch (layerError) {
       // If layer doesn't exist, try to create it
       if (layerError.response?.status === 404) {
-        console.log(`Layer ${lowerTable} not found, creating with style...`);
 
         try {
           // Create layer with style
@@ -448,7 +413,6 @@ async function publishToGeoServer(tableName, color) {
               headers: { "Content-Type": "application/xml" },
             },
           );
-          console.log(`Layer created with style successfully`);
         } catch (createLayerError) {
           console.error(
             "Error creating layer:",
@@ -462,7 +426,6 @@ async function publishToGeoServer(tableName, color) {
       }
     }
 
-    console.log(`Published ${lowerTable} to GeoServer successfully`);
     return true;
   } catch (error) {
     console.error(
@@ -488,7 +451,6 @@ const createPatrolBoundaryTable = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log("Patrol boundaries table ready");
   } catch (error) {
     console.error("Error creating patrol_boundaries table:", error);
   }
@@ -555,7 +517,6 @@ router.put(
       // Create a temporary table name for the new import
       const tempTableName = `${tableName}_temp_${Date.now()}`;
       
-      console.log(`Importing new shapefile to temporary table: ${tempTableName}`);
 
       if (isKML) {
         // Handle KML file replacement
@@ -573,7 +534,6 @@ router.put(
         }
 
         const kmlPath = path.join(UPLOAD_DIR, kmlFile.originalname);
-        console.log("Importing KML to temporary table:", tempTableName);
 
         // Import KML to temporary table
         const ogrCmd = `ogr2ogr -f "PostgreSQL" \
@@ -586,17 +546,14 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -overwrite \
 -skipfailures`;
 
-        console.log("Running ogr2ogr command for KML...");
 
         try {
           await runCommand(ogrCmd);
-          console.log("PostGIS import completed for KML:", tempTableName);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for KML:", ogrError.stderr);
 
           // Try with simpler options
-          console.log("Retrying KML with minimal options...");
           const altCmd = `ogr2ogr -f "PostgreSQL" \
 PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
 "${kmlPath}" \
@@ -605,7 +562,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
           try {
             await runCommand(altCmd);
-            console.log("PostGIS import completed on retry for KML:", tempTableName);
             importSuccess = true;
           } catch (altError) {
             console.error("Alternative import also failed:", altError);
@@ -633,7 +589,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
         }
 
         const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
-        console.log("Importing SHP to temporary table:", tempTableName);
 
         // Import SHP to temporary table
         const ogrCmd = `ogr2ogr -f "PostgreSQL" \
@@ -646,17 +601,14 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -overwrite \
 -skipfailures`;
 
-        console.log("Running ogr2ogr command for SHP...");
 
         try {
           await runCommand(ogrCmd);
-          console.log("PostGIS import completed for SHP:", tempTableName);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for SHP:", ogrError.stderr);
 
           // Try with simpler options
-          console.log("Retrying SHP with minimal options...");
           const altCmd = `ogr2ogr -f "PostgreSQL" \
 PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
 "${shpPath}" \
@@ -665,7 +617,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
           try {
             await runCommand(altCmd);
-            console.log("PostGIS import completed on retry for SHP:", tempTableName);
             importSuccess = true;
           } catch (altError) {
             console.error("Alternative import also failed:", altError);
@@ -681,7 +632,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Fix the temporary table structure for GeoServer
-      console.log(`Fixing temporary table: ${tempTableName}`);
       const tempTableFixed = await fixPostgreSQLTable(tempTableName);
       
       if (!tempTableFixed) {
@@ -692,7 +642,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '_').slice(0, 19);
       const backupTableName = `${tableName}_backup_${timestamp}`;
       
-      console.log(`Creating backup of ${tableName} as ${backupTableName}`);
       
       const env = { ...GDAL_ENV, PGPASSWORD: PG_PASS };
       
@@ -705,9 +654,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
           // Table exists, rename it to backup
           const renameCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${tableName} RENAME TO ${backupTableName};"`;
           await runCommand(renameCmd, env);
-          console.log(`Backup created: ${backupTableName}`);
         } else {
-          console.log(`Table ${tableName} does not exist, no backup needed`);
         }
       } catch (backupError) {
         console.error("Error creating backup:", backupError.message);
@@ -715,11 +662,9 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       }
 
       // Rename the temporary table to the final table name
-      console.log(`Renaming ${tempTableName} to ${tableName}`);
       try {
         const renameCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${tempTableName} RENAME TO ${tableName};"`;
         await runCommand(renameCmd, env);
-        console.log(`Table renamed successfully to ${tableName}`);
       } catch (renameError) {
         console.error("Error renaming table:", renameError.message);
         
@@ -727,7 +672,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
         try {
           const restoreCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${backupTableName} RENAME TO ${tableName};"`;
           await runCommand(restoreCmd, env);
-          console.log("Restored from backup after rename failure");
         } catch (restoreError) {
           console.error("Failed to restore from backup:", restoreError.message);
         }
@@ -736,14 +680,11 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       }
 
       // Fix the final table structure again (to ensure everything is correct)
-      console.log(`Fixing final table: ${tableName}`);
       await fixPostgreSQLTable(tableName);
 
       // Update GeoServer with new data and color
-      console.log(`Publishing to GeoServer: ${tableName}`);
       try {
         await publishToGeoServer(tableName, color);
-        console.log("GeoServer layer updated successfully:", tableName);
       } catch (geoError) {
         console.error("GeoServer publish failed:", geoError.message);
         // Don't fail the whole operation - the data is in PostGIS
@@ -776,7 +717,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       try {
         const deleteBackupCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "DROP TABLE IF EXISTS ${backupTableName};"`;
         await runCommand(deleteBackupCmd, env);
-        console.log(`Backup table ${backupTableName} deleted`);
       } catch (deleteError) {
         console.warn("Could not delete backup table:", deleteError.message);
       }
@@ -890,7 +830,6 @@ router.post(
       if (existingBoundary) {
         // This is a replace operation - use the existing table name
         tableName = existingBoundary.table_name;
-        console.log("Replacing existing boundary:", tableName);
         
         // Backup existing table
         const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '_').slice(0, 19);
@@ -900,7 +839,6 @@ router.post(
           const env = { ...GDAL_ENV, PGPASSWORD: PG_PASS };
           const backupCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${tableName} RENAME TO ${backupTableName};"`;
           await runCommand(backupCmd, env);
-          console.log(`Backup created: ${backupTableName}`);
         } catch (backupError) {
           console.error("Error creating backup:", backupError.message);
         }
@@ -934,7 +872,6 @@ router.post(
             .toLowerCase();
           tableName = `patrol_boundary_${cleanName}`;
         }
-        console.log("Creating new boundary:", tableName);
       }
 
       if (isKML) {
@@ -954,7 +891,6 @@ router.post(
 
         const kmlPath = path.join(UPLOAD_DIR, kmlFile.originalname);
 
-        console.log("Uploading KML Patrol Boundary:", tableName);
 
         // Import KML to PostGIS - Skip SRS transformation to avoid PROJ error
         const ogrCmd = `ogr2ogr -f "PostgreSQL" \
@@ -967,17 +903,14 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -overwrite \
 -skipfailures`;
 
-        console.log("Running ogr2ogr command for KML...");
 
         try {
           await runCommand(ogrCmd);
-          console.log("PostGIS import completed for KML:", tableName);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for KML:", ogrError.stderr);
 
           // If that fails, try with even simpler options
-          console.log("Retrying KML with minimal options...");
           const altCmd = `ogr2ogr -f "PostgreSQL" \
 PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
 "${kmlPath}" \
@@ -985,7 +918,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -overwrite`;
 
           await runCommand(altCmd);
-          console.log("PostGIS import completed on retry for KML:", tableName);
           importSuccess = true;
         }
       } else {
@@ -1011,7 +943,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
         const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
 
-        console.log("Uploading SHP Patrol Boundary:", tableName);
 
         // Import to PostGIS - Skip SRS transformation to avoid PROJ error
         const ogrCmd = `ogr2ogr -f "PostgreSQL" \
@@ -1024,17 +955,14 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -overwrite \
 -skipfailures`;
 
-        console.log("Running ogr2ogr command for SHP...");
 
         try {
           await runCommand(ogrCmd);
-          console.log("PostGIS import completed for SHP:", tableName);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for SHP:", ogrError.stderr);
 
           // If that fails, try with even simpler options
-          console.log("Retrying SHP with minimal options...");
           const altCmd = `ogr2ogr -f "PostgreSQL" \
 PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
 "${shpPath}" \
@@ -1042,7 +970,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -overwrite`;
 
           await runCommand(altCmd);
-          console.log("PostGIS import completed on retry for SHP:", tableName);
           importSuccess = true;
         }
       }
@@ -1060,7 +987,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       // Publish to GeoServer
       try {
         await publishToGeoServer(tableName, color);
-        console.log("GeoServer layer published:", tableName);
       } catch (geoError) {
         console.error(
           "GeoServer publish failed but continuing:",
@@ -1481,17 +1407,6 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
       .join(",");
     const polygonText = `POLYGON((${polygonPoints}))`;
 
-    console.log("Creating boundary:", {
-      name,
-      tableName,
-      officer_name,
-      division,
-      range,
-      round,
-      beat,
-      village,
-      totalPoints: parsedCoordinates.length,
-    });
 
     // Create dynamic table with additional fields
     const createTable = `

@@ -267,7 +267,7 @@ const parseGeomCoordinates = (geom) => {
   whenCreated={(map) => {
     // ✅ ADD GEOSERVER WMS DIRECTLY
     const beatBoundaryLayer = L.tileLayer.wms(
-      "https://www.gisfy.co.in:8445/geoserver/wms",
+      `${import.meta.env.VITE_GEOSERVER_URL || "https://gisfy.co.in:8445"}/geoserver/wms`,
       {
         layers: "Recap4NDC:Teritorial_Circle_Beat_Boundary",
         format: "image/png",

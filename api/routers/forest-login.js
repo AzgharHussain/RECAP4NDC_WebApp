@@ -9,15 +9,18 @@ const { logFromRequest } = require('../utils/auditLogger');
 
 const SECRET_KEY = process.env.JWT_SECRET;
 
+// Rate limiter tuned for high concurrency (5000 users).
+// Allows 300 requests per 15 minutes per IP — enough for office/NAT users
+// while still preventing brute-force attacks.
 const saveUserLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
     success: false,
     error: "Too many requests. Please try again after 15 minutes."
   },
-  standardHeaders: true,
-  legacyHeaders: false,
 });
 
 router.post("/saveuser", saveUserLimiter, async (req, res) => {
@@ -31,8 +34,6 @@ router.post("/saveuser", saveUserLimiter, async (req, res) => {
   }
 
   try {
-    console.log("=== FOREST LOGIN REQUEST ===");
-    console.log("Username:", username);
 
     const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
@@ -44,8 +45,6 @@ router.post("/saveuser", saveUserLimiter, async (req, res) => {
   </soap:Body>
 </soap:Envelope>`;
 
-    console.log("SOAP Request:");
-    console.log(soapRequest);
 
     const soapUrl = process.env.SOAP_API_URL;
     const response = await axios.post(soapUrl, soapRequest, {
@@ -56,9 +55,6 @@ router.post("/saveuser", saveUserLimiter, async (req, res) => {
       timeout: 30000
     });
 
-    console.log("Response Status:", response.status);
-    console.log("Response Headers:", response.headers);
-    console.log("Raw SOAP Response:", response.data);
 
     const parsed = await xml2js.parseStringPromise(response.data, {
       explicitArray: false,
@@ -66,7 +62,6 @@ router.post("/saveuser", saveUserLimiter, async (req, res) => {
       tagNameProcessors: [xml2js.processors.stripPrefix]
     });
 
-    console.log("Parsed XML structure:", JSON.stringify(parsed, null, 2).substring(0, 2000));
 
     const envelope = parsed['Envelope'] || parsed;
     const body = envelope && envelope['Body'];
@@ -137,7 +132,6 @@ router.post("/saveuser", saveUserLimiter, async (req, res) => {
       EmailID: userResult.EmailID || "-"
     };
 
-    console.log("Extracted user data:", userData);
 
     if (!userData.NAME || userData.NAME === "-") {
       logFromRequest(req, {
@@ -189,7 +183,8 @@ router.post("/saveuser", saveUserLimiter, async (req, res) => {
         mobile: userData.MobileNo,
         email: userData.EmailID
       },
-      SECRET_KEY
+      SECRET_KEY,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
     logFromRequest(req, {

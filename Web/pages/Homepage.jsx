@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
+import Cookies from "js-cookie";
 import "../App.css";
 import { useLanguage } from "../context/LanguageContext";
 import "./Login.css";
@@ -26,6 +27,34 @@ import { FiArrowRight, FiChevronUp, FiChevronDown, FiRadio, FiMap, FiAlertTriang
 
 const Homepage = () => {
   const { language, toggleLanguage } = useLanguage();
+
+  // === Cookie consent ===
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
+
+  useEffect(() => {
+    const consent = Cookies.get('cookie-consent');
+    if (!consent) {
+      setShowCookieBanner(true);
+    }
+  }, []);
+
+  const handleAcceptCookies = () => {
+    Cookies.set('cookie-consent', 'accepted', { expires: 365, sameSite: 'Lax' });
+    setShowCookieBanner(false);
+  };
+
+  const handleRejectCookies = () => {
+    Cookies.set('cookie-consent', 'rejected', { expires: 90, sameSite: 'Lax' });
+    // Clear any non-essential cookies
+    const essentialCookies = ['cookie-consent', 'session', 'token', 'authToken'];
+    document.cookie.split(';').forEach(c => {
+      const name = c.split('=')[0].trim();
+      if (!essentialCookies.includes(name)) {
+        Cookies.remove(name);
+      }
+    });
+    setShowCookieBanner(false);
+  };
 
   // faqCategories must be INSIDE the component so `language` is accessible
   const faqCategories = [
@@ -181,9 +210,39 @@ const Homepage = () => {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.playbackRate = 0.5; // Play at half speed
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Smooth slow-motion playback
+    const setSmoothSlowMotion = () => {
+      video.playbackRate = 0.5;     // Half speed
+      video.defaultPlaybackRate = 0.5; // Ensure rate persists after seeks/loops
+      // Smooth playback hint — tells browser to prioritize smooth rendering
+      if ('requestVideoFrameCallback' in video) {
+        video.requestVideoFrameCallback(() => {});
+      }
+    };
+
+    // Apply as soon as metadata is available
+    if (video.readyState >= 1) {
+      setSmoothSlowMotion();
     }
+
+    // Re-apply on metadata load and each loop restart
+    video.addEventListener('loadedmetadata', setSmoothSlowMotion);
+    video.addEventListener('play', setSmoothSlowMotion);
+    video.addEventListener('seeked', setSmoothSlowMotion);
+
+    // Ensure video plays smoothly even if autoplay is blocked
+    const tryPlay = () => video.play().catch(() => {});
+    video.addEventListener('canplaythrough', tryPlay);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', setSmoothSlowMotion);
+      video.removeEventListener('play', setSmoothSlowMotion);
+      video.removeEventListener('seeked', setSmoothSlowMotion);
+      video.removeEventListener('canplaythrough', tryPlay);
+    };
   }, []);
 
   return (
@@ -244,7 +303,6 @@ const Homepage = () => {
           muted
           loop
           playsInline
-          preload="metadata"
           preload="auto"
           aria-label="Forest Patrolling and Monitoring background video"
         />
@@ -315,8 +373,8 @@ const Homepage = () => {
         </div>
 
         <div className="tools-grid">
-          {cards.map((card, index) => (
-            <div className="tool-card" key={index}>
+          {cards.map((card) => (
+            <div className="tool-card" key={card.title}>
               <div className="tool-icon">
                 {card.img && <img src={card.img} alt={card.title} loading="lazy" decoding="async" />}
               </div>
@@ -374,7 +432,7 @@ const Homepage = () => {
                   <p>{faq.a}</p>
                   {faq.list && (
                     <ul>
-                      {faq.list.map((item, i) => <li key={i}>{item}</li>)}
+                      {faq.list.map((item) => <li key={item}>{item}</li>)}
                     </ul>
                   )}
                   {faq.extra && <p className="faq-extra">{faq.extra}</p>}
@@ -398,6 +456,76 @@ const Homepage = () => {
           </a>
         </div>
       </footer>
+
+      {/* Cookie Consent Banner */}
+      {showCookieBanner && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 99999,
+          backgroundColor: '#1a1a2e',
+          color: '#fff',
+          padding: '16px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+          flexWrap: 'wrap',
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
+          fontFamily: "'Inter', 'Arial', sans-serif",
+        }}>
+          <div style={{ flex: 1, minWidth: '280px', fontSize: '14px', lineHeight: '1.5' }}>
+            <span style={{ fontWeight: 600, fontSize: '15px' }}>
+              {language === 'gu' ? 'કૂકીઝ પરવાનગી' : 'Cookie Consent'}
+            </span>
+            <p style={{ margin: '4px 0 0', color: '#bbb', fontSize: '13px' }}>
+              {language === 'gu'
+                ? 'અમે તમારા અનુભવને સુધારવા માટે કૂકીઝનો ઉપયોગ કરીએ છીએ. આવશ્યક કૂકીઝ વેબસાઇટના કાર્ય માટે જરૂરી છે. તમે બિન-આવશ્યક કૂકીઝને સ્વીકાર અથવા નકારી શકો છો.'
+                : 'We use cookies to improve your experience. Essential cookies are required for the website to function. You can accept or reject non-essential cookies.'}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+            <button
+              onClick={handleRejectCookies}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: 'transparent',
+                color: '#ccc',
+                border: '1px solid #555',
+                borderRadius: '8px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                fontWeight: 500,
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#333'; e.currentTarget.style.color = '#fff'; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
+            >
+              {language === 'gu' ? 'નકારો' : 'Reject'}
+            </button>
+            <button
+              onClick={handleAcceptCookies}
+              style={{
+                padding: '10px 24px',
+                backgroundColor: '#2e7d32',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1b5e20'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2e7d32'}
+            >
+              {language === 'gu' ? 'સ્વીકારો' : 'Accept'}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 };

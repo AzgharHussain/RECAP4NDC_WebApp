@@ -68,7 +68,6 @@ const clearAllMeasurements = () => {
   const map = mapRef.current;
   if (!map) return;
 
-  console.log("Clearing all measurements, layers count:", measurementLayers.length);
   
   // Close any open popup
   map.closePopup();

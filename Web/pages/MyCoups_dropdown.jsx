@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-export const API_BASE_URL = "http://68.178.167.39:5002";
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const MyCoups_dropdown = () => {
   const [forestTypes, setForestTypes] = useState([]);
@@ -18,7 +18,6 @@ const MyCoups_dropdown = () => {
 
   /* ------------------ Load Forest Types ------------------ */
   useEffect(() => {
-    console.log("api/forest-types");
     axios
       .get(`${API_BASE_URL}/api/forest-types`)
       .then((res) => setForestTypes(res.data))
@@ -52,7 +51,6 @@ const res = await axios.post(
     },
   }
 );
-console.log("api/get-divisions");
        
     setDivisions(res.data);
   };
@@ -83,7 +81,6 @@ const res = await axios.post(
     },
   }
 );
-console.log("api/hierarchy");
 
     setHierarchyData(res.data);
 

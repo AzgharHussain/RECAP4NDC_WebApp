@@ -23,12 +23,10 @@ async function withRetry(fn, attempts = 5, baseDelay = 1000) {
       console.error(`Attempt ${i} failed: ${err && err.message ? err.message : err}.`);
       if (isLast) throw err;
       const backoff = baseDelay * Math.pow(2, i - 1);
-      console.log(`Retrying after ${backoff}ms...`);
       await sleep(backoff);
       // If sequelize connection seems closed, try re-authenticating
       try {
         await sequelize.authenticate();
-        console.log('✅ Re-authenticated to DB after failure.');
       } catch (authErr) {
         console.warn('⚠️ Re-authentication failed:', authErr.message || authErr);
       }
@@ -113,7 +111,6 @@ async function createTableIfNotExists(tableName) {
 
   await withRetry(() => sequelize.query(sqlCreate));
   await withRetry(() => sequelize.query(sqlIndex));
-  console.log(`✅ Table '${tableName}' ensured to exist (and index).`);
 }
 
 // ----------------- Build bulk insert query -----------------
@@ -200,7 +197,6 @@ async function main() {
       ee.initialize(null, null, resolve, reject);
     }, reject);
   });
-  console.log("✅ EE initialized");
 
   // Test DB connection and attempt re-auth if needed
   const ok = await testConnection();
@@ -208,7 +204,6 @@ async function main() {
     console.error('Exiting: cannot connect to DB.');
     process.exit(1);
   }
-  console.log("✅ DB connected");
 
   const months = [
     '2025-03-01'
@@ -253,7 +248,6 @@ async function main() {
     }
   });
 
-  console.log(`Found ${polygons.length} valid polygons.`);
 
   // Process months
   for (let m = 0; m < months.length; m++) {
@@ -265,7 +259,6 @@ async function main() {
     endObj.setMonth(endObj.getMonth() + 1);
     const end = endObj.toISOString().slice(0, 10);
 
-    console.log(`\n📅 Processing: ${month} → ${table}`);
 
     for (const row of polygons) {
       // parse polygon geometry
@@ -275,7 +268,6 @@ async function main() {
 
       // Get total tile count
       const totalTiles = tiles.size().getInfo();
-      console.log(`🧩 Total tiles for polygon ${row.id}: ${totalTiles}`);
       
       // Process tiles in batches to avoid ENAMETOOLONG error
       const BATCH_SIZE = 30; // Process 30 tiles at a time
@@ -289,7 +281,6 @@ async function main() {
         
         const batchNumber = Math.floor(processedTiles / BATCH_SIZE) + 1;
         const totalBatches = Math.ceil(totalTiles / BATCH_SIZE);
-        console.log(`   Processing batch ${batchNumber}/${totalBatches} (${tileBatch.length} tiles)`);
         
         for (const tileFeature of tileBatch) {
           try {
@@ -317,7 +308,6 @@ async function main() {
               delayBetweenBatches: 100
             });
 
-            console.log(`     ↳ Tile processed, polygons inserted: ${inserted}`);
             // Increase pause between tiles
             await sleep(100);
           } catch (tileErr) {
@@ -325,7 +315,6 @@ async function main() {
             // If connection terminated, try to re-authenticate
             try {
               await sequelize.authenticate();
-              console.log('✅ DB re-authenticated after tile error.');
             } catch (reAuthErr) {
               console.warn('Re-auth failed after tile error:', reAuthErr && reAuthErr.message ? reAuthErr.message : reAuthErr);
             }
@@ -336,14 +325,12 @@ async function main() {
         
         // Add longer delay between batches to reduce load
         if (processedTiles < totalTiles) {
-          console.log(`   ⏳ Waiting 2 seconds before next batch...`);
           await sleep(2000);
         }
       }
     }
   }
 
-  console.log("\n🎉 NDVI Polygon Processing Finished!");
   await sequelize.close();
 }
 

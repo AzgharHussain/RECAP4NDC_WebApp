@@ -28,10 +28,15 @@ const WORKSPACE      = process.env.GEOSERVER_WORKSPACE  || 'Recap4NDC';
 const DATASTORE      = process.env.GEOSERVER_STORE      || 'Recap4NDC_New';
 // --------------------------------
 
-// Multer storage
+// Multer storage — sanitize filename to prevent path traversal
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => cb(null, file.originalname)
+  filename: (req, file, cb) => {
+    const safeName = path.basename(file.originalname)
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .replace(/_{2,}/g, '_');
+    cb(null, safeName || `upload_${Date.now()}`);
+  }
 });
 const upload = multer({ storage });
 
@@ -68,8 +73,6 @@ function runCommand(cmd, env = process.env) {
 // --- Test GDAL Connection ---
 async function testGDALConnection() {
   try {
-    console.log("Testing GDAL installation...");
-    console.log("System PATH:", process.env.PATH);
     
     // Try multiple ways to find GDAL
     const gdalPaths = [
@@ -80,13 +83,9 @@ async function testGDALConnection() {
     
     for (const gdalPath of gdalPaths) {
       try {
-        console.log(`Trying: ${gdalPath}`);
         const { stdout } = await runCommand(`"${gdalPath}" --version`);
-        console.log(`✓ GDAL Found: ${stdout.trim()}`);
-        console.log(`✓ Using: ${gdalPath}`);
         return true;
       } catch (error) {
-        console.log(`✗ Not found: ${gdalPath}`);
       }
     }
     
@@ -166,18 +165,15 @@ async function fixPostgreSQLTable(tableName) {
     const env = { ...process.env, PGPASSWORD: PG_PASS };
     const lowerTable = tableName.toLowerCase();
 
-    console.log(`Fixing PostgreSQL table: ${lowerTable}`);
 
     // Check if fid exists; only create if missing
     const checkFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name='fid';"`;
     const { stdout } = await runCommand(checkFidCmd, env);
 
     if (!stdout.trim()) {
-      console.log(`Adding fid column to ${lowerTable}...`);
       const createFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL PRIMARY KEY;"`;
       await runCommand(createFidCmd, env);
     } else {
-      console.log(`fid column already exists in ${lowerTable}`);
     }
 
     // Check and rename geometry column if needed
@@ -187,28 +183,22 @@ async function fixPostgreSQLTable(tableName) {
     const columns = geomColumns.split('\n').map(col => col.trim()).filter(col => col);
     
     if (columns.includes('wkb_geometry')) {
-      console.log(`Renaming wkb_geometry to geom in ${lowerTable}...`);
       const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN wkb_geometry TO geom;"`;
       await runCommand(geomCmd, env);
     } else if (!columns.includes('geom') && columns.includes('geometry')) {
-      console.log(`Renaming geometry to geom in ${lowerTable}...`);
       const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN geometry TO geom;"`;
       await runCommand(geomCmd, env);
     } else {
-      console.log(`Geometry column is already named 'geom' or doesn't exist`);
     }
 
     // Create spatial index
-    console.log(`Creating spatial index for ${lowerTable}...`);
     const indexCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "CREATE INDEX IF NOT EXISTS idx_${lowerTable}_geom ON ${lowerTable} USING GIST (geom);"`; 
     await runCommand(indexCmd, env);
 
     // Update geometry metadata
-    console.log(`Updating geometry metadata for ${lowerTable}...`);
     const updateGeomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "SELECT UpdateGeometrySRID('${lowerTable}', 'geom', 4326);"`;
     await runCommand(updateGeomCmd, env);
 
-    console.log(`PostgreSQL table ${lowerTable} fixed successfully`);
     return true;
   } catch (error) {
     console.error("Error fixing PostgreSQL table:", error.stderr || error.message);
@@ -220,7 +210,6 @@ async function fixPostgreSQLTable(tableName) {
 async function publishToGeoServer(tableName, color) {
   try {
     const lowerTable = tableName.toLowerCase();
-    console.log(`Publishing ${lowerTable} to GeoServer...`);
 
     // Create or update feature type
     const xml = `<featureType>
@@ -233,7 +222,6 @@ async function publishToGeoServer(tableName, color) {
 
     const featureTypeUrl = `${GEOSERVER_URL}/rest/workspaces/${WORKSPACE}/datastores/${DATASTORE}/featuretypes`;
 
-    console.log(`Creating feature type at: ${featureTypeUrl}`);
     await axios.post(featureTypeUrl, xml, {
       auth: { username: GEOSERVER_USER, password: GEOSERVER_PASS },
       headers: { "Content-Type": "text/xml" }
@@ -243,24 +231,19 @@ async function publishToGeoServer(tableName, color) {
     const styleName = `${lowerTable}_style`;
     const sld = generateSLD(lowerTable, color);
 
-    console.log(`Creating/updating style: ${styleName}`);
     try {
       await axios.put(`${GEOSERVER_URL}/rest/styles/${styleName}`, sld, {
         auth: { username: GEOSERVER_USER, password: GEOSERVER_PASS },
         headers: { "Content-Type": "application/vnd.ogc.sld+xml" }
       });
-      console.log(`Style ${styleName} updated`);
     } catch (putError) {
-      console.log(`Style ${styleName} doesn't exist, creating new...`);
       await axios.post(`${GEOSERVER_URL}/rest/styles?name=${styleName}`, sld, {
         auth: { username: GEOSERVER_USER, password: GEOSERVER_PASS },
         headers: { "Content-Type": "application/vnd.ogc.sld+xml" }
       });
-      console.log(`Style ${styleName} created`);
     }
 
     // Apply style to layer
-    console.log(`Applying style to layer ${WORKSPACE}:${lowerTable}`);
     await axios.put(
       `${GEOSERVER_URL}/rest/layers/${WORKSPACE}:${lowerTable}`,
       `<layer><defaultStyle><name>${styleName}</name></defaultStyle></layer>`,
@@ -270,7 +253,6 @@ async function publishToGeoServer(tableName, color) {
       }
     );
 
-    console.log(`Published ${lowerTable} to GeoServer successfully`);
     return true;
   } catch (error) {
     console.error("GeoServer publish error:", error.response?.data || error.message);
@@ -287,7 +269,6 @@ async function addcolumnsintable(tableName) {
   try {
     const lowerTable = tableName.toLowerCase();
     
-    console.log(`Starting to process villages for table: ${lowerTable}`);
     
     // Get distinct village values
     const [villages] = await sequelize.query(
@@ -301,10 +282,8 @@ async function addcolumnsintable(tableName) {
       }
     );
     
-    console.log(`Found ${villages.length} distinct villages`);
     
     if (villages.length === 0) {
-      console.log(`No village data found in table: ${lowerTable}`);
       return false;
     }
     
@@ -327,7 +306,6 @@ async function addcolumnsintable(tableName) {
             }
           );
           insertedCount++;
-          console.log(`✓ Inserted: ${villageName} for ${lowerTable}`);
         } catch (insertErr) {
           // If it's a duplicate key error, just skip it
           if (insertErr.message.includes('duplicate') || 
@@ -345,7 +323,6 @@ async function addcolumnsintable(tableName) {
       }
     }
     
-    console.log(`Successfully inserted ${insertedCount} villages, skipped ${duplicateCount} duplicates from ${lowerTable} into coupe_village_master`);
     
     return insertedCount > 0;
     
@@ -358,9 +335,7 @@ async function addcolumnsintable(tableName) {
 // --- Test GDAL Connection ---
 async function testGDALConnection() {
   try {
-    console.log("Testing GDAL installation...");
     const { stdout } = await runCommand('ogr2ogr --version');
-    console.log(`✓ GDAL Version: ${stdout.trim()}`);
     return true;
   } catch (error) {
     console.error("✗ GDAL not found or not in PATH");
@@ -393,14 +368,8 @@ router.post("/upload-shp", upload.array("files"), async (req, res) => {
     const tableName = originalTableName.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
     const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
 
-    console.log(`========================================`);
-    console.log(`Processing shapefile: ${originalTableName}`);
-    console.log(`Table name will be: ${tableName}`);
-    console.log(`Color: ${color}`);
-    console.log(`========================================`);
 
     // Step 1: Import shapefile to PostgreSQL using ogr2ogr
-    console.log(`\n[1/6] Importing shapefile to PostgreSQL...`);
     
     // Build the ogr2ogr command
 // Use this if shapefile doesn't have projection info
@@ -417,55 +386,43 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -skipfailures \
 --config PG_USE_COPY YES`;
 
-    console.log("Running ogr2ogr command...");
-    console.log("Command preview:", ogrCmd.substring(0, 150) + "...");
     
     const ogrResult = await runCommand(ogrCmd);
     
     if (ogrResult.stdout) {
-      console.log("ogr2ogr output:", ogrResult.stdout.substring(0, 300));
     }
     
     if (ogrResult.stderr && ogrResult.stderr.length > 0) {
       console.warn("ogr2ogr warnings:", ogrResult.stderr.substring(0, 500));
     }
 
-    console.log(`✓ Shapefile imported to PostgreSQL table: ${tableName}`);
 
     // Step 2: Wait for table to be fully created
-    console.log(`\n[2/6] Waiting for table creation to complete...`);
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Step 3: Fix PostgreSQL table for GeoServer
-    console.log(`\n[3/6] Fixing PostgreSQL table for GeoServer...`);
     const tableFixed = await fixPostgreSQLTable(tableName);
     if (!tableFixed) {
       console.warn("Table fixing encountered issues, but continuing...");
     }
 
     // Step 4: Publish to GeoServer
-    console.log(`\n[4/6] Publishing to GeoServer...`);
     try {
       await publishToGeoServer(tableName, color);
-      console.log(`✓ Published to GeoServer successfully`);
     } catch (geoServerError) {
       console.error("GeoServer publish failed:", geoServerError.message);
       // Continue with village processing even if GeoServer fails
     }
 
     // Step 5: Add village data to coupe_village_master table
-    console.log(`\n[5/6] Adding village data to coupe_village_master...`);
     await new Promise(resolve => setTimeout(resolve, 2000)); // Wait before querying
     const villageInserted = await addcolumnsintable(tableName);
     
     if (villageInserted) {
-      console.log(`✓ Village data added to coupe_village_master`);
     } else {
-      console.log(`⚠ No village data found or inserted`);
     }
 
     // Step 6: Cleanup uploaded files
-    console.log(`\n[6/6] Cleaning up uploaded files...`);
     await Promise.all(uploadedFiles.map(file => {
       const filePath = path.join(UPLOAD_DIR, file.originalname);
       return fs.promises.unlink(filePath)
@@ -473,8 +430,6 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
         .catch(cleanupErr => console.warn(`⚠ Failed to delete ${filePath}:`, cleanupErr.message));
     }));
 
-    console.log(`\n✅ Upload process completed successfully!`);
-    console.log(`========================================`);
 
     // Success response
     res.json({
@@ -554,7 +509,6 @@ router.get("/test-gdal", async (req, res) => {
       
       try {
         const { stdout } = await runCommand(testCmd, env);
-        console.log("PostgreSQL version:", stdout.trim());
         
         res.json({
           success: true,

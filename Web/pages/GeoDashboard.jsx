@@ -28,7 +28,6 @@ import gisfylogo from "../assets/Gisfylogo.png";
 import { API_BASE_URL } from '../config';
 
 const Loader = () => {
-  console.log("loading");
   return (
     <div className="map-loader">
       <div className="map-loader__radar">
@@ -162,10 +161,10 @@ export default function MapView() {
   }, []);
 
   useEffect(() => {
+  // Fallback: hide loader after 15s in case map load events never fire
   const timer = setTimeout(() => {
     setIsLoading(false);
-  }, 10000); // 10 seconds
-
+  }, 15000);
   return () => clearTimeout(timer);
 }, []);
 
@@ -173,7 +172,9 @@ export default function MapView() {
   
   useEffect(() => {
     if (showIncidentLayer) {
-      fetch("http://68.178.167.39:5000/api/incidents-with-images?user_id=2")
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const userId = userData.user_id || userData.id || '';
+      fetch(`${import.meta.env.VITE_API_URL}/api/incidents-with-images?user_id=${userId}`)
         .then((res) => res.json())
         .then((data) => setIncidentsData(data))
         .catch((err) => console.error("Error fetching incidents", err));
@@ -345,6 +346,67 @@ const handleFilter = ({ fromDate, toDate }) => {
     useEffect(() => {
       mapRef.current = map;
       window.leafletTools = { map };
+    }, [map]);
+    return null;
+  };
+
+  // Hides the loader once the map and its visible tile layers finish loading.
+  // Listens to Leaflet's native 'load' event (fires when initial tiles are done)
+  // and tracks each tile layer's 'load'/'loading' events for dynamic layers.
+  const MapReadyHandler = () => {
+    const map = useMap();
+    useEffect(() => {
+      if (!map) return;
+
+      // Track loading state of all tile layers currently on the map
+      let pendingLayers = new Set();
+
+      const checkAllLoaded = () => {
+        if (pendingLayers.size === 0) {
+          setIsLoading(false);
+        }
+      };
+
+      const onLayerAdd = (e) => {
+        const layer = e.layer;
+        // Only track tile-based layers (TileLayer / WMSTileLayer)
+        if (!layer || typeof layer.on !== 'function') return;
+        if (layer._url || layer.wmsParams) {
+          pendingLayers.add(L.stamp(layer));
+          layer.on('load', () => {
+            pendingLayers.delete(L.stamp(layer));
+            checkAllLoaded();
+          });
+          layer.on('loading', () => {
+            pendingLayers.add(L.stamp(layer));
+          });
+        }
+      };
+
+      const onLayerRemove = (e) => {
+        if (e.layer) pendingLayers.delete(L.stamp(e.layer));
+      };
+
+      // Map 'load' fires when the initial view + visible tiles are loaded
+      const onMapLoad = () => {
+        // If no tile layers are pending, hide the loader immediately
+        checkAllLoaded();
+      };
+
+      map.on('load', onMapLoad);
+      map.on('layeradd', onLayerAdd);
+      map.on('layerremove', onLayerRemove);
+
+      // If the map was already loaded before this handler attached
+      if (map._loaded) {
+        onMapLoad();
+      }
+
+      return () => {
+        map.off('load', onMapLoad);
+        map.off('layeradd', onLayerAdd);
+        map.off('layerremove', onLayerRemove);
+      };
     }, [map]);
     return null;
   };
@@ -524,7 +586,6 @@ const handleDrawingToolClick = (toolType) => {
 
   const handleDownload = (file) => {
     // Trigger the file download
-    console.log(`Downloading file: ${file}`);
     saveAs(file); // FileSaver.js download function
   };
 
@@ -535,7 +596,6 @@ const clearAllMeasurements = () => {
   const map = mapRef.current;
   if (!map) return;
 
-  console.log("Clearing all measurements, layers count:", measurementLayers.length);
   
   // Close any open popup first
   map.closePopup();
@@ -697,7 +757,7 @@ const handleLayerToggle = (layerType, isChecked) => {
       return;
     }
 
-    const response = await axios.get(`http://68.178.167.39:5000/api/tnc-users/${id}`, {
+    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/tnc-users/${id}`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -934,6 +994,7 @@ const handleLayerToggle = (layerType, isChecked) => {
         
 
       <AddControls />
+      <MapReadyHandler />
       <GeomanTools />
        <ScaleControl position="bottomleft" 
       //  className="custom-scale-control" 

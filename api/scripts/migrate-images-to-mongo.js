@@ -44,22 +44,18 @@ function sleep(ms) {
 
 // ── 1. Migrate patrol images ──
 async function migratePatrolImages() {
-  console.log('\n========== Migrating Patrol Images ==========\n');
 
   try {
     // Check if patrol_images table exists and has data
     const countResult = await pgClient.query('SELECT COUNT(*) AS total FROM patrol_images');
     const totalCount = parseInt(countResult.rows[0].total);
-    console.log(`Found ${totalCount} patrol image records in PostgreSQL`);
 
     if (totalCount === 0) {
-      console.log('No patrol images to migrate. Skipping.');
       return { migrated: 0, skipped: 0 };
     }
 
     // Check what already exists in MongoDB
     const existingMongo = await MongoImage.countDocuments({ sourceType: 'patrol' });
-    console.log(`MongoDB already has ${existingMongo} patrol images`);
 
     // Fetch all patrol images in batches
     const BATCH_SIZE = 100;
@@ -115,7 +111,6 @@ async function migratePatrolImages() {
       if (docs.length > 0) {
         await MongoImage.insertMany(docs, { ordered: false });
         migrated += docs.length;
-        console.log(`  Migrated batch: ${docs.length} images (total so far: ${migrated})`);
       }
 
       offset += BATCH_SIZE;
@@ -124,7 +119,6 @@ async function migratePatrolImages() {
       await sleep(200);
     }
 
-    console.log(`\nPatrol images migration complete: ${migrated} migrated, ${skipped} skipped`);
     return { migrated, skipped };
 
   } catch (err) {
@@ -135,7 +129,6 @@ async function migratePatrolImages() {
 
 // ── 2. Migrate NDVI coupe images ──
 async function migrateNdviImages() {
-  console.log('\n========== Migrating NDVI Coupe Images ==========\n');
 
   try {
     // Get all NDVI Change tables
@@ -148,17 +141,14 @@ async function migrateNdviImages() {
     `);
 
     if (!tablesResult || tablesResult.length === 0) {
-      console.log('No NDVI Change tables found. Skipping.');
       return { migrated: 0, skipped: 0, tables: 0 };
     }
 
-    console.log(`Found ${tablesResult.length} NDVI Change tables`);
 
     let totalMigrated = 0;
     let totalSkipped = 0;
 
     for (const { tablename } of tablesResult) {
-      console.log(`\n  Processing table: ${tablename}`);
 
       try {
         // Check if image_data column exists
@@ -170,7 +160,6 @@ async function migrateNdviImages() {
         `);
 
         if (!colCheck || colCheck.length === 0) {
-          console.log(`    No image_data column. Skipping.`);
           continue;
         }
 
@@ -182,11 +171,9 @@ async function migrateNdviImages() {
         `);
 
         if (!rows || rows.length === 0) {
-          console.log(`    No images in this table. Skipping.`);
           continue;
         }
 
-        console.log(`    Found ${rows.length} records with images`);
 
         let tableMigrated = 0;
         let tableSkipped = 0;
@@ -226,7 +213,6 @@ async function migrateNdviImages() {
 
         totalMigrated += tableMigrated;
         totalSkipped += tableSkipped;
-        console.log(`    Migrated: ${tableMigrated}, Skipped: ${tableSkipped}`);
 
         await sleep(200);
       } catch (tableErr) {
@@ -234,7 +220,6 @@ async function migrateNdviImages() {
       }
     }
 
-    console.log(`\nNDVI images migration complete: ${totalMigrated} migrated, ${totalSkipped} skipped`);
     return { migrated: totalMigrated, skipped: totalSkipped, tables: tablesResult.length };
 
   } catch (err) {
@@ -245,7 +230,6 @@ async function migrateNdviImages() {
 
 // ── Main ──
 async function main() {
-  console.log('🚀 Starting migration: PostgreSQL → MongoDB\n');
 
   // Connect to MongoDB
   const mongoConnected = await connectMongo();
@@ -256,26 +240,18 @@ async function main() {
 
   // Connect to PostgreSQL (patrol images)
   await pgClient.connect();
-  console.log('✅ Connected to PostgreSQL (Recap4NDC)');
 
   // Connect to Recap4NDC_Query (NDVI tables)
   await querySequelize.authenticate();
-  console.log('✅ Connected to PostgreSQL (Recap4NDC_Query)');
 
   const patrolResult = await migratePatrolImages();
   const ndviResult = await migrateNdviImages();
 
-  console.log('\n========== Migration Summary ==========');
-  console.log(`Patrol images: ${patrolResult.migrated} migrated, ${patrolResult.skipped} skipped`);
-  console.log(`NDVI images:   ${ndviResult.migrated} migrated, ${ndviResult.skipped} skipped (${ndviResult.tables} tables scanned)`);
-  console.log(`Total:         ${patrolResult.migrated + ndviResult.migrated} migrated, ${patrolResult.skipped + ndviResult.skipped} skipped`);
-  console.log('=======================================\n');
 
   // Cleanup
   await pgClient.end();
   await querySequelize.close();
   await mongoose.disconnect();
-  console.log('🔌 Disconnected from all databases. Migration complete.');
   process.exit(0);
 }
 

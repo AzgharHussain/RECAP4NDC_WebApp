@@ -30,6 +30,10 @@ const pool = new Pool({
   database: process.env.DB_NAME     || 'RECAP4NDC',
   password: process.env.DB_PASSWORD || '',
   port:     Number(process.env.DB_PORT || 9999),
+  max:      Number(process.env.DB_POOL_MAX || 50),
+  min:      5,
+  acquireTimeoutMillis: 60000,
+  idleTimeoutMillis: 30000,
 });
 
 // ============================
@@ -54,7 +58,6 @@ app.post("/uploadShapefile", upload.single("shapefile"), async (req, res) => {
   const client = await pool.connect();
 
   try {
-    console.log("✅ PostgreSQL connection acquired from pool");
 
     const shapefilePath = await unzipShapefile(filePath);
     await createTableForCoupe(client, coupeName);
@@ -65,7 +68,6 @@ app.post("/uploadShapefile", upload.single("shapefile"), async (req, res) => {
       coupeName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "") + "_table";
     const styleName = "Jamnagar_coupes";
 
-    console.log(`🌍 Publishing layer to GeoServer: ${tableName}`);
     await publishLayerWithStyle(tableName, styleName, tableName);
 
     await insertIntoBeatviewMetadata(client, 1, coupeName, tableName);
@@ -80,7 +82,6 @@ app.post("/uploadShapefile", upload.single("shapefile"), async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   } finally {
     client.release();
-    console.log("🔚 PostgreSQL connection released back to pool.");
   }
 });
 
@@ -115,7 +116,6 @@ async function extractShapefileData(shapefilePath, coupeName) {
     shapefileData.push(result.value);
     result = await source.read();
   }
-  console.log(`✅ Extracted ${shapefileData.length} features for ${coupeName}`);
   return shapefileData;    
 }  
 
@@ -136,7 +136,6 @@ async function createTableForCoupe(client, coupeName) {
   `;
   await client.query(dropSQL);
   await client.query(createSQL);
-  console.log(`✅ Table "${tableName}" created.`);
 }
 
 // ---- Insert Shapefile Data into Table ----
@@ -148,7 +147,6 @@ async function insertShapefileDataToTable(client, coupeName, shapefileData) {
     const insertSQL = `INSERT INTO "${tableName}" (geom) VALUES (ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))`;
     await client.query(insertSQL, [JSON.stringify(data.geometry)]);
   }
-  console.log(`✅ Inserted ${shapefileData.length} geometries into "${tableName}".`);
 }
 
 // ---- Check if GeoServer Style Exists ----
@@ -164,10 +162,8 @@ async function checkStyleExists(styleName) {
   try {
     const res = await fetch(url, { method: "GET", headers, agent: httpsAgent });
     if (res.ok) {
-      console.log(`✅ Style "${styleName}" found in GeoServer`);
       return true;
     } else if (res.status === 404) {
-      console.log(`ℹ️ Style "${styleName}" not found in workspace "${WORKSPACE}"`);
       return false;
     } else {
       const text = await res.text();
@@ -206,7 +202,6 @@ async function publishLayerWithStyle(tableName, styleName, dbTableName) {
   };
 
   try {
-    console.log(`📤 Publishing layer "${tableName}" to: ${url}`);
     const res = await fetch(url, {
       method: "POST",
       headers,
@@ -223,11 +218,9 @@ async function publishLayerWithStyle(tableName, styleName, dbTableName) {
     }
 
     if (text.includes("already exists")) {
-      console.log(`⚠️ Layer "${tableName}" already exists in GeoServer.`);
       return true;
     }
 
-    console.log(`✅ Layer "${tableName}" published successfully to GeoServer.`);
     return true;
   } catch (err) {
     console.error("💥 Network/TLS error during layer publish:");
@@ -245,7 +238,6 @@ async function insertIntoBeatviewMetadata(client, beatId, viewName, tableName) {
     ON CONFLICT (beat_id) DO NOTHING;
   `;
   await client.query(sql, [beatId, viewName, tableName]);
-  console.log(`✅ Inserted into beatview_metadata for ${viewName}`);
 }
 
 // ---- GeoServer Health Test ----
@@ -276,6 +268,4 @@ app.get("/test-geoserver", async (req, res) => {
 // ============================
 const PORT = 6000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`🌍 Using GeoServer (HTTPS): ${GEOSERVER_URL}`);
 });

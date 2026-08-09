@@ -109,9 +109,9 @@ const SearchControlWithInput = () => {
             fontSize: "9px",
           }}
         >
-          {suggestions.map((s, i) => (
+          {suggestions.map((s) => (
             <li
-              key={i}
+              key={s.place_id || s.osm_id || s.display_name}
               onClick={() => handleSearch(s.display_name)}
               style={{
                 padding: "4px",

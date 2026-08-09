@@ -24,6 +24,7 @@ import "./DashboardLayout.css";
 
 import { API_BASE_URL } from '../config';
 import axios from "axios";
+import Cookies from "js-cookie";
 
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import Moef from "../assets/Moef.jpg";
@@ -175,6 +176,10 @@ useEffect(() => {
   });
 
   // Clear cookies
+  ['authToken', 'token', 'role', 'id'].forEach(name => {
+    Cookies.remove(name);
+    Cookies.remove(name, { path: '/' });
+  });
   document.cookie.split(";").forEach(cookie => {
     document.cookie = cookie
       .replace(/^ +/, "")
@@ -304,16 +309,15 @@ useEffect(() => {
         <div>
 <div className="after-login-container">
 
-        <header id="header">
+        <header id="after-login-header">
                 <div className="container-fluid22">
-                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'100%'}}>
+                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'100%',borderRadius:'50px'}}>
                         <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'25px'}}>
                             {/* <a href="indexs.aspx">
                                 </a> */}
                                 <img src={gujaratlogo} alt="logo picture" style={{width:'50px'}}></img>
                       
                         <div className="portal-header">
-                            <div className="icon" aria-hidden="true"></div>
                             <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>{text[language].appTitle}</b></h2>
                         </div>  </div>
                       

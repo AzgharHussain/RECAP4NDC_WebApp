@@ -47,7 +47,6 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
         setLoading(prev => ({ ...prev, forest: true }));
         const response = await fetch(`${base_url}/api/forest-types`);
         const data = await response.json();
-        console.log("Forest types data:", data);
         setForestTypes(data);
       } catch (error) {
         console.error('Error fetching forest types:', error);
@@ -107,7 +106,6 @@ const ForestHierarchyDropdowns = ({ language = 'en', onSelectionChange,setSelect
       }
       
       const data = await response.json();
-      console.log("Divisions data:", data);
       
       // Assuming the API returns an array of objects with DIVISION field
       if (Array.isArray(data)) {
@@ -183,7 +181,6 @@ const response = await fetch(`${base_url}/api/hierarchy`, {
       }
       
       const data = await response.json();
-      console.log("Hierarchy data for division:", data);
       
       // Store the hierarchy data for this division
       setHierarchyData(data);

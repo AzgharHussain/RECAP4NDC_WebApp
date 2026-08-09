@@ -7,11 +7,9 @@ const { connectMongo } = require('../config/mongo');
 const MongoImage = require('../models/Image');
 
 async function main() {
-  console.log('Connecting to MongoDB...');
   await connectMongo();
 
   const docs = await MongoImage.find({ imageId: { $exists: false } }).sort({ _id: 1 });
-  console.log(`Found ${docs.length} documents without imageId`);
 
   let counter = 0;
   const lastDoc = await MongoImage.findOne({}, {}, { sort: { imageId: -1 } });
@@ -22,11 +20,9 @@ async function main() {
     await doc.save();
     counter++;
     if (counter % 100 === 0) {
-      console.log(`  Backfilled ${counter}/${docs.length}`);
     }
   }
 
-  console.log(`Done! Backfilled ${counter} documents with imageId.`);
   process.exit(0);
 }
 

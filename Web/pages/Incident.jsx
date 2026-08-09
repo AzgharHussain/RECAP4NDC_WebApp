@@ -62,8 +62,10 @@ const PatrolIncidentLogs = () => {
   // Fetch incident data
   const fetchIncidentData = async () => {
     try {
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const userId = userData.user_id || userData.id || '';
       const response = await fetch(
-        "http://68.178.167.39:5000/api/incidents-with-images?user_id=1"
+        `${import.meta.env.VITE_API_URL}/api/incidents-with-images?user_id=${userId}`
       );
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();

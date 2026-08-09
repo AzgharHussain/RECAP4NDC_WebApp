@@ -266,7 +266,7 @@ router.post("/coupe-patrol-coverage", verifyJwt, async (req, res) => {
     const query = `
 WITH coupe AS (
     SELECT
-        ST_Union(geom) AS coupe_geom,
+        ST_Transform(ST_Union(geom), 4326) AS coupe_geom,
         ST_Area(ST_Union(geom)::geography) AS coupe_area
     FROM public.beat_witheeee22
     ${coupeWhereClause}
@@ -395,10 +395,6 @@ GROUP BY cc.coupe_area, cc.patrol_area;
       ...patrolReplacements
     };
 
-    console.log("Query replacements:", replacements);
-    console.log("Coupe WHERE clause:", coupeWhereClause);
-    console.log("Patrol WHERE clause:", patrolWhereClause);
-    console.log("Date range:", start_date, "to", end_date);
 
     const result = await sequelize.query(query, {
       replacements,
@@ -406,7 +402,6 @@ GROUP BY cc.coupe_area, cc.patrol_area;
     });
 
     // Log the result to debug
-    console.log("Query result:", JSON.stringify(result, null, 2));
 
     // Check if any results were returned
     if (!result || result.length === 0) {
@@ -458,7 +453,7 @@ router.post("/boundary-patrol-coverage", verifyJwt, async (req, res) => {
     const query = `
 WITH coupe AS (
     SELECT
-        ST_Union(geom) AS coupe_geom,
+        ST_Transform(ST_Union(geom), 4326) AS coupe_geom,
         ST_Area(ST_Union(geom)::geography) AS coupe_area
     FROM public."${coupe_table}"
 ),
@@ -480,7 +475,7 @@ patrol_lines AS (
         p.number_of_staff,
         p.user_id,
         -- Get type_name based on patrolling_type_id
-        CASE 
+        CASE
             WHEN p.patrolling_type_id = 1 THEN 'Day patrolling'
             WHEN p.patrolling_type_id = 2 THEN 'Night patrolling'
             WHEN p.patrolling_type_id = 3 THEN 'Beat checking'
@@ -635,9 +630,7 @@ FROM coverage_calc cc;
       }
       data.patrols_covering_coupe = uniquePatrols;
       
-      console.log("Number of patrols found:", uniquePatrols.length);
       if (uniquePatrols.length > 0) {
-        console.log("Sample patrol data:", JSON.stringify(uniquePatrols[0], null, 2));
       }
       
       res.json({

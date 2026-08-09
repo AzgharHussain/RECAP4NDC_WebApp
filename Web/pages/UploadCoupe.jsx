@@ -105,7 +105,6 @@ const UploadCoupe = () => {
     const prefix = baseName.split("_")[0]; // Gandhinagar
     const coupeName = `${prefix}_Coupe`; // Gandhinagar_Coupe
 
-    console.log("Auto-generated coupeName:", coupeName);
 
     setMessage(text[language].uploading);
     setFileName(file.name);
@@ -115,7 +114,7 @@ const UploadCoupe = () => {
       fd.append("shapefile", file);
       fd.append("coupeName", coupeName);
 
-      const res = await fetch("http://68.178.167.216:6000/uploadShapefile", {
+      const res = await fetch(`${import.meta.env.VITE_GEOSERVER_URL}/uploadShapefile`, {
         method: "POST",
         body: fd,
       });

@@ -20,9 +20,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 NDVI Notification Service running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`📍 Send alerts: POST http://localhost:${PORT}/api/send-ndvi-alerts`);
 });
 
 module.exports = app;

@@ -26,12 +26,10 @@ async function withRetry(fn, attempts = 5, baseDelay = 1000) {
       console.error(`Attempt ${i} failed: ${err && err.message ? err.message : err}.`);
       if (isLast) throw err;
       const backoff = baseDelay * Math.pow(2, i - 1);
-      console.log(`Retrying after ${backoff}ms...`);
       await sleep(backoff);
       // If sequelize connection seems closed, try re-authenticating
       try {
         await sequelize.authenticate();
-        console.log('✅ Re-authenticated to DB after failure.');
       } catch (authErr) {
         console.warn('⚠️ Re-authentication failed:', authErr.message || authErr);
       }
@@ -39,12 +37,12 @@ async function withRetry(fn, attempts = 5, baseDelay = 1000) {
   }
 }
 
-// Load checkpoint if exists
-function loadCheckpoint() {
+// Load checkpoint if exists (async)
+async function loadCheckpoint() {
   try {
     if (fs.existsSync(CHECKPOINT_FILE)) {
-      const data = JSON.parse(fs.readFileSync(CHECKPOINT_FILE, 'utf8'));
-      console.log('📌 Loaded checkpoint:', data);
+      const raw = await fs.promises.readFile(CHECKPOINT_FILE, 'utf8');
+      const data = JSON.parse(raw);
       return data;
     }
   } catch (err) {
@@ -53,22 +51,20 @@ function loadCheckpoint() {
   return null;
 }
 
-// Save checkpoint
-function saveCheckpoint(data) {
+// Save checkpoint (async)
+async function saveCheckpoint(data) {
   try {
-    fs.writeFileSync(CHECKPOINT_FILE, JSON.stringify(data, null, 2));
-    console.log('💾 Checkpoint saved:', data);
+    await fs.promises.writeFile(CHECKPOINT_FILE, JSON.stringify(data, null, 2));
   } catch (err) {
     console.error('❌ Failed to save checkpoint:', err.message);
   }
 }
 
 // Clear checkpoint (call when processing is complete)
-function clearCheckpoint() {
+async function clearCheckpoint() {
   try {
     if (fs.existsSync(CHECKPOINT_FILE)) {
-      fs.unlinkSync(CHECKPOINT_FILE);
-      console.log('🧹 Checkpoint cleared');
+      await fs.promises.unlink(CHECKPOINT_FILE);
     }
   } catch (err) {
     console.warn('⚠️ Could not clear checkpoint:', err.message);
@@ -149,7 +145,6 @@ async function createTableIfNotExists(tableName) {
 
   await withRetry(() => sequelize.query(sqlCreate));
   await withRetry(() => sequelize.query(sqlIndex));
-  console.log(`✅ Table '${tableName}' ensured to exist (and index).`);
 }
 
 // ----------------- Build bulk insert query -----------------
@@ -244,7 +239,6 @@ async function main() {
       ee.initialize(null, null, resolve, reject);
     }, reject);
   });
-  console.log("✅ EE initialized");
 
   // Test DB connection
   const ok = await testConnection();
@@ -252,7 +246,6 @@ async function main() {
     console.error('Exiting: cannot connect to DB.');
     process.exit(1);
   }
-  console.log("✅ DB connected");
 
   const months = [
     '2025-01-01',  // January
@@ -280,7 +273,6 @@ async function main() {
     throw new Error('No coupe metadata found in the database');
   }
 
-  console.log(`Found ${allCoupes.length} coupes to process.`);
 
   // Determine where to resume from checkpoint
   let startCoupeIndex = 0;
@@ -299,7 +291,6 @@ async function main() {
       startMonthIndex = months.indexOf(checkpoint.month) || 0;
       startPolygonIndex = checkpoint.polygonIndex || 0;
       startTileIndex = checkpoint.tileIndex || 0;
-      console.log(`🔄 Resuming from: Coupe ${checkpoint.coupeName}, Month ${checkpoint.month}, Polygon ${startPolygonIndex}, Tile ${startTileIndex}`);
     }
   }
 
@@ -308,7 +299,6 @@ async function main() {
     const coop = allCoupes[c];
     const coopName = coop.coupe_name;
     
-    console.log(`\n🌳 Processing coupe: ${coopName} (${c + 1}/${allCoupes.length})`);
     
     // Save checkpoint at start of each coupe
     saveCheckpoint({
@@ -365,7 +355,6 @@ async function main() {
       }
     });
 
-    console.log(`📊 Found ${polygons.length} valid polygons for coupe ${coopName}.`);
 
     // Process each month for this coupe
     for (let m = (c === startCoupeIndex ? startMonthIndex : 0); m < months.length; m++) {
@@ -377,7 +366,6 @@ async function main() {
       endObj.setMonth(endObj.getMonth() + 1);
       const end = endObj.toISOString().slice(0, 10);
 
-      console.log(`\n📅 Processing: ${month} → ${table}`);
 
       // Process polygons for this month (starting from checkpoint if applicable)
       for (let p = (c === startCoupeIndex && m === startMonthIndex ? startPolygonIndex : 0); p < polygons.length; p++) {
@@ -399,7 +387,6 @@ async function main() {
           const tiles = makeGrid(geom, 500);
 
           const totalTiles = tiles.size().getInfo();
-          console.log(`🧩 Polygon ${row.id}: Total tiles: ${totalTiles}`);
           
           // Determine starting tile based on checkpoint
           let startTile = 0;
@@ -408,7 +395,6 @@ async function main() {
               checkpoint.month === month && 
               checkpoint.polygonId === row.id) {
             startTile = checkpoint.tileIndex || 0;
-            console.log(`🔄 Resuming polygon ${row.id} from tile ${startTile}`);
           }
           
           const BATCH_SIZE = 30;
@@ -421,7 +407,6 @@ async function main() {
             
             const batchNumber = Math.floor(processedTiles / BATCH_SIZE) + 1;
             const totalBatches = Math.ceil(totalTiles / BATCH_SIZE);
-            console.log(`   Processing batch ${batchNumber}/${totalBatches} (${tileBatch.length} tiles)`);
             
             for (const tileFeature of tileBatch) {
               try {
@@ -448,7 +433,6 @@ async function main() {
                   delayBetweenBatches: 100
                 });
 
-                console.log(`     ↳ Tile ${processedTiles + 1}/${totalTiles}, polygons inserted: ${inserted}`);
                 
                 // Update checkpoint after each successful tile
                 saveCheckpoint({
@@ -479,7 +463,6 @@ async function main() {
                 
                 try {
                   await sequelize.authenticate();
-                  console.log('✅ DB re-authenticated after tile error.');
                 } catch (reAuthErr) {
                   console.warn('Re-auth failed after tile error:', reAuthErr && reAuthErr.message ? reAuthErr.message : reAuthErr);
                 }
@@ -490,7 +473,6 @@ async function main() {
             
             // Add longer delay between batches
             if (processedTiles < totalTiles) {
-              console.log(`   ⏳ Waiting 2 seconds before next batch...`);
               await sleep(2000);
             }
           }
@@ -507,12 +489,10 @@ async function main() {
     // Reset month index for next coupe
     startMonthIndex = 0;
     
-    console.log(`\n✅ Completed processing for coupe: ${coopName}`);
   }
 
   // Clear checkpoint when done
   clearCheckpoint();
-  console.log("\n🎉 All coupes processed successfully!");
   await sequelize.close();
 }
 

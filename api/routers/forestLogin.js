@@ -2,15 +2,31 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const xml2js = require('xml2js');
+const jwt = require('jsonwebtoken');
 const { logFromRequest } = require('../utils/auditLogger');
 const { sequelize } = require('../config/database');
 const bcrypt = require('bcrypt');
 
+// Lazy-load notifications router to avoid circular dependency at startup.
+// This lets us trigger pending notifications on login.
+let sendPendingNotificationsFromPreviousMonth = null;
+function getPendingNotificationsFn() {
+  if (!sendPendingNotificationsFromPreviousMonth) {
+    try {
+      const notificationsRouter = require('./notifications');
+      sendPendingNotificationsFromPreviousMonth = notificationsRouter.sendPendingNotificationsFromPreviousMonth;
+    } catch (e) {
+      console.warn('Could not load sendPendingNotificationsFromPreviousMonth:', e.message);
+    }
+  }
+  return sendPendingNotificationsFromPreviousMonth;
+}
+
+const SECRET_KEY = process.env.JWT_SECRET;
+
 router.post('/forest-login', async (req, res) => {
   const { username, password } = req.body;
 
-  console.log('=== FOREST LOGIN REQUEST ===');
-  console.log('Username:', username);
 
   if (!username || !password) {
     return res.status(400).json({
@@ -29,8 +45,6 @@ router.post('/forest-login', async (req, res) => {
   </soap:Body>
 </soap:Envelope>`;
 
-  console.log('SOAP Request:');
-  console.log(soapRequest);
 
   try {
     const soapUrl = process.env.SOAP_API_URL;
@@ -42,9 +56,6 @@ router.post('/forest-login', async (req, res) => {
       timeout: 30000
     });
 
-    console.log('Response Status:', response.status);
-    console.log('Response Headers:', response.headers);
-    console.log('Raw SOAP Response:', response.data);
 
     const parsed = await xml2js.parseStringPromise(response.data, {
       explicitArray: false,
@@ -52,7 +63,6 @@ router.post('/forest-login', async (req, res) => {
       tagNameProcessors: [xml2js.processors.stripPrefix]
     });
 
-    console.log('Parsed XML structure:', JSON.stringify(parsed, null, 2).substring(0, 2000));
 
     const envelope = parsed['Envelope'] || parsed;
     const body = envelope && envelope['Body'];
@@ -90,7 +100,6 @@ router.post('/forest-login', async (req, res) => {
     // Extract user data from diffgram
     const userData = extractUserDataFromSoapResult(resultData);
 
-    console.log('Extracted user data:', userData);
 
     if (!userData || Object.keys(userData).length === 0) {
       logFromRequest(req, {
@@ -131,9 +140,90 @@ router.post('/forest-login', async (req, res) => {
       details: { name: userData.NAME, division: userData.DivisionName },
     });
 
+    // Generate JWT token so the frontend doesn't need a separate /saveuser call
+    let token = null;
+    try {
+      // Check if user exists in database, create if not
+      const trimmedUsername = username.trim();
+      const [users] = await sequelize.query(
+        `SELECT user_id, username FROM public.government_department_users WHERE username = $1`,
+        { bind: [trimmedUsername] }
+      );
+
+      let user;
+      if (users.length > 0) {
+        user = users[0];
+      } else {
+        const [insertResult] = await sequelize.query(
+          `INSERT INTO public.government_department_users (username) VALUES ($1) RETURNING user_id, username`,
+          { bind: [trimmedUsername] }
+        );
+        user = insertResult[0];
+      }
+
+      token = jwt.sign(
+        {
+          userId: user.user_id,
+          username: user.username,
+          name: userData.NAME,
+          cadre: userData.CadreName,
+          circle: userData.CircleName,
+          division: userData.DivisionName,
+          range: userData.RangeName,
+          round: userData.RoundName,
+          beat: userData.BeatName,
+          mobile: userData.MobileNo,
+          email: userData.EmailID
+        },
+        SECRET_KEY,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      );
+    } catch (dbErr) {
+      console.error('Database error during forest-login token generation:', dbErr.message);
+      // Continue without token — frontend will handle via saveuser fallback
+    }
+
+    // Set token as HTTP-only cookie (backup auth mechanism)
+    if (token) {
+      res.cookie('authToken', token, {
+        httpOnly: false, // Frontend needs to read it via js-cookie
+        secure: false,   // Set to true in production with HTTPS
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      });
+    }
+
+    // === Fire-and-forget: send pending notifications from previous month ===
+    // Runs AFTER the response is sent so it doesn't slow down login.
+    // The user must be subscribed (have a firebase_token in ndvi_notification_users).
+    // If not subscribed yet, this is a no-op.
+    const loginUsername = username.trim();
+    setImmediate(async () => {
+      try {
+        const fn = getPendingNotificationsFn();
+        if (!fn) return;
+
+        // Use the shared sequelize connection — NOT a new pg.Pool (which leaks connections)
+        const [subRows] = await sequelize.query(
+          'SELECT firebase_token FROM public.ndvi_notification_users WHERE user_id = $1 AND firebase_token IS NOT NULL',
+          { bind: [loginUsername] }
+        );
+
+        if (subRows.length === 0) {
+          return;
+        }
+
+        const fbToken = subRows[0].firebase_token;
+        const result = await fn(loginUsername, fbToken);
+      } catch (e) {
+        console.error('[login-notifications] Error:', e.message);
+      }
+    });
+
     return res.json({
       success: true,
       jsonMap: userData,
+      token, // Include token in response so frontend can save to localStorage
       message: 'Authentication successful'
     });
 
@@ -197,7 +287,6 @@ router.post('/forest-login', async (req, res) => {
         const isPasswordValid = await bcrypt.compare(req.body.password.trim(), user.password);
 
         if (isPasswordValid) {
-          console.log('Fallback to local database authentication successful for:', trimmedUsername);
 
           const userData = {
             NAME: user.username,
@@ -221,9 +310,27 @@ router.post('/forest-login', async (req, res) => {
             details: { name: userData.NAME }
           });
 
+          // Fire-and-forget: send pending notifications from previous month
+          setImmediate(async () => {
+            try {
+              const fn = getPendingNotificationsFn();
+              if (!fn) return;
+              // Use shared sequelize connection — no new pg.Pool
+              const [subRows] = await sequelize.query(
+                'SELECT firebase_token FROM public.ndvi_notification_users WHERE user_id = $1 AND firebase_token IS NOT NULL',
+                { bind: [trimmedUsername] }
+              );
+              if (subRows.length === 0) return;
+              const result = await fn(trimmedUsername, subRows[0].firebase_token);
+            } catch (e) {
+              console.error('[login-notifications] Fallback error:', e.message);
+            }
+          });
+
           return res.json({
             success: true,
             jsonMap: userData,
+            token: jwt.sign({ username: trimmedUsername, name: user.username }, SECRET_KEY, { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }),
             message: 'Authentication successful (Local Fallback)'
           });
         }
@@ -257,7 +364,6 @@ router.post('/forest-login', async (req, res) => {
 function extractUserDataFromSoapResult(resultData) {
   const userData = {};
 
-  console.log('Extracting user data from result...');
 
   try {
     // Method 1: diffgram structure
@@ -276,7 +382,6 @@ function extractUserDataFromSoapResult(resultData) {
           }
         });
 
-        console.log('Extracted via diffgram method:', userData);
         return userData;
       }
     }
@@ -294,7 +399,6 @@ function extractUserDataFromSoapResult(resultData) {
       });
 
       if (Object.keys(userData).length > 0) {
-        console.log('Extracted via Result method:', userData);
         return userData;
       }
     }
@@ -313,7 +417,6 @@ function extractUserDataFromSoapResult(resultData) {
     });
 
     if (hasUserData) {
-      console.log('Extracted via direct method:', userData);
       return userData;
     }
 
@@ -342,12 +445,9 @@ function extractUserDataFromSoapResult(resultData) {
     findDataRecursively(resultData, 0);
 
     if (Object.keys(userData).length > 0) {
-      console.log('Extracted via recursive method:', userData);
       return userData;
     }
 
-    console.log('No user data found in result structure');
-    console.log('Result data:', JSON.stringify(resultData, null, 2).substring(0, 1000));
 
   } catch (error) {
     console.error('Error extracting user data:', error);

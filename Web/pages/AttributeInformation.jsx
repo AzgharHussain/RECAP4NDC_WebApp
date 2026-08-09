@@ -16,7 +16,7 @@ export default function AttributeInformation({
       try {
         // ✅ Check layers
         if (!queryableLayers || queryableLayers.length === 0) {
-          L.popup()
+          L.popup({ maxWidth: 400, autoPan: true, autoPanPadding: [20, 20] })
             .setLatLng(e.latlng)
             .setContent("No queryable layers active")
             .openOn(map);
@@ -30,8 +30,9 @@ export default function AttributeInformation({
         const layerList = queryableLayers.join(",");
 
         // ✅ GeoServer URL (use SAME port as WMS tiles → 8445)
+        const geoserverUrl = import.meta.env.VITE_GEOSERVER_URL || "https://gisfy.co.in:8445";
         const url =
-          "https://gisfy.co.in:8445/geoserver/cite/wms" +
+          `${geoserverUrl}/geoserver/cite/wms` +
           "?SERVICE=WMS" +
           "&VERSION=1.1.1" +
           "&REQUEST=GetFeatureInfo" +
@@ -46,12 +47,11 @@ export default function AttributeInformation({
           "&SRS=EPSG:4326" +
           `&BBOX=${map.getBounds().toBBoxString()}`;
 
-        console.log("GetFeatureInfo URL:", url);
 
         const res = await axios.get(url);
 
         if (!res.data || !res.data.features || res.data.features.length === 0) {
-          L.popup()
+          L.popup({ maxWidth: 400, autoPan: true, autoPanPadding: [20, 20] })
             .setLatLng(e.latlng)
             .setContent("No feature info found")
             .openOn(map);
@@ -74,7 +74,7 @@ export default function AttributeInformation({
           html += `</div>`;
         });
 
-        L.popup()
+        L.popup({ maxWidth: 400, maxHeight: 300, autoPan: true, autoPanPadding: [20, 20] })
           .setLatLng(e.latlng)
           .setContent(html)
           .openOn(map);
@@ -82,7 +82,7 @@ export default function AttributeInformation({
       } catch (err) {
         console.error("GetFeatureInfo Error:", err);
 
-        L.popup()
+        L.popup({ maxWidth: 400, autoPan: true, autoPanPadding: [20, 20] })
           .setLatLng(e.latlng)
           .setContent("Error fetching attribute data")
           .openOn(map);

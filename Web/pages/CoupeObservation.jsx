@@ -69,8 +69,10 @@ const CoupeObservation = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const userId = userData.user_id || userData.id || '';
         const response = await fetch(
-          "http://68.178.167.39:5000/api/coupe/log-with-images?user_id=2"
+          `${import.meta.env.VITE_API_URL}/api/coupe/log-with-images?user_id=${userId}`
         );
         const result = await response.json();
         if (result && Array.isArray(result)) {

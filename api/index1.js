@@ -528,7 +528,6 @@ app.use(express.urlencoded({
    📥 REQUEST LOGGER (SAFE FOR PROD)
 ========================================================= */
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
@@ -571,18 +570,14 @@ const jwt = require("jsonwebtoken");
 const SECRET_KEY = "your-secret-key-change-in-production";
 
 app.post("/api/saveuser", async (req, res) => {
-  console.log("🟢 [/api/saveuser] API HIT");
 
   const { username } = req.body;
-  console.log("➡️ Received username:", username);
 
   if (!username) {
-    console.log("❌ Username missing");
     return res.status(400).json({ error: "Username required" });
   }
 
   try {
-    console.log("🔍 Checking if user exists in DB...");
 
     const [users] = await sequelize.query(
       `SELECT user_id, username
@@ -591,15 +586,12 @@ app.post("/api/saveuser", async (req, res) => {
       { bind: [username] }
     );
 
-    console.log("📄 DB SELECT result:", users);
 
     let user;
 
     if (users.length > 0) {
-      console.log("🟡 User already exists");
       user = users[0];
     } else {
-      console.log("🆕 User not found, inserting new user...");
 
       const [result] = await sequelize.query(
         `INSERT INTO public.government_department_users (username)
@@ -608,11 +600,9 @@ app.post("/api/saveuser", async (req, res) => {
         { bind: [username] }
       );
 
-      console.log("✅ Insert result:", result);
       user = result[0];
     }
 
-    console.log("🔐 Generating JWT token...");
 
     const token = jwt.sign(
       {
@@ -623,7 +613,6 @@ app.post("/api/saveuser", async (req, res) => {
       { expiresIn: "24h" }
     );
 
-    console.log("🎉 User save SUCCESS:", user);
 
     return res.status(200).json({
       success: true,
@@ -637,7 +626,6 @@ app.post("/api/saveuser", async (req, res) => {
 
     // Duplicate username handling
     if (error.code === "23505") {
-      console.log("⚠️ Duplicate username detected, fetching existing user...");
 
       try {
         const [users] = await sequelize.query(
@@ -656,7 +644,6 @@ app.post("/api/saveuser", async (req, res) => {
             { expiresIn: "24h" }
           );
 
-          console.log("♻️ Duplicate handled, token generated");
 
           return res.status(200).json({
             success: true,
@@ -727,10 +714,8 @@ const PORT = 5002;
 app.listen(PORT, async () => {
   try {
     await sequelize.authenticate();
-    console.log('🟢 Database connected');
   } catch (e) {
     console.error('❌ Database connection failed', e);
   }
 
-  console.log(`🚀 Server running on port ${PORT}`);
 });

@@ -4,6 +4,7 @@ import "../App.css";
 import { useLanguage } from "../context/LanguageContext";
 import "./Login.css";
 import axios from "axios";
+import Cookies from "js-cookie";
 import { API_BASE_URL } from '../config';
 
 // === Images ===
@@ -119,7 +120,7 @@ function Login() {
       loginButton: "Login",
       privacyTerms: "Privacy Notice & Terms of Use",
       errorRequired: "Please enter both User ID and Password",
-      errorInvalid: "Invalid credentials. Please check your User ID and Password",
+      errorInvalid: "Wrong password. Please check your Password and try again.",
       errorUserNotFound: "User not found in the system",
       errorNetwork: "Network error. Please check your connection.",
       errorServer: "Server error. Please try again later.",
@@ -145,7 +146,7 @@ function Login() {
       loginButton: "લૉગિન",
       privacyTerms: "ગોપનીયતા સૂચના અને વપરાશની શરતો",
       errorRequired: "કૃપા કરીને વપરાશકર્તા ID અને પાસવર્ડ દાખલ કરો",
-      errorInvalid: "અમાન્ય લૉગિન વિગતો. કૃપા કરીને તમારું વપરાશકર્તા ID અને પાસવર્ડ તપાસો.",
+      errorInvalid: "ખોટો પાસવર્ડ. કૃપા કરીને તમારો પાસવર્ડ તપાસો અને ફરી પ્રયાસ કરો.",
       errorUserNotFound: "સિસ્ટમમાં વપરાશકર્તા મળ્યો નથી",
       errorNetwork: "નેટવર્ક એરર. કૃપા કરીને તમારું કનેક્શન તપાસો.",
       errorServer: "સર્વર એરર. કૃપા કરીને પછી પ્રયાસ કરો.",
@@ -212,6 +213,13 @@ function Login() {
       if (!data.success) throw new Error('FOREST_AUTH_FAILED');
       const userData = data.jsonMap;
       if (!userData || !userData.NAME || userData.NAME === '-') throw new Error('FOREST_AUTH_FAILED');
+
+      // Save token from forest-login response (backend now generates JWT directly)
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        Cookies.set("authToken", data.token, { expires: 1, sameSite: 'lax' });
+      }
+
       return userData;
     } catch (error) {
       if (error.message === 'FOREST_AUTH_FAILED') throw new Error('FOREST_AUTH_FAILED');
@@ -230,14 +238,17 @@ function Login() {
         { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'x-temp-token': 'RECAP4NDC_TEMP_TOKEN' }, timeout: 10000 }
       );
       const { token } = response.data;
-      if (token) localStorage.setItem("token", token);
+      if (token) {
+        localStorage.setItem("token", token);
+        Cookies.set("authToken", token, { expires: 1, sameSite: 'lax' });
+      }
       return response.data;
     } catch { return null; }
   };
 
   const handleLogin = async () => {
     if (!userId || !password) { setError(text[language].errorRequired); return; }
-    if (captchaInput.trim().toLowerCase() !== captchaTextRef.current.toLowerCase()) {
+    if (captchaInput.trim() !== captchaTextRef.current) {
       setError(text[language].errorCaptcha);
       generateCaptcha();
       return;
@@ -252,6 +263,7 @@ function Login() {
           const adminUserData = { username: userId, name: adminResponse.data.user.name || "Administrator", isAdmin: true, permissions: adminResponse.data.user.permissions || ['all'], source: 'admin_api' };
           createSession(adminUserData, true);
           localStorage.setItem('token', adminResponse.data.token);
+          Cookies.set("authToken", adminResponse.data.token, { expires: 1, sameSite: 'lax' });
           await axios.get(`${API_BASE_URL}/api/admincoupes`, { headers: { Authorization: `Bearer ${adminResponse.data.token}` } });
           navigate("/admin");
           setLoading(false);
@@ -276,6 +288,20 @@ function Login() {
       createSession(userData, false);
       localStorage.setItem("authToken", "forest_authenticated");
       await saveUser(userId, password);
+
+      // Fire-and-forget: trigger pending notifications from previous month
+      // The backend also does this automatically on login, but this is a
+      // backup in case the automatic trigger didn't find a firebase token yet.
+      try {
+        const storedToken = localStorage.getItem("token");
+        if (storedToken) {
+          axios.post(
+            `${API_BASE_URL}/api/send-pending-notifications`,
+            { user_id: userId },
+            { headers: { Authorization: `Bearer ${storedToken}` }, timeout: 5000 }
+          ).catch(() => { /* ignore — non-critical */ });
+        }
+      } catch { /* ignore */ }
 
       if (validateSession()) navigate("/geo");
       else throw new Error("SESSION_CREATION_FAILED");

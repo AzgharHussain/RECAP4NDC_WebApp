@@ -229,12 +229,6 @@ export default function Dashboard() {
         const res = await fetch(`${API_BASE_URL}/api/patrol-info`);
         const json = await res.json();
         const data = json?.data || json || [];
-        console.log("Fetched patrol data:", data);
-        console.log("Available patrol types in data:", 
-          [...new Set(data.map(p => 
-            p.type_name || p.type || p.patrol_type || "Unknown"
-          ))]
-        );
         setRawPatrolsData(data);
       } catch (err) {
         console.error("Error fetching patrol data:", err);
@@ -267,7 +261,6 @@ export default function Dashboard() {
       try {
         const response = await fetch(`${API_BASE_URL}/api/patrolling-types`);
         const data = await response.json();
-        console.log("Fetched patrolling types:", data);
         setPatrollingTypes(data?.data || data || []);
       } catch (error) {
         console.error("Error fetching patrolling types:", error);
@@ -413,25 +406,8 @@ export default function Dashboard() {
 
   // Debug effect to monitor filtering
   useEffect(() => {
-    console.log("=== FILTER DEBUGGING ===");
-    console.log("Selected Filters:", {
-      forest: selectedForest,
-      division: selectedDivision,
-      range: selectedRange,
-      patrolType: selectedPatrolType
-    });
-    console.log("Total raw patrols:", rawPatrolsData.length);
-    console.log("Filtered patrols count:", filteredPatrols.length);
-    console.log("Available patrol types in filtered data:", 
-      [...new Set(filteredPatrols.map(p => 
-        p.type_name || p.type || p.patrol_type || "Unknown"
-      ))]
-    );
     
     // Log table counts
-    console.log("Day patrols:", dayPatrollingData.length);
-    console.log("Night patrols:", nightPatrollingData.length);
-    console.log("Beat checking:", beatCheckingData.length);
   }, [selectedForest, selectedDivision, selectedRange, selectedPatrolType, filteredPatrols]);
 
   // Prepare table data helpers

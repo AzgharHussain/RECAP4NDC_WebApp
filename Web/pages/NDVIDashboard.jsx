@@ -408,7 +408,6 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
             },
           }
         );
-        console.log("api/coupe-divisions", res.data);
         setDivisions(res.data[0] || []);
       } catch (error) {
         console.error("Error fetching divisions:", error);
@@ -452,7 +451,6 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           },
         }
       );
-      console.log("api/coupe-ranges", res.data);
       setRanges(res.data);
       onHierarchyChange({ division: selectedDivision, range: null, round: null, beat: null, isAllDivisions: false });
     } catch (error) {
@@ -489,7 +487,6 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           },
         }
       );
-      console.log("api/coupe-rounds", res.data);
       setRounds(res.data);
       onHierarchyChange({ division, range: selectedRange, round: null, beat: null, isAllDivisions: false });
     } catch (error) {
@@ -525,7 +522,6 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           },
         }
       );
-      console.log("api/coupe-beats", res.data);
       setBeats(res.data);
       onHierarchyChange({ division, range, round: selectedRound, beat: null, isAllDivisions: false });
     } catch (error) {
@@ -762,13 +758,11 @@ const NDVIChangeDashboard = () => {
     // Add "_coupe" at the end
     coupeName = `${coupeName}_coupe`;
     
-    console.log(`Transformed "${divisionName}" to "${coupeName}"`);
     return coupeName;
   };
 
   // Handle hierarchy change from dropdown
   const handleHierarchyChange = (hierarchy) => {
-    console.log("Hierarchy changed:", hierarchy);
     
     setSelectedDivision(hierarchy.division);
     setSelectedRange(hierarchy.range);
@@ -780,9 +774,7 @@ const NDVIChangeDashboard = () => {
     if (hierarchy.division && !hierarchy.coupe_name && hierarchy.division !== 'all') {
       const transformedCoupe = transformDivisionToCoupe(hierarchy.division);
       setHierarchyCoupeName(transformedCoupe);
-      console.log("Set hierarchy coupe name to:", transformedCoupe);
     } else if (hierarchy.division === 'all') {
-      console.log("All divisions selected");
       setHierarchyCoupeName('all_divisions');
     }
   };
@@ -955,7 +947,6 @@ const fetchAllDivisionsData = async (months) => {
         return;
       }
       
-      console.log(`Fetching data for ${allDivisions.length} divisions`);
       
       // Create a temporary object to store data per division per month
       const tempMonthlyData = {};
@@ -979,7 +970,6 @@ const fetchAllDivisionsData = async (months) => {
             // Construct table name for this month
             const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
             
-            console.log(`Fetching data for division: ${divisionName}, month: ${month}`);
             
             // Fetch data with hierarchy filters (range/round/beat may be null)
             const dataResponse = await axios.post(
@@ -1172,7 +1162,6 @@ const fetchAllDivisionsData = async (months) => {
         console.warn('Total area is zero or negative, using default value');
       }
       
-      console.log('Total Coupe Area:', totalCoupeArea);
       
       // Create a temporary object to store all month data
       const tempMonthlyData = {};
@@ -1183,7 +1172,6 @@ const fetchAllDivisionsData = async (months) => {
           // Construct table name for this month
           const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
           
-          console.log(`Fetching data for month: ${month}, table: ${tableName}`);
           
           // Fetch data with hierarchy filters
           const dataResponse = await axios.post(
@@ -1208,11 +1196,6 @@ const fetchAllDivisionsData = async (months) => {
               // Calculate afforested area as total area minus degraded area
               const afforestedAreaValue = Math.max(0, totalCoupeArea - degradedAreaValue);
               
-              console.log(`Month ${month}:`, {
-                totalArea: totalCoupeArea,
-                degradedArea: degradedAreaValue,
-                afforestedArea: afforestedAreaValue
-              });
               
               // Count polygons by status
               const degradedPolygons = data.filter(item => item.status === true).length;
@@ -1404,14 +1387,6 @@ const fetchAllDivisionsData = async (months) => {
     const degradedPercentage = totalCoupeAreaKm > 0 ? (degradedAreaKm / totalCoupeAreaKm) * 100 : 0;
     const afforestedPercentage = totalCoupeAreaKm > 0 ? (afforestedAreaKm / totalCoupeAreaKm) * 100 : 0;
     
-    console.log('Statistics calculation:', {
-      totalCoupeAreaKm,
-      degradedAreaKm,
-      afforestedAreaKm,
-      degradedPercentage,
-      afforestedPercentage,
-      totalPolygons: data.length
-    });
     
     return {
       withNotes,

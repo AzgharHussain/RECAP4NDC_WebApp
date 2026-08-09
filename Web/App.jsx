@@ -4,6 +4,7 @@ import { LanguageProvider } from "./context/LanguageContext";
 import { AccessibilityProvider, A11yPageWrapper } from "./context/AccessibilityContext";
 import AccessibilityWidget from "./components/AccessibilityWidget";
 import ProtectedRoute from "./pages/components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary";
 import './fonts.css';
 
 // === Components ===
@@ -40,6 +41,7 @@ export default function App() {
     <AccessibilityProvider>
       <LanguageProvider>
         <A11yPageWrapper>
+        <ErrorBoundary>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
 
@@ -84,6 +86,7 @@ export default function App() {
 
           </Routes>
         </Suspense>
+        </ErrorBoundary>
         </A11yPageWrapper>
         <AccessibilityWidget />
       </LanguageProvider>
