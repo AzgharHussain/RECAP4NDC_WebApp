@@ -4,10 +4,12 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "ndvi:monthly": "node run_all_coupes_monthly_onefile.js"
+    "ndvi:monthly": "node run_all_coupes_monthly_onefile.js --no-schedule",
+    "setup": "chmod +x setup.sh && sudo ./setup.sh"
   },
   "dependencies": {
     "@google/earthengine": "^0.1.393",
+    "dotenv": "^16.4.5",
     "pg": "^8.12.0"
   }
 }

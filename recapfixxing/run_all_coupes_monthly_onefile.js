@@ -1,3 +1,4 @@
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'api', '.env') });
 
 const ee = require('@google/earthengine');
