@@ -53,7 +53,11 @@ router.post('/forest-login', async (req, res) => {
         'Content-Type': 'text/xml; charset=utf-8',
         'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
       },
-      timeout: 30000
+      timeout: 30000,
+      // Bypass any HTTP_PROXY/HTTPS_PROXY env vars — the SOAP service is on
+      // the internal Gujarat govt network (172.16.0.0/16) and the Cisco WSA
+      // proxy blocks this host with "BLOCK-DEST / GujaratDenied".
+      proxy: false,
     });
 
 
@@ -346,8 +350,12 @@ router.post('/forest-login', async (req, res) => {
       errorMessage = 'Request timeout - Gujarat Forest Service is not responding';
       errorCode = 504;
     } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-      errorMessage = 'Cannot connect to Gujarat Forest Service';
+      errorMessage = 'Cannot connect to Gujarat Forest Service (DNS/connection refused)';
       errorCode = 502;
+    } else if (error.code === 'ECONNRESET' || /socket hang up/i.test(error.message)) {
+      errorMessage = 'Gujarat Forest Service closed the connection (socket hang up). Check server IP allowlisting, firewall, and VPN.';
+      errorCode = 502;
+      console.error('[SOAP] Socket hang up — likely IP not allowlisted by Forest dept, or firewall/VPN issue. Server IP:', require('os').hostname());
     } else if (error.response) {
       errorCode = error.response.status;
       errorMessage = 'Forest service returned status ' + error.response.status;
