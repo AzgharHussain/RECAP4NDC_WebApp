@@ -85,7 +85,7 @@ DB_PASSWORD=P$DB@25%$#!26
 DB_SSL=false
 
 # Google Earth Engine
-EE_SERVICE_ACCOUNT_KEY=./giz-gujarat-638109c5420a.json
+EE_SERVICE_ACCOUNT_KEY=./giz-gujarat-71920ef58b39.json
 ```
 
 ## Files

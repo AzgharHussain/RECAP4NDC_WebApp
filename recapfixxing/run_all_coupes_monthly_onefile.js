@@ -20,7 +20,7 @@ const DB_PORT = Number(process.env.DB_PORT);
 
 // ── Earth Engine service-account key ─────────────────────────────────────────
 const SERVICE_ACCOUNT_KEY = process.env.EE_SERVICE_ACCOUNT_KEY
-  || path.join(__dirname, 'giz-gujarat-638109c5420a.json');
+  || path.join(__dirname, 'giz-gujarat-71920ef58b39.json');
 
 // ── Computation parameters ────────────────────────────────────────────────────
 const SCALE            = Number(process.env.SCALE            || 10);

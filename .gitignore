@@ -1,8 +1,16 @@
-node_modules/ 
-api/uploads/ 
-Incidentimage/ 
-*.log 
-.env 
-.DS_Store 
-node_modules/ 
-geoserver/ 
+node_modules/
+api/uploads/
+Incidentimage/
+*.log
+.env
+.DS_Store
+node_modules/
+geoserver/
+
+# Google service account key files (contain private keys — never commit)
+recapfixxing/*.json
+!recapfixxing/package.json
+!recapfixxing/package-lock.json
+api/*.json
+!api/package.json
+!api/package-lock.json
