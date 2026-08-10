@@ -1,3 +1,6 @@
+const path = require('path');
+const fs = require('fs');
+
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', 'api', '.env') });
 
@@ -5,8 +8,6 @@ const ee = require('@google/earthengine');
 const { Client } = require('pg');
 const { execFileSync } = require('child_process');
 const https = require('https');
-const path = require('path');
-const fs = require('fs');
 
 // ── Database ──────────────────────────────────────────────────────────────────
 // Reads from the shared .env in api/.env  (same file used by the API server).
