@@ -117,7 +117,9 @@ DB_PASSWORD=P$DB@25%$#!26
 DB_SSL=false
 
 # Google Earth Engine
-EE_SERVICE_ACCOUNT_KEY=./giz-gujarat-638109c5420a.json
+# EE_SERVICE_ACCOUNT_KEY is auto-detected from any giz-gujarat-*.json file
+# in this directory. Uncomment the line below to override with a specific path.
+#EE_SERVICE_ACCOUNT_KEY=./giz-gujarat-71920ef58b39.json
 
 # Computation Parameters
 SCALE=10
@@ -144,12 +146,13 @@ log "npm install complete."
 log ""
 log "Step 4: Checking Google Earth Engine key..."
 
-EE_KEY="$SCRIPT_DIR/giz-gujarat-638109c5420a.json"
-if [ -f "$EE_KEY" ]; then
+# Auto-detect any giz-gujarat-*.json key file in the script directory
+EE_KEY=$(ls "$SCRIPT_DIR"/giz-gujarat-*.json 2>/dev/null | sort | tail -1)
+if [ -n "$EE_KEY" ] && [ -f "$EE_KEY" ]; then
     log "EE service account key found: $EE_KEY"
 else
-    warn "EE service account key NOT found at: $EE_KEY"
-    warn "Place your Google Earth Engine JSON key file there before running."
+    warn "No EE service account key found in $SCRIPT_DIR"
+    warn "Place your Google Earth Engine JSON key file (giz-gujarat-*.json) there before running."
 fi
 
 # ── Step 5: Test run ────────────────────────────────────────
