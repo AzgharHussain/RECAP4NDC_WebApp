@@ -2,6 +2,39 @@ const cron = require("node-cron");
 const { sequelize } = require("../config/r_quire");
 const { ensurePixleIdColumn } = require("../utils/ensurePixleId");
 
+/**
+ * Retry wrapper for database queries that may fail with transient connection
+ * errors (ECONNRESET, ETIMEDOUT, EPIPE, etc.).  Retries up to `maxRetries`
+ * times with exponential backoff, and tries to re-authenticate the Sequelize
+ * connection before each retry so a dropped pooled connection is restored.
+ */
+async function queryWithRetry(client, sql, options = {}, maxRetries = 3) {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await client.query(sql, options);
+    } catch (err) {
+      lastErr = err;
+      const isConnErr =
+        err.parent?.code === 'ECONNRESET' ||
+        err.parent?.code === 'ETIMEDOUT' ||
+        err.parent?.code === 'EPIPE' ||
+        err.parent?.code === 'ECONNREFUSED' ||
+        err.code === 'ECONNRESET' ||
+        err.message?.includes('ECONNRESET') ||
+        err.message?.includes('Connection terminated') ||
+        err.message?.includes('ConnectionRefused');
+      if (!isConnErr || attempt === maxRetries) throw err;
+      const delay = 1000 * attempt; // 1s, 2s, 3s
+      console.warn(`[scheduler] DB query failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms:`, err.parent?.code || err.message);
+      await new Promise(r => setTimeout(r, delay));
+      // Try to restore the connection before retrying
+      try { await sequelize.authenticate(); } catch (_) { /* ignore — retry anyway */ }
+    }
+  }
+  throw lastErr;
+}
+
 module.exports = function startNdviScheduler(admin) {
 
   cron.schedule("*/1000 * * * *", async () => {
@@ -14,7 +47,7 @@ module.exports = function startNdviScheduler(admin) {
       // ------------------------------------------------
       // 1️⃣ Get NDVI tables
       // ------------------------------------------------
-      const tables = await client.query(`
+      const tables = await queryWithRetry(client, `
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema='public'
@@ -28,7 +61,7 @@ module.exports = function startNdviScheduler(admin) {
       // ------------------------------------------------
       // 2️⃣ Get subscribed users
       // ------------------------------------------------
-      const users = await client.query(`
+      const users = await queryWithRetry(client, `
         SELECT user_id, firebase_token, village_name, coupe_name
         FROM public.ndvi_notification_users
         WHERE firebase_token IS NOT NULL
@@ -74,7 +107,7 @@ module.exports = function startNdviScheduler(admin) {
           // ------------------------------------------------
           let records;
           try {
-            records = await client.query(`
+            records = await queryWithRetry(client, `
               SELECT
                 pixle_id,
                 "NDVI_change",
@@ -101,7 +134,7 @@ module.exports = function startNdviScheduler(admin) {
           // ------------------------------------------------
           // 5️⃣ Check if already notified
           // ------------------------------------------------
-          const alreadySent = await client.query(`
+          const alreadySent = await queryWithRetry(client, `
             SELECT 1
             FROM public.ndvi_notification_log
             WHERE user_id = $1
@@ -149,7 +182,7 @@ module.exports = function startNdviScheduler(admin) {
             // ------------------------------------------------
             // 8️⃣ Insert log record
             // ------------------------------------------------
-            await client.query(`
+            await queryWithRetry(client, `
               INSERT INTO public.ndvi_notification_log
               (user_id, table_name, pixel_id)
               VALUES ($1,$2,$3)

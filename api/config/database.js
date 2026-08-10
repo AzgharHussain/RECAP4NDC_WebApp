@@ -23,15 +23,6 @@ const sequelize = new Sequelize(
     port:    Number(process.env.DB_PORT),
     dialect: 'postgres',
     logging: isProduction ? false : console.log,
-    dialectOptions: sslEnabled
-      ? {
-          ssl: {
-            require: true,
-            rejectUnauthorized:
-              String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false',
-          },
-        }
-      : {},
     pool: {
       max:     Number(process.env.DB_POOL_MAX     || 50),
       min:     Number(process.env.DB_POOL_MIN     || 5),
@@ -39,6 +30,24 @@ const sequelize = new Sequelize(
       idle:    Number(process.env.DB_POOL_IDLE    || 30000),
       evict:   Number(process.env.DB_POOL_EVICT   || 10000),
     },
+    // Keep idle connections alive so remote DBs / firewalls don't drop them.
+    // Without this, idle pooled connections silently die and the next query
+    // gets an ECONNRESET.
+    dialectOptions: sslEnabled
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized:
+              String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false',
+          },
+          // TCP keepalive: probe every 30s after 30s idle
+          keepAlive: true,
+          keepAliveInitialDelayMillis: 30000,
+        }
+      : {
+          keepAlive: true,
+          keepAliveInitialDelayMillis: 30000,
+        },
     // Query timeout: abort any query that takes longer than 30 seconds.
     // This prevents slow spatial/geo queries from blocking the event loop.
     queryTimeout: 30000,
