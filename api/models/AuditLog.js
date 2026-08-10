@@ -13,6 +13,8 @@ const auditLogSchema = new mongoose.Schema(
       enum: [
         'LOGIN',
         'LOGIN_FAILED',
+        'LOGIN_FAILED_SOAP',
+        'LOGIN_FALLBACK',
         'LOGOUT',
         'LOGOUT_FAILED',
         'PASSWORD_CHANGE',
@@ -28,6 +30,7 @@ const auditLogSchema = new mongoose.Schema(
         'NOTIFICATION_SUBSCRIBE',
         'NOTIFICATION_UPDATE',
         'NOTIFICATION_UNSUBSCRIBE',
+        'PENDING_NOTIFICATIONS_SEND',
         'ADMIN_ACTION',
         'API_ACCESS',
         'API_ERROR',
