@@ -289,10 +289,11 @@ const LayerItem = React.memo(({
   );
 });
 
-const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActive }) => {
-  if (!position || !data) return null;
-
+const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActive, mapRef }) => {
   const popupRef = useRef(null);
+  // Track the map container's bounding rect so we can position the popup
+  // relative to the viewport (position: fixed) and keep it inside the map.
+  const [mapRect, setMapRect] = useState(null);
 
   // Close popup when clicking outside
   useEffect(() => {
@@ -311,6 +312,30 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [onClose, setIsInfoToolActive]);
+
+  // Keep the map container's viewport rect up to date so the popup stays
+  // anchored correctly when the window resizes, scrolls, or the layout shifts.
+  useEffect(() => {
+    if (!position) return;
+    const updateRect = () => {
+      const container = mapRef?.current?.getContainer?.() || mapRef?.current?._container;
+      if (container) {
+        setMapRect(container.getBoundingClientRect());
+      } else {
+        setMapRect(null);
+      }
+    };
+    updateRect();
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, true);
+    return () => {
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect, true);
+    };
+  }, [position, mapRef]);
+
+  // Early return must come AFTER all hooks to respect the Rules of Hooks.
+  if (!position || !data) return null;
 
   // Prevent event propagation to avoid triggering map clicks
   const handlePopupClick = (e) => {
@@ -396,41 +421,49 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
     return <FiInfo style={{ color: '#555' }} />;
   };
 
-  // --- Boundary-aware positioning ---
-  // The popup is 320-400px wide and up to 450px tall. If the click point
-  // is near the right or bottom edge of the viewport, the popup would
-  // extend outside the window. We flip/reposition it to stay on-screen.
+  // --- Boundary-aware positioning (kept inside the map) ---
+  // `position` is a container point (relative to the map's top-left), so we
+  // convert it to viewport coordinates by adding the map container's offset.
+  // The popup uses position: fixed, so left/top are viewport coordinates and
+  // immune to any positioned ancestors. Clamping uses the map container's rect
+  // so the popup always stays within the visible map area.
   const POPUP_WIDTH = 380;   // estimated (min 320, max 400)
   const POPUP_HEIGHT = 450;  // max height
   const MARGIN = 10;         // px from edge
 
-  const viewportW = window.innerWidth;
-  const viewportH = window.innerHeight;
+  // Map container rect in viewport coordinates. Fall back to the viewport
+  // itself if we can't resolve the map element (keeps things safe).
+  const rect = mapRect || { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+  const boundsW = rect.width;
+  const boundsH = rect.height;
 
-  let popupLeft = position.x;
-  let popupTop = position.y;
+  // Viewport coordinates of the click point.
+  const clickX = rect.left + position.x;
+  const clickY = rect.top + position.y;
 
-  // Horizontal: if popup would overflow right edge, flip to left of click
-  if (popupLeft + POPUP_WIDTH + MARGIN > viewportW) {
-    popupLeft = position.x - POPUP_WIDTH - MARGIN;
-    // If that also overflows left, clamp to left margin
-    if (popupLeft < MARGIN) {
-      popupLeft = Math.max(MARGIN, viewportW - POPUP_WIDTH - MARGIN);
-    }
+  // Default: place popup to the bottom-right of the click point.
+  let popupLeft = clickX + MARGIN;
+  let popupTop = clickY + MARGIN;
+
+  // Horizontal: if popup would overflow the map's right edge, flip to the
+  // left of the click point.
+  if (popupLeft + POPUP_WIDTH > rect.left + boundsW) {
+    popupLeft = clickX - POPUP_WIDTH - MARGIN;
   }
-  // Clamp left
-  popupLeft = Math.max(MARGIN, popupLeft);
-
-  // Vertical: if popup would overflow bottom edge, flip above the click
-  if (popupTop + POPUP_HEIGHT + MARGIN > viewportH) {
-    popupTop = position.y - POPUP_HEIGHT - MARGIN;
-    // If that also overflows top, clamp to top margin
-    if (popupTop < MARGIN) {
-      popupTop = Math.max(MARGIN, viewportH - POPUP_HEIGHT - MARGIN);
-    }
+  // If flipping also overflows the map's left edge, clamp inside the map.
+  if (popupLeft < rect.left + MARGIN) {
+    popupLeft = rect.left + Math.max(MARGIN, boundsW - POPUP_WIDTH - MARGIN);
   }
-  // Clamp top
-  popupTop = Math.max(MARGIN, popupTop);
+
+  // Vertical: if popup would overflow the map's bottom edge, flip above the
+  // click point.
+  if (popupTop + POPUP_HEIGHT > rect.top + boundsH) {
+    popupTop = clickY - POPUP_HEIGHT - MARGIN;
+  }
+  // If flipping also overflows the map's top edge, clamp inside the map.
+  if (popupTop < rect.top + MARGIN) {
+    popupTop = rect.top + Math.max(MARGIN, boundsH - POPUP_HEIGHT - MARGIN);
+  }
 
   return (
     <div
@@ -438,7 +471,7 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
       className="attribute-popup"
       onClick={handlePopupClick}
       style={{
-        position: 'absolute',
+        position: 'fixed',
         left: `${popupLeft}px`,
         top: `${popupTop}px`,
         zIndex: 10000,
@@ -447,9 +480,9 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
         borderRadius: '12px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
         padding: '16px',
-        minWidth: '320px',
-        maxWidth: '400px',
-        maxHeight: '450px',
+        minWidth: '220px',
+        maxWidth: '300px',
+        maxHeight: '350px',
         overflow: 'auto',
         fontFamily: "'Inter', 'Arial', sans-serif"
       }}
@@ -3272,6 +3305,7 @@ const renderGroup = (group, index, section = "layers") => {
       <AttributePopup
   position={clickPosition}
   data={attributeData}
+  mapRef={mapRef}
   onClose={() => {
     setAttributeData(null);
     setClickPosition(null);
