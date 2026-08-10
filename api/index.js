@@ -172,6 +172,7 @@ const allowedOrigins = [
   'https://gisfy.co.in:8445',
   'https://gisfy.co.in:8445/geoserver/wms',
   'https://forestrecap.gisfy.co.in',
+  'https://fmps.gujarat.gov.in',
   'https://fmps.gujarat.gov.in:8080',
   // Localhost origins — safe to always include (not reachable externally in prod)
   'http://localhost:5002',
