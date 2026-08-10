@@ -1,5 +1,6 @@
 const cron = require("node-cron");
 const { sequelize } = require("../config/r_quire");
+const { ensurePixleIdColumn } = require("../utils/ensurePixleId");
 
 module.exports = function startNdviScheduler(admin) {
 
@@ -44,6 +45,18 @@ module.exports = function startNdviScheduler(admin) {
 
         const tableName = table.table_name;
 
+        // ------------------------------------------------
+        // 3.5️⃣ Ensure the table has a `pixle_id` column.
+        //    Some NDVI tables are auto-created without it; the scheduler
+        //    SELECTs pixle_id below, so we add + populate it (unique values,
+        //    not a primary key) when missing. Idempotent & cheap.
+        // ------------------------------------------------
+        try {
+          await ensurePixleIdColumn(client, tableName, { isSequelize: true });
+        } catch (ensureErr) {
+          console.error(`❌ ensurePixleId failed for "${tableName}":`, ensureErr.message);
+          // continue anyway — the query below has its own try/catch
+        }
 
         for (const user of users) {
 

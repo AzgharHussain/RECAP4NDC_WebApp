@@ -9,6 +9,7 @@ const upload = multer();
 const { verifyJwt } = require("../middlewares/verifyJwt"); 
 const blacklistedTokens = require("../middlewares/tokenBlacklist");
 const { logFromRequest } = require("../utils/auditLogger");
+const { ensurePixleIdColumn } = require("../utils/ensurePixleId");
 
 
 // ----------------------------------------------------
@@ -648,6 +649,17 @@ async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) 
 
       // Match the user's coupe name
       if (user.coupe_name && !tableName.toUpperCase().includes(`_${user.coupe_name.toUpperCase()}_NDVI_CHANGE`)) {
+        continue;
+      }
+
+      // Ensure the table has a `pixle_id` column before we SELECT it.
+      // Auto-created NDVI tables may lack it; we add + populate unique values
+      // (not a primary key) when missing. Idempotent & cheap.
+      try {
+        await ensurePixleIdColumn(client, tableName);
+      } catch (ensureErr) {
+        console.error(`[pending-notifications] ensurePixleId failed for "${tableName}":`, ensureErr.message);
+        result.errors++;
         continue;
       }
 
