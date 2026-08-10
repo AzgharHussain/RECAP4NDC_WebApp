@@ -8,9 +8,5 @@ node_modules/
 geoserver/
 
 # Google service account key files (contain private keys — never commit)
-
-!recapfixxing/package.json
-!recapfixxing/package-lock.json
-api/*.json
-!api/package.json
-!api/package-lock.json
+recapfixxing/giz-gujarat-*.json
+api/recap4ndc-*.json
