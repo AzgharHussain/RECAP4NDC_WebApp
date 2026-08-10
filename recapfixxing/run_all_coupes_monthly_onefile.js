@@ -19,8 +19,22 @@ const DB_HOST = process.env.DB_HOST;
 const DB_PORT = Number(process.env.DB_PORT);
 
 // ── Earth Engine service-account key ─────────────────────────────────────────
-const SERVICE_ACCOUNT_KEY = process.env.EE_SERVICE_ACCOUNT_KEY
-  || path.join(__dirname, 'giz-gujarat-71920ef58b39.json');
+// Prefer an explicit env var; otherwise auto-detect any giz-gujarat-*.json
+// key file in this directory so key rotation doesn't require a code change.
+function resolveServiceAccountKey() {
+  if (process.env.EE_SERVICE_ACCOUNT_KEY) return process.env.EE_SERVICE_ACCOUNT_KEY;
+  const candidates = fs.readdirSync(__dirname)
+    .filter(f => /^giz-gujarat-.*\.json$/.test(f))
+    .sort();
+  if (candidates.length === 0) {
+    throw new Error(`No Earth Engine service account key found. Set EE_SERVICE_ACCOUNT_KEY or place a giz-gujarat-*.json file in ${__dirname}`);
+  }
+  if (candidates.length > 1) {
+    console.warn(`[WARN] Multiple EE key files found (${candidates.join(', ')}); using ${candidates[candidates.length - 1]}. Remove old keys to avoid ambiguity.`);
+  }
+  return path.join(__dirname, candidates[candidates.length - 1]);
+}
+const SERVICE_ACCOUNT_KEY = resolveServiceAccountKey();
 
 // ── Computation parameters ────────────────────────────────────────────────────
 const SCALE            = Number(process.env.SCALE            || 10);
