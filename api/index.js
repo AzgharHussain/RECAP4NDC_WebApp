@@ -172,13 +172,14 @@ const allowedOrigins = [
   'https://gisfy.co.in:8445',
   'https://gisfy.co.in:8445/geoserver/wms',
   'https://forestrecap.gisfy.co.in',
-  // Development origins (only included in non-production)
-  ...(!isProd ? [
-    'http://localhost:5002',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5176',
-  ] : []),
+  'https://fmps.gujarat.gov.in:8080',
+  // Localhost origins — safe to always include (not reachable externally in prod)
+  'http://localhost:5002',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5176',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5002',
   // Additional origins from env
   ...(process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean),
 ];
@@ -186,7 +187,7 @@ const allowedOrigins = [
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
+    callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
