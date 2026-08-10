@@ -7,6 +7,5 @@ Incidentimage/
 node_modules/
 geoserver/
 
-# Google service account key files (contain private keys — never commit)
-recapfixxing/giz-gujarat-*.json
+
 api/recap4ndc-*.json
