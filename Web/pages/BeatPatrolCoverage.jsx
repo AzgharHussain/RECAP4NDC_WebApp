@@ -226,7 +226,6 @@ const BeatPatrolCoverage = () => {
       noImagesFound: "No images found",
       details: "Details",
       route: "Route",
-      images: "Images",
       photos: "Photos"
     },
     gu: {
@@ -308,7 +307,6 @@ const BeatPatrolCoverage = () => {
       noImagesFound: "કોઈ છબીઓ મળી નથી",
       details: "વિગતો",
       route: "રસ્તો",
-      images: "છબીઓ",
       photos: "ફોટા"
     }
   };
