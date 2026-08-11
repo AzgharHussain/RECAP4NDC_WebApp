@@ -15,18 +15,31 @@ const INITIAL_BACKOFF_MS = Number(process.env.EE_INITIAL_BACKOFF_MS || 5000);
 const BACKOFF_MULTIPLIER = Number(process.env.EE_BACKOFF_MULTIPLIER || 2);
 
 // ── Proxy support ─────────────────────────────────────────────────────────────
-// If HTTPS_PROXY or https_proxy is set, route all outbound HTTPS requests
-// (including Google Earth Engine API calls) through the proxy.
-const PROXY_URL = process.env.HTTPS_PROXY || process.env.https_proxy || '';
+// The @google/earthengine client makes its own HTTPS requests and does NOT
+// respect https.globalAgent. We use global-agent which patches Node's HTTP/HTTPS
+// stack at the lowest level so ALL outbound connections go through the proxy.
+const PROXY_URL = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy || '';
 if (PROXY_URL) {
   try {
-    const { HttpsProxyAgent } = require('https-proxy-agent');
-    https.globalAgent = new HttpsProxyAgent(PROXY_URL);
+    process.env.GLOBAL_AGENT_HTTP_PROXY = PROXY_URL;
+    process.env.GLOBAL_AGENT_HTTPS_PROXY = PROXY_URL;
+    process.env.GLOBAL_AGENT_NO_PROXY = process.env.NO_PROXY || process.env.no_proxy || 'localhost,127.0.0.1';
+    const globalAgent = require('global-agent');
+    globalAgent.bootstrap();
     // eslint-disable-next-line no-console
-    console.log(`[INFO] Using proxy: ${PROXY_URL}`);
+    console.log(`[INFO] Using proxy (global-agent): ${PROXY_URL}`);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn(`[WARN] HTTPS_PROXY is set but https-proxy-agent could not be loaded: ${err.message}`);
+    console.warn(`[WARN] Proxy setup failed (global-agent): ${err.message}. Falling back to https.globalAgent.`);
+    try {
+      const { HttpsProxyAgent } = require('https-proxy-agent');
+      https.globalAgent = new HttpsProxyAgent(PROXY_URL);
+      // eslint-disable-next-line no-console
+      console.log(`[INFO] Using proxy (fallback https.globalAgent): ${PROXY_URL}`);
+    } catch (err2) {
+      // eslint-disable-next-line no-console
+      console.warn(`[WARN] Fallback proxy setup also failed: ${err2.message}`);
+    }
   }
 }
 
