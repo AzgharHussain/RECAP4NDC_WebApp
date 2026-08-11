@@ -9,6 +9,63 @@ const { Client } = require('pg');
 const { execFileSync } = require('child_process');
 const https = require('https');
 
+// ── Retry / network resilience ────────────────────────────────────────────────
+const MAX_RETRIES = Number(process.env.EE_MAX_RETRIES || 5);
+const INITIAL_BACKOFF_MS = Number(process.env.EE_INITIAL_BACKOFF_MS || 5000);
+const BACKOFF_MULTIPLIER = Number(process.env.EE_BACKOFF_MULTIPLIER || 2);
+
+// ── Proxy support ─────────────────────────────────────────────────────────────
+// If HTTPS_PROXY or https_proxy is set, route all outbound HTTPS requests
+// (including Google Earth Engine API calls) through the proxy.
+const PROXY_URL = process.env.HTTPS_PROXY || process.env.https_proxy || '';
+if (PROXY_URL) {
+  try {
+    const { HttpsProxyAgent } = require('https-proxy-agent');
+    https.globalAgent = new HttpsProxyAgent(PROXY_URL);
+    // eslint-disable-next-line no-console
+    console.log(`[INFO] Using proxy: ${PROXY_URL}`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(`[WARN] HTTPS_PROXY is set but https-proxy-agent could not be loaded: ${err.message}`);
+  }
+}
+
+function isTransientError(error) {
+  const msg = String(error && (error.message || error)).toLowerCase();
+  return msg.includes('etimedout') ||
+         msg.includes('econnreset') ||
+         msg.includes('econnrefused') ||
+         msg.includes('enotfound') ||
+         msg.includes('eai_again') ||
+         msg.includes('socket hang up') ||
+         msg.includes('invalid json') ||
+         msg.includes('aggregateerror') ||
+         msg.includes('timeout') ||
+         msg.includes('429') ||
+         msg.includes('503') ||
+         msg.includes('502') ||
+         msg.includes('500');
+}
+
+async function retryWithBackoff(fn, label, maxRetries = MAX_RETRIES) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const isTransient = isTransientError(error);
+      if (!isTransient || attempt === maxRetries) {
+        throw error;
+      }
+      const delay = INITIAL_BACKOFF_MS * Math.pow(BACKOFF_MULTIPLIER, attempt - 1);
+      log(`[${label}] Attempt ${attempt}/${maxRetries} failed (${error.message || error}). Retrying in ${delay}ms...`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastError;
+}
+
 // ── Database ──────────────────────────────────────────────────────────────────
 // Reads from the shared .env in api/.env  (same file used by the API server).
 // Override any value by setting the matching env variable before running.
@@ -247,22 +304,26 @@ async function setDefaultStyle(layerName) {
 
 function initializeEarthEngine() {
   const key = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_KEY, 'utf8'));
-  return new Promise((resolve, reject) => {
-    ee.data.authenticateViaPrivateKey(
-      key,
-      () => ee.initialize(null, null, resolve, reject),
-      reject
-    );
-  });
+  return retryWithBackoff(() => {
+    return new Promise((resolve, reject) => {
+      ee.data.authenticateViaPrivateKey(
+        key,
+        () => ee.initialize(null, null, resolve, reject),
+        reject
+      );
+    });
+  }, 'EE init');
 }
 
-function evaluate(serverObject) {
-  return new Promise((resolve, reject) => {
-    serverObject.evaluate((result, error) => {
-      if (error) reject(error);
-      else resolve(result);
+function evaluate(serverObject, label = 'evaluate') {
+  return retryWithBackoff(() => {
+    return new Promise((resolve, reject) => {
+      serverObject.evaluate((result, error) => {
+        if (error) reject(error);
+        else resolve(result);
+      });
     });
-  });
+  }, label);
 }
 
 function maskS2Clouds(image) {
@@ -405,7 +466,7 @@ async function processRow(db, sourceTable, targetTable, row, index, total) {
     })
     .filter(ee.Filter.lt('NDVI_change', -CHANGE_THRESHOLD));
 
-  const collection = await evaluate(samples);
+  const collection = await evaluate(samples, `${sourceTable} id=${row.id}`);
   const features = collection.features || [];
   log(`[${index}/${total}] ${row.id} ${row.village || ''}: ${features.length} changed pixels`);
 
@@ -604,7 +665,15 @@ async function main() {
 
 main()
   .catch((error) => {
-    log(`FATAL: ${error.stack || error.message || error}`);
+    const msg = String(error.message || error);
+    if (isTransientError(error)) {
+      log(`FATAL (network): ${msg}`);
+      log(`This appears to be a network connectivity issue to Google Earth Engine APIs.`);
+      log(`Check: 1) Internet connectivity from this server, 2) Firewall rules for outbound HTTPS to earthengine.googleapis.com`);
+      log(`You can set HTTPS_PROXY env var if a proxy is required. Retry settings: EE_MAX_RETRIES=${MAX_RETRIES}, EE_INITIAL_BACKOFF_MS=${INITIAL_BACKOFF_MS}`);
+    } else {
+      log(`FATAL: ${error.stack || msg}`);
+    }
     process.exitCode = 1;
   })
   .finally(() => {
