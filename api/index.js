@@ -334,6 +334,7 @@ const beat_patrol_coverage = require('./routers/beat-patrol-coverage');
 const gisupload = require('./routers/gisupload');
 const gisupload1 = require('./routers/gis-upload1');
 const forestLoginRoutes = require('./routers/forestLogin');
+const supportRouter = require('./routers/support');
 
 const TEMP_SAVEUSER_TOKEN = process.env.TEMP_SAVEUSER_TOKEN || require('crypto').randomBytes(32).toString('hex');
 const verifyTempToken = (req, res, next) => {
@@ -931,6 +932,7 @@ app.use('/api', beat_patrol_coverage);
 app.use('/api', gisupload);
 app.use('/api', gisupload1);
 app.use('/api', forestLoginRoutes);
+app.use('/api', supportRouter);
 app.use("/api", forestRoutes);
 app.use('/api', auditLogsRouter);
 // Error handling middleware

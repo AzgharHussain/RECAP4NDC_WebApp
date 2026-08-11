@@ -531,6 +531,25 @@ body {
   gap: 10px;
 }
 
+.footer-center {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.footer-support-link {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.footer-support-link:hover {
+  color: #5cff9c;
+  text-decoration: underline;
+}
+
 .footer-right img {
   width: 100px;
   height: auto;

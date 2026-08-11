@@ -6,7 +6,8 @@ import {
   FiUpload, FiMap, FiDatabase, FiServer, FiCheckCircle,
   FiAlertCircle, FiRefreshCw, FiEye, FiTrash2, FiEdit,
   FiLayers, FiPieChart, FiGrid, FiCalendar, FiUsers,
-  FiSettings, FiChevronRight, FiCopy, FiFilter
+  FiSettings, FiChevronRight, FiCopy, FiFilter, FiLifeBuoy,
+  FiMail, FiClock, FiX, FiChevronDown, FiChevronUp
 } from "react-icons/fi";
 import { RiAdminFill } from "react-icons/ri";
 import "./AdminDashboard.css";
@@ -39,6 +40,13 @@ function AdminDashboard() {
 
   // New state for edit mode
   const [selectedCoupe, setSelectedCoupe] = useState(null);
+
+  // Support tickets state
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketsError, setTicketsError] = useState(null);
+  const [expandedTicket, setExpandedTicket] = useState(null);
+  const [ticketFilter, setTicketFilter] = useState('all');
 
   // Language text objects
   const text = {
@@ -91,7 +99,21 @@ function AdminDashboard() {
       fileValidation: "Select shapefile components (.shp .shx .dbf [ .prj ]) before upload.",
       coupeName: "Coupe Name",
       publishedStatus: "Published",
-      pendingStatus: "Pending"
+      pendingStatus: "Pending",
+      supportTickets: "Support Tickets",
+      noTickets: "No support tickets found.",
+      loadingTickets: "Loading tickets...",
+      ticketId: "Ticket ID",
+      issueType: "Issue Type",
+      submittedBy: "Submitted By",
+      submittedAt: "Submitted",
+      deleteTicket: "Delete Ticket",
+      confirmDelete: "Are you sure you want to delete this support ticket?",
+      allTickets: "All",
+      openTickets: "Open",
+      inProgress: "In Progress",
+      resolvedTickets: "Resolved",
+      closedTickets: "Closed"
     },
     gu: {
       title: "એડમિન ડેશબોર્ડ",
@@ -142,7 +164,21 @@ function AdminDashboard() {
       fileValidation: "અપલોડ કરતા પહેલા શેપફાઇલ ઘટકો (.shp .shx .dbf [ .prj ]) પસંદ કરો.",
       coupeName: "કૂપ નામ",
       publishedStatus: "પ્રકાશિત",
-      pendingStatus: "બાકી"
+      pendingStatus: "બાકી",
+      supportTickets: "સપોર્ટ ટિકટ",
+      noTickets: "કોઈ સપોર્ટ ટિકટ મળ્યા નથી.",
+      loadingTickets: "ટિકટ લોડ થઈ રહ્યા છે...",
+      ticketId: "ટિકટ ID",
+      issueType: "સમસ્યાનો પ્રકાર",
+      submittedBy: "સબમિટ કર્યું",
+      submittedAt: "સમય",
+      deleteTicket: "ટિકટ કાઢી નાખો",
+      confirmDelete: "શું તમે ખરેખર આ સપોર્ટ ટિકટ કાઢી નાખવા માંગો છો?",
+      allTickets: "બધા",
+      openTickets: "ખુલ્લા",
+      inProgress: "પ્રગતિમાં",
+      resolvedTickets: "ઉકેલાયેલ",
+      closedTickets: "બંધ"
     }
   };
 
@@ -152,6 +188,7 @@ function AdminDashboard() {
   useEffect(() => {
     fetchCoupes();
     fetchDivisions();
+    fetchTickets();
   }, []);
 
   const fetchCoupes = async () => {
@@ -231,6 +268,84 @@ function AdminDashboard() {
     } finally {
       setDivisionsLoading(false);
     }
+  };
+
+  // Fetch support tickets
+  const fetchTickets = async () => {
+    try {
+      setTicketsLoading(true);
+      setTicketsError(null);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/api/support/tickets`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTickets(response.data.data || []);
+    } catch (err) {
+      console.error('Error fetching tickets:', err);
+      setTicketsError(err.message || 'Failed to fetch tickets');
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
+
+  // Delete a support ticket
+  const handleDeleteTicket = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this support ticket?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE_URL}/api/support/tickets/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTickets(tickets.filter(t => t.id !== id));
+      if (expandedTicket === id) setExpandedTicket(null);
+    } catch (err) {
+      console.error('Error deleting ticket:', err);
+      alert('Failed to delete ticket');
+    }
+  };
+
+  // Update ticket status
+  const handleTicketStatusChange = async (id, newStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_BASE_URL}/api/support/tickets/${id}/status`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTickets(tickets.map(t => t.id === id ? { ...t, status: newStatus } : t));
+    } catch (err) {
+      console.error('Error updating ticket status:', err);
+      alert('Failed to update status');
+    }
+  };
+
+  const filteredTickets = ticketFilter === 'all'
+    ? tickets
+    : tickets.filter(t => t.status === ticketFilter);
+
+  const ticketStatusColors = {
+    open: '#f59e0b',
+    in_progress: '#3b82f6',
+    resolved: '#10b981',
+    closed: '#6b7280',
+  };
+
+  const ticketStatusLabels = {
+    open: language === 'gu' ? 'ખુલ્લું' : 'Open',
+    in_progress: language === 'gu' ? 'પ્રગતિમાં' : 'In Progress',
+    resolved: language === 'gu' ? 'ઉકેલાયેલ' : 'Resolved',
+    closed: language === 'gu' ? 'બંધ' : 'Closed',
+  };
+
+  const issueTypeLabels = {
+    login: 'Login / Auth',
+    mobile_app: 'Mobile App',
+    web_app: 'Web App',
+    ndvi: 'NDVI / Forest Cover',
+    patrolling: 'Patrolling',
+    coupe: 'Coupe',
+    data_sync: 'Data Sync',
+    other: 'Other',
   };
 
   // Handle edit button click
@@ -580,6 +695,151 @@ function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ===== SUPPORT TICKETS SECTION ===== */}
+          <div className="support-tickets-section">
+            <div className="card">
+              <div className="card-header">
+                <h3><FiLifeBuoy /> {t.supportTickets}</h3>
+                <div className="ticket-filter-buttons">
+                  <button
+                    className={`ticket-filter-btn ${ticketFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setTicketFilter('all')}
+                  >
+                    {t.allTickets} ({tickets.length})
+                  </button>
+                  <button
+                    className={`ticket-filter-btn ${ticketFilter === 'open' ? 'active' : ''}`}
+                    onClick={() => setTicketFilter('open')}
+                  >
+                    {t.openTickets} ({tickets.filter(t => t.status === 'open').length})
+                  </button>
+                  <button
+                    className={`ticket-filter-btn ${ticketFilter === 'in_progress' ? 'active' : ''}`}
+                    onClick={() => setTicketFilter('in_progress')}
+                  >
+                    {t.inProgress} ({tickets.filter(t => t.status === 'in_progress').length})
+                  </button>
+                  <button
+                    className={`ticket-filter-btn ${ticketFilter === 'resolved' ? 'active' : ''}`}
+                    onClick={() => setTicketFilter('resolved')}
+                  >
+                    {t.resolvedTickets} ({tickets.filter(t => t.status === 'resolved').length})
+                  </button>
+                  <button
+                    className={`ticket-filter-btn ${ticketFilter === 'closed' ? 'active' : ''}`}
+                    onClick={() => setTicketFilter('closed')}
+                  >
+                    {t.closedTickets} ({tickets.filter(t => t.status === 'closed').length})
+                  </button>
+                </div>
+              </div>
+
+              <div className="tickets-container">
+                {ticketsLoading ? (
+                  <div className="loading-state">
+                    <div className="spinner"></div>
+                    <p>{t.loadingTickets}</p>
+                  </div>
+                ) : ticketsError ? (
+                  <div className="error-state">
+                    <FiAlertCircle />
+                    <p>{ticketsError}</p>
+                    <button onClick={fetchTickets} className="btn-retry">
+                      <FiRefreshCw /> {t.retry}
+                    </button>
+                  </div>
+                ) : filteredTickets.length === 0 ? (
+                  <div className="empty-state">
+                    <FiLifeBuoy />
+                    <p>{t.noTickets}</p>
+                  </div>
+                ) : (
+                  <div className="tickets-list">
+                    {filteredTickets.map((ticket) => (
+                      <div key={ticket.id} className="ticket-item">
+                        <div
+                          className="ticket-summary"
+                          onClick={() => setExpandedTicket(expandedTicket === ticket.id ? null : ticket.id)}
+                        >
+                          <div className="ticket-main-info">
+                            <span className="ticket-id">{ticket.ticket_id}</span>
+                            <span
+                              className="ticket-status-badge"
+                              style={{
+                                backgroundColor: ticketStatusColors[ticket.status] || '#6b7280',
+                                color: '#fff',
+                              }}
+                            >
+                              {ticketStatusLabels[ticket.status] || ticket.status}
+                            </span>
+                            <span className="ticket-subject">{ticket.subject}</span>
+                          </div>
+                          <div className="ticket-meta">
+                            <span className="ticket-name">
+                              <FiMail size={12} /> {ticket.name}
+                            </span>
+                            <span className="ticket-date">
+                              <FiClock size={12} /> {new Date(ticket.created_at).toLocaleDateString()}
+                            </span>
+                            <span className="ticket-chevron">
+                              {expandedTicket === ticket.id ? <FiChevronUp /> : <FiChevronDown />}
+                            </span>
+                          </div>
+                        </div>
+
+                        {expandedTicket === ticket.id && (
+                          <div className="ticket-details">
+                            <div className="ticket-detail-row">
+                              <div className="ticket-detail-group">
+                                <label>{t.submittedBy}</label>
+                                <span>{ticket.name}</span>
+                              </div>
+                              <div className="ticket-detail-group">
+                                <label>Email</label>
+                                <a href={`mailto:${ticket.email}`}>{ticket.email}</a>
+                              </div>
+                              <div className="ticket-detail-group">
+                                <label>{t.issueType}</label>
+                                <span>{issueTypeLabels[ticket.issue_type] || ticket.issue_type}</span>
+                              </div>
+                              <div className="ticket-detail-group">
+                                <label>{t.submittedAt}</label>
+                                <span>{new Date(ticket.created_at).toLocaleString()}</span>
+                              </div>
+                            </div>
+                            <div className="ticket-description">
+                              <label>{language === 'gu' ? 'વર્ણન' : 'Description'}</label>
+                              <p>{ticket.description}</p>
+                            </div>
+                            <div className="ticket-actions-bar">
+                              <select
+                                className="ticket-status-select"
+                                value={ticket.status}
+                                onChange={(e) => handleTicketStatusChange(ticket.id, e.target.value)}
+                              >
+                                <option value="open">{ticketStatusLabels.open}</option>
+                                <option value="in_progress">{ticketStatusLabels.in_progress}</option>
+                                <option value="resolved">{ticketStatusLabels.resolved}</option>
+                                <option value="closed">{ticketStatusLabels.closed}</option>
+                              </select>
+                              <button
+                                className="btn-action delete"
+                                onClick={() => handleDeleteTicket(ticket.id)}
+                                title={t.deleteTicket}
+                              >
+                                <FiTrash2 /> {t.deleteTicket}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

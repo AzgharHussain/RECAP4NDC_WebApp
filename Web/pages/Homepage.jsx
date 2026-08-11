@@ -449,6 +449,14 @@ const Homepage = () => {
           <img src={gujaratlogo} alt="Gujarat Forest Department" loading="lazy" decoding="async" />
           <p>{t.footerCopy}</p>
         </div>
+        <div className="footer-center">
+          <a href="/support" className="footer-support-link">
+            {language === 'gu' ? 'સપોર્ટ' : 'Support'}
+          </a>
+          <a href="/privacy-policy" className="footer-support-link">
+            {language === 'gu' ? 'ગોપનીયતા નીતિ' : 'Privacy Policy'}
+          </a>
+        </div>
         <div className="footer-right">
           <p>{t.footerPowered}</p>
           <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
