@@ -471,9 +471,31 @@ try {
   const serviceAccount = require("./routers/recap4ndc-add07-firebase-adminsdk-fbsvc-5a8fab9fe1_1967.json");
 
   if (!admin.apps.length) {
+    // Temporarily clear proxy env vars so google-auth-library can reach
+    // https://www.googleapis.com directly (bypassing corporate proxy that
+    // times out with ETIMEDOUT 10.10.2.248:8080).
+    const savedProxyVars = {};
+    for (const key of ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']) {
+      if (process.env[key]) {
+        savedProxyVars[key] = process.env[key];
+        delete process.env[key];
+      }
+    }
+
+    // Permanently add googleapis.com to NO_PROXY so token refreshes
+    // also bypass the proxy (google-auth-library checks NO_PROXY).
+    const googleHosts = 'googleapis.com,www.googleapis.com,oauth2.googleapis.com,firestore.googleapis.com,fcm.googleapis.com';
+    process.env.NO_PROXY = process.env.NO_PROXY
+      ? `${process.env.NO_PROXY},${googleHosts}`
+      : googleHosts;
+    process.env.no_proxy = process.env.NO_PROXY;
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
+
+    // Restore proxy env vars after Firebase init
+    Object.assign(process.env, savedProxyVars);
   }
 } catch (err) {
   console.error("❌ Firebase service account missing:", err);

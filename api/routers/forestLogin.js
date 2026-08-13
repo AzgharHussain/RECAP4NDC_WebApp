@@ -48,17 +48,29 @@ router.post('/forest-login', async (req, res) => {
 
   try {
     const soapUrl = process.env.SOAP_API_URL;
-    const response = await axios.post(soapUrl, soapRequest, {
+    const axiosConfig = {
       headers: {
         'Content-Type': 'text/xml; charset=utf-8',
         'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
       },
-      timeout: 30000,
+      timeout: 45000,
       // Bypass any HTTP_PROXY/HTTPS_PROXY env vars — the SOAP service is on
       // the internal Gujarat govt network (172.16.0.0/16) and the Cisco WSA
       // proxy blocks this host with "BLOCK-DEST / GujaratDenied".
       proxy: false,
-    });
+    };
+
+    let response;
+    try {
+      response = await axios.post(soapUrl, soapRequest, axiosConfig);
+    } catch (firstErr) {
+      if (firstErr.code === 'ECONNABORTED' || /timeout/i.test(firstErr.message)) {
+        console.warn('[SOAP] First attempt timed out, retrying once...');
+        response = await axios.post(soapUrl, soapRequest, axiosConfig);
+      } else {
+        throw firstErr;
+      }
+    }
 
 
     const parsed = await xml2js.parseStringPromise(response.data, {
