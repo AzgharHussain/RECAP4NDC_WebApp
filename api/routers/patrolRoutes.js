@@ -21,6 +21,12 @@ const client = new Pool({
   min: 5,
   acquireTimeoutMillis: 60000,
   idleTimeoutMillis: 30000,
+  options: '-c datestyle=ISO,YMD',
+});
+client.on('connect', (pgClient) => {
+  pgClient.query("SET datestyle = 'ISO, YMD'").catch((err) => {
+    console.error('Failed to set PostgreSQL DateStyle:', err.message);
+  });
 });
 client.on('error', (err) => {
   console.error('Unexpected PostgreSQL pool error:', err.message);
@@ -30,53 +36,19 @@ client.query('SELECT 1')
     console.log('Database connected');
     try {
       const connectionResult = await client.query(`
-        SELECT current_database() AS database_name, current_user AS database_user, inet_server_addr() AS server_ip, inet_server_port() AS server_port
+        SELECT current_database() AS database_name, current_user AS database_user, inet_server_addr() AS server_ip, inet_server_port() AS server_port, current_setting('DateStyle') AS date_style
       `);
       console.log('[patrols startup] database connection:', connectionResult.rows[0]);
 
-      const schemaResult = await client.query(`
-        SELECT column_name, data_type, is_nullable, column_default
-        FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'patrols'
-        ORDER BY ordinal_position
-      `);
-      console.log('[patrols startup] table schema:', schemaResult.rows);
-
-      const dateColumns = schemaResult.rows
-        .map((col) => col.column_name)
-        .filter((name) => /date|time|created|updated|start|end/i.test(name));
-      const columnsToLog = ['patrol_id', ...dateColumns].filter((value, index, arr) => arr.indexOf(value) === index);
-      const quotedColumns = columnsToLog.map((name) => `"${name.replace(/"/g, '""')}"`).join(', ');
-
-      const nullCountResult = await client.query(`
-        SELECT
-          COUNT(*)::int AS total_rows,
-          COUNT(*) FILTER (WHERE start_time IS NULL)::int AS start_time_null_rows,
-          COUNT(*) FILTER (WHERE end_time IS NULL)::int AS end_time_null_rows,
-          COUNT(*) FILTER (WHERE start_time IS NOT NULL)::int AS start_time_present_rows,
-          COUNT(*) FILTER (WHERE end_time IS NOT NULL)::int AS end_time_present_rows
-        FROM public.patrols
-      `);
-      console.log('[patrols startup] null date counts:', nullCountResult.rows[0]);
-
-      const result = await client.query(`
-        SELECT ${quotedColumns}, start_time::text AS start_time_raw, end_time::text AS end_time_raw
-        FROM public.patrols
-        ORDER BY patrol_id DESC
-        LIMIT 10
-      `);
-      console.log('[patrols startup] date/time column values:', result.rows);
-
-      const latestWithDatesResult = await client.query(`
+      const sampleResult = await client.query(`
         SELECT patrol_id, start_time, end_time, start_time::text AS start_time_raw, end_time::text AS end_time_raw
         FROM public.patrols
-        WHERE start_time IS NOT NULL OR end_time IS NOT NULL
-        ORDER BY patrol_id DESC
-        LIMIT 10
+        ORDER BY start_time DESC NULLS LAST, patrol_id DESC
+        LIMIT 5
       `);
-      console.log('[patrols startup] latest rows having date values:', latestWithDatesResult.rows);
+      console.log('[patrols startup] date parse sample:', sampleResult.rows);
     } catch (err) {
-      console.log('[patrols startup] failed to log patrols schema/date values:', err.message);
+      console.log('[patrols startup] failed to log patrol date sample:', err.message);
     }
   })
   .catch((err) => console.log('Database not connected:', err.message));
@@ -542,12 +514,6 @@ if (end_date) {
         return acc;
       }, {});
     }
-
-    console.log('[patrol-info-page] raw start/end sample:', result.rows.slice(0, 5).map((patrol) => ({
-      patrol_id: patrol.patrol_id,
-      start_time: patrol.start_time,
-      end_time: patrol.end_time,
-    })));
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
