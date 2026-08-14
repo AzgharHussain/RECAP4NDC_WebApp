@@ -29,19 +29,29 @@ client.query('SELECT 1')
   .then(async () => {
     console.log('Database connected');
     try {
+      const schemaResult = await client.query(`
+        SELECT column_name, data_type, is_nullable, column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'patrols'
+        ORDER BY ordinal_position
+      `);
+      console.log('[patrols startup] table schema:', schemaResult.rows);
+
+      const dateColumns = schemaResult.rows
+        .map((col) => col.column_name)
+        .filter((name) => /date|time|created|updated|start|end/i.test(name));
+      const columnsToLog = ['patrol_id', ...dateColumns].filter((value, index, arr) => arr.indexOf(value) === index);
+      const quotedColumns = columnsToLog.map((name) => `"${name.replace(/"/g, '""')}"`).join(', ');
+
       const result = await client.query(`
-        SELECT patrol_id, start_time, end_time
+        SELECT ${quotedColumns}
         FROM public.patrols
         ORDER BY patrol_id DESC
         LIMIT 10
       `);
-      console.log('[patrols startup] start/end date time:', result.rows.map((row) => ({
-        patrol_id: row.patrol_id,
-        start_time: row.start_time,
-        end_time: row.end_time,
-      })));
+      console.log('[patrols startup] date/time column values:', result.rows);
     } catch (err) {
-      console.log('[patrols startup] failed to log start/end date time:', err.message);
+      console.log('[patrols startup] failed to log patrols schema/date values:', err.message);
     }
   })
   .catch((err) => console.log('Database not connected:', err.message));
