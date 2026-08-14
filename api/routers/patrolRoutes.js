@@ -29,6 +29,11 @@ client.query('SELECT 1')
   .then(async () => {
     console.log('Database connected');
     try {
+      const connectionResult = await client.query(`
+        SELECT current_database() AS database_name, current_user AS database_user, inet_server_addr() AS server_ip, inet_server_port() AS server_port
+      `);
+      console.log('[patrols startup] database connection:', connectionResult.rows[0]);
+
       const schemaResult = await client.query(`
         SELECT column_name, data_type, is_nullable, column_default
         FROM information_schema.columns
@@ -55,12 +60,21 @@ client.query('SELECT 1')
       console.log('[patrols startup] null date counts:', nullCountResult.rows[0]);
 
       const result = await client.query(`
-        SELECT ${quotedColumns}
+        SELECT ${quotedColumns}, start_time::text AS start_time_raw, end_time::text AS end_time_raw
         FROM public.patrols
         ORDER BY patrol_id DESC
         LIMIT 10
       `);
       console.log('[patrols startup] date/time column values:', result.rows);
+
+      const latestWithDatesResult = await client.query(`
+        SELECT patrol_id, start_time, end_time, start_time::text AS start_time_raw, end_time::text AS end_time_raw
+        FROM public.patrols
+        WHERE start_time IS NOT NULL OR end_time IS NOT NULL
+        ORDER BY patrol_id DESC
+        LIMIT 10
+      `);
+      console.log('[patrols startup] latest rows having date values:', latestWithDatesResult.rows);
     } catch (err) {
       console.log('[patrols startup] failed to log patrols schema/date values:', err.message);
     }
@@ -284,7 +298,7 @@ router.get('/patrol-info-all', verifyJwt, async (req, res) => {
         pt.type_name
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
-      ORDER BY p.patrol_id DESC;
+      ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC;
     `;
 
     const result = await client.query({ text: query, timeout: 30000 });
@@ -486,7 +500,7 @@ if (end_date) {
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ${whereClause}
-      ORDER BY p.patrol_id DESC
+      ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
     `;
 
@@ -528,6 +542,12 @@ if (end_date) {
         return acc;
       }, {});
     }
+
+    console.log('[patrol-info-page] raw start/end sample:', result.rows.slice(0, 5).map((patrol) => ({
+      patrol_id: patrol.patrol_id,
+      start_time: patrol.start_time,
+      end_time: patrol.end_time,
+    })));
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
@@ -691,7 +711,7 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ${whereClause}
       GROUP BY p.patrol_id, pt.type_name
-      ORDER BY p.start_time DESC
+      ORDER BY p.start_time DESC NULLS LAST
       LIMIT $${limitIndex} OFFSET $${offsetIndex};
     `;
 

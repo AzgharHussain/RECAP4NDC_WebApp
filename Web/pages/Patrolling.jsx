@@ -781,8 +781,8 @@ const fetchDashboardData = useCallback(async () => {
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
         const selectedDate = startFilter.format('YYYY-MM-DD');
         formattedData = formattedData.filter(item => {
-          const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
-          const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+          const itemStartDate = item.start_time ? new Date(item.start_time).toISOString().split('T')[0] : null;
+          const itemEndDate = item.end_time ? new Date(item.end_time).toISOString().split('T')[0] : null;
           return itemStartDate === selectedDate || itemEndDate === selectedDate;
         });
       }
@@ -826,8 +826,8 @@ const fetchDashboardData = useCallback(async () => {
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
         const selectedDate = startFilter.format('YYYY-MM-DD');
         formattedData = formattedData.filter(item => {
-          const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
-          const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+          const itemStartDate = item.start_time ? new Date(item.start_time).toISOString().split('T')[0] : null;
+          const itemEndDate = item.end_time ? new Date(item.end_time).toISOString().split('T')[0] : null;
           return itemStartDate === selectedDate || itemEndDate === selectedDate;
         });
       }
@@ -893,8 +893,8 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       const originalLength = formattedData.length;
       
       formattedData = formattedData.filter(item => {
-        const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
-        const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+        const itemStartDate = item.start_time ? new Date(item.start_time).toISOString().split('T')[0] : null;
+        const itemEndDate = item.end_time ? new Date(item.end_time).toISOString().split('T')[0] : null;
         return itemStartDate === selectedDate || itemEndDate === selectedDate;
       });
       
