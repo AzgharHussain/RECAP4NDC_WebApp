@@ -1139,7 +1139,9 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
   };
 
   const formatDateTime = (datetime) => {
+  if (!datetime) return { date: "-", time: "-" };
   const date = new Date(datetime);
+  if (Number.isNaN(date.getTime())) return { date: "-", time: "-" };
   // Use UTC methods to display the date exactly as stored in the database
   const day = String(date.getUTCDate()).padStart(2, "0");
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
