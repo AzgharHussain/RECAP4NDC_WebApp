@@ -43,6 +43,17 @@ client.query('SELECT 1')
       const columnsToLog = ['patrol_id', ...dateColumns].filter((value, index, arr) => arr.indexOf(value) === index);
       const quotedColumns = columnsToLog.map((name) => `"${name.replace(/"/g, '""')}"`).join(', ');
 
+      const nullCountResult = await client.query(`
+        SELECT
+          COUNT(*)::int AS total_rows,
+          COUNT(*) FILTER (WHERE start_time IS NULL)::int AS start_time_null_rows,
+          COUNT(*) FILTER (WHERE end_time IS NULL)::int AS end_time_null_rows,
+          COUNT(*) FILTER (WHERE start_time IS NOT NULL)::int AS start_time_present_rows,
+          COUNT(*) FILTER (WHERE end_time IS NOT NULL)::int AS end_time_present_rows
+        FROM public.patrols
+      `);
+      console.log('[patrols startup] null date counts:', nullCountResult.rows[0]);
+
       const result = await client.query(`
         SELECT ${quotedColumns}
         FROM public.patrols
@@ -66,7 +77,9 @@ const upload = multer({
 
 
 function toUTC(dateValue) {
-  return new Date(dateValue).toISOString();
+  if (!dateValue) return null;
+  const date = new Date(dateValue);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function parseToUTC(dateValue) {
