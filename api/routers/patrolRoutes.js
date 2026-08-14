@@ -26,7 +26,24 @@ client.on('error', (err) => {
   console.error('Unexpected PostgreSQL pool error:', err.message);
 });
 client.query('SELECT 1')
-  .then(() => console.log('Database connected'))
+  .then(async () => {
+    console.log('Database connected');
+    try {
+      const result = await client.query(`
+        SELECT patrol_id, start_time, end_time
+        FROM public.patrols
+        ORDER BY patrol_id DESC
+        LIMIT 10
+      `);
+      console.log('[patrols startup] start/end date time:', result.rows.map((row) => ({
+        patrol_id: row.patrol_id,
+        start_time: row.start_time,
+        end_time: row.end_time,
+      })));
+    } catch (err) {
+      console.log('[patrols startup] failed to log start/end date time:', err.message);
+    }
+  })
   .catch((err) => console.log('Database not connected:', err.message));
 
 // Multer memory storage

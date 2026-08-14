@@ -27,7 +27,6 @@ const SECRET_KEY = process.env.JWT_SECRET;
 router.post('/forest-login', async (req, res) => {
   const { username, password } = req.body;
 
-console.log("fhvhfbhbfushbv77777777777777777777777777777777777777777")
   if (!username || !password) {
     return res.status(400).json({
       success: false,
@@ -167,16 +166,6 @@ console.log("fhvhfbhbfushbv77777777777777777777777777777777777777777")
         { bind: [trimmedUsername] }
       );
 
-      // DEBUG: log all columns/values of this user row
-      try {
-        const [fullRows] = await sequelize.query(
-          `SELECT * FROM public.government_department_users WHERE username = $1`,
-          { bind: [trimmedUsername] }
-        );
-        console.log('[forest-login] government_department_users row for', trimmedUsername, ':', JSON.stringify(fullRows, null, 2));
-      } catch (dbgErr) {
-        console.warn('[forest-login] DEBUG select * failed:', dbgErr.message);
-      }
 
       if (users.length > 0) {
         dbUser = users[0];
