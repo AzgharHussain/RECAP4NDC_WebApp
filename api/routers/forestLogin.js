@@ -64,8 +64,8 @@ router.post('/forest-login', async (req, res) => {
     try {
       response = await axios.post(soapUrl, soapRequest, axiosConfig);
     } catch (firstErr) {
-      if (firstErr.code === 'ECONNABORTED' || /timeout/i.test(firstErr.message)) {
-        console.warn('[SOAP] First attempt timed out, retrying once...');
+      if (firstErr.code === 'ECONNABORTED' || firstErr.code === 'ECONNRESET' || /timeout|socket hang up/i.test(firstErr.message)) {
+        console.warn('[SOAP] First attempt failed (' + (firstErr.code || firstErr.message) + '), retrying once...');
         response = await axios.post(soapUrl, soapRequest, axiosConfig);
       } else {
         throw firstErr;
@@ -158,6 +158,7 @@ router.post('/forest-login', async (req, res) => {
 
     // Generate JWT token so the frontend doesn't need a separate /saveuser call
     let token = null;
+    let dbUser = null;
     try {
       // Check if user exists in database, create if not
       const trimmedUsername = username.trim();
@@ -166,21 +167,20 @@ router.post('/forest-login', async (req, res) => {
         { bind: [trimmedUsername] }
       );
 
-      let user;
       if (users.length > 0) {
-        user = users[0];
+        dbUser = users[0];
       } else {
         const [insertResult] = await sequelize.query(
           `INSERT INTO public.government_department_users (username) VALUES ($1) RETURNING user_id, username`,
           { bind: [trimmedUsername] }
         );
-        user = insertResult[0];
+        dbUser = insertResult[0];
       }
 
       token = jwt.sign(
         {
-          userId: user.user_id,
-          username: user.username,
+          userId: dbUser.user_id,
+          username: dbUser.username,
           name: userData.NAME,
           cadre: userData.CadreName,
           circle: userData.CircleName,
@@ -239,6 +239,7 @@ router.post('/forest-login', async (req, res) => {
     return res.json({
       success: true,
       jsonMap: userData,
+      userId: dbUser ? dbUser.user_id : null,
       token, // Include token in response so frontend can save to localStorage
       message: 'Authentication successful'
     });
