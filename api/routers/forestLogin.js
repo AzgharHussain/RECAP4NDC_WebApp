@@ -167,6 +167,17 @@ router.post('/forest-login', async (req, res) => {
         { bind: [trimmedUsername] }
       );
 
+      // DEBUG: log all columns/values of this user row
+      try {
+        const [fullRows] = await sequelize.query(
+          `SELECT * FROM public.government_department_users WHERE username = $1`,
+          { bind: [trimmedUsername] }
+        );
+        console.log('[forest-login] government_department_users row for', trimmedUsername, ':', JSON.stringify(fullRows, null, 2));
+      } catch (dbgErr) {
+        console.warn('[forest-login] DEBUG select * failed:', dbgErr.message);
+      }
+
       if (users.length > 0) {
         dbUser = users[0];
       } else {
@@ -243,6 +254,7 @@ router.post('/forest-login', async (req, res) => {
       token, // Include token in response so frontend can save to localStorage
       message: 'Authentication successful'
     });
+    console.log('Response sent', dbUser.user_id);
 
   } catch (error) {
     console.error('SOAP proxy error:', error.message);
