@@ -2254,7 +2254,6 @@ const handleExportToPDF = () => {
                   <th>${t.category}</th>
                   <th>${t.lat}</th>
                   <th>${t.lon}</th>
-                  <th>${t.areaKm}</th>
                   <th>${t.note}</th>
                   <th>${t.imageAvailable}</th>
                 </tr>
@@ -2268,7 +2267,6 @@ const handleExportToPDF = () => {
                     <td>${item.change_category || (item.status ? t.afforested : t.degraded)}</td>
                     <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
                     <td>${item.longitude?.toFixed(6) || 'N/A'}</td>
-                    <td>${item.area_sq_km?.toFixed(6) || '0.000000'}</td>
                     <td>${item.has_note ? 
                       '<span class="badge badge-note">✓ Note</span>' : 
                       '<span style="color: #94a3b8;">—</span>'
@@ -2913,7 +2911,6 @@ const handleExportToPDF = () => {
                         <TableCell><strong>{t.ndviChange}</strong></TableCell>
                         <TableCell><strong>{t.category}</strong></TableCell>
                         <TableCell><strong>{t.location}</strong></TableCell>
-                        <TableCell><strong>{t.areaKm}</strong></TableCell>
                         <TableCell onClick={() => handleSort('has_note')} sx={{ cursor: 'pointer' }}>
                           <Box display="flex" alignItems="center">
                             <strong>{t.hasNote}</strong>
@@ -2932,7 +2929,7 @@ const handleExportToPDF = () => {
                     <TableBody>
                       {paginatedData.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={showDivisionColumn ? 10 : 9} align="center" sx={{ py: 6 }}>
+                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
                             <Box sx={{ textAlign: 'center' }}>
                               <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                               <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -2992,11 +2989,6 @@ const handleExportToPDF = () => {
                                   {t.lon}: {row.longitude?.toFixed(6) || 'N/A'}
                                 </Typography>
                               </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                {row.area_sq_km?.toFixed(6) || '0.000000'}
-                              </Typography>
                             </TableCell>
                             <TableCell>
                               {row.has_note ? (
