@@ -80,13 +80,12 @@ async function retryWithBackoff(fn, label, maxRetries = MAX_RETRIES) {
 }
 
 // ── Database ──────────────────────────────────────────────────────────────────
-// Hardcoded DB credentials (override via env vars if needed).
-const DB_NAME = process.env.DB_NAME || 'RECAP4NDC';
-const DB_USER = process.env.DB_USER || 'recap4ndc_postgres';
-const DB_PASS = process.env.DB_PASSWORD || 'Reb@$hyd@08052026';
-const DB_HOST = process.env.DB_HOST || 'gsdc-psql.gujarat.gov.in';
-const DB_PORT = Number(process.env.DB_PORT || 9999);
-const DB_SSL = String(process.env.DB_SSL || 'false').toLowerCase() === 'true';
+const DB_NAME = 'RECAP4NDC';
+const DB_USER = 'recap4ndc_postgres';
+const DB_PASS = 'Reb@$hyd@08052026';
+const DB_HOST = 'gsdc-psql.gujarat.gov.in';
+const DB_PORT = 9999;
+const DB_SSL = false;
 const DB_CONNECT_TIMEOUT_MS = Number(process.env.DB_CONNECT_TIMEOUT_MS || 15000);
 
 function createDbClient() {
@@ -696,7 +695,10 @@ async function main() {
 main()
   .catch((error) => {
     const msg = String(error.message || error);
-    if (isTransientError(error)) {
+    if (msg.includes('Database connection failed')) {
+      log(`FATAL (database): ${msg}`);
+      log(`Check DB connectivity to ${DB_HOST}:${DB_PORT} and confirm credentials/database name are correct.`);
+    } else if (isTransientError(error)) {
       log(`FATAL (network): ${msg}`);
       log(`This appears to be a network connectivity issue to Google Earth Engine APIs.`);
       log(`Check: 1) Internet connectivity from this server, 2) Firewall rules for outbound HTTPS to earthengine.googleapis.com`);
