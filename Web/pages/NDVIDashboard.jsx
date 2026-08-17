@@ -275,13 +275,13 @@ loadingNDVIChange: "મહિના મુજબ NDVI ફેરફારનો �
     // Area Analysis
     areaAnalysis: "વિસ્તાર વિશ્લેષણ",
     totalArea: "કુલ વિસ્તાર",
-    afforestedArea: "વનીકૃત વિસ્તાર",
-    degradedArea: "અધોગતિ વિસ્ાર",
+    afforestedArea: "વનસર્જિત વિસ્તાર",
+    degradedArea: "અવનતિગ્રસ્ત વિસ્તાર",
     latest: "(નવીਨતમ)",
     
     // Summary Cards
-    degradedAreaLatest: "અધોગતિ વિસ્તાર (નવીનતમ)",
-    afforestedAreaLatest: "વનીકૃત વિસ્તાર (નવીનતમ)",
+    degradedAreaLatest: "અવનતિગ્રસ્ત વિસ્તાર (નવીનતમ)",
+    afforestedAreaLatest: "વનસર્જિત વિસ્તાર (નવીનતમ)",
     recordsWithNotes: "નોંધો સાથે રેકોર્ડ્સ",
     recordsWithImages: "છબીઓ સાથે રેકોર્ડ્స",
     
@@ -333,8 +333,8 @@ clearFilters: "ફિલ્ટર દૂર કરો",
     
     // Monthly Overview
     monthlyOverview: "૨. માસિક ઝાંખી",
-    degraded: "અધોગતિ",
-    afforested: "વનીકૃત",
+    degraded: "અવનતિગ્રસ્ત",
+    afforested: "વનસર્જિત",
     positive: "↑ હકારાત્મક",
     negative: "↓ નકારાત્મક",
     records_count: "રેકોર્ડ્સ",
@@ -357,7 +357,7 @@ clearFilters: "ફિલ્ટર દૂર કરો",
     close: "બંધ કરો",
     
     // Footer
-    footerNote: "નોંધ: બધા વિસ્તાર માપન ચોરસ કિલોમીટર (કિમી²) માં છે. વનીકૃત વિસ્તાર (કુલ કૂપ વિસ્તાર - NDVI વિશ્લેષણથી અધોગતિ વિસ્તાર) તરીકે ગણવામાં આવે છે.",
+    footerNote: "નોંધ: બધા વિસ્તાર માપન ચોરસ કિલોમીટર (કિમી²) માં છે. વનસર્જિત વિસ્તાર (કુલ કૂપ વિસ્તાર - NDVI વિશ્લેષણથી અવનતિગ્રસ્ત વિસ્તાર) તરીકે ગણવામાં આવે છે.",
     
     // Month Select
     selectMonth: "મહિનો પસંદ કરો",
@@ -366,8 +366,8 @@ clearFilters: "ફિલ્ટર દૂર કરો",
     allDivisions: "બધા વિભાગો",
     
     // Area values
-    degradedAreaValue: "અધોગતિ વિસ્તાર",
-    afforestedAreaValue: "વનીકૃત વિસ્તાર",
+    degradedAreaValue: "અવનતિગ્રસ્ત વિસ્તાર",
+    afforestedAreaValue: "વનસર્જિત વિસ્તાર",
     netChange: "નેટ ફેરફાર",
     
     // Chart titles

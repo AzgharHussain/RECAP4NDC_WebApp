@@ -145,7 +145,7 @@ function SupportPage() {
   const FAQ_DATA = isGu ? [
     { id: 1, category: "general", q: "FMPS એપ્લિકેશન શું છે?", a: "FMPS (વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ) ગુજરાત વન વિભાગ માટે વિકસાવવામાં આવેલ મોબાઇલ અને વેબ એપ્લિકેશન છે, જે વન નિરીક્ષણ, NDVI ટ્રૅકિંગ અને પેટ્રોલિંગ પ્રવૃત્તિઓનું સંચાલન કરે છે." },
     { id: 2, category: "general", q: "એપ્લિકેશન કઈ ભાષાઓ આધાર આપે છે?", a: "એપ્લિકેશન બે ભાષાઓને આધાર આપે છે: અંગ્રેજી અને ગુજરાતી. તમે પ્રારંભિક સ્ક્રીન પર અથવા પ્રોફાઇલ વિભાગમાંથી ભાષા બદલી શકો છો." },
-    { id: 3, category: "general", q: "મોબાઇલ એપ કેવી રીતે ડાઉનલોડ કરવી?", a: 'Google Play Store માં "Forest Monitoring & Patrolling Mobile App" શોધીને ઇન્સ્ટોલ કરો.' },
+    { id: 3, category: "general", q: "મોબાઇલ એપ કેવી રીતે ડાઉનલોડ કરવી?", a: 'Google Play Store માં "FMPS" શોધીને ઇન્સ્ટોલ કરો.' },
     { id: 4, category: "account", q: "લોગિન કેવી રીતે કરવું?", a: "ભાષા પસંદ કર્યા પછી, લોગિન પેજ પર તમારો eGuj Username અને Password દાખલ કરી લોગિન બટન ક્લિક કરો." },
     { id: 5, category: "account", q: "પાસવર્ડ ભૂલી ગયો હોય તો શું કરવું?", a: "જો તમે પાસવર્ડ ભૂલી ગયા હોવ, તો કૃપા કરીને ઉપરનું સપોર્ટ ફોર્મ ભરો અથવા gujfdp@gmail.com પર સંપર્ક કરો. અમારી ટીમ તમારો પાસવર્ડ રીસેટ કરવામાં મદદ કરશે." },
     { id: 6, category: "account", q: "વેબ એપ્લિકેશનમાં પાસવર્ડ કેવી રીતે બદલવો?", a: 'લોગિન પછી, એડમિન પેનલમાં "Change Password" વિકલ્પ પર જાઓ. જૂનો પાસવર્ડ અને નવો પાસવર્ડ દાખલ કરી અપડેટ કરો.' },
@@ -158,7 +158,7 @@ function SupportPage() {
   ] : [
     { id: 1, category: "general", q: "What is the FMPS application?", a: "FMPS (Forest Monitoring & Patrolling System) is a mobile and web application developed for the Gujarat Forest Department to monitor forest areas, track NDVI vegetation changes, and manage patrolling activities." },
     { id: 2, category: "general", q: "What languages does the application support?", a: "The application supports two languages: English and Gujarati. You can switch languages from the initial screen or the Profile section." },
-    { id: 3, category: "general", q: "How do I download the mobile app?", a: 'Search for "Forest Monitoring & Patrolling Mobile App" on the Google Play Store and install it.' },
+    { id: 3, category: "general", q: "How do I download the mobile app?", a: 'Search for "FMPS" on the Google Play Store and install it.' },
     { id: 4, category: "account", q: "How do I log in?", a: "After selecting your language, enter your eGuj Username and Password on the Login Page and click the login button." },
     { id: 5, category: "account", q: "What should I do if I forgot my password?", a: "If you forgot your password, please fill out the support form above or contact us at gujfdp@gmail.com. Our team will help you reset your password." },
     { id: 6, category: "account", q: "How do I change my password in the web application?", a: 'After logging in, go to the Admin panel and click "Change Password." Enter your old password and new password to update.' },

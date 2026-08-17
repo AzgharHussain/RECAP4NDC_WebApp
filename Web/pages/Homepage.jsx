@@ -109,10 +109,10 @@ const Homepage = () => {
       overviewSubtitle: "એપ્લિકેશન ડેશબોર્ડ સંકલિત સ્પેશિયલ અને ક્ષેત્ર ડેટાને કાર્યક્ષમ મોનિટરિંગ સૂચકાંકોમાં રૂપાંતરિત કરે છે.",
       overview1: "રિયલ-ટાઇમ મોનિટરિંગ",
       overview1Desc: "સંકલિત ઉપગ્રહ અને ક્ષેત્ર ડેટા સ્ટ્રીમ દ્વારા વન સ્વાસ્થ્ય ટ્રૅક કરો.",
-      overview2: "વન બુદ્ધિ",
+      overview2: "વન માહિતી",
       overview2Desc: "ડેટા-આધારિત ઍનલિટિક્સ જે વનસ્પતિ વલણો, પેટ્રોલ કવરેજ અને પુનઃસ્થાપન પ્રગતિ દર્શાવે છે.",
       overview3: "ઘટના વ્યવસ્થાપન",
-      overview3Desc: "જીઓ-ટૅગ કરેલ પુરાવા અને મોબાઇલ ક્ષેત્ર રિપોર્ટ સાથે વન ઘટનાઓ નોંધો, ટ્રૅક કરો અને જવાબ આપો.",
+      overview3Desc: "જીઓ-ટેગ કરેલા પુરાવા અને મોબાઇલ ફિલ્ડ રિપોર્ટ દ્વારા વન સંબંધિત ઘટનાઓની નોંધણી કરો, દેખરેખ રાખો અને યોગ્ય કાર્યવાહી કરો.",
       overview4: "હિતધારક સહયોગ",
       overview4Desc: "સામૂહિક ડેશબોર્ડ અને રિપોર્ટ વિભાગો અને ભાગીદારો વચ્ચે સુસંગત કાર્યવાહી સક્ષમ બનાવે છે.",
       toolsLabel: "પ્લેટફોર્મ",
@@ -133,7 +133,7 @@ const Homepage = () => {
   // Language-aware FAQ data
   const FAQ_DATA = language === 'gu' ? [
     { id: 1,  category: 'general',         q: 'RECAP4NDC વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ શું છે?', a: 'આ એક મોબાઇલ અને વેબ-આધારિત એપ્લિકેશન છે જે વન વિભાગ માટે વન વિસ્તારોનું નિરીક્ષણ, NDVI દ્વારા વનસ્પતિ ફેરફારો ટ્રૅક, અને પેટ્રોલિંગ પ્રવૃત્તિઓ સંચાલિત કરવા માટે ડિઝાઇન કરવામાં આવી છે.' },
-    { id: 2,  category: 'general',         q: 'મોબાઇલ એપ્લિકેશન કેવી રીતે ઇન્સ્ટોલ કરવી?', a: 'Google Play Store માંથી "Forest Monitoring & Patrolling Mobile App" ઇન્સ્ટોલ કરો. ઇન્સ્ટોલ થયા પછી, સેટઅપ પ્રક્રિયા શરૂ કરવા એપ ખોલો.' },
+    { id: 2,  category: 'general',         q: 'મોબાઇલ એપ્લિકેશન કેવી રીતે ઇન્સ્ટોલ કરવી?', a: 'Google Play Store માંથી "FMPS" ઇન્સ્ટોલ કરો. ઇન્સ્ટોલ થયા પછી, સેટઅપ પ્રક્રિયા શરૂ કરવા એપ ખોલો.' },
     { id: 3,  category: 'general',         q: 'એપ્લિકેશન કઈ ભાષાઓ સપોર્ટ કરે છે?', a: 'એપ્લિકેશન બે ભાષાઓ સપોર્ટ કરે છે: અંગ્રેજી અને ગુજરાતી. પ્રારંભિક સ્ક્રીન પર તમારી પસંદગીની ભાષા પસંદ કરો. "Profile" સેક્શન માંથી પછીથી ભાષા બદલી શકાય છે.' },
     { id: 4,  category: 'general',         q: 'એપ્લિકેશન કઈ પરવાનગી માંગે છે?', a: 'એપ્લિકેશનને સાચી રીતે કામ કરવા માટે કેટલીક પરવાનગી જોઈએ:', list: ['સૂચના પરવાનગી: ચેતવણી અને અપડેટ મળવા.', 'સ્થાન પરવાનગી: પેટ્રોલ રૂટ ટ્રૅક અને નકશામાં સ્થાન નક્કી કરવા. "Allow While Using the App" પસંદ કરવાની ભલામણ.', 'કેમેરા અને ઑડિઓ: ક્ષેત્ર મુલાકાત દરમ્યાન ફોટો પાડવા.'] },
     { id: 5,  category: 'general',         q: 'મોબાઇલ એપ્લિકેશનમાં લૉગ ઇન કેવી રીતે કરવું?', a: 'ભાષા પસંદ કર્યા પછી, Login Page પર જવાશે. eGuj Username અને Password દાખલ કરી Login button ક્લિક કરો.' },
@@ -160,7 +160,7 @@ const Homepage = () => {
     { id: 26, category: 'troubleshooting', q: 'Mobile application માંથી log out કેવી રીતે?', a: 'Profile section માં Logout button ક્લિક કરો. Login Screen પર redirect.' },
   ] : [
     { id: 1,  category: 'general',         q: 'What is the RECAP4NDC Forest Monitoring & Patrolling System?', a: "It's a mobile and web-based application designed for the forest department to monitor forest areas, track vegetation changes using NDVI, and manage patrolling activities. It helps in forest protection, management, and evidence-based decision-making." },
-    { id: 2,  category: 'general',         q: 'How do I install the mobile application?', a: 'You need to install the "Forest Monitoring & Patrolling Mobile App" from the Google Play Store. Once installed, open the app to begin the setup process.' },
+    { id: 2,  category: 'general',         q: 'How do I install the mobile application?', a: 'You need to install the "FMPS" from the Google Play Store. Once installed, open the app to begin the setup process.' },
     { id: 3,  category: 'general',         q: 'What languages does the application support?', a: 'The application supports two languages: English and Gujarati. You can select your preferred language on the initial screen. You can also switch languages later from the "Profile" section.' },
     { id: 4,  category: 'general',         q: 'What permissions does the app require?', a: 'The app requires several permissions to function correctly:', list: ['Notification Permission: To receive alerts and updates.', 'Location Permission: To track your patrolling routes and pinpoint your location on the map. It is recommended to select "Allow While Using the App."', 'Camera and Audio Permission: To capture photos during patrolling and field visits.'] },
     { id: 5,  category: 'general',         q: 'How do I log in to the mobile application?', a: 'After selecting your language, you will be directed to the Login Page. You must enter your eGuj Username and Password and click the login button.' },
@@ -191,10 +191,10 @@ const Homepage = () => {
   const cards = language === 'gu' ? [
     { title: "ભૂ-સ્થાનિક વન મોનિટરિંગ નકશો", img: Geospacial, desc: "ગુજરાત ભરમાં વન આવરણ ફેરફારો, વહીવટી સીમાઓ, working plan વિસ્તારો અને ક્ષેત્ર patrol routes explore કરવા ઇન્ટરેક્ટિવ WebGIS ઇન્ટરફેસ." },
     { title: "પેટ્રોલિંગ મોનિટરિંગ", img: pm, desc: "Route coverage, patrol frequency, officer participation અને forest divisions ભરમાં patrol utilization સહ field patrol operations ની real-time monitoring." },
-    { title: "ઘટના અને અવલોકન મોનિટરિંગ", img: Incident, desc: "Mobile application દ્વારા submit ગેરકાયદે logging, encroachment, wildlife threats અને ecological observations સહ field-reported incidents ની ઝાંખી." },
-    { title: "વન મોનિટરિંગ ઇનસાઇટ", img: fm, desc: "NDVI vegetation trends, patrolling coverage, incident distribution અને working plan status combine કરી restoration planning support ઇન્ટિગ્રેટેડ analytics." },
-    { title: "NDVI વનસ્પતિ મોનિટરિંગ", img: nv, desc: "Sentinel-2 imagery ઉપયોગ કરી forest coupes ભરમાં vegetation density, degradation patterns અને restoration progress visualize Satellite-based NDVI analysis." },
-    { title: "કૂપ મોનિટરિંગ", img: cb, desc: "Uploaded spatial boundaries અને field-reported ecological conditions સહ working plan areas અને coupe-level observations ની monitoring." },
+    { title: "ઘટના અને અવલોકન મોનિટરિંગ", img: Incident, desc: "મોબાઇલ એપ્લિકેશન દ્વારા નોંધાયેલી ગેરકાયદેસર વૃક્ષ કાપણી, અતિક્રમણ, વન્યજીવોને લગતા જોખમો અને પર્યાવરણ સંબંધિત ઘટનાઓની માહિતી." },
+    { title: "વન મોનિટરિંગ ઇનસાઇટ", img: fm, desc: "પુનઃસ્થાપન આયોજન માટે NDVI વનસ્પતિના વલણો, પેટ્રોલિંગ કવરેજ, ઘટનાઓનું વિતરણ અને વર્કિંગ પ્લાનની સ્થિતિનું સંકલિત વિશ્લેષણ." },
+    { title: "NDVI વનસ્પતિ મોનિટરિંગ", img: nv, desc: "Sentinel-2 ઉપગ્રહ છબીઓનો ઉપયોગ કરીને વન કૂપોમાં વનસ્પતિની ઘનતા, વનસ્પતિના ઘટાડાના વિસ્તારો અને પુનઃસ્થાપનની પ્રગતિ દર્શાવતું ઉપગ્રહ આધારિત NDVI વિશ્લેષણ." },
+    { title: "કૂપ મોનિટરિંગ", img: cb, desc: "વર્કિંગ પ્લાન વિસ્તારો અને કૂપ સ્તરની નોંધોનું નિરીક્ષણ, જેમાં અપલોડ કરેલી વિસ્તારની સીમાઓ અને ક્ષેત્રમાંથી નોંધાયેલી પર્યાવરણીય સ્થિતિનો સમાવેશ થાય છે." },
   ] : [
     { title: "GEOSPATIAL FOREST MONITORING MAP", img: Geospacial, desc: "Interactive WebGIS interface for exploring forest cover changes, administrative boundaries, working plan areas, and field patrol routes across Gujarat." },
     { title: "PATROLLING MONITORING", img: pm, desc: "Real-time monitoring of field patrol operations including route coverage, patrol frequency, officer participation, and patrol utilization across forest divisions." },
