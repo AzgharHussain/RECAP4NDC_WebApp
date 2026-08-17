@@ -80,14 +80,13 @@ async function retryWithBackoff(fn, label, maxRetries = MAX_RETRIES) {
 }
 
 // ── Database ──────────────────────────────────────────────────────────────────
-// Reads from the shared .env in api/.env  (same file used by the API server).
-// Override any value by setting the matching env variable before running.
-const DB_NAME = process.env.DB_NAME;
-const DB_USER = process.env.DB_USER;
-const DB_PASS = process.env.DB_PASSWORD;
-const DB_HOST = process.env.DB_HOST;
-const DB_PORT = Number(process.env.DB_PORT);
-const DB_SSL = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+// Hardcoded DB credentials (override via env vars if needed).
+const DB_NAME = process.env.DB_NAME || 'RECAP4NDC';
+const DB_USER = process.env.DB_USER || 'recap4ndc_postgres';
+const DB_PASS = process.env.DB_PASSWORD || 'Reb@$hyd@08052026';
+const DB_HOST = process.env.DB_HOST || 'gsdc-psql.gujarat.gov.in';
+const DB_PORT = Number(process.env.DB_PORT || 9999);
+const DB_SSL = String(process.env.DB_SSL || 'false').toLowerCase() === 'true';
 const DB_CONNECT_TIMEOUT_MS = Number(process.env.DB_CONNECT_TIMEOUT_MS || 15000);
 
 function createDbClient() {
