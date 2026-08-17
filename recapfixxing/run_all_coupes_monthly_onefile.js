@@ -87,6 +87,35 @@ const DB_USER = process.env.DB_USER;
 const DB_PASS = process.env.DB_PASSWORD;
 const DB_HOST = process.env.DB_HOST;
 const DB_PORT = Number(process.env.DB_PORT);
+const DB_SSL = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+const DB_CONNECT_TIMEOUT_MS = Number(process.env.DB_CONNECT_TIMEOUT_MS || 15000);
+
+function createDbClient() {
+  return new Client({
+    host: DB_HOST,
+    port: DB_PORT,
+    database: DB_NAME,
+    user: DB_USER,
+    password: DB_PASS,
+    ssl: DB_SSL ? { rejectUnauthorized: String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false' } : false,
+    connectionTimeoutMillis: DB_CONNECT_TIMEOUT_MS,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 30000,
+  });
+}
+
+async function validateDbConnection() {
+  const db = createDbClient();
+  try {
+    await db.connect();
+    await db.query('SELECT 1');
+    log(`Database connection OK: ${DB_HOST}:${DB_PORT}/${DB_NAME}`);
+  } catch (error) {
+    throw new Error(`Database connection failed to ${DB_HOST}:${DB_PORT}/${DB_NAME}: ${error.message || error}`);
+  } finally {
+    await db.end().catch(() => {});
+  }
+}
 
 // ── Earth Engine service-account key ─────────────────────────────────────────
 // Prefer an explicit env var; otherwise auto-detect any giz-gujarat-*.json
@@ -490,13 +519,7 @@ async function processRow(db, sourceTable, targetTable, row, index, total) {
 
 async function processCoupe(sourceTable) {
   const targetTable = `${MONTH.runDate}_${sourceTable}_NDVI_Change`;
-  const db = new Client({
-    host: DB_HOST,
-    port: DB_PORT,
-    database: DB_NAME,
-    user: DB_USER,
-    password: DB_PASS,
-  });
+  const db = createDbClient();
 
   await db.connect();
   try {
@@ -521,13 +544,7 @@ async function processCoupe(sourceTable) {
 }
 
 async function runPostprocessSql() {
-  const db = new Client({
-    host: DB_HOST,
-    port: DB_PORT,
-    database: DB_NAME,
-    user: DB_USER,
-    password: DB_PASS,
-  });
+  const db = createDbClient();
   await db.connect();
   try {
     log('=== Running postprocess SQL ===');
@@ -650,6 +667,7 @@ async function main() {
   log(`Comparing ${MONTH.label} (${MONTH.runDate} to ${MONTH.endDate}) - ${MONTH.prevLabel} (${MONTH.prevStart} to ${MONTH.prevEnd})`);
   log(`Columns: ${CURRENT_NDVI_COLUMN}, ${PREV_NDVI_COLUMN}`);
 
+  await validateDbConnection();
   await initializeEarthEngine();
 
   let failed = 0;
