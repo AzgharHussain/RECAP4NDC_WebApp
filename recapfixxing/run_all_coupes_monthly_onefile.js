@@ -476,7 +476,7 @@ async function insertPixel(db, sourceTable, targetTable, row, feature) {
       prevNdvi,
       currentNdvi,
       pixelId,
-      `NDVI decrease less than -${CHANGE_THRESHOLD}`,
+      null,
       JSON.stringify(imageData),
       'computed',
       row.coupe_no,
@@ -572,6 +572,7 @@ BEGIN
         previous_ndvi_col := previous_month || '_NDVI';
 
         EXECUTE format('UPDATE public.%I SET change_category = %L;', rec.table_name, 'Degradation');
+        EXECUTE format('UPDATE public.%I SET note = NULL WHERE btrim(note) = %L;', rec.table_name, 'NDVI decrease less than -0.3');
         EXECUTE format(
             'UPDATE public.%I
              SET "NDVI_change" = TRUNC("NDVI_change"::numeric, 2),

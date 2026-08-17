@@ -380,6 +380,12 @@ clearFilters: "ફિલ્ટર દૂર કરો",
   }
 };
 
+const DEFAULT_NDVI_NOTE_PATTERN = /^NDVI decrease less than -0\.3\s*$/i;
+const normalizeNote = (note) => {
+  const value = typeof note === 'string' ? note.trim() : '';
+  return DEFAULT_NDVI_NOTE_PATTERN.test(value) ? '' : value;
+};
+
 // ============================================
 // NDVIMyCoups_dropdown Component
 // ============================================
@@ -1019,15 +1025,17 @@ const fetchAllDivisionsData = async (months) => {
                 const enhancedData = data.map(item => {
                   const isDegraded = item.status === true;
                   const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
+                  const note = normalizeNote(item.note);
                   
                   return {
                     ...item,
+                    note,
                     area_sq_km: polygonArea,
                     month: month,
                     division: divisionName,
                     status: isDegraded,
                     change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
-                    has_note: !!(item.note && item.note.trim() !== ''),
+                    has_note: note !== '',
                     has_image: !!(item.image_data),
                     pixle_id: `${divisionName}_${item.pixle_id || 'N/A'}`
                   };
@@ -1210,14 +1218,16 @@ const fetchAllDivisionsData = async (months) => {
                 const isDegraded = item.status === true;
                 // Assign area based on status
                 const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
+                const note = normalizeNote(item.note);
                 
                 return {
                   ...item,
+                  note,
                   area_sq_km: polygonArea,
                   month: month,
                   status: isDegraded,
                   change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
-                  has_note: !!(item.note && item.note.trim() !== ''),
+                  has_note: note !== '',
                   has_image: !!(item.image_data),
                   pixle_id: item.pixle_id || 'N/A',
                   NDVI_change: item.NDVI_change !== null && item.NDVI_change !== undefined 
