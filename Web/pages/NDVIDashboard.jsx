@@ -2339,7 +2339,7 @@ const handleExportToPDF = () => {
             
             <!-- Footer -->
             <div class="footer">
-              <p style="margin: 5px 0; font-size: 14px; font-weight: 600;">FOREST PATROLLING & MONITORING SYSTEM</p>
+              <p style="margin: 5px 0; font-size: 14px; font-weight: 600;">FOREST MONITORING & PATROLLING SYSTEM</p>
               <p style="margin: 5px 0;">© ${new Date().getFullYear()} Gujarat Forest Department | All Rights Reserved</p>
               <p style="margin: 5px 0;">Data Source: Sentinel-2 NDVI Satellite Analysis | Report Generated Automatically</p>
             </div>
@@ -3333,7 +3333,7 @@ const handleExportToPDF = () => {
       {/* Footer */}
       <Box sx={{ mt: 6, pt: 4, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          <strong>FOREST PATROLLING & MONITORING SYSTEM</strong> © {new Date().getFullYear()} | 
+          <strong>FOREST MONITORING & PATROLLING SYSTEM</strong> © {new Date().getFullYear()} | 
           Data Source: Sentinel-2 Satellite NDVI Analysis
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block">
