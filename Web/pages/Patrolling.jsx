@@ -1138,18 +1138,31 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     setCoveragePatrols([]);
   };
 
+  const getIstDateTimeParts = (datetime) => {
+    const date = new Date(datetime);
+    if (Number.isNaN(date.getTime())) return null;
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(date).reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+    return {
+      date: `${parts.day}-${parts.month}-${parts.year}`,
+      time: `${parts.hour}:${parts.minute}`,
+    };
+  };
+
   const formatDateTime = (datetime) => {
-  if (!datetime) return { date: "-", time: "-" };
-  const date = new Date(datetime);
-  if (Number.isNaN(date.getTime())) return { date: "-", time: "-" };
-  // Use UTC methods to display the date exactly as stored in the database
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const year = date.getUTCFullYear();
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
-};
+    if (!datetime) return { date: "-", time: "-" };
+    return getIstDateTimeParts(datetime) || { date: "-", time: "-" };
+  };
 
   // Fetch beat coverage data using existing startFilter and endFilter
   const fetchBeatCoverageData = async () => {
@@ -1459,19 +1472,12 @@ const exportTableToExcel = async () => {
 
   const formatDateForExport = (datetime) => {
     if (!datetime) return "N/A";
-    const date = new Date(datetime);
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const year = date.getUTCFullYear();
-    return `${day}-${month}-${year}`;
+    return getIstDateTimeParts(datetime)?.date || "N/A";
   };
 
   const formatTimeForExport = (datetime) => {
     if (!datetime) return "N/A";
-    const date = new Date(datetime);
-    const hours = String(date.getUTCHours()).padStart(2, "0");
-    const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
+    return getIstDateTimeParts(datetime)?.time || "N/A";
   };
 
   // Sheet 1: Patrol Logs Data (with separate date and time columns)
@@ -1750,19 +1756,12 @@ const exportTableToExcel = async () => {
     if (coveragePatrols && coveragePatrols.length > 0) {
       const formatDateForExportCoverage = (datetime) => {
         if (!datetime) return "N/A";
-        const date = new Date(datetime);
-        const day = String(date.getUTCDate()).padStart(2, "0");
-        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-        const year = date.getUTCFullYear();
-        return `${day}-${month}-${year}`;
+        return getIstDateTimeParts(datetime)?.date || "N/A";
       };
 
       const formatTimeForExportCoverage = (datetime) => {
         if (!datetime) return "N/A";
-        const date = new Date(datetime);
-        const hours = String(date.getUTCHours()).padStart(2, "0");
-        const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-        return `${hours}:${minutes}`;
+        return getIstDateTimeParts(datetime)?.time || "N/A";
       };
 
       const coveringPatrolsData = coveragePatrols.map((patrol, idx) => ({
