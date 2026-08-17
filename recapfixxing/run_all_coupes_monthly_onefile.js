@@ -80,7 +80,7 @@ async function retryWithBackoff(fn, label, maxRetries = MAX_RETRIES) {
 }
 
 // ── Database ──────────────────────────────────────────────────────────────────
-const DB_NAME = 'RECAP4NDC';
+const DB_NAME = 'recap4ndc';
 const DB_USER = 'recap4ndc_postgres';
 const DB_PASS = 'Reb@$hyd@08052026';
 const DB_HOST = 'gsdc-psql.gujarat.gov.in';
