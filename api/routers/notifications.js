@@ -70,10 +70,15 @@ async function createNotificationTables() {
         id SERIAL PRIMARY KEY,
         user_id TEXT,
         table_name TEXT,
-        pixel_id INTEGER,
+        pixel_id TEXT,
         sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(user_id, table_name, pixel_id)
       )
+    `);
+
+    await client.query(`
+      ALTER TABLE public.ndvi_notification_log
+      ALTER COLUMN pixel_id TYPE TEXT USING pixel_id::text
     `);
 
 
@@ -688,6 +693,7 @@ async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) 
       if (records.rows.length === 0) continue;
 
       for (const record of records.rows) {
+        const pixelId = String(record.pixle_id);
         // Check if already sent
         const alreadySent = await client.query(`
           SELECT 1
@@ -696,7 +702,7 @@ async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) 
             AND table_name = $2
             AND pixel_id = $3
           LIMIT 1
-        `, [userId, tableName, record.pixle_id]);
+        `, [userId, tableName, pixelId]);
 
         if (alreadySent.rows.length > 0) {
           result.skipped++;
@@ -730,7 +736,7 @@ async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) 
           token,
           notification: { title, body },
           data: {
-            pixle_id: String(record.pixle_id),
+            pixle_id: String(pixelId),
             village_name: String(user.village_name || ''),
             coupe_name: String(user.coupe_name || ''),
             latitude: String(record.latitude || ''),
@@ -750,10 +756,10 @@ async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) 
             INSERT INTO public.ndvi_notification_log (user_id, table_name, pixel_id)
             VALUES ($1, $2, $3)
             ON CONFLICT DO NOTHING
-          `, [userId, tableName, record.pixle_id]);
+          `, [userId, tableName, pixelId]);
 
           result.sent++;
-          result.details.push({ table: tableName, pixel_id: record.pixle_id, category: record.change_category });
+          result.details.push({ table: tableName, pixel_id: pixelId, category: record.change_category });
         } catch (sendErr) {
           console.error(`[pending-notifications] ❌ Firebase send error:`, sendErr.message);
           result.errors++;

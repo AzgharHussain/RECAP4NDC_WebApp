@@ -35,6 +35,23 @@ async function queryWithRetry(client, sql, options = {}, maxRetries = 3) {
   throw lastErr;
 }
 
+async function ensureNotificationLogPixelIdText(client) {
+  await queryWithRetry(client, `
+    CREATE TABLE IF NOT EXISTS public.ndvi_notification_log (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT,
+      table_name TEXT,
+      pixel_id TEXT,
+      sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, table_name, pixel_id)
+    )
+  `);
+  await queryWithRetry(client, `
+    ALTER TABLE public.ndvi_notification_log
+    ALTER COLUMN pixel_id TYPE TEXT USING pixel_id::text
+  `);
+}
+
 module.exports = function startNdviScheduler(admin) {
 
   cron.schedule("*/1000 * * * *", async () => {
@@ -43,6 +60,7 @@ module.exports = function startNdviScheduler(admin) {
     try {
 
       const client = sequelize.getQueryInterface().sequelize;
+      await ensureNotificationLogPixelIdText(client);
 
       // ------------------------------------------------
       // 1️⃣ Get NDVI tables
@@ -130,6 +148,7 @@ module.exports = function startNdviScheduler(admin) {
           if (!records.length) continue;
 
           const record = records[0];
+          const pixelId = String(record.pixle_id);
 
           // ------------------------------------------------
           // 5️⃣ Check if already notified
@@ -142,7 +161,7 @@ module.exports = function startNdviScheduler(admin) {
             AND pixel_id = $3
             LIMIT 1
           `, {
-            bind: [user_id, tableName, record.pixle_id],
+            bind: [user_id, tableName, pixelId],
             type: sequelize.QueryTypes.SELECT
           });
 
@@ -160,7 +179,7 @@ module.exports = function startNdviScheduler(admin) {
               body: `Vegetation change detected in ${village_name}`
             },
             data: {
-              pixle_id: String(record.pixle_id),
+              pixle_id: String(pixelId),
               village_name,
               coupe_name,
               latitude: String(record.latitude || ""),
@@ -188,7 +207,7 @@ module.exports = function startNdviScheduler(admin) {
               VALUES ($1,$2,$3)
               ON CONFLICT DO NOTHING
             `, {
-              bind: [user_id, tableName, record.pixle_id],
+              bind: [user_id, tableName, pixelId],
               type: sequelize.QueryTypes.INSERT
             });
 

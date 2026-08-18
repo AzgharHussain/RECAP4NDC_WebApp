@@ -375,13 +375,19 @@ function maskS2Clouds(image) {
 }
 
 function ndviComposite(startDate, endDate, geometry) {
-  return ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+  const collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
     .filterBounds(geometry)
     .filterDate(startDate, endDate)
     .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 40))
-    .map(maskS2Clouds)
-    .median()
-    .normalizedDifference(['B8', 'B4']);
+    .map(maskS2Clouds);
+
+  const composite = ee.Image(ee.Algorithms.If(
+    collection.size().gt(0),
+    collection.median(),
+    ee.Image(0).rename(['B8', 'B4'])
+  ));
+
+  return composite.normalizedDifference(['B8', 'B4']);
 }
 
 function changeCategory(value) {
