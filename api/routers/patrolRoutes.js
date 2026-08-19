@@ -62,10 +62,25 @@ const upload = multer({
 });
 
 
-function toUTC(dateValue) {
+function formatPatrolTimestamp(dateValue) {
   if (!dateValue) return null;
   const date = new Date(dateValue);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+
+  return `${parts.day}-${parts.month}-${parts.year} ${parts.hour}:${parts.minute}`;
 }
 
 function parseToUTC(dateValue) {
@@ -277,8 +292,8 @@ router.get('/patrol-info-all', verifyJwt, async (req, res) => {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_time: toUTC(patrol.start_time),
-      end_time: toUTC(patrol.end_time),
+      start_time: formatPatrolTimestamp(patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time),
      
     }));
 
@@ -334,8 +349,8 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
   range: clean(patrol.range),
   division: clean(patrol.division),
 
-  start_time: toUTC(patrol.start_time),
-  end_time: toUTC(patrol.end_time),
+  start_time: formatPatrolTimestamp(patrol.start_time),
+  end_time: formatPatrolTimestamp(patrol.end_time),
 
   images: (imagesMap[patrol.patrol_id] || []).map(img => ({
     ...img,
@@ -517,8 +532,8 @@ if (end_date) {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_time: toUTC(patrol.start_time),
-      end_time: toUTC(patrol.end_time),
+      start_time: formatPatrolTimestamp(patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time),
       images: imagesMap[patrol.patrol_id] || []
     }));
 
@@ -730,6 +745,8 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
+      start_time: formatPatrolTimestamp(patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time),
       images: imagesMap[patrol.patrol_id] || []
     }));
 
@@ -791,8 +808,8 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_time: toUTC(patrol.start_time),
-      end_time: toUTC(patrol.end_time),
+      start_time: formatPatrolTimestamp(patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time),
       images: (imagesMap[patrol.patrol_id] || []).map(img => ({
         ...img,
         image_data: img.image_data || null
@@ -842,8 +859,8 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
 
     const formattedPatrol = {
       ...patrol,
-      start_time: toUTC(patrol.start_time),
-      end_time: toUTC(patrol.end_time),
+      start_time: formatPatrolTimestamp(patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time),
       images
     };
 

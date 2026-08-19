@@ -389,12 +389,26 @@ export default function Dashboard() {
     });
   }, [rawPatrolsData, selectedForest, selectedDivision, selectedRange, selectedPatrolType, patrollingTypes]);
 
+  const parsePatrolTimestamp = (dateString) => {
+    if (!dateString) return null;
+    if (dateString instanceof Date) return Number.isNaN(dateString.getTime()) ? null : dateString;
+    if (typeof dateString === "string") {
+      const match = dateString.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+      if (match) {
+        const [, day, month, year, hour, minute] = match;
+        return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+      }
+    }
+    const date = new Date(dateString);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
   // Build monthly chart data from filteredPatrols
   const patrolChartData = useMemo(() => {
     const monthlyMap = {};
     filteredPatrols.forEach((p) => {
-      const d = new Date(p.start_time || p.started_at || p.created_at || p.startTime);
-      if (isNaN(d)) return;
+      const d = parsePatrolTimestamp(p.start_time || p.started_at || p.created_at || p.startTime);
+      if (!d) return;
       const month = d.toLocaleString("default", { month: "short", year: "numeric" });
       monthlyMap[month] = (monthlyMap[month] || 0) + 1;
     });
@@ -413,15 +427,22 @@ export default function Dashboard() {
   // Prepare table data helpers
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    const date = new Date(dateString);
-    if (isNaN(date)) return dateString;
-    return date.toLocaleDateString(language === "gu" ? "gu-IN" : "en-IN", {
+    if (typeof dateString === "string" && /^\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}$/.test(dateString)) return dateString;
+    const date = parsePatrolTimestamp(dateString);
+    if (!date) return dateString;
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "2-digit",
       year: "numeric",
-      month: "short",
-      day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    });
+      hour12: false,
+    }).formatToParts(date).reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+    return `${parts.day}-${parts.month}-${parts.year} ${parts.hour}:${parts.minute}`;
   };
 
   const formatLocation = (location) => {
@@ -481,14 +502,14 @@ export default function Dashboard() {
       dataIndex: "startTime",
       key: "startTime",
       width: 180,
-      sorter: (a, b) => new Date(a.rawData?.start_time || a.rawData?.started_at || 0) - new Date(b.rawData?.start_time || b.rawData?.started_at || 0),
+      sorter: (a, b) => (parsePatrolTimestamp(a.rawData?.start_time || a.rawData?.started_at)?.getTime() || 0) - (parsePatrolTimestamp(b.rawData?.start_time || b.rawData?.started_at)?.getTime() || 0),
     },
     {
       title: text[language].endTime,
       dataIndex: "endTime",
       key: "endTime",
       width: 180,
-      sorter: (a, b) => new Date(a.rawData?.end_time || a.rawData?.ended_at || 0) - new Date(b.rawData?.end_time || b.rawData?.ended_at || 0),
+      sorter: (a, b) => (parsePatrolTimestamp(a.rawData?.end_time || a.rawData?.ended_at)?.getTime() || 0) - (parsePatrolTimestamp(b.rawData?.end_time || b.rawData?.ended_at)?.getTime() || 0),
     },
     {
       title: text[language].distance,

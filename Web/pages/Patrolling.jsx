@@ -66,6 +66,64 @@ const stripHtmlTags = (htmlString) => {
 const { Title, Text } = Typography;
 const { Option } = Select;
 
+const parsePatrolTimestamp = (datetime) => {
+  if (!datetime) return null;
+  if (datetime instanceof Date) return Number.isNaN(datetime.getTime()) ? null : datetime;
+  if (typeof datetime === "string") {
+    const match = datetime.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [, day, month, year, hour, minute] = match;
+      return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    }
+  }
+  const date = new Date(datetime);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getPatrolDateTimeParts = (datetime) => {
+  if (!datetime) return null;
+  if (typeof datetime === "string") {
+    const match = datetime.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [, day, month, year, hour, minute] = match;
+      return { date: `${day}-${month}-${year}`, time: `${hour}:${minute}` };
+    }
+  }
+  const date = parsePatrolTimestamp(datetime);
+  if (!date) return null;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return {
+    date: `${parts.day}-${parts.month}-${parts.year}`,
+    time: `${parts.hour}:${parts.minute}`,
+  };
+};
+
+const getPatrolDateForFilter = (datetime) => {
+  const parts = getPatrolDateTimeParts(datetime);
+  if (!parts) return null;
+  const [day, month, year] = parts.date.split("-");
+  return `${year}-${month}-${day}`;
+};
+
+const getPatrolHours = (startTime, endTime) => {
+  const start = parsePatrolTimestamp(startTime);
+  const end = parsePatrolTimestamp(endTime);
+  if (!start || !end) return 0;
+  const hours = (end - start) / (1000 * 60 * 60);
+  return Number.isFinite(hours) && hours >= 0 ? hours : 0;
+};
+
 const startIcon = new L.Icon({
   iconUrl: startIconImg,
   iconSize: [25, 41],
@@ -205,12 +263,7 @@ const PatrolAnalysisDashboard = ({
     const avgStaff = totalStaff / totalPatrols;
 
     // Calculate total hours
-    const totalHours = filtered.reduce((sum, item) => {
-      const start = new Date(item.start_time);
-      const end = new Date(item.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
-      return sum + hours;
-    }, 0);
+    const totalHours = filtered.reduce((sum, item) => sum + getPatrolHours(item.start_time, item.end_time), 0);
     const avgHours = totalHours / totalPatrols;
 
     // Get top officer for this type
@@ -242,12 +295,7 @@ const PatrolAnalysisDashboard = ({
   const avgDistanceOverall = totalPatrols > 0 ? (totalDistance / totalPatrols).toFixed(1) : 0;
   
   // Calculate total hours
-  const totalHours = patrolData.reduce((sum, item) => {
-    const start = new Date(item.start_time);
-    const end = new Date(item.end_time);
-    const hours = (end - start) / (1000 * 60 * 60);
-    return sum + hours;
-  }, 0);
+  const totalHours = patrolData.reduce((sum, item) => sum + getPatrolHours(item.start_time, item.end_time), 0);
   
   // Get unique officers
   const uniqueOfficers = [...new Set(patrolData.map(item => item.patrol_officer_name))];
@@ -729,8 +777,10 @@ const applyPatrolFilters = useCallback((records) => {
     if (forestId && String(item.forest_id || '') !== String(forestId)) return false;
 
     if (startDate || endDate) {
-      const start = item.start_time ? dayjs(item.start_time) : null;
-      const end = item.end_time ? dayjs(item.end_time) : start;
+      const parsedStart = parsePatrolTimestamp(item.start_time);
+      const parsedEnd = parsePatrolTimestamp(item.end_time) || parsedStart;
+      const start = parsedStart ? dayjs(parsedStart) : null;
+      const end = parsedEnd ? dayjs(parsedEnd) : start;
       if (!start?.isValid()) return false;
       if (startDate && end.isBefore(startDate)) return false;
       if (endDate && start.isAfter(endDate)) return false;
@@ -781,8 +831,8 @@ const fetchDashboardData = useCallback(async () => {
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
         const selectedDate = startFilter.format('YYYY-MM-DD');
         formattedData = formattedData.filter(item => {
-          const itemStartDate = item.start_time ? new Date(item.start_time).toISOString().split('T')[0] : null;
-          const itemEndDate = item.end_time ? new Date(item.end_time).toISOString().split('T')[0] : null;
+          const itemStartDate = getPatrolDateForFilter(item.start_time);
+          const itemEndDate = getPatrolDateForFilter(item.end_time);
           return itemStartDate === selectedDate || itemEndDate === selectedDate;
         });
       }
@@ -826,8 +876,8 @@ const fetchDashboardData = useCallback(async () => {
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
         const selectedDate = startFilter.format('YYYY-MM-DD');
         formattedData = formattedData.filter(item => {
-          const itemStartDate = item.start_time ? new Date(item.start_time).toISOString().split('T')[0] : null;
-          const itemEndDate = item.end_time ? new Date(item.end_time).toISOString().split('T')[0] : null;
+          const itemStartDate = getPatrolDateForFilter(item.start_time);
+          const itemEndDate = getPatrolDateForFilter(item.end_time);
           return itemStartDate === selectedDate || itemEndDate === selectedDate;
         });
       }
@@ -893,8 +943,8 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       const originalLength = formattedData.length;
       
       formattedData = formattedData.filter(item => {
-        const itemStartDate = item.start_time ? new Date(item.start_time).toISOString().split('T')[0] : null;
-        const itemEndDate = item.end_time ? new Date(item.end_time).toISOString().split('T')[0] : null;
+        const itemStartDate = getPatrolDateForFilter(item.start_time);
+        const itemEndDate = getPatrolDateForFilter(item.end_time);
         return itemStartDate === selectedDate || itemEndDate === selectedDate;
       });
       
@@ -1138,30 +1188,9 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     setCoveragePatrols([]);
   };
 
-  const getIstDateTimeParts = (datetime) => {
-    const date = new Date(datetime);
-    if (Number.isNaN(date.getTime())) return null;
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Asia/Kolkata",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).formatToParts(date).reduce((acc, part) => {
-      acc[part.type] = part.value;
-      return acc;
-    }, {});
-    return {
-      date: `${parts.day}-${parts.month}-${parts.year}`,
-      time: `${parts.hour}:${parts.minute}`,
-    };
-  };
-
   const formatDateTime = (datetime) => {
     if (!datetime) return { date: "-", time: "-" };
-    return getIstDateTimeParts(datetime) || { date: "-", time: "-" };
+    return getPatrolDateTimeParts(datetime) || { date: "-", time: "-" };
   };
 
   // Fetch beat coverage data using existing startFilter and endFilter
@@ -1240,14 +1269,17 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
 
     const formatDateTime = (dateTime) => {
       if (!dateTime) return "N/A";
-      return new Date(dateTime).toLocaleString();
+      const parts = getPatrolDateTimeParts(dateTime);
+      return parts ? `${parts.date} ${parts.time}` : "N/A";
     };
 
     const formatDuration = (startTime, endTime) => {
       if (!startTime || !endTime) return "N/A";
-      const start = new Date(startTime);
-      const end = new Date(endTime);
+      const start = parsePatrolTimestamp(startTime);
+      const end = parsePatrolTimestamp(endTime);
+      if (!start || !end) return "N/A";
       const durationMs = end - start;
+      if (!Number.isFinite(durationMs) || durationMs < 0) return "N/A";
       const hours = Math.floor(durationMs / (1000 * 60 * 60));
       const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
       return `${hours}h ${minutes}m`;
@@ -1354,7 +1386,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       key: "start_date",
       align: "center",
       render: (record) => formatDateTime(record.start_time).date,
-      sorter: (a, b) => new Date(a.start_time) - new Date(b.start_time),
+      sorter: (a, b) => (parsePatrolTimestamp(a.start_time)?.getTime() || 0) - (parsePatrolTimestamp(b.start_time)?.getTime() || 0),
     },
     {
       title: language === "gu" ? "શરૂઆતનો સમય" : "Start Time",
@@ -1367,7 +1399,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       key: "end_date",
       align: "center",
       render: (record) => formatDateTime(record.end_time).date,
-      sorter: (a, b) => new Date(a.end_time) - new Date(b.end_time),
+      sorter: (a, b) => (parsePatrolTimestamp(a.end_time)?.getTime() || 0) - (parsePatrolTimestamp(b.end_time)?.getTime() || 0),
     },
     {
       title: language === "gu" ? "સમાપ્તિ સમય" : "End Time",
@@ -1472,12 +1504,12 @@ const exportTableToExcel = async () => {
 
   const formatDateForExport = (datetime) => {
     if (!datetime) return "N/A";
-    return getIstDateTimeParts(datetime)?.date || "N/A";
+    return getPatrolDateTimeParts(datetime)?.date || "N/A";
   };
 
   const formatTimeForExport = (datetime) => {
     if (!datetime) return "N/A";
-    return getIstDateTimeParts(datetime)?.time || "N/A";
+    return getPatrolDateTimeParts(datetime)?.time || "N/A";
   };
 
   // Sheet 1: Patrol Logs Data (with separate date and time columns)
@@ -1507,12 +1539,7 @@ const exportTableToExcel = async () => {
     const totalStaff = filtered.reduce((sum, item) => sum + (item.number_of_staff || 1), 0);
     const avgDistance = totalDistance / totalPatrols;
     
-    const totalHours = filtered.reduce((sum, item) => {
-      const start = new Date(item.start_time);
-      const end = new Date(item.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
-      return sum + hours;
-    }, 0);
+    const totalHours = filtered.reduce((sum, item) => sum + getPatrolHours(item.start_time, item.end_time), 0);
     const avgHours = totalHours / totalPatrols;
     
     return {
@@ -1585,12 +1612,7 @@ const exportTableToExcel = async () => {
     }
 
     const totalStaff = matched.reduce((sum, r) => sum + (parseInt(r.number_of_staff) || 0), 0);
-    const totalHours = matched.reduce((sum, r) => {
-      const start = new Date(r.start_time);
-      const end = new Date(r.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
-      return sum + (isNaN(hours) || hours < 0 ? 0 : hours);
-    }, 0);
+    const totalHours = matched.reduce((sum, r) => sum + getPatrolHours(r.start_time, r.end_time), 0);
     const totalDist = matched.reduce((sum, r) => sum + parseFloat(r.distance_kms || 0), 0);
 
     return {
@@ -1756,12 +1778,12 @@ const exportTableToExcel = async () => {
     if (coveragePatrols && coveragePatrols.length > 0) {
       const formatDateForExportCoverage = (datetime) => {
         if (!datetime) return "N/A";
-        return getIstDateTimeParts(datetime)?.date || "N/A";
+        return getPatrolDateTimeParts(datetime)?.date || "N/A";
       };
 
       const formatTimeForExportCoverage = (datetime) => {
         if (!datetime) return "N/A";
-        return getIstDateTimeParts(datetime)?.time || "N/A";
+        return getPatrolDateTimeParts(datetime)?.time || "N/A";
       };
 
       const coveringPatrolsData = coveragePatrols.map((patrol, idx) => ({

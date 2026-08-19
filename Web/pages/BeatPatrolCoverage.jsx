@@ -39,22 +39,53 @@ import {
 } from "react-leaflet";
 
 // Helper to format date/time
+const parsePatrolTimestamp = (dateTime) => {
+  if (!dateTime) return null;
+  if (dateTime instanceof Date) return Number.isNaN(dateTime.getTime()) ? null : dateTime;
+  if (typeof dateTime === "string") {
+    const match = dateTime.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [, day, month, year, hour, minute] = match;
+      return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    }
+  }
+  const date = new Date(dateTime);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const formatDateTime = (dateTime, language = 'en') => {
   if (!dateTime) return "N/A";
-  const date = new Date(dateTime);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
+  if (typeof dateTime === "string") {
+    const match = dateTime.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [, day, month, year, hour, minute] = match;
+      return { date: `${day}-${month}-${year}`, time: `${hour}:${minute}` };
+    }
+  }
+  const date = parsePatrolTimestamp(dateTime);
+  if (!date) return { date: "N/A", time: "N/A" };
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return { date: `${parts.day}-${parts.month}-${parts.year}`, time: `${parts.hour}:${parts.minute}` };
 };
 
 const formatDuration = (startTime, endTime, language = 'en') => {
   if (!startTime || !endTime) return "N/A";
-  const start = new Date(startTime);
-  const end = new Date(endTime);
+  const start = parsePatrolTimestamp(startTime);
+  const end = parsePatrolTimestamp(endTime);
+  if (!start || !end) return "N/A";
   const durationMs = end - start;
+  if (!Number.isFinite(durationMs) || durationMs < 0) return "N/A";
   const hours = Math.floor(durationMs / (1000 * 60 * 60));
   const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
   
@@ -495,7 +526,7 @@ const BeatPatrolCoverage = () => {
       key: "start_date",
       align: "center",
       render: (record) => formatDateTime(record.start_time, language).date,
-      sorter: (a, b) => new Date(a.start_time) - new Date(b.start_time),
+      sorter: (a, b) => (parsePatrolTimestamp(a.start_time)?.getTime() || 0) - (parsePatrolTimestamp(b.start_time)?.getTime() || 0),
     },
     {
       title: t.startTimeCol,
@@ -508,7 +539,7 @@ const BeatPatrolCoverage = () => {
       key: "end_date",
       align: "center",
       render: (record) => formatDateTime(record.end_time, language).date,
-      sorter: (a, b) => new Date(a.end_time) - new Date(b.end_time),
+      sorter: (a, b) => (parsePatrolTimestamp(a.end_time)?.getTime() || 0) - (parsePatrolTimestamp(b.end_time)?.getTime() || 0),
     },
     {
       title: t.endTimeCol,
