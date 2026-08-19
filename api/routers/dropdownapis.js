@@ -1091,6 +1091,9 @@ router.get('/coupe-divisions',  verifyJwt,async (req, res) => {
     const query = `
       SELECT DISTINCT division
       FROM public.coupe_dropdown_master
+      WHERE division IS NOT NULL
+        AND division != ''
+        AND division NOT ILIKE '%Forest Division'
       ORDER BY division
     `;
     
