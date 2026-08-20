@@ -10,7 +10,8 @@ const { Option } = Select;
 
 const emptyOptions = { user_ids: [], villages: [], coupes: [], tables: [], divisions: [], months: [], statuses: ["Pending", "Resolved"] };
 
-const formatSentAt = (value) => {
+const formatSentAt = (value, formattedValue) => {
+  if (formattedValue) return formattedValue;
   if (!value) return "N/A";
   const parsed = dayjs(value);
   return parsed.isValid() ? parsed.format("DD-MM-YYYY HH:mm:ss") : String(value);
@@ -22,13 +23,13 @@ const NDVINotifications = () => {
   const [monthlySummary, setMonthlySummary] = useState([]);
   const [options, setOptions] = useState(emptyOptions);
   const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
-  const [filters, setFilters] = useState({ user_id: null, village_name: null, coupe_name: null, table_name: null, division: null, month: null, status: null, dates: null });
+  const [filters, setFilters] = useState({ user_id: null, table_name: null, division: null, month: null, status: null, dates: null });
 
   const fetchReport = async (overrideFilters = filters) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      ["user_id", "village_name", "coupe_name", "table_name", "division", "month", "status"].forEach((key) => {
+      ["user_id", "table_name", "division", "month", "status"].forEach((key) => {
         if (overrideFilters[key]) params.append(key, overrideFilters[key]);
       });
       if (overrideFilters.dates?.[0]) params.append("start_date", overrideFilters.dates[0].format("YYYY-MM-DD"));
@@ -37,7 +38,29 @@ const NDVINotifications = () => {
       const res = await fetch(`${API_BASE_URL}/api/ndvi-notification-report?${params.toString()}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to fetch notification report");
-      console.log("NDVI notification raw sent_at values:", (json.data || []).map((item) => ({ id: item.id, user_id: item.user_id, pixel_id: item.pixel_id, raw_sent_at: item.sent_at })));
+      console.log("NDVI notification full rows:", json.data || []);
+      console.table((json.data || []).map((item) => ({
+        id: item.id,
+        user_id: item.user_id,
+        village_name: item.village_name,
+        coupe_name: item.coupe_name,
+        division: item.division,
+        range: item.range,
+        round: item.round,
+        beat: item.beat,
+        village: item.village,
+        month: item.month,
+        table_name: item.table_name,
+        pixel_id: item.pixel_id,
+        alert_status: item.alert_status,
+        action_taken: item.action_taken,
+        note: item.note,
+        has_image: item.has_image,
+        sent_at: item.sent_at,
+        sent_at_raw: item.sent_at_raw,
+        sent_at_formatted: item.sent_at_formatted,
+        report_generated_at: item.report_generated_at,
+      })));
       setData((json.data || []).map((item) => ({ ...item, key: item.id })));
       setMonthlySummary((json.monthlyDivisionSummary || []).map((item, index) => ({ ...item, key: `${item.month}-${item.division}-${index}` })));
       setSummary(json.summary || { total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
@@ -58,7 +81,7 @@ const NDVINotifications = () => {
   }, []);
 
   const clearFilters = () => {
-    const cleared = { user_id: null, village_name: null, coupe_name: null, table_name: null, division: null, month: null, status: null, dates: null };
+    const cleared = { user_id: null, table_name: null, division: null, month: null, status: null, dates: null };
     setFilters(cleared);
     fetchReport(cleared);
   };
@@ -89,9 +112,13 @@ const NDVINotifications = () => {
     const rows = data.map((item, index) => ({
       "Sr. No.": index + 1,
       "User ID": item.user_id || "N/A",
-      Village: item.village_name || "N/A",
+      "Subscribed Village": item.village_name || "N/A",
       Coupe: item.coupe_name || "N/A",
       Division: item.division || "N/A",
+      Range: item.range || "N/A",
+      Round: item.round || "N/A",
+      Beat: item.beat || "N/A",
+      "Alert Village": item.village || item.village_name || "N/A",
       Month: item.month || "N/A",
       "NDVI Table": item.table_name || "N/A",
       "Pixel ID": item.pixel_id || "N/A",
@@ -99,20 +126,23 @@ const NDVINotifications = () => {
       "Action Taken": item.action_taken || "No action taken",
       Note: item.note || "N/A",
       "Has Image": item.has_image ? "Yes" : "No",
-      "Sent At": formatSentAt(item.sent_at),
-      "Raw Sent At": item.sent_at || "N/A",
+      "Sent At": formatSentAt(item.sent_at, item.sent_at_formatted),
+      "Raw Sent At": item.sent_at_raw || item.sent_at || "N/A",
+      "Report Generated At": item.report_generated_at || "N/A",
     }));
     const summaryRows = monthlySummary.map((item) => ({
       Month: item.month,
       Division: item.division,
+      Range: item.range || "N/A",
+      Round: item.round || "N/A",
+      Beat: item.beat || "N/A",
+      Village: item.village || "N/A",
       "Alerts Generated": item.alerts_generated,
       Resolved: item.resolved,
       Pending: item.pending,
     }));
     const filterRows = [
       { Filter: "User ID", Value: filters.user_id || "All" },
-      { Filter: "Village", Value: filters.village_name || "All" },
-      { Filter: "Coupe", Value: filters.coupe_name || "All" },
       { Filter: "Division", Value: filters.division || "All" },
       { Filter: "Month", Value: filters.month || "All" },
       { Filter: "Status", Value: filters.status || "All" },
@@ -135,9 +165,13 @@ const NDVINotifications = () => {
 
   const columns = [
     { title: "User ID", dataIndex: "user_id", key: "user_id" },
-    { title: "Village", dataIndex: "village_name", key: "village_name", render: (v) => v || "N/A" },
+    { title: "Subscribed Village", dataIndex: "village_name", key: "village_name", render: (v) => v || "N/A" },
     { title: "Coupe", dataIndex: "coupe_name", key: "coupe_name", render: (v) => v || "N/A" },
     { title: "Division", dataIndex: "division", key: "division", render: (v) => v || "N/A" },
+    { title: "Range", dataIndex: "range", key: "range", render: (v) => v || "N/A" },
+    { title: "Round", dataIndex: "round", key: "round", render: (v) => v || "N/A" },
+    { title: "Beat", dataIndex: "beat", key: "beat", render: (v) => v || "N/A" },
+    { title: "Alert Village", dataIndex: "village", key: "village", render: (v, record) => v || record.village_name || "N/A" },
     { title: "Month", dataIndex: "month", key: "month", render: (v) => v || "N/A" },
     { title: "NDVI Table", dataIndex: "table_name", key: "table_name", ellipsis: true },
     { title: "Pixel ID", dataIndex: "pixel_id", key: "pixel_id" },
@@ -147,10 +181,11 @@ const NDVINotifications = () => {
       title: "Sent At",
       dataIndex: "sent_at",
       key: "sent_at",
-      render: (v) => (
-        <div style={{ minWidth: 170 }}>
-          <div>{formatSentAt(v)}</div>
-          <div style={{ color: "#777", fontSize: 11, wordBreak: "break-all" }}>Raw: {v || "N/A"}</div>
+      render: (v, record) => (
+        <div style={{ minWidth: 190 }}>
+          <div>{formatSentAt(v, record.sent_at_formatted)}</div>
+          <div style={{ color: "#777", fontSize: 11, wordBreak: "break-all" }}>Raw: {record.sent_at_raw || v || "N/A"}</div>
+          <div style={{ color: "#999", fontSize: 10, wordBreak: "break-all" }}>API: {record.report_generated_at || "N/A"}</div>
         </div>
       ),
     },
@@ -159,6 +194,10 @@ const NDVINotifications = () => {
   const monthlyColumns = [
     { title: "Month", dataIndex: "month", key: "month" },
     { title: "Division", dataIndex: "division", key: "division" },
+    { title: "Range", dataIndex: "range", key: "range", render: (v) => v || "N/A" },
+    { title: "Round", dataIndex: "round", key: "round", render: (v) => v || "N/A" },
+    { title: "Beat", dataIndex: "beat", key: "beat", render: (v) => v || "N/A" },
+    { title: "Village", dataIndex: "village", key: "village", render: (v) => v || "N/A" },
     { title: "Alerts Generated", dataIndex: "alerts_generated", key: "alerts_generated" },
     { title: "Resolved", dataIndex: "resolved", key: "resolved", render: (v) => <Tag color="success">{v}</Tag> },
     { title: "Pending", dataIndex: "pending", key: "pending", render: (v) => <Tag color="warning">{v}</Tag> },
@@ -177,8 +216,6 @@ const NDVINotifications = () => {
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
           {renderSelect("user_id", "User ID", options.user_ids)}
-          {renderSelect("village_name", "Village", options.villages)}
-          {renderSelect("coupe_name", "Coupe", options.coupes)}
           {renderSelect("division", "Division", options.divisions)}
           {renderSelect("month", "Month", options.months)}
           {renderSelect("status", "Status", options.statuses)}

@@ -130,7 +130,7 @@
 /* Bottom section (buttons) */
 .header-bottom {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
  
   /* gap: 30px; */
   /* padding: 10px 0; */
@@ -144,7 +144,7 @@
   align-items: center;
   /* gap: 30px; */
   /* padding: 10px 0; */
-   padding-left: 26%;
+   padding-left: 14%;
 
     
 }
@@ -792,7 +792,7 @@ body{
     padding: 1px 0;
   }
   .header-bottom2 {
-    padding-left: 10%;
+    padding-left: 2%;
   }
 }
 
@@ -803,7 +803,7 @@ body{
     padding: 1px 0;
   }
   .header-bottom2 {
-    padding-left: 15%;
+    padding-left: 2%;
   }
 }
 

@@ -46,7 +46,7 @@ const [contentHeight, setContentHeight] = useState(0);
   // Language Texts
   const text = {
     en: {
-      appTitle: "FOREST MONITORING SYSTEM",
+      appTitle: "FOREST MONITORING PATROLLING SYSTEM",
       overview: "Overview",
       geoDashboard: "Geo Dashboard",
       patrollingLogs: "Patrolling Logs",

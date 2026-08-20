@@ -884,6 +884,11 @@ const getMonthFromNdviTableName = (tableName) => {
   return match ? `${match[1]}-${match[2]}` : 'N/A';
 };
 
+const getDateFromNdviTableName = (tableName) => {
+  const match = String(tableName || '').match(/^(\d{4})[-_](\d{2})[-_](\d{2})/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}T00:00:00.000Z` : null;
+};
+
 const buildNdviActionText = (record) => {
   const actions = [];
   if (record?.status === true || record?.status === 'true') actions.push('Status updated');
@@ -894,6 +899,17 @@ const buildNdviActionText = (record) => {
 
 router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
   try {
+    await client.query(`
+      ALTER TABLE public.ndvi_notification_log
+      ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+    await client.query(`
+      UPDATE public.ndvi_notification_log
+      SET sent_at = CURRENT_TIMESTAMP
+      WHERE sent_at IS NULL
+    `);
+
+    const reportGeneratedAt = new Date().toISOString();
     const { user_id, village_name, coupe_name, table_name, status, month, division, start_date, end_date } = req.query;
     const conditions = [];
     const values = [];
@@ -921,7 +937,9 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         u.coupe_name,
         l.table_name,
         l.pixel_id,
-        COALESCE(l.sent_at, CURRENT_TIMESTAMP) AS sent_at
+        COALESCE(l.sent_at, CURRENT_TIMESTAMP) AS sent_at,
+        COALESCE(l.sent_at, CURRENT_TIMESTAMP)::text AS sent_at_raw,
+        TO_CHAR(COALESCE(l.sent_at, CURRENT_TIMESTAMP), 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted
       FROM public.ndvi_notification_log l
       LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
       ${whereClause}
@@ -963,13 +981,30 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
           .filter(row => row.table_name === sourceTable)
           .map(row => String(row.pixel_id))
           .filter(Boolean))];
+        const columnInfo = await client.query(`
+          SELECT column_name
+          FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = $1
+        `, [sourceTable]);
+        const sourceColumns = new Set(columnInfo.rows.map(row => row.column_name));
+        const pickColumn = (name) => sourceColumns.has(name) ? name : null;
+        const hierarchySelect = [
+          pickColumn('division') ? '"division" AS division' : 'NULL::text AS division',
+          pickColumn('range') ? '"range" AS range' : 'NULL::text AS range',
+          pickColumn('round') ? '"round" AS round' : 'NULL::text AS round',
+          pickColumn('beat') ? '"beat" AS beat' : 'NULL::text AS beat',
+          pickColumn('village') ? '"village" AS village' : 'NULL::text AS village',
+        ].join(',\n            ');
+        const noteSelect = pickColumn('note') ? '"note" AS note' : 'NULL::text AS note';
+        const imageSelect = pickColumn('image_data') ? '"image_data" IS NOT NULL AS has_table_image' : 'false AS has_table_image';
+        const statusSelect = pickColumn('status') ? '"status" AS status' : 'NULL AS status';
         const sourceRows = await client.query(`
           SELECT
             COALESCE(pixle_id::text, id::text) AS pixel_id,
-            division,
-            note,
-            image_data IS NOT NULL AS has_table_image,
-            status
+            ${hierarchySelect},
+            ${noteSelect},
+            ${imageSelect},
+            ${statusSelect}
           FROM public."${sourceTable}"
           WHERE COALESCE(pixle_id::text, id::text) = ANY($1)
         `, [pixelIds]);
@@ -994,10 +1029,19 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       const sourceRecord = tableRecords.get(row.table_name)?.get(String(row.pixel_id));
       const actionTaken = buildNdviActionText(sourceRecord);
       const alertStatus = actionTaken === 'No action taken' ? 'Pending' : 'Resolved';
+      const sentAtFallback = row.sent_at || row.sent_at_raw || getDateFromNdviTableName(row.table_name) || reportGeneratedAt;
       return {
         ...row,
+        sent_at: sentAtFallback,
+        sent_at_raw: row.sent_at_raw || String(sentAtFallback),
+        sent_at_formatted: row.sent_at_formatted || new Date(sentAtFallback).toLocaleString('en-GB', { hour12: false }),
+        report_generated_at: reportGeneratedAt,
         month: getMonthFromNdviTableName(row.table_name),
         division: sourceRecord?.division || getDivisionFromNdviTableName(row.table_name),
+        range: sourceRecord?.range || 'N/A',
+        round: sourceRecord?.round || 'N/A',
+        beat: sourceRecord?.beat || 'N/A',
+        village: sourceRecord?.village || row.village_name || 'N/A',
         alert_status: alertStatus,
         action_taken: actionTaken,
         note: sourceRecord?.note || null,
@@ -1011,9 +1055,19 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
 
     const monthlyDivisionMap = new Map();
     annotatedRows.forEach((row) => {
-      const key = `${row.month}__${row.division}`;
+      const key = `${row.month}__${row.division}__${row.range}__${row.round}__${row.beat}__${row.village}`;
       if (!monthlyDivisionMap.has(key)) {
-        monthlyDivisionMap.set(key, { month: row.month, division: row.division, alerts_generated: 0, resolved: 0, pending: 0 });
+        monthlyDivisionMap.set(key, {
+          month: row.month,
+          division: row.division,
+          range: row.range,
+          round: row.round,
+          beat: row.beat,
+          village: row.village,
+          alerts_generated: 0,
+          resolved: 0,
+          pending: 0
+        });
       }
       const item = monthlyDivisionMap.get(key);
       item.alerts_generated += 1;

@@ -686,6 +686,8 @@ const PatrolIncidentLogs = () => {
   const [dashboardData, setDashboardData] = useState([]);
   const [selectedPatrol, setSelectedPatrol] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isExportConfirmVisible, setIsExportConfirmVisible] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const { language } = useLanguage();
@@ -701,6 +703,8 @@ const PatrolIncidentLogs = () => {
   const [beatFilter, setBeatFilter] = useState("");
   const [forestId, setForestId] = useState("");
   const [roundFilter, setRoundFilter] = useState("");
+  const [patrolLocationFilter, setPatrolLocationFilter] = useState("");
+  const [patrolLocations, setPatrolLocations] = useState([]);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -752,9 +756,10 @@ const buildFilters = useCallback(() => {
   if (roundFilter) filters.round = roundFilter;
   if (beatFilter) filters.beat = beatFilter;
   if (forestId) filters.forest_id = forestId;
+  if (patrolLocationFilter) filters.patrolling_location = patrolLocationFilter;
   
   return filters;
-}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
+}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId, patrolLocationFilter]);
 
 const applyPatrolFilters = useCallback((records) => {
   const search = searchText?.trim().toLowerCase();
@@ -775,6 +780,7 @@ const applyPatrolFilters = useCallback((records) => {
     if (roundFilter && item.round !== roundFilter) return false;
     if (beatFilter && item.beat !== beatFilter) return false;
     if (forestId && String(item.forest_id || '') !== String(forestId)) return false;
+    if (patrolLocationFilter && (item.patrolling_location || '') !== patrolLocationFilter) return false;
 
     if (startDate || endDate) {
       const parsedStart = parsePatrolTimestamp(item.start_time);
@@ -788,7 +794,7 @@ const applyPatrolFilters = useCallback((records) => {
 
     return true;
   });
-}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
+}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId, patrolLocationFilter]);
 
   // Fetch filtered data for dashboard (all records without pagination)
   // In fetchDashboardData function, add the same filtering logic
@@ -1063,6 +1069,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     setRoundFilter("");
     setBeatFilter("");
     setCoupeFilter("");
+    setPatrolLocationFilter("");
     setFilteredRanges([]);
     setFilteredBeats([]);
     setSelectedBeatForCoverage(null);
@@ -1078,6 +1085,16 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     setPageSize(newPageSize);
     fetchPatrolData(page, newPageSize);
   };
+
+  // Extract unique patrol locations from data
+  useEffect(() => {
+    const locations = [...new Set(
+      patrolData
+        .map(item => item.patrolling_location)
+        .filter(Boolean)
+    )].sort();
+    setPatrolLocations(locations);
+  }, [patrolData]);
 
   // Initial load
   useEffect(() => {
@@ -1504,6 +1521,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     `${language === "gu" ? "વિભાગ" : "Division"}: ${divisionFilter || "All"}`,
     `${language === "gu" ? "રેન્જ" : "Range"}: ${rangeFilter || "All"}`,
     `${language === "gu" ? "બીટ" : "Beat"}: ${beatFilter || "All"}`,
+    `${language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location"}: ${patrolLocationFilter || "All"}`,
     `${language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"}: ${typeFilter ? getTypeDisplayName(typeFilter) : "All"}`,
     `${language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"}: ${startFilter ? startFilter.format('YYYY-MM-DD') : "All"}`,
     `${language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"}: ${endFilter ? endFilter.format('YYYY-MM-DD') : "All"}`,
@@ -1511,25 +1529,20 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
   ];
 
   const confirmExportTableToExcel = () => {
-    if (!filteredData || filteredData.length === 0) {
-      message.warning(language === "gu" ? "કોઈ ડેટા નિકાસ કરવા માટે ઉપલબ્ધ નથી" : "No data available to export");
-      return;
-    }
+    setIsExportConfirmVisible(true);
+  };
 
-    Modal.confirm({
-      title: language === "gu" ? "ફિલ્ટર સાથે નિકાસ કરો" : "Export with current filters?",
-      content: (
-        <div>
-          <p>{language === "gu" ? "નીચેના ફિલ્ટર લાગુ થશે:" : "The following filters will be applied:"}</p>
-          <ul style={{ paddingLeft: 18, marginBottom: 0 }}>
-            {getExportFilterSummary().map((item) => <li key={item}>{item}</li>)}
-          </ul>
-        </div>
-      ),
-      okText: language === "gu" ? "નિકાસ કરો" : "Export",
-      cancelText: language === "gu" ? "રદ કરો" : "Cancel",
-      onOk: exportTableToExcel,
-    });
+  const handleExportConfirm = async () => {
+    setIsExportConfirmVisible(false);
+    setIsExporting(true);
+    try {
+      await exportTableToExcel();
+    } catch (err) {
+      console.error("Export error:", err);
+      message.error(language === "gu" ? "નિકાસ નિષ્ફળ" : "Export failed");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const CustomPagination = () => (
@@ -1795,6 +1808,7 @@ const exportTableToExcel = async () => {
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "વિભાગ" : "Division", [language === "gu" ? "મૂલ્ય" : "Value"]: divisionFilter || "N/A" },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "રેન્જ" : "Range", [language === "gu" ? "મૂલ્ય" : "Value"]: rangeFilter || "N/A" },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "બીટ" : "Beat", [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location", [language === "gu" ? "મૂલ્ય" : "Value"]: patrolLocationFilter || "N/A" },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type", [language === "gu" ? "મૂલ્ય" : "Value"]: typeFilter ? getTypeDisplayName(typeFilter) : "N/A" },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date", [language === "gu" ? "મૂલ્ય" : "Value"]: startFilter ? startFilter.format('YYYY-MM-DD') : "N/A" },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date", [language === "gu" ? "મૂલ્ય" : "Value"]: endFilter ? endFilter.format('YYYY-MM-DD') : "N/A" },
@@ -1932,7 +1946,7 @@ const exportTableToExcel = async () => {
     : "Select the start and end dates for the division to perform coverage analysis"}
         </div>
 
-        <div className="heading-container patrol-filter-card" style={{height:"50px"}}>
+        <div className="heading-container patrol-filter-card">
           <Input
             placeholder={language === "gu" ? "અધિકારીના નામ પ્રમાણે શોધો" : "Search by Officer Name"}
             style={{ width: "180px", background: "#fff", border: "1px solid #d9d9d9", borderRadius: "4px" }}
@@ -2031,6 +2045,21 @@ const exportTableToExcel = async () => {
                 </Option>
               ) : null;
             })}
+          </Select>
+
+          <Select
+            placeholder={language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location"}
+            style={{ width: "180px", borderRadius: "4px", background: "#fff" }}
+            value={patrolLocationFilter}
+            onChange={(value) => setPatrolLocationFilter(value || "")}
+            allowClear
+            showSearch
+            optionFilterProp="children"
+          >
+            <Option value="">{language === "gu" ? "બધા સ્થાનો" : "All Locations"}</Option>
+            {patrolLocations.map((loc) => (
+              <Option key={loc} value={loc}>{loc}</Option>
+            ))}
           </Select>
 
           <DatePicker
@@ -2305,6 +2334,31 @@ const exportTableToExcel = async () => {
           </a>
         </div>
       </footer>
+
+      {/* Export Confirmation Modal */}
+      <Modal
+        title={language === "gu" ? "ફિલ્ટર સાથે નિકાસ કરો" : "Export with current filters?"}
+        open={isExportConfirmVisible}
+        onOk={handleExportConfirm}
+        onCancel={() => setIsExportConfirmVisible(false)}
+        okText={language === "gu" ? "નિકાસ કરો" : "Export"}
+        cancelText={language === "gu" ? "રદ કરો" : "Cancel"}
+        okButtonProps={{ loading: isExporting }}
+        zIndex={10000}
+      >
+        <div>
+          <p>{language === "gu" ? "નીચેના ફિલ્ટર લાગુ થશે:" : "The following filters will be applied:"}</p>
+          <ul style={{ paddingLeft: 18, marginBottom: 0 }}>
+            {getExportFilterSummary().map((item) => <li key={item}>{item}</li>)}
+          </ul>
+          {(!filteredData || filteredData.length === 0) && (
+            <p style={{ color: "#faad14", marginTop: 8 }}>
+              {language === "gu" ? "કોઈ ડેટા ઉપલબ્ધ નથી. નિકાસ ખાલી રહેશે." : "No data available. Export will be empty."}
+            </p>
+          )}
+        </div>
+      </Modal>
+
     </div>
     </div>
   );
