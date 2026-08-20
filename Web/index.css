@@ -53,3 +53,135 @@ samp,
   border: 0 !important;
   height: 0 !important;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+.ant-table-wrapper,
+.ant-card,
+.ant-row,
+.ant-col,
+.container {
+  min-width: 0;
+}
+
+.ant-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ant-card-body {
+  overflow-x: hidden;
+}
+
+@media (max-width: 1366px) {
+  .container,
+  .ndvi-dashboard-page,
+  .patrol-logs-page,
+  .ndvi-notifications-page {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .main-heading,
+  .ndvi-notifications-page .main-heading,
+  .patrol-logs-page .main-heading {
+    font-size: 20px !important;
+  }
+
+  .ant-card-body {
+    padding: 14px !important;
+  }
+
+  .ant-statistic-title {
+    font-size: 11px !important;
+  }
+
+  .ant-statistic-content {
+    font-size: 20px !important;
+  }
+
+  .ant-table {
+    font-size: 11px !important;
+  }
+
+  .ant-table-cell {
+    padding: 8px 7px !important;
+  }
+
+  .ant-btn {
+    font-size: 12px !important;
+    padding-inline: 10px !important;
+  }
+
+  .ant-select,
+  .ant-picker,
+  .ant-input {
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .hide-on-small-laptop,
+  .optional-large-screen-only {
+    display: none !important;
+  }
+
+  .ant-card-body {
+    padding: 12px !important;
+  }
+
+  .ant-table-cell {
+    padding: 6px 6px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .container,
+  .ndvi-dashboard-page,
+  .patrol-logs-page,
+  .ndvi-notifications-page {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .ant-card {
+    border-radius: 8px !important;
+  }
+
+  .ant-card-head,
+  .ant-card-body {
+    padding: 10px !important;
+  }
+
+  .ant-space {
+    flex-wrap: wrap;
+  }
+
+  .ant-btn {
+    width: auto;
+    min-height: 34px;
+  }
+
+  .ant-pagination {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .ant-btn span:not(.anticon) {
+    white-space: normal;
+  }
+
+  .ant-table-cell {
+    padding: 5px !important;
+  }
+}

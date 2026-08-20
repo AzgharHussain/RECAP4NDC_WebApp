@@ -50,6 +50,15 @@ async function ensureNotificationLogPixelIdText(client) {
     ALTER TABLE public.ndvi_notification_log
     ALTER COLUMN pixel_id TYPE TEXT USING pixel_id::text
   `);
+  await queryWithRetry(client, `
+    ALTER TABLE public.ndvi_notification_log
+    ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `);
+  await queryWithRetry(client, `
+    UPDATE public.ndvi_notification_log
+    SET sent_at = CURRENT_TIMESTAMP
+    WHERE sent_at IS NULL
+  `);
 }
 
 module.exports = function startNdviScheduler(admin) {
@@ -203,8 +212,8 @@ module.exports = function startNdviScheduler(admin) {
             // ------------------------------------------------
             await queryWithRetry(client, `
               INSERT INTO public.ndvi_notification_log
-              (user_id, table_name, pixel_id)
-              VALUES ($1,$2,$3)
+              (user_id, table_name, pixel_id, sent_at)
+              VALUES ($1,$2,$3,CURRENT_TIMESTAMP)
               ON CONFLICT DO NOTHING
             `, {
               bind: [user_id, tableName, pixelId],

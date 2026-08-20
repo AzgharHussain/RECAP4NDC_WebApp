@@ -128,6 +128,25 @@ const transformTableName = (tableName, division) => {
   return tableName;
 };
 
+const getHyphenDateTableCandidate = (tableName) => tableName.replace(/^(\d{4}-\d{2}-\d{2})_/, '$1-');
+
+const resolveExistingNdviTableName = async (tableName) => {
+  const candidates = [...new Set([tableName, getHyphenDateTableCandidate(tableName)])];
+
+  for (const candidate of candidates) {
+    const [tableExistsResult] = await sequelize.query(
+      `SELECT to_regclass(:tableRegclass) AS regclass;`,
+      { replacements: { tableRegclass: `public."${candidate}"` } }
+    );
+
+    if (tableExistsResult[0] && tableExistsResult[0].regclass) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
 const getRecordIdCandidates = (recordId) => {
   const candidates = [];
   if (recordId !== undefined && recordId !== null && recordId !== '') {
@@ -154,18 +173,14 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
 
     try {
         // Transform table name if needed based on division
-        const actualTableName = transformTableName(tableName, division);
+        const transformedTableName = transformTableName(tableName, division);
+        const actualTableName = await resolveExistingNdviTableName(transformedTableName);
         
 
         // Check if the table exists before doing anything else.
         // NDVI change tables are only generated for divisions/dates that have
         // processed data, so a missing table simply means there is no data yet.
-        const [tableExistsResult] = await sequelize.query(
-            `SELECT to_regclass('public."${actualTableName}"') AS regclass;`
-        );
-        const tableExists = tableExistsResult[0] && tableExistsResult[0].regclass;
-
-        if (!tableExists) {
+        if (!actualTableName) {
             return res.json({
                 success: true,
                 data: []
@@ -261,7 +276,16 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
 
     try {
         // Transform table name if needed based on division
-        const actualTableName = transformTableName(tableName, division);
+        const transformedTableName = transformTableName(tableName, division);
+        const actualTableName = await resolveExistingNdviTableName(transformedTableName);
+
+        if (!actualTableName) {
+            return res.json({
+                success: true,
+                message: 'Filtered area fetched successfully',
+                data: [{ total_area_sq_km: 0 }]
+            });
+        }
         
 
         // Build WHERE clause based on hierarchy filters
@@ -305,7 +329,16 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
         // If the first approach fails, try with ST_Transform
         try {
             const { tableName, range, round, beat, division } = req.body;
-            const actualTableName = transformTableName(tableName, division);
+            const transformedTableName = transformTableName(tableName, division);
+            const actualTableName = await resolveExistingNdviTableName(transformedTableName);
+
+            if (!actualTableName) {
+                return res.json({
+                    success: true,
+                    message: 'Filtered area fetched successfully (with transform)',
+                    data: [{ total_area_sq_km: 0 }]
+                });
+            }
             
             let whereClause = '';
             const conditions = [];
@@ -669,6 +702,46 @@ router.get('/ndvi-change-tables', async (req, res) => {
             message: 'Server encountered an unexpected condition',
            
         });
+    }
+});
+
+router.get('/ndvi-available-months', verifyJwt, async (req, res) => {
+    try {
+        const { division } = req.query;
+        const normalizedDivision = division && division !== 'all'
+            ? division.replace(/ Forest Division$/i, '').replace(/\s+/g, '_').toLowerCase()
+            : null;
+        const overrides = {
+            bharuch: 'bharuchsubdivision',
+            bharuch_sub_division: 'bharuchsubdivision'
+        };
+        const coupeName = normalizedDivision ? (overrides[normalizedDivision] || normalizedDivision) : null;
+
+        const getTablesQuery = `
+            SELECT tablename
+            FROM pg_tables
+            WHERE schemaname = 'public'
+              AND tablename LIKE '%\\_coupe\\_NDVI\\_Change' ESCAPE '\\'
+              ${coupeName ? "AND (tablename LIKE :underscorePattern OR tablename LIKE :hyphenPattern)" : ""}
+            ORDER BY tablename DESC;
+        `;
+
+        const [results] = await sequelize.query(getTablesQuery, {
+            replacements: coupeName ? {
+                underscorePattern: `%_${coupeName}_coupe_NDVI_Change`,
+                hyphenPattern: `%-${coupeName}_coupe_NDVI_Change`
+            } : {}
+        });
+
+        const months = [...new Set((results || []).map(row => {
+            const match = row.tablename.match(/^(\d{4})[-_](\d{2})[-_]\d{2}[-_]/);
+            return match ? `${match[1]}-${match[2]}` : null;
+        }).filter(Boolean))].sort();
+
+        res.json({ success: true, data: months, count: months.length });
+    } catch (error) {
+        console.error('Error fetching NDVI available months:', error);
+        res.status(500).json({ success: false, message: 'Server encountered an unexpected condition', data: [] });
     }
 });
 

@@ -697,6 +697,7 @@ const NDVIChangeDashboard = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [tableNames, setTableNames] = useState([]);
+  const [availableMonths, setAvailableMonths] = useState([]);
   
   // Pagination states
   const [page, setPage] = useState(0);
@@ -729,6 +730,35 @@ const NDVIChangeDashboard = () => {
     dataTable: true,
     monthlyOverview: true
   });
+
+  const openCoordinatesInMap = (latitude, longitude) => {
+    if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) return;
+    window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const isMonthAvailable = (date) => {
+    if (!date || availableMonths.length === 0) return true;
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    return availableMonths.includes(monthKey);
+  };
+
+  useEffect(() => {
+    const fetchAvailableMonths = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const params = selectedDivision ? `?division=${encodeURIComponent(selectedDivision)}` : "";
+        const res = await axios.get(`${API_BASE_URL}/api/ndvi-available-months${params}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data?.success) setAvailableMonths(res.data.data || []);
+      } catch (err) {
+        console.error('Error fetching available NDVI months:', err);
+        setAvailableMonths([]);
+      }
+    };
+
+    fetchAvailableMonths();
+  }, [selectedDivision]);
 
   // Toggle section expansion
   const toggleSection = (section) => {
@@ -2445,6 +2475,8 @@ const handleExportToPDF = () => {
       label={t.startDate}
       value={startDate}
       onChange={handleStartDateChange}
+      shouldDisableDate={(date) => !isMonthAvailable(date)}
+      shouldDisableMonth={(date) => !isMonthAvailable(date)}
       minDate={new Date(2020, 0, 1)}
       maxDate={endDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
@@ -2470,6 +2502,8 @@ const handleExportToPDF = () => {
       label={t.endDate}
       value={endDate}
       onChange={handleEndDateChange}
+      shouldDisableDate={(date) => !isMonthAvailable(date)}
+      shouldDisableMonth={(date) => !isMonthAvailable(date)}
       minDate={startDate || new Date(2020, 0, 1)}
       maxDate={startDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
@@ -3243,8 +3277,22 @@ const handleExportToPDF = () => {
                           primary={t.coordinates}
                           secondary={
                             <>
-                              <Typography variant="body2">{t.lat}: {selectedRecord.latitude?.toFixed(6) || 'N/A'}</Typography>
-                              <Typography variant="body2">{t.lon}: {selectedRecord.longitude?.toFixed(6) || 'N/A'}</Typography>
+                              <Typography
+                                variant="body2"
+                                component="button"
+                                onClick={() => openCoordinatesInMap(selectedRecord.latitude, selectedRecord.longitude)}
+                                style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer', color: '#1976d2', textDecoration: 'underline' }}
+                              >
+                                {t.lat}: {selectedRecord.latitude?.toFixed(6) || 'N/A'}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                component="button"
+                                onClick={() => openCoordinatesInMap(selectedRecord.latitude, selectedRecord.longitude)}
+                                style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer', color: '#1976d2', textDecoration: 'underline', display: 'block' }}
+                              >
+                                {t.lon}: {selectedRecord.longitude?.toFixed(6) || 'N/A'}
+                              </Typography>
                             </>
                           }
                         />

@@ -10,6 +10,7 @@ const { verifyJwt } = require("../middlewares/verifyJwt");
 const blacklistedTokens = require("../middlewares/tokenBlacklist");
 const { logFromRequest } = require("../utils/auditLogger");
 const { ensurePixleIdColumn } = require("../utils/ensurePixleId");
+const MongoImage = require("../models/Image");
 
 
 // ----------------------------------------------------
@@ -79,6 +80,17 @@ async function createNotificationTables() {
     await client.query(`
       ALTER TABLE public.ndvi_notification_log
       ALTER COLUMN pixel_id TYPE TEXT USING pixel_id::text
+    `);
+
+    await client.query(`
+      ALTER TABLE public.ndvi_notification_log
+      ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+
+    await client.query(`
+      UPDATE public.ndvi_notification_log
+      SET sent_at = CURRENT_TIMESTAMP
+      WHERE sent_at IS NULL
     `);
 
 
@@ -753,8 +765,8 @@ async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) 
 
           // Log it
           await client.query(`
-            INSERT INTO public.ndvi_notification_log (user_id, table_name, pixel_id)
-            VALUES ($1, $2, $3)
+            INSERT INTO public.ndvi_notification_log (user_id, table_name, pixel_id, sent_at)
+            VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
             ON CONFLICT DO NOTHING
           `, [userId, tableName, pixelId]);
 
@@ -855,6 +867,189 @@ router.post('/send-pending-notifications', verifyJwt, upload.none(), async (req,
       success: false,
       message: 'Failed to send pending notifications',
     });
+  }
+});
+
+const getDivisionFromNdviTableName = (tableName) => {
+  if (!tableName) return 'N/A';
+  return tableName
+    .replace(/_coupe_NDVI_Change$/i, '')
+    .replace(/^\d{4}[-_]\d{2}[-_]\d{2}[-_]/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const getMonthFromNdviTableName = (tableName) => {
+  const match = String(tableName || '').match(/^(\d{4})[-_](\d{2})[-_]\d{2}/);
+  return match ? `${match[1]}-${match[2]}` : 'N/A';
+};
+
+const buildNdviActionText = (record) => {
+  const actions = [];
+  if (record?.status === true || record?.status === 'true') actions.push('Status updated');
+  if (record?.note) actions.push('Note added');
+  if (record?.image_data) actions.push('Image uploaded');
+  return actions.length ? actions.join(', ') : 'No action taken';
+};
+
+router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
+  try {
+    const { user_id, village_name, coupe_name, table_name, status, month, division, start_date, end_date } = req.query;
+    const conditions = [];
+    const values = [];
+
+    const addCondition = (sql, value) => {
+      values.push(value);
+      conditions.push(sql.replace('?', `$${values.length}`));
+    };
+
+    if (user_id) addCondition('u.user_id = ?', user_id);
+    if (village_name) addCondition('u.village_name = ?', village_name);
+    if (coupe_name) addCondition('u.coupe_name = ?', coupe_name);
+    if (table_name) addCondition('l.table_name = ?', table_name);
+    if (month) addCondition('l.table_name LIKE ?', `${month}-%`);
+    if (division) addCondition('l.table_name ILIKE ?', `%${division.replace(/\s+/g, '_')}%`);
+    if (start_date) addCondition('l.sent_at::date >= ?', start_date);
+    if (end_date) addCondition('l.sent_at::date <= ?', end_date);
+
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const reportQuery = `
+      SELECT
+        l.id,
+        l.user_id,
+        u.village_name,
+        u.coupe_name,
+        l.table_name,
+        l.pixel_id,
+        COALESCE(l.sent_at, CURRENT_TIMESTAMP) AS sent_at
+      FROM public.ndvi_notification_log l
+      LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
+      ${whereClause}
+      ORDER BY l.sent_at DESC NULLS LAST, l.id DESC
+      LIMIT 5000
+    `;
+
+    const countQuery = `
+      SELECT
+        COUNT(*)::int AS total_notifications,
+        COUNT(DISTINCT l.user_id)::int AS users_received
+      FROM public.ndvi_notification_log l
+      LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
+      ${whereClause}
+    `;
+
+    const optionsQuery = `
+      SELECT
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.user_id ORDER BY u.user_id), NULL) AS user_ids,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.village_name ORDER BY u.village_name), NULL) AS villages,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.coupe_name ORDER BY u.coupe_name), NULL) AS coupes,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT l.table_name ORDER BY l.table_name), NULL) AS tables
+      FROM public.ndvi_notification_log l
+      LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
+    `;
+
+    const [report, counts, options] = await Promise.all([
+      client.query(reportQuery, values),
+      client.query(countQuery, values),
+      client.query(optionsQuery),
+    ]);
+
+    const tableRecords = new Map();
+    const tableNames = [...new Set(report.rows.map(row => row.table_name).filter(Boolean))];
+
+    for (const sourceTable of tableNames) {
+      try {
+        const pixelIds = [...new Set(report.rows
+          .filter(row => row.table_name === sourceTable)
+          .map(row => String(row.pixel_id))
+          .filter(Boolean))];
+        const sourceRows = await client.query(`
+          SELECT
+            COALESCE(pixle_id::text, id::text) AS pixel_id,
+            division,
+            note,
+            image_data IS NOT NULL AS has_table_image,
+            status
+          FROM public."${sourceTable}"
+          WHERE COALESCE(pixle_id::text, id::text) = ANY($1)
+        `, [pixelIds]);
+        const mongoImages = await MongoImage.find({
+          sourceType: 'ndvi',
+          coupeName: sourceTable,
+          recordId: { $in: pixelIds.flatMap(id => [id, Number(id)].filter(value => !Number.isNaN(value))) }
+        }).lean();
+        const imageIds = new Set(mongoImages.map(img => String(img.recordId)));
+        const recordMap = new Map(sourceRows.rows.map(row => [String(row.pixel_id), {
+          ...row,
+          image_data: row.has_table_image || imageIds.has(String(row.pixel_id))
+        }]));
+        tableRecords.set(sourceTable, recordMap);
+      } catch (err) {
+        console.warn(`Failed to read NDVI source table ${sourceTable}:`, err.message);
+        tableRecords.set(sourceTable, new Map());
+      }
+    }
+
+    let annotatedRows = report.rows.map((row) => {
+      const sourceRecord = tableRecords.get(row.table_name)?.get(String(row.pixel_id));
+      const actionTaken = buildNdviActionText(sourceRecord);
+      const alertStatus = actionTaken === 'No action taken' ? 'Pending' : 'Resolved';
+      return {
+        ...row,
+        month: getMonthFromNdviTableName(row.table_name),
+        division: sourceRecord?.division || getDivisionFromNdviTableName(row.table_name),
+        alert_status: alertStatus,
+        action_taken: actionTaken,
+        note: sourceRecord?.note || null,
+        has_image: !!sourceRecord?.image_data,
+      };
+    });
+
+    if (status) {
+      annotatedRows = annotatedRows.filter(row => row.alert_status === status);
+    }
+
+    const monthlyDivisionMap = new Map();
+    annotatedRows.forEach((row) => {
+      const key = `${row.month}__${row.division}`;
+      if (!monthlyDivisionMap.has(key)) {
+        monthlyDivisionMap.set(key, { month: row.month, division: row.division, alerts_generated: 0, resolved: 0, pending: 0 });
+      }
+      const item = monthlyDivisionMap.get(key);
+      item.alerts_generated += 1;
+      if (row.alert_status === 'Resolved') item.resolved += 1;
+      else item.pending += 1;
+    });
+
+    const optionRows = options.rows[0] || {};
+    const tableOptions = optionRows.tables || [];
+    const divisionOptions = [...new Set(tableOptions.map(getDivisionFromNdviTableName))].filter(Boolean).sort();
+    const monthOptions = [...new Set(tableOptions.map(getMonthFromNdviTableName))].filter(Boolean).sort().reverse();
+
+    res.json({
+      success: true,
+      data: annotatedRows,
+      summary: {
+        ...(counts.rows[0] || { total_notifications: 0, users_received: 0 }),
+        total_notifications: annotatedRows.length,
+        users_received: new Set(annotatedRows.map(row => row.user_id).filter(Boolean)).size,
+        resolved: annotatedRows.filter(row => row.alert_status === 'Resolved').length,
+        pending: annotatedRows.filter(row => row.alert_status === 'Pending').length,
+      },
+      monthlyDivisionSummary: Array.from(monthlyDivisionMap.values()).sort((a, b) => b.month.localeCompare(a.month) || a.division.localeCompare(b.division)),
+      options: {
+        user_ids: optionRows.user_ids || [],
+        villages: optionRows.villages || [],
+        coupes: optionRows.coupes || [],
+        tables: tableOptions,
+        divisions: divisionOptions,
+        months: monthOptions,
+        statuses: ['Pending', 'Resolved'],
+      },
+    });
+  } catch (err) {
+    console.error('ndvi-notification-report error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch NDVI notification report' });
   }
 });
 

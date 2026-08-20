@@ -74,7 +74,7 @@ const Homepage = () => {
       heroTitle1: "Forest Monitoring",
       heroTitle2: "& Patrolling Platform",
       heroDesc: "The Forest Monitoring & Patrolling System under the RECAP4NDC initiative integrates satellite-derived vegetation indicators, field patrolling data, incident reporting, and working plan spatial boundaries into a unified web-based monitoring environment. The WebGIS dashboard integrates spatial data services and geo-intelligence for operational forest management.",
-      launchApp: "Launch App",
+      launchApp: "Login",
       overviewTitle: "Forest Monitoring",
       overviewTitleHighlight: "Overview",
       overviewSubtitle: "The application dashboards transform integrated spatial and field data into actionable monitoring indicators.",

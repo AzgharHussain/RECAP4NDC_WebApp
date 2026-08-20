@@ -677,3 +677,63 @@ body {
   }
 }
 
+@media (max-width: 1366px) {
+  .patrol-filter-card {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .patrol-modern-table .ant-table-tbody > tr > td {
+    padding: 8px 9px !important;
+  }
+
+  .patrol-distribution-card {
+    grid-template-columns: 98px 1fr;
+    min-height: 124px;
+  }
+
+  .patrol-progress-pane {
+    padding: 10px 8px;
+  }
+
+  .patrol-progress-pane .ant-progress-circle,
+  .patrol-progress-pane .ant-progress-inner {
+    width: 84px !important;
+    height: 84px !important;
+    font-size: 14px !important;
+  }
+
+  .patrol-type-count {
+    font-size: 20px !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .patrol-filter-card {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+
+  .patrol-distribution-card {
+    grid-template-columns: 1fr;
+  }
+
+  .patrol-progress-pane {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .patrol-filter-card {
+    grid-template-columns: 1fr;
+  }
+
+  .patrol-logs-page .main-heading::before {
+    display: none;
+  }
+
+  .patrol-logs-page .main-heading + div {
+    margin-left: 0 !important;
+  }
+}
+

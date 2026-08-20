@@ -5,7 +5,7 @@ import {
   Space, Spin, Alert, message 
 } from "antd";
 import { 
-  SearchOutlined, EyeOutlined, FilterOutlined, ReloadOutlined
+  SearchOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, DownloadOutlined
 } from "@ant-design/icons";
 import { FaCalendarCheck, FaRoute, FaUsers, FaSun, FaMoon, FaShieldAlt, FaUserTie, FaTrophy, FaMapMarkedAlt } from "react-icons/fa";
 import "./PatrolIncidentLogs.css";
@@ -823,6 +823,9 @@ const fetchDashboardData = useCallback(async () => {
           division: stripHtmlTags(item.division),
           range: stripHtmlTags(item.range),
           beat: stripHtmlTags(item.beat),
+          patrolling_location: stripHtmlTags(item.patrolling_location),
+          current_location_distict: stripHtmlTags(item.current_location_distict),
+          current_location_village: stripHtmlTags(item.current_location_village),
           start_location: stripHtmlTags(item.start_location),
           end_location: stripHtmlTags(item.end_location)
         }));
@@ -868,6 +871,9 @@ const fetchDashboardData = useCallback(async () => {
           division: stripHtmlTags(item.division),
           range: stripHtmlTags(item.range),
           beat: stripHtmlTags(item.beat),
+          patrolling_location: stripHtmlTags(item.patrolling_location),
+          current_location_distict: stripHtmlTags(item.current_location_distict),
+          current_location_village: stripHtmlTags(item.current_location_village),
           start_location: stripHtmlTags(item.start_location),
           end_location: stripHtmlTags(item.end_location)
         }));
@@ -932,6 +938,9 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
         division: stripHtmlTags(item.division),
         range: stripHtmlTags(item.range),
         beat: stripHtmlTags(item.beat),
+        patrolling_location: stripHtmlTags(item.patrolling_location),
+        current_location_distict: stripHtmlTags(item.current_location_distict),
+        current_location_village: stripHtmlTags(item.current_location_village),
         start_location: stripHtmlTags(item.start_location),
         end_location: stripHtmlTags(item.end_location)
       }));
@@ -1302,6 +1311,9 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       "End Time": formatDateTime(patrol.end_time),
       "Duration": formatDuration(patrol.start_time, patrol.end_time),
       "Patrol Officer": patrol.patrol_officer_name,
+      "Patrol Location": patrol.patrolling_location || "N/A",
+      "District": patrol.current_location_distict || "N/A",
+      "Village": patrol.current_location_village || "N/A",
       "Distance (kms)": patrol.distance_kms,
       "Start Location": patrol.start_location,
       "End Location": patrol.end_location,
@@ -1382,6 +1394,27 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       align: "center",
     },
     {
+      title: language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location",
+      dataIndex: "patrolling_location",
+      key: "patrolling_location",
+      align: "center",
+      render: (value) => value || "N/A",
+    },
+    {
+      title: language === "gu" ? "જિલ્લો" : "District",
+      dataIndex: "current_location_distict",
+      key: "current_location_distict",
+      align: "center",
+      render: (value) => value || "N/A",
+    },
+    {
+      title: language === "gu" ? "ગામ" : "Village",
+      dataIndex: "current_location_village",
+      key: "current_location_village",
+      align: "center",
+      render: (value) => value || "N/A",
+    },
+    {
       title: language === "gu" ? "શરૂઆતની તારીખ" : "Search by Start Date",
       key: "start_date",
       align: "center",
@@ -1449,6 +1482,55 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       ),
     },
   ];
+
+  const downloadBase64Image = (image, fallbackName) => {
+    if (!image?.image_data) {
+      message.warning(language === "gu" ? "છબી ઉપલબ્ધ નથી" : "Image is not available");
+      return;
+    }
+
+    const mimeType = image.image_type || "image/jpeg";
+    const extension = mimeType.includes("png") ? "png" : mimeType.includes("gif") ? "gif" : mimeType.includes("heic") ? "heic" : "jpg";
+    const link = document.createElement("a");
+    link.href = `data:${mimeType};base64,${image.image_data}`;
+    link.download = `${fallbackName}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const getExportFilterSummary = () => [
+    `${language === "gu" ? "અધિકારીનું નામ" : "Officer Name"}: ${searchText || "All"}`,
+    `${language === "gu" ? "વિભાગ" : "Division"}: ${divisionFilter || "All"}`,
+    `${language === "gu" ? "રેન્જ" : "Range"}: ${rangeFilter || "All"}`,
+    `${language === "gu" ? "બીટ" : "Beat"}: ${beatFilter || "All"}`,
+    `${language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"}: ${typeFilter ? getTypeDisplayName(typeFilter) : "All"}`,
+    `${language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"}: ${startFilter ? startFilter.format('YYYY-MM-DD') : "All"}`,
+    `${language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"}: ${endFilter ? endFilter.format('YYYY-MM-DD') : "All"}`,
+    `${language === "gu" ? "કુલ રેકોર્ડ" : "Total Records"}: ${filteredData.length}`,
+  ];
+
+  const confirmExportTableToExcel = () => {
+    if (!filteredData || filteredData.length === 0) {
+      message.warning(language === "gu" ? "કોઈ ડેટા નિકાસ કરવા માટે ઉપલબ્ધ નથી" : "No data available to export");
+      return;
+    }
+
+    Modal.confirm({
+      title: language === "gu" ? "ફિલ્ટર સાથે નિકાસ કરો" : "Export with current filters?",
+      content: (
+        <div>
+          <p>{language === "gu" ? "નીચેના ફિલ્ટર લાગુ થશે:" : "The following filters will be applied:"}</p>
+          <ul style={{ paddingLeft: 18, marginBottom: 0 }}>
+            {getExportFilterSummary().map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
+      ),
+      okText: language === "gu" ? "નિકાસ કરો" : "Export",
+      cancelText: language === "gu" ? "રદ કરો" : "Cancel",
+      onOk: exportTableToExcel,
+    });
+  };
 
   const CustomPagination = () => (
     <div style={{ 
@@ -1520,6 +1602,9 @@ const exportTableToExcel = async () => {
     [language === "gu" ? "વિભાગ" : "Division"]: item.division || "N/A",
     [language === "gu" ? "રેન્જ" : "Range"]: item.range || "N/A",
     [language === "gu" ? "બીટ" : "Beat"]: item.beat || "N/A",
+    [language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location"]: item.patrolling_location || "N/A",
+    [language === "gu" ? "જિલ્લો" : "District"]: item.current_location_distict || "N/A",
+    [language === "gu" ? "ગામ" : "Village"]: item.current_location_village || "N/A",
     [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExport(item.start_time),
     [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExport(item.start_time),
     [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExport(item.end_time),
@@ -1986,7 +2071,7 @@ const exportTableToExcel = async () => {
           </Button>
 
           <Button 
-    onClick={exportTableToExcel}
+    onClick={confirmExportTableToExcel}
     style={{ 
       background: "linear-gradient(135deg, #28a745 0%, #218838 100%)", 
       borderColor: "#28a745", 
@@ -2012,7 +2097,14 @@ const exportTableToExcel = async () => {
           scroll={{ x: 'max-content' }}
           loading={isLoading || paginationLoading}
           locale={{
-            emptyText: (
+            emptyText: isLoading || paginationLoading ? (
+              <div style={{ textAlign: "center", padding: "50px 0" }}>
+                <Spin />
+                <div style={{ fontSize: 16, color: "#000", fontWeight: 500, marginTop: 12 }}>
+                  {language === "gu" ? "લોડ થઈ રહ્યું છે..." : "Loading data..."}
+                </div>
+              </div>
+            ) : (
               <div style={{ textAlign: "center", padding: "50px 0" }}>
                 <img src={noDataImage} alt="No Data" style={{ width: 60, marginBottom: 16 }} />
                 <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
@@ -2149,6 +2241,14 @@ const exportTableToExcel = async () => {
                                   {image.note}
                                 </div>
                               )}
+                              <Button
+                                size="small"
+                                icon={<DownloadOutlined />}
+                                style={{ marginTop: 6, width: '100%' }}
+                                onClick={() => downloadBase64Image(image, `patrol_${selectedPatrol.patrol_id || 'image'}_${image.image_category || index + 1}`)}
+                              >
+                                {language === "gu" ? "ડાઉનલોડ" : "Download"}
+                              </Button>
                             </div>
                           </div>
                         </Col>

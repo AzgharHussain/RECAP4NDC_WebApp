@@ -87,6 +87,19 @@ function parseToUTC(dateValue) {
   return new Date(dateValue).toISOString();
 }
 
+async function ensurePatrolLocationColumns(dbClient = client) {
+  await dbClient.query(`
+    ALTER TABLE public.patrols
+      ADD COLUMN IF NOT EXISTS patrolling_location TEXT,
+      ADD COLUMN IF NOT EXISTS current_location_distict TEXT,
+      ADD COLUMN IF NOT EXISTS current_location_village TEXT;
+  `);
+}
+
+ensurePatrolLocationColumns().catch((err) => {
+  console.error('Failed to ensure patrol location columns:', err.message);
+});
+
 // POST route for patrol with multiple images (no notes)
 router.post('/patrol-post', verifyJwt, upload.any(), async (req, res) => {
   const pat_data = req.body;
@@ -97,7 +110,13 @@ pat_data.end_location = clean(pat_data.end_location);
 pat_data.beat = clean(pat_data.beat);
 pat_data.range = clean(pat_data.range);
 pat_data.division = clean(pat_data.division);
+pat_data.patrolling_location = clean(pat_data.patrolling_location || pat_data.patrolling_Location || pat_data.patrollingLocation);
+pat_data.current_location_distict = clean(pat_data.current_location_distict || pat_data.current_location_district || pat_data.currentLocationDistrict);
+pat_data.current_location_village = clean(pat_data.current_location_village || pat_data.currentLocationVillage);
 
+  if (!pat_data.patrolling_location) pat_data.patrolling_location = 'Inside Forest';
+  const patrolLocationType = String(pat_data.patrolling_location || '').trim().toLowerCase();
+  const isOutsideForest = patrolLocationType === 'outside forest' || patrolLocationType === 'outside';
   const requiredFields = [
     'patrol_officer_name', 
     'start_time', 
@@ -108,11 +127,14 @@ pat_data.division = clean(pat_data.division);
     'geom', 
     'user_id', 
     'patrolling_type_id', 
-    'number_of_staff',
-    'beat',          // Added beat as required field
-    'range',         // Added range as required field
-    'division'       // Added division as required field
+    'number_of_staff'
   ];
+
+  if (isOutsideForest) {
+    requiredFields.push('current_location_distict', 'current_location_village');
+  } else {
+    requiredFields.push('beat', 'range', 'division');
+  }
 
   for (let field of requiredFields) {
     if (!pat_data[field])
@@ -173,6 +195,8 @@ pat_data.division = clean(pat_data.division);
       // Start a transaction
       await txClient.query('BEGIN');
 
+      await ensurePatrolLocationColumns(txClient);
+
       const query1 = `
         INSERT INTO patrols (
           patrol_officer_name, 
@@ -185,11 +209,14 @@ pat_data.division = clean(pat_data.division);
           user_id, 
           patrolling_type_id, 
           number_of_staff,
-          beat,           -- Added beat column
-          range,          -- Added range column
-          division        -- Added division column
+          beat,
+          range,
+          division,
+          patrolling_location,
+          current_location_distict,
+          current_location_village
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING patrol_id;
       `;
 
@@ -204,9 +231,12 @@ pat_data.division = clean(pat_data.division);
         pat_data.user_id,
         pat_data.patrolling_type_id,
         pat_data.number_of_staff,
-        pat_data.beat,      // Added beat value
-        pat_data.range,     // Added range value
-        pat_data.division   // Added division value
+        pat_data.beat,
+        pat_data.range,
+        pat_data.division,
+        pat_data.patrolling_location,
+        pat_data.current_location_distict,
+        pat_data.current_location_village
       ]);
 
       const patrol_id = result.rows[0].patrol_id;
@@ -348,6 +378,9 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
   beat: clean(patrol.beat),
   range: clean(patrol.range),
   division: clean(patrol.division),
+  patrolling_location: clean(patrol.patrolling_location),
+  current_location_distict: clean(patrol.current_location_distict),
+  current_location_village: clean(patrol.current_location_village),
 
   start_time: formatPatrolTimestamp(patrol.start_time),
   end_time: formatPatrolTimestamp(patrol.end_time),

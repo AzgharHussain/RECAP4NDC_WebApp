@@ -901,3 +901,136 @@ body{
   font-weight: 600;
   color: #555;
 }
+
+@media (max-width: 1366px) {
+  #after-login-header .headAssets {
+    gap: 6px;
+    padding: 2px 8px;
+  }
+
+  #after-login-header .portal-header h2 {
+    font-size: clamp(11px, 1.05vw, 15px);
+    letter-spacing: 0.8px;
+  }
+
+  #after-login-header .logo img,
+  #after-login-header .ministryLogo img,
+  .header-logos img {
+    max-height: 30px;
+  }
+
+  .header-logos {
+    gap: 10px;
+    padding: 0 4px;
+  }
+
+  .header-bottom {
+    flex-wrap: nowrap;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .header-bottom .menu-item {
+    gap: 4px;
+    padding: 8px 6px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .header-bottom .menu-item svg {
+    font-size: 14px !important;
+    margin-right: 2px !important;
+  }
+
+  .header-right {
+    margin-right: 6px;
+    gap: 4px !important;
+  }
+
+  .username {
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 6px 2px;
+    font-size: 12px;
+  }
+
+  .user-icon-img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .header-lang-btn {
+    min-width: 24px;
+    height: 22px;
+    padding: 0 5px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 1180px) {
+  #after-login-header .ministryLogo img:nth-child(n + 5),
+  .header-logos img:nth-child(n + 7) {
+    display: none;
+  }
+
+  .header-bottom .menu-item {
+    font-size: 11px;
+    padding: 7px 5px;
+  }
+
+  .header-bottom .menu-item svg {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  #after-login-header .ministryLogo img:nth-child(n + 3),
+  .header-logos img:nth-child(n + 4) {
+    display: none;
+  }
+
+  .header-bottom {
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+
+  .header-bottom::-webkit-scrollbar {
+    display: none;
+  }
+
+  .header-bottom .menu-item {
+    flex: 0 0 auto;
+  }
+
+  .content {
+    overflow-x: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  #after-login-header .portal-header h2 {
+    max-width: 42vw;
+  }
+
+  #after-login-header .ministryLogo,
+  .header-logos {
+    display: none;
+  }
+
+  .header-bottom {
+    display: none;
+  }
+
+  .header-right .username,
+  .arrow-icon {
+    display: none;
+  }
+
+  .dropdown-menu {
+    top: 58px;
+    right: 8px;
+  }
+}

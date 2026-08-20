@@ -46,7 +46,7 @@ const [contentHeight, setContentHeight] = useState(0);
   // Language Texts
   const text = {
     en: {
-      appTitle: "FOREST MONITORING & PATROLLING SYSTEM",
+      appTitle: "FOREST MONITORING SYSTEM",
       overview: "Overview",
       geoDashboard: "Geo Dashboard",
       patrollingLogs: "Patrolling Logs",
@@ -62,6 +62,7 @@ const [contentHeight, setContentHeight] = useState(0);
       english: "English",
       gujarati: "Gujarati",
       NDVIDashboard: "NDVI Dashboard",
+      NDVINotifications: "NDVI Notifications",
       PatrolCoverageAnalysis: "Plantation Coverage Analysis"
     },
     gu: {
@@ -81,6 +82,7 @@ const [contentHeight, setContentHeight] = useState(0);
       english: "અંગ્રેજી",
       gujarati: "ગુજરાતી",
       NDVIDashboard: "NDVI ડેશબોર્ડ",
+      NDVINotifications: "NDVI સૂચનાઓ",
       PatrolCoverageAnalysis: "પ્લાન્ટેશન આવરણનું વિશ્લેષણ"
     },
   };
@@ -383,6 +385,16 @@ useEffect(() => {
           >
             <FiActivity style={{ fontSize: '20px', marginRight: '6px' }} />
             {text[language].NDVIDashboard}
+          </NavLink>
+          <NavLink
+            to="/ndvi-notifications"
+            className={`menu-item ${
+              isActiveLink("/ndvi-notifications") ? "active" : ""
+            }`}
+            onClick={handleLinkClick}
+          >
+            <FiActivity style={{ fontSize: '20px', marginRight: '6px' }} />
+            {text[language].NDVINotifications}
           </NavLink>
           <NavLink
             to="PatrolCoverageAnalysis"
