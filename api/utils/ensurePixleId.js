@@ -123,7 +123,6 @@ async function ensurePixleIdColumn(client, tableName, opts = {}) {
       console.warn(`[ensurePixleId] index creation skipped for "${tableName}":`, idxErr.message);
     }
 
-    console.log(`[ensurePixleId] added + populated pixle_id for "${tableName}"`);
     return true;
   }
 
@@ -153,7 +152,6 @@ async function ensurePixleIdColumn(client, tableName, opts = {}) {
          FROM ranked
         WHERE t.ctid = ranked.ctid;`
     );
-    console.log(`[ensurePixleId] back-filled ${nullCount} NULL pixle_id rows in "${tableName}"`);
     return true;
   }
 

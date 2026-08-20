@@ -32,7 +32,6 @@ const ISSUE_TYPES = ['login', 'mobile_app', 'web_app', 'ndvi', 'patrolling', 'co
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    console.log('[Support] support_tickets table ready');
   } catch (err) {
     console.error('[Support] Failed to create support_tickets table:', err.message);
   }
@@ -80,7 +79,6 @@ router.post('/support/submit', SUPPORT_RATE_LIMIT, async (req, res) => {
       console.error('Support ticket DB insert failed:', dbErr.message);
     }
 
-    console.log(`[Support] Ticket ${ticketId} from ${email}: ${subject}`);
 
     res.json({
       success: true,

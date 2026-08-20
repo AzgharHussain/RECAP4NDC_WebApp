@@ -863,12 +863,15 @@ async function main() {
     throw error;
   }
 
+  log('[DEBUG] About to validate GeoServer connection...');
   try {
     await validateGeoServerConnection();
   } catch (error) {
     logError('STARTUP', `GeoServer: ${error.message || error}`);
     throw error;
   }
+
+  log('[DEBUG] All connection checks passed, starting processing...');
 
   log('=== All services reachable. Starting processing. ===');
 
@@ -934,6 +937,16 @@ async function main() {
     log(`[DONE] Checkpoint file removed (clean run complete).`);
   } catch (_) {}
 }
+
+// Catch silent crashes
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', err.stack || err);
+  log(`[UNCAUGHT EXCEPTION] ${err.stack || err}`);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION]', reason);
+  log(`[UNHANDLED REJECTION] ${reason}`);
+});
 
 main()
   .catch((error) => {

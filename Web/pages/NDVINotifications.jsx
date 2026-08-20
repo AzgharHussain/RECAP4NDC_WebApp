@@ -53,7 +53,6 @@ const NDVINotifications = () => {
       const res = await fetch(`${API_BASE_URL}/api/ndvi-notification-report?${params.toString()}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to fetch notification report");
-      console.log("NDVI notification full rows:", json.data || []);
       console.table((json.data || []).map((item) => ({
         id: item.id,
         user_id: item.user_id,

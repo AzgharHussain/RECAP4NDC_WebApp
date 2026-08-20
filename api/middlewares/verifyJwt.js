@@ -31,7 +31,6 @@ const verifyJwt = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
     req.user = decoded;
-    console.log("Decoded JWT:", decoded); // 🔥 debug
     next();
   } catch (err) {
     console.error("JWT verification failed:", err.message);

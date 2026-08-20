@@ -1012,7 +1012,6 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
           WHERE table_schema = 'public' AND table_name = $1
         `, [sourceTable]);
         const sourceColumns = new Map(columnInfo.rows.map(row => [row.column_name, row.data_type]));
-        console.log(`[ndvi-notification-report] Table "${sourceTable}" columns:`, [...sourceColumns.keys()]);
 
         // Build SELECT clause dynamically — quote all identifiers to handle
         // reserved words. NOTE: division/range/round/beat come from ndvi_notification_users
@@ -1069,11 +1068,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
           }
         }
 
-        console.log(`[ndvi-notification-report] Source rows for "${sourceTable}": ${sourceRows.rows.length} (searched ${pixelIds.length} pixel IDs)`);
         if (sourceRows.rows.length > 0) {
-          console.log(`[ndvi-notification-report] Sample row:`, sourceRows.rows[0]);
         } else {
-          console.log(`[ndvi-notification-report] No matching rows! pixelIds sample:`, pixelIds.slice(0, 3));
         }
 
         const mongoImages = await MongoImage.find({
@@ -1096,7 +1092,6 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     let annotatedRows = report.rows.map((row) => {
       const sourceRecord = tableRecords.get(row.table_name)?.get(String(row.pixel_id));
       if (!sourceRecord) {
-        console.log(`[ndvi-notification-report] No source record found for table="${row.table_name}" pixel_id="${row.pixel_id}"`);
       }
       const actionTaken = buildNdviActionText(sourceRecord);
       const alertStatus = actionTaken === 'No action taken' ? 'Pending' : 'Resolved';

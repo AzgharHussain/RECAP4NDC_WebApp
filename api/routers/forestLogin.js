@@ -243,7 +243,6 @@ router.post('/forest-login', async (req, res) => {
       token, // Include token in response so frontend can save to localStorage
       message: 'Authentication successful'
     });
-    console.log('Response sent', dbUser.user_id);
 
   } catch (error) {
     console.error('SOAP proxy error:', error.message);

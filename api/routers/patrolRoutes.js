@@ -33,12 +33,10 @@ client.on('error', (err) => {
 });
 client.query('SELECT 1')
   .then(async () => {
-    console.log('Database connected');
     try {
       const connectionResult = await client.query(`
         SELECT current_database() AS database_name, current_user AS database_user, inet_server_addr() AS server_ip, inet_server_port() AS server_port, current_setting('DateStyle') AS date_style
       `);
-      console.log('[patrols startup] database connection:', connectionResult.rows[0]);
 
       const sampleResult = await client.query(`
         SELECT patrol_id, start_time, end_time, start_time::text AS start_time_raw, end_time::text AS end_time_raw
@@ -46,12 +44,10 @@ client.query('SELECT 1')
         ORDER BY start_time DESC NULLS LAST, patrol_id DESC
         LIMIT 5
       `);
-      console.log('[patrols startup] date parse sample:', sampleResult.rows);
     } catch (err) {
-      console.log('[patrols startup] failed to log patrol date sample:', err.message);
     }
   })
-  .catch((err) => console.log('Database not connected:', err.message));
+  .catch((err) => console.error('Database not connected:', err.message));
 
 // Multer memory storage
 const storage = multer.memoryStorage();

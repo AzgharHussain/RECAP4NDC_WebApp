@@ -500,7 +500,6 @@ try {
 
     // Restore proxy env vars after Firebase init
     Object.assign(process.env, savedProxyVars);
-    console.log("✅ Firebase Admin initialized successfully");
   }
 } catch (err) {
   console.error("❌ Firebase initialization failed:", err.message);
