@@ -331,7 +331,12 @@ function asList(value) {
 
 // ── GeoServer HTTP helper ─────────────────────────────────────────────────────
 function geoserverRequest(method, requestPath, body) {
-  const url = new URL(`${GEOSERVER_URL}${requestPath}`);
+  let url;
+  try {
+    url = new URL(`${GEOSERVER_URL}${requestPath}`);
+  } catch (e) {
+    return Promise.reject(new Error(`Invalid GeoServer URL: ${GEOSERVER_URL}${requestPath} — ${e.message}`));
+  }
   const data = body ? JSON.stringify(body) : null;
   const headers = {
     Authorization: `Basic ${Buffer.from(`${GEOSERVER_USER}:${GEOSERVER_PASSWORD}`).toString('base64')}`,
@@ -340,38 +345,63 @@ function geoserverRequest(method, requestPath, body) {
   if (data) headers['Content-Type'] = 'application/json';
 
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      request.destroy(new Error(`GeoServer request timed out after 15s: ${method} ${url.href}`));
+    let request;
+    let timeout;
+    let settled = false;
+
+    const safeReject = (err) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      reject(err);
+    };
+    const safeResolve = (val) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      resolve(val);
+    };
+
+    timeout = setTimeout(() => {
+      if (request) {
+        try { request.destroy(); } catch (_) {}
+      }
+      safeReject(new Error(`GeoServer request timed out after 15s: ${method} ${url.href}`));
     }, 15000);
 
-    const request = https.request({
-      method,
-      hostname: url.hostname,
-      port: url.port || 443,
-      path: `${url.pathname}${url.search}`,
-      headers,
-      rejectUnauthorized: false,
-      timeout: 15000,
-    }, (response) => {
-      let raw = '';
-      response.on('data', (chunk) => {
-        raw += chunk;
+    try {
+      request = https.request({
+        method,
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: `${url.pathname}${url.search}`,
+        headers,
+        rejectUnauthorized: false,
+        timeout: 15000,
+      }, (response) => {
+        let raw = '';
+        response.on('data', (chunk) => {
+          raw += chunk;
+        });
+        response.on('end', () => {
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            safeReject(new Error(`${method} ${url.href} failed: HTTP ${response.statusCode}: ${raw}`));
+            return;
+          }
+          safeResolve(raw ? JSON.parse(raw) : null);
+        });
+        response.on('error', safeReject);
       });
-      response.on('end', () => {
-        clearTimeout(timeout);
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          reject(new Error(`${method} ${url.href} failed: HTTP ${response.statusCode}: ${raw}`));
-          return;
-        }
-        resolve(raw ? JSON.parse(raw) : null);
+      request.on('error', safeReject);
+      request.on('timeout', () => {
+        try { request.destroy(); } catch (_) {}
+        safeReject(new Error(`GeoServer request socket timeout: ${method} ${url.href}`));
       });
-    });
-    request.on('error', (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-    if (data) request.write(data);
-    request.end();
+      if (data) request.write(data);
+      request.end();
+    } catch (e) {
+      safeReject(e);
+    }
   });
 }
 
@@ -944,6 +974,19 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION]', reason);
   log(`[UNHANDLED REJECTION] ${reason}`);
+});
+process.on('exit', (code) => {
+  console.error(`[PROCESS EXIT] code=${code}`);
+  log(`[PROCESS EXIT] code=${code}`);
+});
+process.on('SIGTERM', () => {
+  console.error('[SIGTERM received]');
+  log('[SIGTERM received]');
+});
+process.on('SIGINT', () => {
+  console.error('[SIGINT received]');
+  log('[SIGINT received]');
+  process.exit(130);
 });
 
 main()
