@@ -470,7 +470,11 @@ function validateNoDuplicateParams22(req, res, next) {
 try {
   const serviceAccount = require("./routers/recap4ndc-add07-firebase-adminsdk-fbsvc-5a8fab9fe1_1967.json");
 
-  if (!admin.apps.length) {
+  // Validate the service account key has required fields
+  if (!serviceAccount.private_key || !serviceAccount.client_email) {
+    console.error("❌ Firebase service account key is missing required fields (private_key or client_email).");
+    console.error("   Generate a new key at: https://console.firebase.google.com/project/recap4ndc-add07/settings/serviceaccounts/adminsdk");
+  } else if (!admin.apps.length) {
     // Temporarily clear proxy env vars so google-auth-library can reach
     // https://www.googleapis.com directly (bypassing corporate proxy that
     // times out with ETIMEDOUT 10.10.2.248:8080).
@@ -496,9 +500,13 @@ try {
 
     // Restore proxy env vars after Firebase init
     Object.assign(process.env, savedProxyVars);
+    console.log("✅ Firebase Admin initialized successfully");
   }
 } catch (err) {
-  console.error("❌ Firebase service account missing:", err);
+  console.error("❌ Firebase initialization failed:", err.message);
+  console.error("   If 'Invalid JWT Signature', the service account key may be revoked.");
+  console.error("   Generate a new key at: https://console.firebase.google.com/project/recap4ndc-add07/settings/serviceaccounts/adminsdk");
+  console.error("   Save it as: api/routers/recap4ndc-add07-firebase-adminsdk-fbsvc-5a8fab9fe1_1967.json");
 }
 
 startNdviScheduler(admin);

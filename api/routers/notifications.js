@@ -981,33 +981,69 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
           .filter(row => row.table_name === sourceTable)
           .map(row => String(row.pixel_id))
           .filter(Boolean))];
+
+        if (pixelIds.length === 0) {
+          tableRecords.set(sourceTable, new Map());
+          continue;
+        }
+
+        // Detect available columns once
         const columnInfo = await client.query(`
-          SELECT column_name
+          SELECT column_name, data_type
           FROM information_schema.columns
           WHERE table_schema = 'public' AND table_name = $1
         `, [sourceTable]);
-        const sourceColumns = new Set(columnInfo.rows.map(row => row.column_name));
-        const pickColumn = (name) => sourceColumns.has(name) ? name : null;
-        const hierarchySelect = [
-          pickColumn('division') ? '"division" AS division' : 'NULL::text AS division',
-          pickColumn('range') ? '"range" AS range' : 'NULL::text AS range',
-          pickColumn('round') ? '"round" AS round' : 'NULL::text AS round',
-          pickColumn('beat') ? '"beat" AS beat' : 'NULL::text AS beat',
-          pickColumn('village') ? '"village" AS village' : 'NULL::text AS village',
-        ].join(',\n            ');
-        const noteSelect = pickColumn('note') ? '"note" AS note' : 'NULL::text AS note';
-        const imageSelect = pickColumn('image_data') ? '"image_data" IS NOT NULL AS has_table_image' : 'false AS has_table_image';
-        const statusSelect = pickColumn('status') ? '"status" AS status' : 'NULL AS status';
+        const sourceColumns = new Map(columnInfo.rows.map(row => [row.column_name, row.data_type]));
+        console.log(`[ndvi-notification-report] Table "${sourceTable}" columns:`, [...sourceColumns.keys()]);
+
+        // Build SELECT clause dynamically — quote all identifiers to handle
+        // reserved words like "range" and "round"
+        const colOrNull = (name) => sourceColumns.has(name) ? `"${name}"` : 'NULL::text';
+        const selectParts = [
+          colOrNull('division') + ' AS division',
+          colOrNull('range') + ' AS range',
+          colOrNull('round') + ' AS round',
+          colOrNull('beat') + ' AS beat',
+          colOrNull('village') + ' AS village',
+          colOrNull('note') + ' AS note',
+          sourceColumns.has('image_data') ? '("image_data" IS NOT NULL) AS has_table_image' : 'false AS has_table_image',
+          sourceColumns.has('status') ? '"status" AS status' : 'NULL::text AS status',
+        ];
+
+        // Determine the ID column: prefer pixle_id, fall back to id
+        const hasPxCol = sourceColumns.has('pixle_id');
+        const hasIdCol = sourceColumns.has('id');
+        let idColumn, idCast;
+        if (hasPxCol) {
+          idColumn = '"pixle_id"';
+          idCast = '"pixle_id"::text';
+        } else if (hasIdCol) {
+          idColumn = '"id"';
+          idCast = '"id"::text';
+        } else {
+          console.warn(`[ndvi-notification-report] Table "${sourceTable}" has neither pixle_id nor id column`);
+          tableRecords.set(sourceTable, new Map());
+          continue;
+        }
+
+        // Use IN clause with individual parameters for reliability
+        // (ANY($1) with text[] can sometimes have type inference issues)
+        const placeholders = pixelIds.map((_, i) => `$${i + 1}`).join(', ');
         const sourceRows = await client.query(`
           SELECT
-            COALESCE(pixle_id::text, id::text) AS pixel_id,
-            ${hierarchySelect},
-            ${noteSelect},
-            ${imageSelect},
-            ${statusSelect}
+            ${idCast} AS pixel_id,
+            ${selectParts.join(',\n            ')}
           FROM public."${sourceTable}"
-          WHERE COALESCE(pixle_id::text, id::text) = ANY($1)
-        `, [pixelIds]);
+          WHERE ${idCast} IN (${placeholders})
+        `, pixelIds);
+
+        console.log(`[ndvi-notification-report] Source rows for "${sourceTable}": ${sourceRows.rows.length} (searched ${pixelIds.length} pixel IDs)`);
+        if (sourceRows.rows.length > 0) {
+          console.log(`[ndvi-notification-report] Sample row:`, sourceRows.rows[0]);
+        } else {
+          console.log(`[ndvi-notification-report] No matching rows! pixelIds sample:`, pixelIds.slice(0, 3));
+        }
+
         const mongoImages = await MongoImage.find({
           sourceType: 'ndvi',
           coupeName: sourceTable,
@@ -1020,13 +1056,16 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         }]));
         tableRecords.set(sourceTable, recordMap);
       } catch (err) {
-        console.warn(`Failed to read NDVI source table ${sourceTable}:`, err.message);
+        console.warn(`Failed to read NDVI source table ${sourceTable}: ${err.message}`);
         tableRecords.set(sourceTable, new Map());
       }
     }
 
     let annotatedRows = report.rows.map((row) => {
       const sourceRecord = tableRecords.get(row.table_name)?.get(String(row.pixel_id));
+      if (!sourceRecord) {
+        console.log(`[ndvi-notification-report] No source record found for table="${row.table_name}" pixel_id="${row.pixel_id}"`);
+      }
       const actionTaken = buildNdviActionText(sourceRecord);
       const alertStatus = actionTaken === 'No action taken' ? 'Pending' : 'Resolved';
       const sentAtFallback = row.sent_at || row.sent_at_raw || getDateFromNdviTableName(row.table_name) || reportGeneratedAt;

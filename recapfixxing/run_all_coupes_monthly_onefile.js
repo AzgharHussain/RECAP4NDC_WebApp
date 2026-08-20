@@ -107,9 +107,9 @@ async function validateDbConnection() {
   try {
     await db.connect();
     await db.query('SELECT 1');
-    log(`Database connection OK: ${DB_HOST}:${DB_PORT}/${DB_NAME}`);
+    log(`[CHECK] PostgreSQL OK: ${DB_HOST}:${DB_PORT}/${DB_NAME}`);
   } catch (error) {
-    throw new Error(`Database connection failed to ${DB_HOST}:${DB_PORT}/${DB_NAME}: ${error.message || error}`);
+    throw new Error(`PostgreSQL connection failed to ${DB_HOST}:${DB_PORT}/${DB_NAME}: ${error.message || error}`);
   } finally {
     await db.end().catch(() => {});
   }
@@ -206,11 +206,21 @@ const MONTH = {
   prevEnd: dateString(runMonth),
 };
 
+// Month key used for checkpoint and monthly log filenames (e.g. "2026-07")
+const MONTH_KEY = `${runMonth.getFullYear()}-${pad(runMonth.getMonth() + 1)}`;
+
 const CURRENT_NDVI_COLUMN = `${MONTH.label}_NDVI`;
 const PREV_NDVI_COLUMN = `${MONTH.prevLabel}_NDVI`;
 const runId = `${MONTH.runDate}_${new Date().toISOString().replace(/[:.]/g, '-')}`;
-const logFile = path.join(logsDir, `ndvi_${runId}.log`);
-const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+
+// ── Log streams ───────────────────────────────────────────────────────────────
+const logFile      = path.join(logsDir, `ndvi_${runId}.log`);
+const publishedFile = path.join(logsDir, `published_${MONTH_KEY}.log`);
+const errorFile    = path.join(logsDir, `errors_${MONTH_KEY}.log`);
+
+const logStream       = fs.createWriteStream(logFile,       { flags: 'a' });
+const publishedStream = fs.createWriteStream(publishedFile, { flags: 'a' });
+const errorStream     = fs.createWriteStream(errorFile,     { flags: 'a' });
 
 function log(message) {
   const line = `[${new Date().toISOString()}] ${message}`;
@@ -218,11 +228,58 @@ function log(message) {
   logStream.write(`${line}\n`);
 }
 
+/** Write a success entry to the published log file. */
+function logPublished(message) {
+  const line = `[${new Date().toISOString()}] ${message}`;
+  publishedStream.write(`${line}\n`);
+}
+
+/**
+ * Write an error entry to the error log file.
+ * @param {string} context  Category label, e.g. 'STARTUP', 'COUPE', 'PUBLISH'
+ * @param {string} message  Error detail
+ */
+function logError(context, message) {
+  const line = `[${new Date().toISOString()}] [${context}] ${message}`;
+  errorStream.write(`${line}\n`);
+  // Also surface it in the main log so it's all in one place too
+  log(`ERROR [${context}] ${message}`);
+}
+
 function writeRaw(data) {
   process.stdout.write(data);
   logStream.write(data);
 }
 
+// ── Checkpoint helpers ────────────────────────────────────────────────────────
+const checkpointFile = path.join(logsDir, `checkpoint_${MONTH.runDate}.json`);
+
+function loadCheckpoint() {
+  try {
+    if (fs.existsSync(checkpointFile)) {
+      const raw = fs.readFileSync(checkpointFile, 'utf8');
+      const data = JSON.parse(raw);
+      // Ensure the shape is correct even if the file is from an older version
+      return {
+        completed: Array.isArray(data.completed) ? data.completed : [],
+        failed:    Array.isArray(data.failed)    ? data.failed    : [],
+      };
+    }
+  } catch (err) {
+    log(`[WARN] Could not read checkpoint file (${checkpointFile}): ${err.message}. Starting fresh.`);
+  }
+  return { completed: [], failed: [] };
+}
+
+function saveCheckpoint(checkpoint) {
+  try {
+    fs.writeFileSync(checkpointFile, JSON.stringify(checkpoint, null, 2), 'utf8');
+  } catch (err) {
+    log(`[WARN] Could not save checkpoint file: ${err.message}`);
+  }
+}
+
+// ── Scheduled task ────────────────────────────────────────────────────────────
 function ensureMonthlySchedule() {
   if (process.platform !== 'win32' || process.argv.includes('--no-schedule')) {
     return;
@@ -270,6 +327,7 @@ function asList(value) {
   return Array.isArray(value) ? value : [value];
 }
 
+// ── GeoServer HTTP helper ─────────────────────────────────────────────────────
 function geoserverRequest(method, requestPath, body) {
   const url = new URL(`${GEOSERVER_URL}${requestPath}`);
   const data = body ? JSON.stringify(body) : null;
@@ -304,6 +362,20 @@ function geoserverRequest(method, requestPath, body) {
     if (data) request.write(data);
     request.end();
   });
+}
+
+// ── GeoServer connection check ────────────────────────────────────────────────
+async function validateGeoServerConnection() {
+  if (!GEOSERVER_URL) {
+    throw new Error('GEOSERVER_URL is not set in environment. Cannot validate GeoServer connection.');
+  }
+  try {
+    // Use the GeoServer REST /about/version endpoint as a lightweight health check
+    await geoserverRequest('GET', '/rest/about/version.json');
+    log(`[CHECK] GeoServer OK: ${GEOSERVER_URL}`);
+  } catch (error) {
+    throw new Error(`GeoServer connection failed at ${GEOSERVER_URL}: ${error.message || error}`);
+  }
 }
 
 async function listFeaturetypes() {
@@ -342,6 +414,7 @@ async function setDefaultStyle(layerName) {
   });
 }
 
+// ── Earth Engine init + validation ────────────────────────────────────────────
 function initializeEarthEngine() {
   const key = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_KEY, 'utf8'));
   return retryWithBackoff(() => {
@@ -355,6 +428,27 @@ function initializeEarthEngine() {
   }, 'EE init');
 }
 
+/**
+ * After initializeEarthEngine(), do a trivial server-side evaluate to confirm
+ * the EE API is actually reachable and responding.
+ */
+async function validateEarthEngineApi() {
+  try {
+    await retryWithBackoff(() => {
+      return new Promise((resolve, reject) => {
+        ee.Number(1).evaluate((result, error) => {
+          if (error) reject(new Error(String(error)));
+          else if (result !== 1) reject(new Error(`Unexpected EE validation result: ${result}`));
+          else resolve();
+        });
+      });
+    }, 'EE validate', 3);
+    log('[CHECK] Google Earth Engine API OK');
+  } catch (error) {
+    throw new Error(`Google Earth Engine API check failed: ${error.message || error}`);
+  }
+}
+
 function evaluate(serverObject, label = 'evaluate') {
   return retryWithBackoff(() => {
     return new Promise((resolve, reject) => {
@@ -366,6 +460,7 @@ function evaluate(serverObject, label = 'evaluate') {
   }, label);
 }
 
+// ── NDVI computation helpers ──────────────────────────────────────────────────
 function maskS2Clouds(image) {
   const qa = image.select('QA60');
   const cloudBitMask = 1 << 10;
@@ -395,6 +490,7 @@ function changeCategory(value) {
   return 'no_significant_change';
 }
 
+// ── Database helpers ──────────────────────────────────────────────────────────
 async function fetchSourceRows(db, sourceTable) {
   const result = await db.query(`
     SELECT id, geom, village, range, round, beat, division, coupe_no
@@ -537,7 +633,8 @@ async function processCoupe(sourceTable) {
       try {
         await processRow(db, sourceTable, targetTable, rows[i], i + 1, rows.length);
       } catch (error) {
-        log(`ERROR processing ${sourceTable} source id ${rows[i].id}: ${error.message || error}`);
+        const rowMsg = `${sourceTable} row id=${rows[i].id}: ${error.message || error}`;
+        logError('COUPE', rowMsg);
       }
     }
 
@@ -623,14 +720,22 @@ END $$;
   }
 }
 
+// ── GeoServer publish ─────────────────────────────────────────────────────────
 async function publishToGeoserver() {
   log('=== Publishing to GeoServer ===');
+  log(`Published layers list: ${publishedFile}`);
+  log(`Publish errors list:   ${errorFile}`);
+
   await styleExists();
   const published = new Set(await listFeaturetypes());
   const available = new Set(await listAvailableFeaturetypes());
   const candidates = Array.from(new Set([...published, ...available]))
     .filter((name) => name.startsWith('2026'))
     .sort();
+
+  // Log the full list of candidate layers so the user can audit it
+  log(`Candidate layers to process (${candidates.length}):`);
+  candidates.forEach((name) => log(`  - ${name}`));
 
   let styled = 0;
   let skipped = 0;
@@ -640,21 +745,24 @@ async function publishToGeoserver() {
         await publishFeaturetype(featuretype);
         published.add(featuretype);
         log(`PUBLISHED ${featuretype}`);
+        logPublished(`PUBLISHED  ${featuretype}`);
       }
 
       const attributes = await getAttributeNames(featuretype);
       if (!attributes.has('change_category')) {
         skipped += 1;
         log(`SKIP ${featuretype}: missing change_category`);
+        logError('PUBLISH', `SKIP ${featuretype}: missing change_category attribute`);
         continue;
       }
 
       await setDefaultStyle(featuretype);
       styled += 1;
-      log(`UPDATED ${GEOSERVER_WORKSPACE}:${featuretype} -> ${GEOSERVER_STYLE}`);
+      log(`STYLED     ${GEOSERVER_WORKSPACE}:${featuretype} -> ${GEOSERVER_STYLE}`);
+      logPublished(`STYLED     ${GEOSERVER_WORKSPACE}:${featuretype} -> ${GEOSERVER_STYLE}`);
     } catch (error) {
       skipped += 1;
-      log(`ERROR ${featuretype}: ${error.message || error}`);
+      logError('PUBLISH', `${featuretype}: ${error.message || error}`);
     }
   }
   log(`GeoServer publish completed. Styled ${styled}, skipped ${skipped}.`);
@@ -665,46 +773,122 @@ async function runPostprocessAndPublish() {
   await publishToGeoserver();
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  log(`Log file: ${logFile}`);
+  log(`Log file:       ${logFile}`);
+  log(`Published log:  ${publishedFile}`);
+  log(`Error log:      ${errorFile}`);
+  log(`Checkpoint:     ${checkpointFile}`);
+
   ensureMonthlySchedule();
+
   log(`Running ${COUPES.length} coupes for ${MONTH.label} ${runMonth.getFullYear()}.`);
   log(`Comparing ${MONTH.label} (${MONTH.runDate} to ${MONTH.endDate}) - ${MONTH.prevLabel} (${MONTH.prevStart} to ${MONTH.prevEnd})`);
   log(`Columns: ${CURRENT_NDVI_COLUMN}, ${PREV_NDVI_COLUMN}`);
 
-  await validateDbConnection();
-  await initializeEarthEngine();
+  // ── 1. Startup connection checks ──────────────────────────────────────────
+  log('=== Checking service connections ===');
 
+  try {
+    await validateDbConnection();
+  } catch (error) {
+    logError('STARTUP', `PostgreSQL: ${error.message || error}`);
+    throw error; // caught by main().catch() for FATAL handling
+  }
+
+  try {
+    await initializeEarthEngine();
+    await validateEarthEngineApi();
+  } catch (error) {
+    logError('STARTUP', `Google Earth Engine: ${error.message || error}`);
+    throw error;
+  }
+
+  try {
+    await validateGeoServerConnection();
+  } catch (error) {
+    logError('STARTUP', `GeoServer: ${error.message || error}`);
+    throw error;
+  }
+
+  log('=== All services reachable. Starting processing. ===');
+
+  // ── 2. Load checkpoint (resume support) ───────────────────────────────────
+  const checkpoint = loadCheckpoint();
+  const completedSet = new Set(checkpoint.completed);
+
+  if (completedSet.size > 0) {
+    log(`[RESUME] Found checkpoint. Already completed ${completedSet.size} coupe(s): ${checkpoint.completed.join(', ')}`);
+    log(`[RESUME] Skipping those and continuing from where we left off.`);
+  } else {
+    log('[START] No checkpoint found. Starting fresh run.');
+  }
+
+  // ── 3. Process coupes with checkpoint save after each ─────────────────────
   let failed = 0;
   for (let i = 0; i < COUPES.length; i += 1) {
     const coupe = COUPES[i];
+
+    if (completedSet.has(coupe)) {
+      log(`[SKIP] ${coupe} (${i + 1}/${COUPES.length}) – already completed in this run.`);
+      continue;
+    }
+
     log(`=== Starting ${coupe} (${i + 1}/${COUPES.length}) ===`);
     try {
       await processCoupe(coupe);
       log(`FINISHED ${coupe}`);
+
+      // Mark as completed and save checkpoint immediately
+      checkpoint.completed.push(coupe);
+      completedSet.add(coupe);
+      // Remove from failed list in case it was previously failed and is now retried
+      checkpoint.failed = checkpoint.failed.filter((c) => c !== coupe);
+      saveCheckpoint(checkpoint);
     } catch (error) {
       failed += 1;
-      log(`FAILED ${coupe}: ${error.message || error}`);
+      const msg = `${coupe}: ${error.message || error}`;
+      logError('COUPE', msg);
+      log(`FAILED ${coupe}`);
+
+      if (!checkpoint.failed.includes(coupe)) {
+        checkpoint.failed.push(coupe);
+      }
+      saveCheckpoint(checkpoint);
     }
   }
 
   log(`All coupes done. Completed ${COUPES.length - failed}, failed ${failed}.`);
   if (failed > 0) {
     log('Skipping postprocess and publish due to failures.');
+    log(`Re-run the script to resume from the checkpoint and retry failed coupes.`);
     process.exitCode = 1;
     return;
   }
 
   await runPostprocessAndPublish();
   log('All steps complete.');
+
+  // Clean up checkpoint on full success so the next month starts fresh
+  try {
+    fs.unlinkSync(checkpointFile);
+    log(`[DONE] Checkpoint file removed (clean run complete).`);
+  } catch (_) {}
 }
 
 main()
   .catch((error) => {
     const msg = String(error.message || error);
-    if (msg.includes('Database connection failed')) {
+    if (msg.includes('PostgreSQL connection failed')) {
       log(`FATAL (database): ${msg}`);
       log(`Check DB connectivity to ${DB_HOST}:${DB_PORT} and confirm credentials/database name are correct.`);
+    } else if (msg.includes('Google Earth Engine')) {
+      log(`FATAL (earth engine): ${msg}`);
+      log(`Check: 1) Internet connectivity, 2) Service account key is valid, 3) Firewall rules for outbound HTTPS to earthengine.googleapis.com`);
+      log(`You can set HTTPS_PROXY env var if a proxy is required. Retry settings: EE_MAX_RETRIES=${MAX_RETRIES}, EE_INITIAL_BACKOFF_MS=${INITIAL_BACKOFF_MS}`);
+    } else if (msg.includes('GeoServer connection failed')) {
+      log(`FATAL (geoserver): ${msg}`);
+      log(`Check: 1) GEOSERVER_URL is set correctly, 2) GEOSERVER_USER/GEOSERVER_PASSWORD are valid, 3) Network access to GeoServer host.`);
     } else if (isTransientError(error)) {
       log(`FATAL (network): ${msg}`);
       log(`This appears to be a network connectivity issue to Google Earth Engine APIs.`);
@@ -717,4 +901,6 @@ main()
   })
   .finally(() => {
     logStream.end();
+    publishedStream.end();
+    errorStream.end();
   });

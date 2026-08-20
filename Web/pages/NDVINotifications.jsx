@@ -10,11 +10,26 @@ const { Option } = Select;
 
 const emptyOptions = { user_ids: [], villages: [], coupes: [], tables: [], divisions: [], months: [], statuses: ["Pending", "Resolved"] };
 
-const formatSentAt = (value, formattedValue) => {
-  if (formattedValue) return formattedValue;
-  if (!value) return "N/A";
-  const parsed = dayjs(value);
-  return parsed.isValid() ? parsed.format("DD-MM-YYYY HH:mm:ss") : String(value);
+// Convert any timestamp to IST (UTC+5:30) and display as DD-MM-YYYY HH:mm:ss
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+const toIST = (value) => {
+  if (!value) return null;
+  // Try native Date first for ISO / Unix strings
+  const d = new Date(value);
+  if (!isNaN(d.getTime())) {
+    const istDate = new Date(d.getTime() + IST_OFFSET_MS);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(istDate.getUTCDate())}-${pad(istDate.getUTCMonth() + 1)}-${istDate.getUTCFullYear()} ${pad(istDate.getUTCHours())}:${pad(istDate.getUTCMinutes())}:${pad(istDate.getUTCSeconds())}`;
+  }
+  // Fallback: already a formatted string from the DB (e.g. "03-AUG-26 07:00:10")
+  return String(value);
+};
+
+const formatSentAt = (value, _formattedValue) => {
+  // Prefer the raw DB value so we can apply IST conversion accurately
+  const result = toIST(value);
+  return result || "N/A";
 };
 
 const NDVINotifications = () => {
@@ -113,21 +128,18 @@ const NDVINotifications = () => {
       "Sr. No.": index + 1,
       "User ID": item.user_id || "N/A",
       "Subscribed Village": item.village_name || "N/A",
-      Coupe: item.coupe_name || "N/A",
       Division: item.division || "N/A",
       Range: item.range || "N/A",
       Round: item.round || "N/A",
       Beat: item.beat || "N/A",
       "Alert Village": item.village || item.village_name || "N/A",
       Month: item.month || "N/A",
-      "NDVI Table": item.table_name || "N/A",
       "Pixel ID": item.pixel_id || "N/A",
       Status: item.alert_status || "Pending",
       "Action Taken": item.action_taken || "No action taken",
       Note: item.note || "N/A",
       "Has Image": item.has_image ? "Yes" : "No",
-      "Sent At": formatSentAt(item.sent_at, item.sent_at_formatted),
-      "Raw Sent At": item.sent_at_raw || item.sent_at || "N/A",
+      "Sent At (IST)": formatSentAt(item.sent_at, item.sent_at_formatted),
       "Report Generated At": item.report_generated_at || "N/A",
     }));
     const summaryRows = monthlySummary.map((item) => ({
@@ -166,28 +178,20 @@ const NDVINotifications = () => {
   const columns = [
     { title: "User ID", dataIndex: "user_id", key: "user_id" },
     { title: "Subscribed Village", dataIndex: "village_name", key: "village_name", render: (v) => v || "N/A" },
-    { title: "Coupe", dataIndex: "coupe_name", key: "coupe_name", render: (v) => v || "N/A" },
     { title: "Division", dataIndex: "division", key: "division", render: (v) => v || "N/A" },
     { title: "Range", dataIndex: "range", key: "range", render: (v) => v || "N/A" },
     { title: "Round", dataIndex: "round", key: "round", render: (v) => v || "N/A" },
     { title: "Beat", dataIndex: "beat", key: "beat", render: (v) => v || "N/A" },
     { title: "Alert Village", dataIndex: "village", key: "village", render: (v, record) => v || record.village_name || "N/A" },
     { title: "Month", dataIndex: "month", key: "month", render: (v) => v || "N/A" },
-    { title: "NDVI Table", dataIndex: "table_name", key: "table_name", ellipsis: true },
     { title: "Pixel ID", dataIndex: "pixel_id", key: "pixel_id" },
     { title: "Status", dataIndex: "alert_status", key: "alert_status", render: (v) => <Tag color={v === "Resolved" ? "success" : "warning"}>{v || "Pending"}</Tag> },
     { title: "Action Taken", dataIndex: "action_taken", key: "action_taken", render: (v) => v || "No action taken" },
     {
-      title: "Sent At",
+      title: "Sent At (IST)",
       dataIndex: "sent_at",
       key: "sent_at",
-      render: (v, record) => (
-        <div style={{ minWidth: 190 }}>
-          <div>{formatSentAt(v, record.sent_at_formatted)}</div>
-          <div style={{ color: "#777", fontSize: 11, wordBreak: "break-all" }}>Raw: {record.sent_at_raw || v || "N/A"}</div>
-          <div style={{ color: "#999", fontSize: 10, wordBreak: "break-all" }}>API: {record.report_generated_at || "N/A"}</div>
-        </div>
-      ),
+      render: (v) => formatSentAt(v),
     },
   ];
 

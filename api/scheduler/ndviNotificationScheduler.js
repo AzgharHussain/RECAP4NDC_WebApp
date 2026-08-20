@@ -222,6 +222,18 @@ module.exports = function startNdviScheduler(admin) {
 
           } catch (err) {
 
+            const isCredentialError = err.message && (
+              err.message.includes('Invalid JWT Signature') ||
+              err.message.includes('invalid_grant') ||
+              err.message.includes('failed to fetch a valid Google OAuth2 access token')
+            );
+
+            if (isCredentialError) {
+              console.error("❌ Firebase credential error — notifications will not be sent until the service account key is regenerated.");
+              console.error("   Generate a new key at: https://console.firebase.google.com/project/recap4ndc-add07/settings/serviceaccounts/adminsdk");
+              break; // stop trying — all sends will fail with the same credential error
+            }
+
             console.error("❌ Firebase send error:", err.message);
 
             // ------------------------------------------------
