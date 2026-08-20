@@ -468,7 +468,7 @@ function validateNoDuplicateParams22(req, res, next) {
   }
 }
 try {
-  const serviceAccount = require("./routers/recap4ndc-add07-firebase-adminsdk-fbsvc-5a8fab9fe1_1967.json");
+  const serviceAccount = require("./routers/recap4ndc-add07-firebase-adminsdk-fbsvc-a7d6b597e7.json");
 
   // Validate the service account key has required fields
   if (!serviceAccount.private_key || !serviceAccount.client_email) {
@@ -506,7 +506,7 @@ try {
   console.error("❌ Firebase initialization failed:", err.message);
   console.error("   If 'Invalid JWT Signature', the service account key may be revoked.");
   console.error("   Generate a new key at: https://console.firebase.google.com/project/recap4ndc-add07/settings/serviceaccounts/adminsdk");
-  console.error("   Save it as: api/routers/recap4ndc-add07-firebase-adminsdk-fbsvc-5a8fab9fe1_1967.json");
+  console.error("   Save it as: api/routers/recap4ndc-add07-firebase-adminsdk-fbsvc-a7d6b597e7.json");
 }
 
 startNdviScheduler(admin);
