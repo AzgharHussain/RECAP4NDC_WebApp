@@ -14,6 +14,15 @@ const MAX_RETRIES = Number(process.env.EE_MAX_RETRIES || 5);
 const INITIAL_BACKOFF_MS = Number(process.env.EE_INITIAL_BACKOFF_MS || 5000);
 const BACKOFF_MULTIPLIER = Number(process.env.EE_BACKOFF_MULTIPLIER || 2);
 
+// ── Database ──────────────────────────────────────────────────────────────────
+const DB_NAME = 'recap4ndc';
+const DB_USER = 'recap4ndc_postgres';
+const DB_PASS = 'Reb@$hyd@08052026';
+const DB_HOST = 'gsdc-psql.gujarat.gov.in';
+const DB_PORT = 9999;
+const DB_SSL = false;
+const DB_CONNECT_TIMEOUT_MS = Number(process.env.DB_CONNECT_TIMEOUT_MS || 15000);
+
 // ── Proxy support ─────────────────────────────────────────────────────────────
 // The @google/earthengine client makes its own HTTPS requests and does NOT
 // respect https.globalAgent. We use global-agent which patches Node's HTTP/HTTPS
@@ -83,15 +92,6 @@ async function retryWithBackoff(fn, label, maxRetries = MAX_RETRIES) {
   }
   throw lastError;
 }
-
-// ── Database ──────────────────────────────────────────────────────────────────
-const DB_NAME = 'recap4ndc';
-const DB_USER = 'recap4ndc_postgres';
-const DB_PASS = 'Reb@$hyd@08052026';
-const DB_HOST = 'gsdc-psql.gujarat.gov.in';
-const DB_PORT = 9999;
-const DB_SSL = false;
-const DB_CONNECT_TIMEOUT_MS = Number(process.env.DB_CONNECT_TIMEOUT_MS || 15000);
 
 function createDbClient() {
   return new Client({
