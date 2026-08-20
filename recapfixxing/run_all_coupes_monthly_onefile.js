@@ -151,9 +151,12 @@ const SCALE            = Number(process.env.SCALE            || 10);
 const CHANGE_THRESHOLD = Number(process.env.CHANGE_THRESHOLD || 0.3);
 
 // ── GeoServer ─────────────────────────────────────────────────────────────────
-const GEOSERVER_URL             = process.env.GEOSERVER_URL;
-const GEOSERVER_USER            = process.env.GEOSERVER_USER;
-const GEOSERVER_PASSWORD        = process.env.GEOSERVER_PASSWORD;
+// GeoServer is optional — if GEOSERVER_URL is not set, the script will skip
+// GeoServer validation and publishing, but still process NDVI data and insert
+// results into PostgreSQL.
+const GEOSERVER_URL             = process.env.GEOSERVER_URL || '';
+const GEOSERVER_USER            = process.env.GEOSERVER_USER || '';
+const GEOSERVER_PASSWORD        = process.env.GEOSERVER_PASSWORD || '';
 const GEOSERVER_WORKSPACE       = process.env.GEOSERVER_WORKSPACE       || 'Recap4NDC';
 const GEOSERVER_STORE           = process.env.GEOSERVER_STORE           || 'Recap4NDC_Query';
 const GEOSERVER_STYLE_WORKSPACE = process.env.GEOSERVER_STYLE_WORKSPACE || 'Recap4NDC_New';
@@ -380,7 +383,8 @@ function geoserverRequest(method, requestPath, body) {
 // ── GeoServer connection check ────────────────────────────────────────────────
 async function validateGeoServerConnection() {
   if (!GEOSERVER_URL) {
-    throw new Error('GEOSERVER_URL is not set in environment. Cannot validate GeoServer connection.');
+    log('[CHECK] GeoServer SKIPPED (GEOSERVER_URL not set — publishing will be skipped)');
+    return;
   }
   try {
     // Use the GeoServer REST /about/version endpoint as a lightweight health check
@@ -773,6 +777,10 @@ END $$;
 
 // ── GeoServer publish ─────────────────────────────────────────────────────────
 async function publishToGeoserver() {
+  if (!GEOSERVER_URL) {
+    log('=== GeoServer publish SKIPPED (GEOSERVER_URL not set) ===');
+    return;
+  }
   log('=== Publishing to GeoServer ===');
   log(`Published layers list: ${publishedFile}`);
   log(`Publish errors list:   ${errorFile}`);
