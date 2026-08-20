@@ -422,12 +422,35 @@ async function setDefaultStyle(layerName) {
 // ── Earth Engine init + validation ────────────────────────────────────────────
 function initializeEarthEngine() {
   const key = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_KEY, 'utf8'));
+  console.log(`[INFO] EE service account: ${key.client_email}`);
+  console.log(`[INFO] EE project: ${key.project_id}`);
+  console.log(`[INFO] EE key file: ${SERVICE_ACCOUNT_KEY}`);
   return retryWithBackoff(() => {
     return new Promise((resolve, reject) => {
+      // Add a 60s timeout so we don't hang forever
+      const timeout = setTimeout(() => {
+        reject(new Error('EE init timed out after 60s — check proxy/network connectivity to accounts.google.com and earthengine.googleapis.com'));
+      }, 60000);
+
       ee.data.authenticateViaPrivateKey(
         key,
-        () => ee.initialize(null, null, resolve, reject),
-        reject
+        () => {
+          console.log('[INFO] EE authenticateViaPrivateKey succeeded, calling ee.initialize()...');
+          ee.initialize(null, null, () => {
+            clearTimeout(timeout);
+            console.log('[INFO] ee.initialize() succeeded');
+            resolve();
+          }, (err) => {
+            clearTimeout(timeout);
+            console.error('[ERROR] ee.initialize() failed:', err);
+            reject(err);
+          });
+        },
+        (err) => {
+          clearTimeout(timeout);
+          console.error('[ERROR] ee.data.authenticateViaPrivateKey failed:', err);
+          reject(err);
+        }
       );
     });
   }, 'EE init');
