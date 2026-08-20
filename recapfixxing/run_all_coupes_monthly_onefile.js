@@ -34,14 +34,22 @@ if (PROXY_URL) {
     process.env.GLOBAL_AGENT_HTTPS_PROXY = PROXY_URL;
     // Always exclude the PostgreSQL DB host from proxy — pg uses raw TCP binary
     // protocol; routing it through an HTTP proxy breaks the connection entirely.
+    // Also exclude Google APIs (Earth Engine, OAuth) — the corporate proxy times
+    // out on these long-lived HTTPS connections. The server has direct internet
+    // access to Google's IPs.
     const existingNoProxy = process.env.NO_PROXY || process.env.no_proxy || '';
     const dbNoProxy = `${DB_HOST},172.17.31.173`;
-    process.env.GLOBAL_AGENT_NO_PROXY = [existingNoProxy, 'localhost,127.0.0.1', dbNoProxy]
+    const googleHosts = 'googleapis.com,accounts.google.com,oauth2.googleapis.com,earthengine.googleapis.com,www.googleapis.com,storage.googleapis.com';
+    process.env.GLOBAL_AGENT_NO_PROXY = [existingNoProxy, 'localhost,127.0.0.1', dbNoProxy, googleHosts]
       .filter(Boolean).join(',');
+    // Also set standard NO_PROXY so google-auth-library (used by EE) bypasses proxy
+    process.env.NO_PROXY = process.env.GLOBAL_AGENT_NO_PROXY;
+    process.env.no_proxy = process.env.GLOBAL_AGENT_NO_PROXY;
     const globalAgent = require('global-agent');
     globalAgent.bootstrap();
     // eslint-disable-next-line no-console
     console.log(`[INFO] Using proxy (global-agent): ${PROXY_URL}`);
+    console.log(`[INFO] NO_PROXY hosts: ${process.env.GLOBAL_AGENT_NO_PROXY}`);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn(`[WARN] Proxy setup failed (global-agent): ${err.message}. Falling back to https.globalAgent.`);
@@ -425,11 +433,21 @@ function initializeEarthEngine() {
   console.log(`[INFO] EE service account: ${key.client_email}`);
   console.log(`[INFO] EE project: ${key.project_id}`);
   console.log(`[INFO] EE key file: ${SERVICE_ACCOUNT_KEY}`);
+
+  // The @google/earthengine SDK uses Node's https module internally.
+  // global-agent should bypass Google hosts via NO_PROXY, but the EE SDK
+  // also reads HTTPS_PROXY directly in some code paths. Temporarily clear
+  // ALL proxy env vars during EE init so it connects directly to Google.
+  const proxyKeys = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'GLOBAL_AGENT_HTTP_PROXY', 'GLOBAL_AGENT_HTTPS_PROXY'];
+  const savedProxy = {};
+  proxyKeys.forEach((k) => { if (process.env[k]) { savedProxy[k] = process.env[k]; delete process.env[k]; } });
+  console.log('[INFO] Temporarily cleared proxy env vars for EE init (direct connection to Google)');
+
   return retryWithBackoff(() => {
     return new Promise((resolve, reject) => {
       // Add a 60s timeout so we don't hang forever
       const timeout = setTimeout(() => {
-        reject(new Error('EE init timed out after 60s — check proxy/network connectivity to accounts.google.com and earthengine.googleapis.com'));
+        reject(new Error('EE init timed out after 60s — check direct connectivity to oauth2.googleapis.com:443 and earthengine.googleapis.com:443'));
       }, 60000);
 
       ee.data.authenticateViaPrivateKey(
@@ -439,16 +457,21 @@ function initializeEarthEngine() {
           ee.initialize(null, null, () => {
             clearTimeout(timeout);
             console.log('[INFO] ee.initialize() succeeded');
+            // Restore proxy env vars after EE init
+            Object.assign(process.env, savedProxy);
+            console.log('[INFO] Proxy env vars restored after EE init');
             resolve();
           }, (err) => {
             clearTimeout(timeout);
             console.error('[ERROR] ee.initialize() failed:', err);
+            Object.assign(process.env, savedProxy);
             reject(err);
           });
         },
         (err) => {
           clearTimeout(timeout);
           console.error('[ERROR] ee.data.authenticateViaPrivateKey failed:', err);
+          Object.assign(process.env, savedProxy);
           reject(err);
         }
       );
