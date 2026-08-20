@@ -382,10 +382,12 @@ function geoserverRequest(method, requestPath, body) {
 
 // ── GeoServer connection check ────────────────────────────────────────────────
 async function validateGeoServerConnection() {
+  log(`[DEBUG] validateGeoServerConnection called, GEOSERVER_URL="${GEOSERVER_URL}"`);
   if (!GEOSERVER_URL) {
     log('[CHECK] GeoServer SKIPPED (GEOSERVER_URL not set — publishing will be skipped)');
     return;
   }
+  log('[DEBUG] GeoServer URL is set, attempting connection...');
   try {
     // Use the GeoServer REST /about/version endpoint as a lightweight health check
     await geoserverRequest('GET', '/rest/about/version.json');
