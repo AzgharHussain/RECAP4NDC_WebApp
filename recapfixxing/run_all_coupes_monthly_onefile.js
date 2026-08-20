@@ -161,6 +161,7 @@ const GEOSERVER_WORKSPACE       = process.env.GEOSERVER_WORKSPACE       || 'Reca
 const GEOSERVER_STORE           = process.env.GEOSERVER_STORE           || 'Recap4NDC_Query';
 const GEOSERVER_STYLE_WORKSPACE = process.env.GEOSERVER_STYLE_WORKSPACE || 'Recap4NDC_New';
 const GEOSERVER_STYLE           = process.env.GEOSERVER_STYLE           || 'NDVI_CHANGE_NEW2222';
+let GEOSERVER_UNREACHABLE = false;
 
 const TASK_NAME = 'Recap NDVI Monthly Coupe Computation';
 
@@ -354,19 +355,25 @@ function geoserverRequest(method, requestPath, body) {
   if (data) headers['Content-Type'] = 'application/json';
 
   return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      request.destroy(new Error(`GeoServer request timed out after 15s: ${method} ${url.href}`));
+    }, 15000);
+
     const request = https.request({
       method,
       hostname: url.hostname,
-      port: url.port,
+      port: url.port || 443,
       path: `${url.pathname}${url.search}`,
       headers,
       rejectUnauthorized: false,
+      timeout: 15000,
     }, (response) => {
       let raw = '';
       response.on('data', (chunk) => {
         raw += chunk;
       });
       response.on('end', () => {
+        clearTimeout(timeout);
         if (response.statusCode < 200 || response.statusCode >= 300) {
           reject(new Error(`${method} ${url.href} failed: HTTP ${response.statusCode}: ${raw}`));
           return;
@@ -374,7 +381,10 @@ function geoserverRequest(method, requestPath, body) {
         resolve(raw ? JSON.parse(raw) : null);
       });
     });
-    request.on('error', reject);
+    request.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
     if (data) request.write(data);
     request.end();
   });
@@ -779,8 +789,8 @@ END $$;
 
 // ── GeoServer publish ─────────────────────────────────────────────────────────
 async function publishToGeoserver() {
-  if (!GEOSERVER_URL) {
-    log('=== GeoServer publish SKIPPED (GEOSERVER_URL not set) ===');
+  if (!GEOSERVER_URL || GEOSERVER_UNREACHABLE) {
+    log('=== GeoServer publish SKIPPED (GeoServer not available) ===');
     return;
   }
   log('=== Publishing to GeoServer ===');
@@ -870,7 +880,10 @@ async function main() {
     await validateGeoServerConnection();
   } catch (error) {
     logError('STARTUP', `GeoServer: ${error.message || error}`);
-    throw error;
+    log('[WARN] GeoServer not reachable — processing will continue but publishing will be skipped.');
+    process.env.GEOSERVER_URL = '';
+    // Update the const reference by setting a flag
+    GEOSERVER_UNREACHABLE = true;
   }
 
   log('[DEBUG] All connection checks passed, starting processing...');
