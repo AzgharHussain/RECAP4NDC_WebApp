@@ -1,18 +1,15 @@
 const path = require('path');
 const fs = require('fs');
 
-require('dotenv').config({ path: path.join(__dirname, '.env') });
-require('dotenv').config({ path: path.join(__dirname, '..', 'api', '.env') });
-
 const ee = require('@google/earthengine');
 const { Client } = require('pg');
 const { execFileSync } = require('child_process');
 const https = require('https');
 
 // ── Retry / network resilience ────────────────────────────────────────────────
-const MAX_RETRIES = Number(process.env.EE_MAX_RETRIES || 5);
-const INITIAL_BACKOFF_MS = Number(process.env.EE_INITIAL_BACKOFF_MS || 5000);
-const BACKOFF_MULTIPLIER = Number(process.env.EE_BACKOFF_MULTIPLIER || 2);
+const MAX_RETRIES = 5;
+const INITIAL_BACKOFF_MS = 5000;
+const BACKOFF_MULTIPLIER = 2;
 
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_NAME = 'recap4ndc';
@@ -21,45 +18,35 @@ const DB_PASS = 'Reb@$hyd@08052026';
 const DB_HOST = 'gsdc-psql.gujarat.gov.in';
 const DB_PORT = 9999;
 const DB_SSL = false;
-const DB_CONNECT_TIMEOUT_MS = Number(process.env.DB_CONNECT_TIMEOUT_MS || 15000);
+const DB_CONNECT_TIMEOUT_MS = 15000;
 
 // ── Proxy support ─────────────────────────────────────────────────────────────
 // The @google/earthengine client makes its own HTTPS requests and does NOT
 // respect https.globalAgent. We use global-agent which patches Node's HTTP/HTTPS
 // stack at the lowest level so ALL outbound connections go through the proxy.
-const PROXY_URL = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy || '';
+const PROXY_URL = 'http://172.16.32.1:80';
 if (PROXY_URL) {
   try {
     process.env.GLOBAL_AGENT_HTTP_PROXY = PROXY_URL;
     process.env.GLOBAL_AGENT_HTTPS_PROXY = PROXY_URL;
-    // Always exclude the PostgreSQL DB host from proxy — pg uses raw TCP binary
-    // protocol; routing it through an HTTP proxy breaks the connection entirely.
-    // Also exclude Google APIs (Earth Engine, OAuth) — the corporate proxy times
-    // out on these long-lived HTTPS connections. The server has direct internet
-    // access to Google's IPs.
-    const existingNoProxy = process.env.NO_PROXY || process.env.no_proxy || '';
+    // Always exclude the PostgreSQL DB host and Google APIs from proxy.
     const dbNoProxy = `${DB_HOST},172.17.31.173`;
     const googleHosts = 'googleapis.com,accounts.google.com,oauth2.googleapis.com,earthengine.googleapis.com,www.googleapis.com,storage.googleapis.com';
-    process.env.GLOBAL_AGENT_NO_PROXY = [existingNoProxy, 'localhost,127.0.0.1', dbNoProxy, googleHosts]
+    process.env.GLOBAL_AGENT_NO_PROXY = ['localhost,127.0.0.1', dbNoProxy, googleHosts]
       .filter(Boolean).join(',');
-    // Also set standard NO_PROXY so google-auth-library (used by EE) bypasses proxy
     process.env.NO_PROXY = process.env.GLOBAL_AGENT_NO_PROXY;
     process.env.no_proxy = process.env.GLOBAL_AGENT_NO_PROXY;
     const globalAgent = require('global-agent');
     globalAgent.bootstrap();
-    // eslint-disable-next-line no-console
     console.log(`[INFO] Using proxy (global-agent): ${PROXY_URL}`);
     console.log(`[INFO] NO_PROXY hosts: ${process.env.GLOBAL_AGENT_NO_PROXY}`);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.warn(`[WARN] Proxy setup failed (global-agent): ${err.message}. Falling back to https.globalAgent.`);
     try {
       const { HttpsProxyAgent } = require('https-proxy-agent');
       https.globalAgent = new HttpsProxyAgent(PROXY_URL);
-      // eslint-disable-next-line no-console
       console.log(`[INFO] Using proxy (fallback https.globalAgent): ${PROXY_URL}`);
     } catch (err2) {
-      // eslint-disable-next-line no-console
       console.warn(`[WARN] Fallback proxy setup also failed: ${err2.message}`);
     }
   }
@@ -108,7 +95,7 @@ function createDbClient() {
     database: DB_NAME,
     user: DB_USER,
     password: DB_PASS,
-    ssl: DB_SSL ? { rejectUnauthorized: String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false' } : false,
+    ssl: DB_SSL ? { rejectUnauthorized: false } : false,
     connectionTimeoutMillis: DB_CONNECT_TIMEOUT_MS,
     keepAlive: true,
     keepAliveInitialDelayMillis: 30000,
@@ -129,15 +116,13 @@ async function validateDbConnection() {
 }
 
 // ── Earth Engine service-account key ─────────────────────────────────────────
-// Prefer an explicit env var; otherwise auto-detect any giz-gujarat-*.json
-// key file in this directory so key rotation doesn't require a code change.
+// Auto-detect any giz-gujarat-*.json key file in this directory.
 function resolveServiceAccountKey() {
-  if (process.env.EE_SERVICE_ACCOUNT_KEY) return process.env.EE_SERVICE_ACCOUNT_KEY;
   const candidates = fs.readdirSync(__dirname)
     .filter(f => /^giz-gujarat-.*\.json$/.test(f))
     .sort();
   if (candidates.length === 0) {
-    throw new Error(`No Earth Engine service account key found. Set EE_SERVICE_ACCOUNT_KEY or place a giz-gujarat-*.json file in ${__dirname}`);
+    throw new Error(`No Earth Engine service account key found. Place a giz-gujarat-*.json file in ${__dirname}`);
   }
   if (candidates.length > 1) {
     console.warn(`[WARN] Multiple EE key files found (${candidates.join(', ')}); using ${candidates[candidates.length - 1]}. Remove old keys to avoid ambiguity.`);
@@ -147,20 +132,20 @@ function resolveServiceAccountKey() {
 const SERVICE_ACCOUNT_KEY = resolveServiceAccountKey();
 
 // ── Computation parameters ────────────────────────────────────────────────────
-const SCALE            = Number(process.env.SCALE            || 10);
-const CHANGE_THRESHOLD = Number(process.env.CHANGE_THRESHOLD || 0.3);
+const SCALE            = 10;
+const CHANGE_THRESHOLD = 0.3;
 
 // ── GeoServer ─────────────────────────────────────────────────────────────────
 // GeoServer is optional — if GEOSERVER_URL is not set, the script will skip
 // GeoServer validation and publishing, but still process NDVI data and insert
 // results into PostgreSQL.
-const GEOSERVER_URL             = process.env.GEOSERVER_URL || 'https://fmps.gujarat.gov.in/geoserver';
-const GEOSERVER_USER            = process.env.GEOSERVER_USER || 'admin';
-const GEOSERVER_PASSWORD        = process.env.GEOSERVER_PASSWORD || 'geoserver';
-const GEOSERVER_WORKSPACE       = process.env.GEOSERVER_WORKSPACE       || 'Recap4NDC';
-const GEOSERVER_STORE           = process.env.GEOSERVER_STORE           || 'Recap4NDC_Query';
-const GEOSERVER_STYLE_WORKSPACE = process.env.GEOSERVER_STYLE_WORKSPACE || 'Recap4NDC_New';
-const GEOSERVER_STYLE           = process.env.GEOSERVER_STYLE           || 'NDVI_CHANGE_NEW2222';
+const GEOSERVER_URL             = 'https://fmps.gujarat.gov.in/geoserver';
+const GEOSERVER_USER            =  'admin';
+const GEOSERVER_PASSWORD        =  'Geo@$ecure#%26';
+const GEOSERVER_WORKSPACE       ='Recap4NDC';
+const GEOSERVER_STORE           = 'Recap4NDC_Query';
+const GEOSERVER_STYLE_WORKSPACE = 'Recap4NDC_New';
+const GEOSERVER_STYLE           = 'NDVI_CHANGE_NEW2222';
 let GEOSERVER_UNREACHABLE = false;
 
 const TASK_NAME = 'Recap NDVI Monthly Coupe Computation';
@@ -881,8 +866,6 @@ async function main() {
   } catch (error) {
     logError('STARTUP', `GeoServer: ${error.message || error}`);
     log('[WARN] GeoServer not reachable — processing will continue but publishing will be skipped.');
-    process.env.GEOSERVER_URL = '';
-    // Update the const reference by setting a flag
     GEOSERVER_UNREACHABLE = true;
   }
 
