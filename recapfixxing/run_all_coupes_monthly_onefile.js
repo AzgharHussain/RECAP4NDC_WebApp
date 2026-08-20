@@ -23,7 +23,12 @@ if (PROXY_URL) {
   try {
     process.env.GLOBAL_AGENT_HTTP_PROXY = PROXY_URL;
     process.env.GLOBAL_AGENT_HTTPS_PROXY = PROXY_URL;
-    process.env.GLOBAL_AGENT_NO_PROXY = process.env.NO_PROXY || process.env.no_proxy || 'localhost,127.0.0.1';
+    // Always exclude the PostgreSQL DB host from proxy — pg uses raw TCP binary
+    // protocol; routing it through an HTTP proxy breaks the connection entirely.
+    const existingNoProxy = process.env.NO_PROXY || process.env.no_proxy || '';
+    const dbNoProxy = `${DB_HOST},172.17.31.173`;
+    process.env.GLOBAL_AGENT_NO_PROXY = [existingNoProxy, 'localhost,127.0.0.1', dbNoProxy]
+      .filter(Boolean).join(',');
     const globalAgent = require('global-agent');
     globalAgent.bootstrap();
     // eslint-disable-next-line no-console
