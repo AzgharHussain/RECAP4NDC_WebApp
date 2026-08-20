@@ -65,6 +65,15 @@ async function createNotificationTables() {
       )
     `);
 
+    // Add division/range/round/beat columns if they don't exist yet
+    const extraCols = ['division', 'range', 'round', 'beat'];
+    for (const col of extraCols) {
+      await client.query(`
+        ALTER TABLE public.ndvi_notification_users
+        ADD COLUMN IF NOT EXISTS ${col} TEXT
+      `);
+    }
+
     // notification log table
     await client.query(`
       CREATE TABLE IF NOT EXISTS public.ndvi_notification_log (
@@ -352,6 +361,12 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
       ""
     ).trim();
 
+    // Extract division/range/round/beat from JWT (set at login from forest API)
+    const division = (req.user?.division || req.body.division || "").trim();
+    const range    = (req.user?.range    || req.body.range    || "").trim();
+    const round    = (req.user?.round    || req.body.round    || "").trim();
+    const beat     = (req.user?.beat     || req.body.beat     || "").trim();
+
     if (!firebase_token || !user_id || !village_name || !coupe_name) {
       return res.status(400).json({
         success: false,
@@ -362,32 +377,32 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
     }
 
     // ------------------------------------------------
-    // 1️⃣ Create table if not exists
+    // 1️⃣ Ensure columns exist (idempotent)
     // ------------------------------------------------
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS public.ndvi_notification_users (
-        user_id TEXT PRIMARY KEY,
-        firebase_token TEXT,
-        village_name TEXT,
-        coupe_name TEXT
-      )
-    `);
+    const extraCols = ['division', 'range', 'round', 'beat'];
+    for (const col of extraCols) {
+      await client.query(`ALTER TABLE public.ndvi_notification_users ADD COLUMN IF NOT EXISTS ${col} TEXT`);
+    }
 
     // ------------------------------------------------
-    // 2️⃣ Insert or update user subscription
+    // 2️⃣ Insert or update user subscription (with division/range/round/beat)
     // ------------------------------------------------
     await client.query(
       `
       INSERT INTO public.ndvi_notification_users
-      (user_id, firebase_token, village_name, coupe_name)
-      VALUES ($1,$2,$3,$4)
+        (user_id, firebase_token, village_name, coupe_name, division, range, round, beat)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       ON CONFLICT (user_id)
       DO UPDATE SET
         firebase_token = EXCLUDED.firebase_token,
-        village_name = EXCLUDED.village_name,
-        coupe_name = EXCLUDED.coupe_name
+        village_name   = EXCLUDED.village_name,
+        coupe_name     = EXCLUDED.coupe_name,
+        division       = COALESCE(NULLIF(EXCLUDED.division, ''), ndvi_notification_users.division),
+        range          = COALESCE(NULLIF(EXCLUDED.range,    ''), ndvi_notification_users.range),
+        round          = COALESCE(NULLIF(EXCLUDED.round,    ''), ndvi_notification_users.round),
+        beat           = COALESCE(NULLIF(EXCLUDED.beat,     ''), ndvi_notification_users.beat)
       `,
-      [user_id, firebase_token, village_name, coupe_name]
+      [user_id, firebase_token, village_name, coupe_name, division, range, round, beat]
     );
 
     logFromRequest(req, {
@@ -934,6 +949,10 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         l.id,
         l.user_id,
         u.village_name,
+        u.division,
+        u.range,
+        u.round,
+        u.beat,
         l.table_name,
         l.pixel_id,
         COALESCE(l.sent_at, CURRENT_TIMESTAMP) AS sent_at,
@@ -996,13 +1015,10 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         console.log(`[ndvi-notification-report] Table "${sourceTable}" columns:`, [...sourceColumns.keys()]);
 
         // Build SELECT clause dynamically — quote all identifiers to handle
-        // reserved words like "range" and "round"
+        // reserved words. NOTE: division/range/round/beat come from ndvi_notification_users
+        // (stored at login time), NOT from the NDVI change table.
         const colOrNull = (name) => sourceColumns.has(name) ? `"${name}"` : 'NULL::text';
         const selectParts = [
-          colOrNull('division') + ' AS division',
-          colOrNull('range') + ' AS range',
-          colOrNull('round') + ' AS round',
-          colOrNull('beat') + ' AS beat',
           colOrNull('village') + ' AS village',
           colOrNull('note') + ' AS note',
           sourceColumns.has('image_data') ? '("image_data" IS NOT NULL) AS has_table_image' : 'false AS has_table_image',
@@ -1092,10 +1108,11 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         sent_at_formatted: row.sent_at_formatted || new Date(sentAtFallback).toLocaleString('en-GB', { hour12: false }),
         report_generated_at: reportGeneratedAt,
         month: getMonthFromNdviTableName(row.table_name),
-        division: sourceRecord?.division || getDivisionFromNdviTableName(row.table_name),
-        range: sourceRecord?.range || 'N/A',
-        round: sourceRecord?.round || 'N/A',
-        beat: sourceRecord?.beat || 'N/A',
+        // division/range/round/beat are read directly from ndvi_notification_users (joined in reportQuery)
+        division: row.division || getDivisionFromNdviTableName(row.table_name),
+        range:    row.range    || 'N/A',
+        round:    row.round    || 'N/A',
+        beat:     row.beat     || 'N/A',
         village: sourceRecord?.village || row.village_name || 'N/A',
         alert_status: alertStatus,
         action_taken: actionTaken,
