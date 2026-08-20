@@ -154,9 +154,9 @@ const CHANGE_THRESHOLD = Number(process.env.CHANGE_THRESHOLD || 0.3);
 // GeoServer is optional — if GEOSERVER_URL is not set, the script will skip
 // GeoServer validation and publishing, but still process NDVI data and insert
 // results into PostgreSQL.
-const GEOSERVER_URL             = process.env.GEOSERVER_URL || '';
-const GEOSERVER_USER            = process.env.GEOSERVER_USER || '';
-const GEOSERVER_PASSWORD        = process.env.GEOSERVER_PASSWORD || '';
+const GEOSERVER_URL             = process.env.GEOSERVER_URL || 'https://fmps.gujarat.gov.in/geoserver';
+const GEOSERVER_USER            = process.env.GEOSERVER_USER || 'admin';
+const GEOSERVER_PASSWORD        = process.env.GEOSERVER_PASSWORD || 'geoserver';
 const GEOSERVER_WORKSPACE       = process.env.GEOSERVER_WORKSPACE       || 'Recap4NDC';
 const GEOSERVER_STORE           = process.env.GEOSERVER_STORE           || 'Recap4NDC_Query';
 const GEOSERVER_STYLE_WORKSPACE = process.env.GEOSERVER_STYLE_WORKSPACE || 'Recap4NDC_New';
