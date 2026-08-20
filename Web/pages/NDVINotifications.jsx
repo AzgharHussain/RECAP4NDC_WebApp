@@ -58,7 +58,6 @@ const NDVINotifications = () => {
         id: item.id,
         user_id: item.user_id,
         village_name: item.village_name,
-        coupe_name: item.coupe_name,
         division: item.division,
         range: item.range,
         round: item.round,

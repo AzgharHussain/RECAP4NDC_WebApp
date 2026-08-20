@@ -934,7 +934,6 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         l.id,
         l.user_id,
         u.village_name,
-        u.coupe_name,
         l.table_name,
         l.pixel_id,
         COALESCE(l.sent_at, CURRENT_TIMESTAMP) AS sent_at,
@@ -1026,16 +1025,33 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
           continue;
         }
 
-        // Use IN clause with individual parameters for reliability
-        // (ANY($1) with text[] can sometimes have type inference issues)
+        // Use IN clause with individual parameters for reliability.
+        // Try text match first; if nothing found try integer cast (handles numeric pixle_id stored as text).
         const placeholders = pixelIds.map((_, i) => `$${i + 1}`).join(', ');
-        const sourceRows = await client.query(`
+        let sourceRows = await client.query(`
           SELECT
             ${idCast} AS pixel_id,
             ${selectParts.join(',\n            ')}
           FROM public."${sourceTable}"
           WHERE ${idCast} IN (${placeholders})
         `, pixelIds);
+
+        // Fallback: try numeric cast for integer pixle_id columns
+        if (sourceRows.rows.length === 0 && hasPxCol) {
+          const numericIds = pixelIds.map(Number).filter(n => !Number.isNaN(n));
+          if (numericIds.length > 0) {
+            const numPlaceholders = numericIds.map((_, i) => `$${i + 1}`).join(', ');
+            try {
+              sourceRows = await client.query(`
+                SELECT
+                  "pixle_id"::text AS pixel_id,
+                  ${selectParts.join(',\n                  ')}
+                FROM public."${sourceTable}"
+                WHERE "pixle_id" IN (${numPlaceholders})
+              `, numericIds);
+            } catch (_) { /* column type may not support numeric comparison */ }
+          }
+        }
 
         console.log(`[ndvi-notification-report] Source rows for "${sourceTable}": ${sourceRows.rows.length} (searched ${pixelIds.length} pixel IDs)`);
         if (sourceRows.rows.length > 0) {
