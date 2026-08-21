@@ -923,8 +923,77 @@ const buildNdviActionText = (record) => {
   return actions.length ? actions.join(', ') : 'No action taken';
 };
 
+/**
+ * Cleans up the default auto-generated note "NDVI decrease less than -0.3"
+ * from all NDVI Change tables, setting it to NULL.
+ * Also cleans up any note column in ndvi_notification_log if it exists.
+ * Runs once per server startup.
+ */
+let defaultNoteCleanupDone = false;
+async function cleanupDefaultNotes() {
+  if (defaultNoteCleanupDone) return;
+  defaultNoteCleanupDone = true;
+  try {
+    // 1. Clean up NDVI Change tables
+    const tables = await client.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+        AND table_name LIKE '%_NDVI_Change'
+      ORDER BY table_name
+    `);
+    let cleanedTables = 0;
+    for (const { table_name } of tables.rows) {
+      try {
+        // Check if the table has a note column
+        const colCheck = await client.query(`
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = $1 AND column_name = 'note'
+        `, [table_name]);
+        if (colCheck.rows.length === 0) continue;
+
+        const result = await client.query(`
+          UPDATE public."${table_name}"
+          SET note = NULL
+          WHERE btrim(note) = $1
+        `, [DEFAULT_NOTE_TEXT]);
+        if (result.rowCount > 0) {
+          cleanedTables += 1;
+        }
+      } catch (err) {
+        // Skip tables that error out
+      }
+    }
+    if (cleanedTables > 0) {
+      console.log(`[notifications] Cleaned default note from ${cleanedTables} NDVI Change table(s).`);
+    }
+
+    // 2. Clean up ndvi_notification_log if it has a note column
+    const logColCheck = await client.query(`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'ndvi_notification_log' AND column_name = 'note'
+    `);
+    if (logColCheck.rows.length > 0) {
+      const logResult = await client.query(`
+        UPDATE public.ndvi_notification_log
+        SET note = NULL
+        WHERE btrim(note) = $1
+      `, [DEFAULT_NOTE_TEXT]);
+      if (logResult.rowCount > 0) {
+        console.log(`[notifications] Cleaned default note from ${logResult.rowCount} ndvi_notification_log row(s).`);
+      }
+    }
+  } catch (err) {
+    console.error('[notifications] Failed to cleanup default notes:', err.message);
+  }
+}
+
 router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
   try {
+    // Clean up default notes on first report fetch after server startup
+    await cleanupDefaultNotes();
+
     await client.query(`
       ALTER TABLE public.ndvi_notification_log
       ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

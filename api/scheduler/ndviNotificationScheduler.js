@@ -61,6 +61,45 @@ async function ensureNotificationLogPixelIdText(client) {
   `);
 }
 
+const DEFAULT_NOTE_TEXT = 'NDVI decrease less than -0.3';
+
+/**
+ * Clean up the default auto-generated note from all NDVI Change tables.
+ * Sets note = NULL where note = 'NDVI decrease less than -0.3'.
+ * Runs once per scheduler tick (idempotent — no-op if already clean).
+ */
+async function cleanupDefaultNotes(client) {
+  try {
+    const tables = await queryWithRetry(client, `
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+        AND table_name LIKE '%_NDVI_Change'
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    for (const { table_name } of tables) {
+      try {
+        // Check if the table has a note column
+        const colCheck = await queryWithRetry(client, `
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = $1 AND column_name = 'note'
+        `, { bind: [table_name], type: sequelize.QueryTypes.SELECT });
+
+        if (!colCheck.length) continue;
+
+        await queryWithRetry(client, `
+          UPDATE public."${table_name}"
+          SET note = NULL
+          WHERE btrim(note) = $1
+        `, { bind: [DEFAULT_NOTE_TEXT] });
+      } catch (_) {}
+    }
+  } catch (err) {
+    console.error('[ndviScheduler] Failed to cleanup default notes:', err.message);
+  }
+}
+
 module.exports = function startNdviScheduler(admin) {
 
   cron.schedule("*/1000 * * * *", async () => {
@@ -70,6 +109,9 @@ module.exports = function startNdviScheduler(admin) {
 
       const client = sequelize.getQueryInterface().sequelize;
       await ensureNotificationLogPixelIdText(client);
+
+      // Clean up default notes in NDVI Change tables
+      await cleanupDefaultNotes(client);
 
       // ------------------------------------------------
       // 1️⃣ Get NDVI tables
