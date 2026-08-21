@@ -1073,6 +1073,7 @@ input[type="checkbox"]:focus {
   width: 100%;
   height: 4px;
   -webkit-appearance: none;
+  appearance: none;
   background: #bdc3c7;
   border-radius: 2px;
   outline: none;

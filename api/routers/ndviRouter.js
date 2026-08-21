@@ -593,8 +593,10 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
 
 // GET: Get single NDVI record by ID
 router.get('/ndvi-change', verifyJwt, async (req, res) => {
-    const { NdvicoupeName } = req.body;
-    const { id } = req.body;
+    const { NdvicoupeName } = req.query;
+    const { id } = req.query;
+
+    console.log('[GET /ndvi-change] NdvicoupeName:', NdvicoupeName, 'id:', id);
 
     if (!NdvicoupeName) {
         return res.status(400).json({
@@ -620,8 +622,22 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
     }
 
     try {
+        // Build column list dynamically, excluding image_data (images are in MongoDB)
+        const colInfo = await sequelize.query(`
+          SELECT column_name
+          FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = :tableName
+          ORDER BY ordinal_position
+        `, { replacements: { tableName: NdvicoupeName }, type: sequelize.QueryTypes.SELECT });
+
+        const cols = colInfo
+          .map(c => c.column_name)
+          .filter(c => c !== 'image_data')
+          .map(c => `"${c}"`)
+          .join(', ');
+
         const selectQuery = `
-           SELECT * EXCLUDE (image_data)
+            SELECT ${cols}
             FROM public."${NdvicoupeName}"
             WHERE pixle_id::text = :id;
         `;
@@ -637,12 +653,17 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
             });
         }
 
-        // Fetch image from MongoDB
+        // Fetch image from MongoDB only (not from PostgreSQL table)
+        const candidates = getRecordIdCandidates(id);
+        console.log('[GET /ndvi-change] image candidates for recordId:', candidates);
+
         const mongoImage = await MongoImage.findOne({
           sourceType: 'ndvi',
           coupeName: NdvicoupeName,
-          recordId: { $in: getRecordIdCandidates(id) }
+          recordId: { $in: candidates }
         }).lean();
+
+        console.log('[GET /ndvi-change] mongoImage found:', !!mongoImage, mongoImage ? `recordId: ${mongoImage.recordId}, type: ${typeof mongoImage.recordId}` : 'none');
 
         results[0].image_data = mongoImage ? mongoImage.imageData : null;
         results[0].image_type = mongoImage ? mongoImage.imageType : null;

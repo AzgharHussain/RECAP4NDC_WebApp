@@ -908,10 +908,11 @@ const DEFAULT_NOTE_TEXT = 'NDVI decrease less than -0.3';
 
 const isRealNote = (note) => {
   if (!note) return false;
-  const trimmed = String(note).trim();
-  if (!trimmed) return false;
+  // Normalize: lowercase, trim, collapse multiple spaces
+  const normalized = String(note).toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!normalized) return false;
   // Ignore the default auto-generated note
-  if (trimmed.toLowerCase() === DEFAULT_NOTE_TEXT.toLowerCase()) return false;
+  if (normalized === DEFAULT_NOTE_TEXT.toLowerCase()) return false;
   return true;
 };
 
@@ -920,6 +921,11 @@ const buildNdviActionText = (record) => {
   if (record?.status === true || record?.status === 'true') actions.push('Status updated');
   if (isRealNote(record?.note)) actions.push('Note added');
   if (record?.image_data) actions.push('Image uploaded');
+  // Debug: log what we received for this pixel
+  if (record?.note !== undefined) {
+    const raw = String(record.note);
+    console.log('[buildNdviActionText] note:', JSON.stringify(record.note), 'len:', raw.length, 'isRealNote:', isRealNote(record.note));
+  }
   return actions.length ? actions.join(', ') : 'No action taken';
 };
 
@@ -1100,8 +1106,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         const colOrNull = (name) => sourceColumns.has(name) ? `"${name}"` : 'NULL::text';
         const selectParts = [
           colOrNull('village') + ' AS village',
-          colOrNull('note') + ' AS note',
-          sourceColumns.has('image_data') ? '("image_data" IS NOT NULL) AS has_table_image' : 'false AS has_table_image',
+          sourceColumns.has('note') ? `CASE WHEN btrim("note") = 'NDVI decrease less than -0.3' THEN NULL ELSE "note" END AS note` : 'NULL::text AS note',
           sourceColumns.has('status') ? '"status" AS status' : 'NULL::text AS status',
           sourceColumns.has('latitude') ? '"latitude" AS latitude' : 'NULL::text AS latitude',
           sourceColumns.has('longitude') ? '"longitude" AS longitude' : 'NULL::text AS longitude',
@@ -1167,7 +1172,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         const imageIds = new Set(mongoImages.map(img => String(img.recordId)));
         const recordMap = new Map(sourceRows.rows.map(row => [String(row.pixel_id), {
           ...row,
-          image_data: row.has_table_image || imageIds.has(String(row.pixel_id))
+          // Only count as having an image if it exists in MongoDB
+          image_data: imageIds.has(String(row.pixel_id))
         }]));
         tableRecords.set(sourceTable, recordMap);
       } catch (err) {
@@ -1180,8 +1186,12 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       const sourceRecord = tableRecords.get(row.table_name)?.get(String(row.pixel_id));
       if (!sourceRecord) {
       }
-      const actionTaken = buildNdviActionText(sourceRecord);
-      const alertStatus = actionTaken === 'No action taken' ? 'Pending' : 'Resolved';
+      // Only "Resolved" when there is a real note AND an image
+      const hasRealNote = isRealNote(sourceRecord?.note);
+      const hasImage = !!sourceRecord?.image_data;
+      const alertStatus = (hasRealNote && hasImage) ? 'Resolved' : 'Pending';
+      // If Pending, force "No action taken" regardless of status field
+      const actionTaken = alertStatus === 'Pending' ? 'No action taken' : buildNdviActionText(sourceRecord);
       const sentAtFallback = row.sent_at || row.sent_at_raw || getDateFromNdviTableName(row.table_name) || reportGeneratedAt;
       return {
         ...row,

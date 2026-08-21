@@ -268,12 +268,19 @@ const NDVINotifications = () => {
     if (record.table_name && record.pixel_id) {
       setDetailImageLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/ndvi-change`, {
-          method: "GET",
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ NdvicoupeName: record.table_name, id: record.pixel_id }),
+        const params = new URLSearchParams({
+          NdvicoupeName: record.table_name,
+          id: String(record.pixel_id),
         });
+        const url = `${API_BASE_URL}/api/ndvi-change?${params}`;
+        console.log("[showDetails] Fetching image from:", url);
+        const res = await fetch(url, {
+          method: "GET",
+          headers: { ...getAuthHeaders() },
+        });
+        console.log("[showDetails] Response status:", res.status);
         const json = await res.json();
+        console.log("[showDetails] Response:", json.success, json.data?.length, json.data?.[0]?.image_data ? "has image" : "no image", json.message);
         if (json.success && json.data && json.data[0] && json.data[0].image_data) {
           setDetailImageUrl(`data:${json.data[0].image_type || "image/jpeg"};base64,${json.data[0].image_data}`);
         }
@@ -380,7 +387,9 @@ const NDVINotifications = () => {
               onChange={(dates) => setFilters((p) => ({ ...p, dates }))}
             />
           </Col>
-          <Col xs={24} md={8} lg={2}>
+        </Row>
+        <Row gutter={[12, 12]} style={{ marginTop: 12 }} justify="end">
+          <Col xs={24} md={8} lg={4} style={{ textAlign: "right" }}>
             <Space>
               <Button icon={<SearchOutlined />} type="primary" onClick={() => fetchReport()}>{t.filter}</Button>
               <Button icon={<ReloadOutlined />} onClick={clearFilters}>{t.clear}</Button>
@@ -423,12 +432,23 @@ const NDVINotifications = () => {
               {detailImageLoading ? (
                 <p>{t.loadingImage}</p>
               ) : detailImageUrl ? (
-                <Image
-                  src={detailImageUrl}
-                  alt="NDVI Alert"
-                  style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }}
-                  fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                />
+                <div>
+                  <Image
+                    src={detailImageUrl}
+                    alt="NDVI Alert"
+                    style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }}
+                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                  />
+                  <div style={{ marginTop: 8 }}>
+                    <Button
+                      type="link"
+                      icon={<EyeOutlined />}
+                      onClick={() => window.open(detailImageUrl, "_blank")}
+                    >
+                      View Full Image
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <p>{t.imageNotAvailable}</p>
               )}
