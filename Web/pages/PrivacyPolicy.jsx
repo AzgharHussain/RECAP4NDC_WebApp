@@ -19,7 +19,7 @@ function PrivacyPolicy() {
           {isGu ? 'ગોપનીયતા નીતિ' : 'PRIVACY POLICY'}
         </h1>
         <h2 className="legal-subtitle">
-          {isGu ? 'FMPS (વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ)' : 'FMPS (Forest Monitoring & Patrolling System)'}
+          {isGu ? 'FMPS (વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ)' : 'FMPS (Forest Monitoring and Patrolling System)'}
         </h2>
         <p className="legal-updated">
           {isGu ? 'છેલ્લે અપડેટ: 20 જુલાઈ 2026' : 'Last Updated: 20 July 2026'}
@@ -27,11 +27,11 @@ function PrivacyPolicy() {
 
         <p>{isGu
           ? 'FMPS (વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ) ગુજરાત વન વિભાગ માટે RECAP4NDC પ્રોજેક્ટ અંગે વિકસાવવામાં આવેલ છે, જે Deutsche Gesellschaft für Internationale Zusammenarbeit (GIZ) GmbH દ્વારા અમલમાં મૂકવામાં આવ્યો છે. આ એપ્લિકેશન સરકારી વન પેટ્રોલિંગ, મોનિટરિંગ, સંરક્ષણ અને અમલીકરણ પ્રવૃત્તિઓને ટેકો આપવા માટે ગુજરાત વન વિભાગ દ્વારા સંચાલિત અને જાળવવામાં આવે છે.'
-          : 'The FMPS (Forest Monitoring & Patrolling System) is developed for the Gujarat Forest Department under the RECAP4NDC Project, implemented by Deutsche Gesellschaft für Internationale Zusammenarbeit (GIZ) GmbH. The application is managed and maintained by the Gujarat Forest Department to support official forest patrolling, monitoring, conservation, and enforcement activities.'}
+          : 'The FMPS (Forest Monitoring and Patrolling System) is developed for the Gujarat Forest Department under the RECAP4NDC Project, implemented by Deutsche Gesellschaft für Internationale Zusammenarbeit (GIZ) GmbH. The application is managed and maintained by the Gujarat Forest Department to support official forest patrolling, monitoring, conservation, and enforcement activities.'}
         </p>
         <p>{isGu
           ? 'ગુજરાત વન વિભાગ તમામ અધિકૃત વપરાશકર્તાઓની ગોપનીયતા અને સુરક્ષા પ્રતિ પ્રતિબદ્ધ છે. આ ગોપનીયતા નીતિ સમજાવે છે કે FMPS ઉપયોગ કરતી વખતે માહિતી કેવી રીતે એકત્રિત, ઉપયોગ, સંગ્રહ, જાહેર અને સુરક્ષિત કરવામાં આવે છે.'
-          : 'The Gujarat Forest Department is committed to protecting the privacy and security of all authorized users. This Privacy Policy explains how information is collected, used, stored, disclosed, and safeguarded when you access and use the FMPS (Forest Monitoring & Patrolling System).'}
+          : 'The Gujarat Forest Department is committed to protecting the privacy and security of all authorized users. This Privacy Policy explains how information is collected, used, stored, disclosed, and safeguarded when you access and use the FMPS (Forest Monitoring and Patrolling System).'}
         </p>
         <p>{isGu
           ? 'FMPS એક મોબાઇલ એપ્લિકેશન છે જે વન પેટ્રોલિંગ અને મોનિટરિંગ પ્રવૃત્તિઓને ટેકો આપવા માટે વિકસાવવામાં આવ્યું છે. આ એપ અધિકૃત વન કર્મચારીઓને પેટ્રોલિંગ પ્રવૃત્તિઓ નોંધવા, ડિજિટલ પેટ્રોલિંગ રેકોર્ડ જાળવવા, કૂપ સીમા અને પેટ્રોલિંગ રુટ જોવા, જિઓ-ટેગ ફોટો કેપ્ચર કરવા અને વન આવરણમાં ફેરફાર જોવા માટે સક્ષમ બનાવે છે.'
@@ -41,7 +41,7 @@ function PrivacyPolicy() {
         <h3>1. {isGu ? 'વિકાસકની માહિતી' : 'Developer Information'}</h3>
         <p>
           {isGu ? 'સંસ્થા: ગુજરાત વન વિભાગ' : 'Organization: Gujarat Forest Department'}<br />
-          {isGu ? 'પ્રોજેક્ટ: FMPS (વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ)' : 'Project:– FMPS (Forest Monitoring & Patrolling System)'}<br />
+          {isGu ? 'પ્રોજેક્ટ: FMPS (વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ)' : 'Project:– FMPS (Forest Monitoring and Patrolling System)'}<br />
           Email: gujfdp@gmail.com
         </p>
 
@@ -130,14 +130,14 @@ function PrivacyPolicy() {
         <p>{isGu ? 'આ સેવયો લાગુ ગોપનીયતા અને સુરક્ષા જરૂરિયાતો અનવયે ફક્ત એપ્લિકેશન ચલાવવા માટે જરૂરી ઉપયોગમાં ડેટા પ્રોસેસ કરે છે.' : 'These services process data only as required for operating the application and in accordance with applicable privacy and security requirements.'}</p>
 
         <h3>8. {isGu ? 'બાળકોની ગોપનીયતા' : "Children's Privacy"}</h3>
-        <p>{isGu ? 'FMPS ફક્ત અધિકૃત સરકારી અધિકારીઓ અને વન કર્મચારીઓ માટે છે.' : 'The FMPS (Forest Monitoring & Patrolling System) is intended exclusively for authorized government officials, forest personnel, and other authorized users.'}</p>
+        <p>{isGu ? 'FMPS ફક્ત અધિકૃત સરકારી અધિકારીઓ અને વન કર્મચારીઓ માટે છે.' : 'The FMPS (Forest Monitoring and Patrolling System) is intended exclusively for authorized government officials, forest personnel, and other authorized users.'}</p>
         <p>{isGu ? 'આ 18 વર્ષથી ોછીની વ્યક્તિઓ માટે ઊદ્દેશાયેલ નથી, અને એપ્લિકેશન બાળકો પાસેથી જાણી બુઝીને માહિતી એકત્રિત કરતું નથી.' : 'It is not intended for individuals under 18 years of age, and the application does not knowingly collect information from children.'}</p>
 
         <h3>9. {isGu ? 'અમગ્ને સંપર્ક કરો' : 'Contact Us'}</h3>
         <p>{isGu ? 'આ ગોપનીયતા નીતિ અંગે પ્રશ્નો માટે:' : 'For questions regarding this Privacy Policy or data protection practices, please contact:'}</p>
         <p>
           {isGu ? 'ગુજરાત વન વિભાગ' : 'Gujarat Forest Department'}<br />
-          {isGu ? '– FMPS (વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ)' : '– FMPS (Forest Monitoring & Patrolling System)'}<br />
+          {isGu ? '– FMPS (વન મોનિટરિંગ અને પેટ્રોલિંગ સિસ્ટમ)' : '– FMPS (Forest Monitoring and Patrolling System)'}<br />
           Email: gujfdp@gmail.com
         </p>
 

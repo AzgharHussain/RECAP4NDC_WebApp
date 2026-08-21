@@ -262,7 +262,10 @@ const NDVINotifications = () => {
     setDetailRecord(record);
     setDetailModalOpen(true);
     setDetailImageUrl(null);
-    if (record.has_image && record.table_name && record.pixel_id) {
+    setDetailImageLoading(false);
+    // Always attempt to fetch the image if we have table_name and pixel_id,
+    // even if has_image is false (the flag may be stale).
+    if (record.table_name && record.pixel_id) {
       setDetailImageLoading(true);
       try {
         const res = await fetch(`${API_BASE_URL}/api/ndvi-change`, {
@@ -307,6 +310,19 @@ const NDVINotifications = () => {
       render: (v) => <Tag color={v === "Resolved" ? "success" : "warning"}>{v || t.pending}</Tag>,
     },
     { title: t.actionTaken, dataIndex: "action_taken", key: "action_taken", render: (v) => v || t.noActionTaken },
+    {
+      title: t.hasImage,
+      dataIndex: "has_image",
+      key: "has_image",
+      render: (hasImage, record) =>
+        hasImage ? (
+          <Button type="link" style={{ padding: 0 }} onClick={() => showDetails(record)}>
+            {t.yes}
+          </Button>
+        ) : (
+          <Tag>{t.no}</Tag>
+        ),
+    },
     {
       title: t.sentAt,
       dataIndex: "sent_at",
@@ -402,22 +418,21 @@ const NDVINotifications = () => {
       >
         {detailRecord && (
           <div>
-            {detailRecord.has_image && (
-              <div style={{ marginBottom: 16, textAlign: "center" }}>
-                {detailImageLoading ? (
-                  <p>{t.loadingImage}</p>
-                ) : detailImageUrl ? (
-                  <Image
-                    src={detailImageUrl}
-                    alt="NDVI Alert"
-                    style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }}
-                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                  />
-                ) : (
-                  <p>{t.imageNotAvailable}</p>
-                )}
-              </div>
-            )}
+            {/* Image section — always attempt to show if we have a URL */}
+            <div style={{ marginBottom: 16, textAlign: "center" }}>
+              {detailImageLoading ? (
+                <p>{t.loadingImage}</p>
+              ) : detailImageUrl ? (
+                <Image
+                  src={detailImageUrl}
+                  alt="NDVI Alert"
+                  style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }}
+                  fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                />
+              ) : (
+                <p>{t.imageNotAvailable}</p>
+              )}
+            </div>
 
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label={t.userId}>{detailRecord.user_id || "-"}</Descriptions.Item>

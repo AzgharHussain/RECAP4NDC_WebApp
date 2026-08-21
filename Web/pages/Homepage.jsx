@@ -69,11 +69,11 @@ const Homepage = () => {
 
   const translations = {
     en: {
-      headerTitle: "FOREST MONITORING & PATROLLING SYSTEM",
+      headerTitle: "FOREST MONITORING AND PATROLLING SYSTEM",
       heroTag: "Implemented by Gujarat Forest Department",
       heroTitle1: "Forest Monitoring",
       heroTitle2: "& Patrolling Platform",
-      heroDesc: "The Forest Monitoring & Patrolling System under the RECAP4NDC initiative integrates satellite-derived vegetation indicators, field patrolling data, incident reporting, and working plan spatial boundaries into a unified web-based monitoring environment. The WebGIS dashboard integrates spatial data services and geo-intelligence for operational forest management.",
+      heroDesc: "The Forest Monitoring and Patrolling System under the RECAP4NDC initiative integrates satellite-derived vegetation indicators, field patrolling data, incident reporting, and working plan spatial boundaries into a unified web-based monitoring environment. The WebGIS dashboard integrates spatial data services and geo-intelligence for operational forest management.",
       launchApp: "Login",
       overviewTitle: "Forest Monitoring",
       overviewTitleHighlight: "Overview",
@@ -159,7 +159,7 @@ const Homepage = () => {
     { id: 25, category: 'web',            q: 'Web app માંથી કઈ reports?', a: 'Reports:', list: ['Patrolling Logs: Filters સહ patrols table.', 'Officer Patrol Summary: Officer performance report.', 'NDVI Reports: Degraded/afforested areas, division breakdown, geotagged records.'] },
     { id: 26, category: 'troubleshooting', q: 'Mobile application માંથી log out કેવી રીતે?', a: 'Profile section માં Logout button ક્લિક કરો. Login Screen પર redirect.' },
   ] : [
-    { id: 1,  category: 'general',         q: 'What is the RECAP4NDC Forest Monitoring & Patrolling System?', a: "It's a mobile and web-based application designed for the forest department to monitor forest areas, track vegetation changes using NDVI, and manage patrolling activities. It helps in forest protection, management, and evidence-based decision-making." },
+    { id: 1,  category: 'general',         q: 'What is the RECAP4NDC Forest Monitoring and Patrolling System?', a: "It's a mobile and web-based application designed for the forest department to monitor forest areas, track vegetation changes using NDVI, and manage patrolling activities. It helps in forest protection, management, and evidence-based decision-making." },
     { id: 2,  category: 'general',         q: 'How do I install the mobile application?', a: 'You need to install the "FMPS" from the Google Play Store. Once installed, open the app to begin the setup process.' },
     { id: 3,  category: 'general',         q: 'What languages does the application support?', a: 'The application supports two languages: English and Gujarati. You can select your preferred language on the initial screen. You can also switch languages later from the "Profile" section.' },
     { id: 4,  category: 'general',         q: 'What permissions does the app require?', a: 'The app requires several permissions to function correctly:', list: ['Notification Permission: To receive alerts and updates.', 'Location Permission: To track your patrolling routes and pinpoint your location on the map. It is recommended to select "Allow While Using the App."', 'Camera and Audio Permission: To capture photos during patrolling and field visits.'] },

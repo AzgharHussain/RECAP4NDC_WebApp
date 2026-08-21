@@ -57,7 +57,7 @@ export default function DashboardLayoutAdmin() {
       english: "English",
       gujarati: "ગુજરાતી",
       logout: "Logout",
-      forestPatrollingSystem: "FOREST MONITORING PATROLLING SYSTEM"
+      forestPatrollingSystem: "FOREST MONITORING AND PATROLLING SYSTEM"
     },
     gu: {
       overview: "સારાંશ",

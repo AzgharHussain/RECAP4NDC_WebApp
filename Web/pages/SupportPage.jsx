@@ -39,7 +39,7 @@ function SupportPage() {
   const t = {
     en: {
       title: "Support Center",
-      subtitle: "FMPS (Forest Monitoring & Patrolling System)",
+      subtitle: "FMPS (Forest Monitoring and Patrolling System)",
       intro: "If you have any issues or questions, please fill out the form below. Our team will respond as soon as possible.",
       formTitle: "Submit a Support Request",
       nameLabel: "Your Name",
@@ -156,7 +156,7 @@ function SupportPage() {
     { id: 11, category: "data", q: "ફોટો અને ડેટા કેટલા સમય સ્ટોર રહે છે?", a: "એપનો ફોટો અને ડેટા 30 દિવસ સ્ટોર રહે છે, ત્યારબાદ આપમેળે ડિલીટ થાય છે. ડેટા સિંક કરવાની ભલામણ કરવામાં આવે છે." },
     { id: 12, category: "data", q: "NDVI રિપોર્ટ ક્યાંથી જોવા?", a: "વેબ એપ્લિકેશનમાં NDVI ડેશબોર્ડ પર જાઓ. તમે મહિનો પસંદ કરી વન આવરણ ફેરફારની સરખામણી જોઈ શકો છો." },
   ] : [
-    { id: 1, category: "general", q: "What is the FMPS application?", a: "FMPS (Forest Monitoring & Patrolling System) is a mobile and web application developed for the Gujarat Forest Department to monitor forest areas, track NDVI vegetation changes, and manage patrolling activities." },
+    { id: 1, category: "general", q: "What is the FMPS application?", a: "FMPS (Forest Monitoring and Patrolling System) is a mobile and web application developed for the Gujarat Forest Department to monitor forest areas, track NDVI vegetation changes, and manage patrolling activities." },
     { id: 2, category: "general", q: "What languages does the application support?", a: "The application supports two languages: English and Gujarati. You can switch languages from the initial screen or the Profile section." },
     { id: 3, category: "general", q: "How do I download the mobile app?", a: 'Search for "FMPS" on the Google Play Store and install it.' },
     { id: 4, category: "account", q: "How do I log in?", a: "After selecting your language, enter your eGuj Username and Password on the Login Page and click the login button." },

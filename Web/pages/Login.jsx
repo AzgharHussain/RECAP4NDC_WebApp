@@ -109,7 +109,7 @@ function Login() {
 
   const text = {
     en: {
-      appTitle: "FOREST MONITORING & PATROLLING SYSTEM",
+      appTitle: "FOREST MONITORING AND PATROLLING SYSTEM",
       welcome: "WELCOME BACK",
       title: "Sign In",
       subtitle: "Access your patrol dashboard",

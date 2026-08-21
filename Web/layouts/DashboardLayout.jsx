@@ -58,7 +58,7 @@ export default function DashboardLayout() {
   // Language Texts
   const text = {
     en: {
-      appTitle: "FOREST MONITORING PATROLLING SYSTEM",
+      appTitle: "FOREST MONITORING AND PATROLLING SYSTEM",
       overview: "Overview",
       geoDashboard: "Geo Dashboard",
       patrollingLogs: "Patrolling Logs",

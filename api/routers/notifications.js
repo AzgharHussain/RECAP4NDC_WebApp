@@ -904,10 +904,21 @@ const getDateFromNdviTableName = (tableName) => {
   return match ? `${match[1]}-${match[2]}-${match[3]}T00:00:00.000Z` : null;
 };
 
+const DEFAULT_NOTE_TEXT = 'NDVI decrease less than -0.3';
+
+const isRealNote = (note) => {
+  if (!note) return false;
+  const trimmed = String(note).trim();
+  if (!trimmed) return false;
+  // Ignore the default auto-generated note
+  if (trimmed.toLowerCase() === DEFAULT_NOTE_TEXT.toLowerCase()) return false;
+  return true;
+};
+
 const buildNdviActionText = (record) => {
   const actions = [];
   if (record?.status === true || record?.status === 'true') actions.push('Status updated');
-  if (record?.note) actions.push('Note added');
+  if (isRealNote(record?.note)) actions.push('Note added');
   if (record?.image_data) actions.push('Image uploaded');
   return actions.length ? actions.join(', ') : 'No action taken';
 };
@@ -1120,7 +1131,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         village: sourceRecord?.village || row.village_name || '-',
         alert_status: alertStatus,
         action_taken: actionTaken,
-        note: sourceRecord?.note || null,
+        note: isRealNote(sourceRecord?.note) ? sourceRecord.note : null,
         has_image: !!sourceRecord?.image_data,
         latitude: sourceRecord?.latitude || null,
         longitude: sourceRecord?.longitude || null,
