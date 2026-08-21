@@ -1067,7 +1067,7 @@ const fetchAllDivisionsData = async (months) => {
                     change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
                     has_note: note !== '',
                     has_image: !!(item.image_data),
-                    pixle_id: `${divisionName}_${item.pixle_id || 'N/A'}`
+                    pixle_id: `${divisionName}_${item.pixle_id || '-'}`
                   };
                 });
                 
@@ -1259,7 +1259,7 @@ const fetchAllDivisionsData = async (months) => {
                   change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
                   has_note: note !== '',
                   has_image: !!(item.image_data),
-                  pixle_id: item.pixle_id || 'N/A',
+                  pixle_id: item.pixle_id || '-',
                   NDVI_change: item.NDVI_change !== null && item.NDVI_change !== undefined 
       ? parseFloat(item.NDVI_change) 
       : null
@@ -2138,7 +2138,7 @@ const handleExportToPDF = () => {
             <div class="info-grid">
               <div class="info-item">
                 <div class="info-label">${t.division}</div>
-                <div class="info-value">${selectedDivision === 'all' ? t.allDivisions : (selectedDivision || 'N/A')}</div>
+                <div class="info-value">${selectedDivision === 'all' ? t.allDivisions : (selectedDivision || '-')}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Range / Round / Beat</div>
@@ -2301,12 +2301,12 @@ const handleExportToPDF = () => {
               <tbody>
                 ${filteredData.slice(0, 20).map(item => `
                   <tr>
-                    ${showDivisionColumn ? `<td>${item.division || selectedDivision || 'N/A'}</td>` : ''}
+                    ${showDivisionColumn ? `<td>${item.division || selectedDivision || '-'}</td>` : ''}
                     <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? t.afforested : t.degraded}</span></td>
-                   <td>${item.NDVI_change && !isNaN(parseFloat(item.NDVI_change)) ? parseFloat(item.NDVI_change).toFixed(4) : 'N/A'}</td>
+                   <td>${item.NDVI_change && !isNaN(parseFloat(item.NDVI_change)) ? parseFloat(item.NDVI_change).toFixed(4) : '-'}</td>
                     <td>${item.change_category || (item.status ? t.afforested : t.degraded)}</td>
-                    <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
-                    <td>${item.longitude?.toFixed(6) || 'N/A'}</td>
+                    <td>${item.latitude?.toFixed(6) || '-'}</td>
+                    <td>${item.longitude?.toFixed(6) || '-'}</td>
                     <td>${item.has_note ? 
                       '<span class="badge badge-note">✓ Note</span>' : 
                       '<span style="color: #94a3b8;">—</span>'
@@ -2993,7 +2993,7 @@ const handleExportToPDF = () => {
                             {showDivisionColumn && (
                               <TableCell>
                                 <Typography variant="body2" fontWeight={600} color="primary">
-                                  {row.division || 'N/A'}
+                                  {row.division || '-'}
                                 </Typography>
                               </TableCell>
                             )}
@@ -3009,7 +3009,7 @@ const handleExportToPDF = () => {
                               <Chip
   label={row.NDVI_change !== null && row.NDVI_change !== undefined && !isNaN(parseFloat(row.NDVI_change)) 
     ? parseFloat(row.NDVI_change).toFixed(4) 
-    : 'N/A'}
+    : '-'}
   color={!isNaN(parseFloat(row.NDVI_change)) && parseFloat(row.NDVI_change) < 0 ? 'error' : 'success'}
   size="small"
   variant="outlined"
@@ -3027,10 +3027,10 @@ const handleExportToPDF = () => {
                             <TableCell>
                               <Box>
                                 <Typography variant="caption" display="block" color="text.secondary">
-                                  {t.lat}: {row.latitude?.toFixed(6) || 'N/A'}
+                                  {t.lat}: {row.latitude?.toFixed(6) || '-'}
                                 </Typography>
                                 <Typography variant="caption" display="block" color="text.secondary">
-                                  {t.lon}: {row.longitude?.toFixed(6) || 'N/A'}
+                                  {t.lon}: {row.longitude?.toFixed(6) || '-'}
                                 </Typography>
                               </Box>
                             </TableCell>
@@ -3243,17 +3243,17 @@ const handleExportToPDF = () => {
                       </Grid> */}
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>{t.category}:</strong> {selectedRecord.change_category || 'N/A'}
+                          <strong>{t.category}:</strong> {selectedRecord.change_category || '-'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>{t.ndviChange}:</strong> {selectedRecord.NDVI_change?.toFixed(4) || 'N/A'}
+                          <strong>{t.ndviChange}:</strong> {selectedRecord.NDVI_change?.toFixed(4) || '-'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>{t.areaKm}:</strong> {selectedRecord.area_sq_km?.toFixed(6) || 'N/A'} km²
+                          <strong>{t.areaKm}:</strong> {selectedRecord.area_sq_km?.toFixed(6) || '-'} km²
                         </Typography>
                       </Grid>
                     </Grid>
@@ -3283,7 +3283,7 @@ const handleExportToPDF = () => {
                                 onClick={() => openCoordinatesInMap(selectedRecord.latitude, selectedRecord.longitude)}
                                 style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer', color: '#1976d2', textDecoration: 'underline' }}
                               >
-                                {t.lat}: {selectedRecord.latitude?.toFixed(6) || 'N/A'}
+                                {t.lat}: {selectedRecord.latitude?.toFixed(6) || '-'}
                               </Typography>
                               <Typography
                                 variant="body2"
@@ -3291,7 +3291,7 @@ const handleExportToPDF = () => {
                                 onClick={() => openCoordinatesInMap(selectedRecord.latitude, selectedRecord.longitude)}
                                 style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer', color: '#1976d2', textDecoration: 'underline', display: 'block' }}
                               >
-                                {t.lon}: {selectedRecord.longitude?.toFixed(6) || 'N/A'}
+                                {t.lon}: {selectedRecord.longitude?.toFixed(6) || '-'}
                               </Typography>
                             </>
                           }

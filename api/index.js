@@ -49,6 +49,7 @@ const { logFromRequest } = require("./utils/auditLogger");
 const app = express();
 app.set('trust proxy', 1);
 const startNdviScheduler = require("./scheduler/ndviNotificationScheduler");
+const startDataRetentionScheduler = require("./scheduler/dataRetentionScheduler");
 
 
 // ----------------------------------------------------
@@ -509,6 +510,13 @@ try {
 }
 
 startNdviScheduler(admin);
+
+// --------------------------------------------------
+// Data Retention Scheduler — auto-deletes patrol rows
+// and NDVI Change tables older than 1 year. Runs daily
+// at 2:00 AM and once on startup.
+// --------------------------------------------------
+startDataRetentionScheduler();
 
 // --------------------------------------------------
 // 2. Schema-based Validation (Joi)

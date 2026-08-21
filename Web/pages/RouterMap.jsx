@@ -122,7 +122,7 @@ const PatrolRoutePopup = ({ patrol, language }) => {
       >
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Text strong>{language === "gu" ? "પેટ્રોલ આઈડી:" : "Patrol ID:"} {patrol.patrol_id || "N/A"}</Text>
+            <Text strong>{language === "gu" ? "પેટ્રોલ આઈડી:" : "Patrol ID:"} {patrol.patrol_id || "-"}</Text>
           </Col>
           <Col span={24}>
             <Tag color={getTypeColor(patrol.type_name)}>
@@ -130,7 +130,7 @@ const PatrolRoutePopup = ({ patrol, language }) => {
             </Tag>
           </Col>
           <Col span={24}>
-            <Text strong>{language === "gu" ? "અધિકારી:" : "Officer:"} {patrol.patrol_officer_name || "N/A"}</Text>
+            <Text strong>{language === "gu" ? "અધિકારી:" : "Officer:"} {patrol.patrol_officer_name || "-"}</Text>
           </Col>
           <Col span={12}>
             <Text type="secondary">{language === "gu" ? "શરૂઆત:" : "Start:"}</Text>

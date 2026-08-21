@@ -352,7 +352,7 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
   };
 
   const formatValue = (value) => {
-    if (value === null || value === undefined) return 'N/A';
+    if (value === null || value === undefined) return '-';
     if (typeof value === 'number') {
       return value % 1 === 0 ? value.toString() : value.toFixed(2);
     }
@@ -571,7 +571,7 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
               const formattedKey = formatKeyName(key);
               const formattedValue = formatValue(value);
               
-              if (!formattedValue || formattedValue === 'N/A') {
+              if (!formattedValue || formattedValue === '-') {
                 return null;
               }
 

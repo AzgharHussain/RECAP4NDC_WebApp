@@ -281,7 +281,7 @@ const PatrolAnalysisDashboard = ({
       avgDistance: avgDistance.toFixed(1),
       avgHours: avgHours.toFixed(1),
       avgStaff: avgStaff.toFixed(1),
-      topOfficer: topOfficer ? `${topOfficer[0]} (${topOfficer[1]} patrols)` : 'N/A'
+      topOfficer: topOfficer ? `${topOfficer[0]} (${topOfficer[1]} patrols)` : '-'
     };
   };
 
@@ -601,7 +601,7 @@ const PatrolAnalysisDashboard = ({
                     <div className="patrol-top-officer">
                       <FaUserTie />
                       <span>{language === "gu" ? "શ્રેષ્ઠ અધિકારી:" : "Top Officer:"}</span>
-                      <strong>{hasData && stats.topOfficer ? stats.topOfficer : 'N/A'}</strong>
+                      <strong>{hasData && stats.topOfficer ? stats.topOfficer : '-'}</strong>
                     </div>
                   </div>
                 </div>
@@ -1294,18 +1294,18 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     ]);
 
     const formatDateTime = (dateTime) => {
-      if (!dateTime) return "N/A";
+      if (!dateTime) return "-";
       const parts = getPatrolDateTimeParts(dateTime);
-      return parts ? `${parts.date} ${parts.time}` : "N/A";
+      return parts ? `${parts.date} ${parts.time}` : "-";
     };
 
     const formatDuration = (startTime, endTime) => {
-      if (!startTime || !endTime) return "N/A";
+      if (!startTime || !endTime) return "-";
       const start = parsePatrolTimestamp(startTime);
       const end = parsePatrolTimestamp(endTime);
-      if (!start || !end) return "N/A";
+      if (!start || !end) return "-";
       const durationMs = end - start;
-      if (!Number.isFinite(durationMs) || durationMs < 0) return "N/A";
+      if (!Number.isFinite(durationMs) || durationMs < 0) return "-";
       const hours = Math.floor(durationMs / (1000 * 60 * 60));
       const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
       return `${hours}h ${minutes}m`;
@@ -1319,7 +1319,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       "Area (sq m)": coverageData.coupe_area_sq_m,
       "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
       "Coverage %": coverageData.coverage_percentage,
-      "Date Range": `${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}`
+      "Date Range": `${startFilter ? startFilter.format('YYYY-MM-DD') : '-'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : '-'}`
     }];
 
     const patrolsData = coveragePatrols.map((patrol) => ({
@@ -1328,9 +1328,9 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       "End Time": formatDateTime(patrol.end_time),
       "Duration": formatDuration(patrol.start_time, patrol.end_time),
       "Patrol Officer": patrol.patrol_officer_name,
-      "Patrol Location": patrol.patrolling_location || "N/A",
-      "District": patrol.current_location_distict || "N/A",
-      "Village": patrol.current_location_village || "N/A",
+      "Patrol Location": patrol.patrolling_location || "-",
+      "District": patrol.current_location_distict || "-",
+      "Village": patrol.current_location_village || "-",
       "Distance (kms)": patrol.distance_kms,
       "Start Location": patrol.start_location,
       "End Location": patrol.end_location,
@@ -1346,7 +1346,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     }
 
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
-    const fileName = `${filterValue}_patrol_coverage_${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'}_to_${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}.xlsx`;
+    const fileName = `${filterValue}_patrol_coverage_${startFilter ? startFilter.format('YYYY-MM-DD') : '-'}_to_${endFilter ? endFilter.format('YYYY-MM-DD') : '-'}.xlsx`;
     saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
   };
 
@@ -1415,21 +1415,21 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       dataIndex: "patrolling_location",
       key: "patrolling_location",
       align: "center",
-      render: (value) => value || "N/A",
+      render: (value) => value || "-",
     },
     {
       title: language === "gu" ? "જિલ્લો" : "District",
       dataIndex: "current_location_distict",
       key: "current_location_distict",
       align: "center",
-      render: (value) => value || "N/A",
+      render: (value) => value || "-",
     },
     {
       title: language === "gu" ? "ગામ" : "Village",
       dataIndex: "current_location_village",
       key: "current_location_village",
       align: "center",
-      render: (value) => value || "N/A",
+      render: (value) => value || "-",
     },
     {
       title: language === "gu" ? "શરૂઆતની તારીખ" : "Search by Start Date",
@@ -1598,32 +1598,32 @@ const exportTableToExcel = async () => {
   ]);
 
   const formatDateForExport = (datetime) => {
-    if (!datetime) return "N/A";
-    return getPatrolDateTimeParts(datetime)?.date || "N/A";
+    if (!datetime) return "-";
+    return getPatrolDateTimeParts(datetime)?.date || "-";
   };
 
   const formatTimeForExport = (datetime) => {
-    if (!datetime) return "N/A";
-    return getPatrolDateTimeParts(datetime)?.time || "N/A";
+    if (!datetime) return "-";
+    return getPatrolDateTimeParts(datetime)?.time || "-";
   };
 
   // Sheet 1: Patrol Logs Data (with separate date and time columns)
   const patrolLogsData = filteredData.map((item, index) => ({
     [language === "gu" ? "ક્રમાંક" : "Sr. No."]: index + 1,
     [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: getTypeDisplayName(item.type_name),
-    [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "N/A",
-    [language === "gu" ? "વિભાગ" : "Division"]: item.division || "N/A",
-    [language === "gu" ? "રેન્જ" : "Range"]: item.range || "N/A",
-    [language === "gu" ? "બીટ" : "Beat"]: item.beat || "N/A",
-    [language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location"]: item.patrolling_location || "N/A",
-    [language === "gu" ? "જિલ્લો" : "District"]: item.current_location_distict || "N/A",
-    [language === "gu" ? "ગામ" : "Village"]: item.current_location_village || "N/A",
+    [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "-",
+    [language === "gu" ? "વિભાગ" : "Division"]: item.division || "-",
+    [language === "gu" ? "રેન્જ" : "Range"]: item.range || "-",
+    [language === "gu" ? "બીટ" : "Beat"]: item.beat || "-",
+    [language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location"]: item.patrolling_location || "-",
+    [language === "gu" ? "જિલ્લો" : "District"]: item.current_location_distict || "-",
+    [language === "gu" ? "ગામ" : "Village"]: item.current_location_village || "-",
     [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExport(item.start_time),
     [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExport(item.start_time),
     [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExport(item.end_time),
     [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExport(item.end_time),
-    [language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location"]: item.start_location || "N/A",
-    [language === "gu" ? "અંતિમ સ્થાન" : "End Location"]: item.end_location || "N/A",
+    [language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location"]: item.start_location || "-",
+    [language === "gu" ? "અંતિમ સ્થાન" : "End Location"]: item.end_location || "-",
     [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: item.distance_kms || "0",
   }));
 
@@ -1804,14 +1804,14 @@ const exportTableToExcel = async () => {
 
   // Sheet 4: Filter Criteria Applied
   const filterCriteria = [
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "અધિકારીનું નામ" : "Officer Name", [language === "gu" ? "મૂલ્ય" : "Value"]: searchText || "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "વિભાગ" : "Division", [language === "gu" ? "મૂલ્ય" : "Value"]: divisionFilter || "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "રેન્જ" : "Range", [language === "gu" ? "મૂલ્ય" : "Value"]: rangeFilter || "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "બીટ" : "Beat", [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location", [language === "gu" ? "મૂલ્ય" : "Value"]: patrolLocationFilter || "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type", [language === "gu" ? "મૂલ્ય" : "Value"]: typeFilter ? getTypeDisplayName(typeFilter) : "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date", [language === "gu" ? "મૂલ્ય" : "Value"]: startFilter ? startFilter.format('YYYY-MM-DD') : "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date", [language === "gu" ? "મૂલ્ય" : "Value"]: endFilter ? endFilter.format('YYYY-MM-DD') : "N/A" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "અધિકારીનું નામ" : "Officer Name", [language === "gu" ? "મૂલ્ય" : "Value"]: searchText || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "વિભાગ" : "Division", [language === "gu" ? "મૂલ્ય" : "Value"]: divisionFilter || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "રેન્જ" : "Range", [language === "gu" ? "મૂલ્ય" : "Value"]: rangeFilter || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "બીટ" : "Beat", [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location", [language === "gu" ? "મૂલ્ય" : "Value"]: patrolLocationFilter || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type", [language === "gu" ? "મૂલ્ય" : "Value"]: typeFilter ? getTypeDisplayName(typeFilter) : "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date", [language === "gu" ? "મૂલ્ય" : "Value"]: startFilter ? startFilter.format('YYYY-MM-DD') : "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date", [language === "gu" ? "મૂલ્ય" : "Value"]: endFilter ? endFilter.format('YYYY-MM-DD') : "-" },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "કુલ રેકોર્ડ" : "Total Records", [language === "gu" ? "મૂલ્ય" : "Value"]: filteredData.length },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "નિકાસ તારીખ" : "Export Date", [language === "gu" ? "મૂલ્ય" : "Value"]: new Date().toLocaleString() },
   ];
@@ -1822,23 +1822,23 @@ const exportTableToExcel = async () => {
     coverageDataSheet = [
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: beatFilter ? (language === "gu" ? "બીટ" : "Beat") : (rangeFilter ? (language === "gu" ? "રેન્જ" : "Range") : (language === "gu" ? "વિભાગ" : "Division")),
-        [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || rangeFilter || divisionFilter || "N/A",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || rangeFilter || divisionFilter || "-",
       },
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "વિસ્તાર (ચો.મી.)" : "Area (sq m)",
-        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coupe_area_sq_m ? Number(coverageData.coupe_area_sq_m).toLocaleString() : "N/A",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coupe_area_sq_m ? Number(coverageData.coupe_area_sq_m).toLocaleString() : "-",
       },
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કવરેજ વિસ્તાર (ચો.મી.)" : "Covered Area (sq m)",
-        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.patrol_area_sq_m ? Number(coverageData.patrol_area_sq_m).toLocaleString() : "N/A",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.patrol_area_sq_m ? Number(coverageData.patrol_area_sq_m).toLocaleString() : "-",
       },
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કવરેજ ટકાવારી" : "Coverage Percentage",
-        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coverage_percentage ? `${Number(coverageData.coverage_percentage).toFixed(2)}%` : "N/A",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coverage_percentage ? `${Number(coverageData.coverage_percentage).toFixed(2)}%` : "-",
       },
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "તારીખ શ્રેણી" : "Date Range",
-        [language === "gu" ? "મૂલ્ય" : "Value"]: `${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}`,
+        [language === "gu" ? "મૂલ્ય" : "Value"]: `${startFilter ? startFilter.format('YYYY-MM-DD') : '-'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : '-'}`,
       },
     ];
   }
@@ -1876,19 +1876,19 @@ const exportTableToExcel = async () => {
     // Sheet 6: Covering Patrols (if available)
     if (coveragePatrols && coveragePatrols.length > 0) {
       const formatDateForExportCoverage = (datetime) => {
-        if (!datetime) return "N/A";
-        return getPatrolDateTimeParts(datetime)?.date || "N/A";
+        if (!datetime) return "-";
+        return getPatrolDateTimeParts(datetime)?.date || "-";
       };
 
       const formatTimeForExportCoverage = (datetime) => {
-        if (!datetime) return "N/A";
-        return getPatrolDateTimeParts(datetime)?.time || "N/A";
+        if (!datetime) return "-";
+        return getPatrolDateTimeParts(datetime)?.time || "-";
       };
 
       const coveringPatrolsData = coveragePatrols.map((patrol, idx) => ({
         [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
-        [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_id || "N/A",
-        [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "N/A",
+        [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_id || "-",
+        [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "-",
         [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExportCoverage(patrol.start_time),
         [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExportCoverage(patrol.start_time),
         [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExportCoverage(patrol.end_time),

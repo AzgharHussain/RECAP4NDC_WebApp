@@ -105,7 +105,7 @@ async function createNotificationTables() {
 
   } catch (err) {
 
-    console.error("❌ Error creating notification tables:", err);
+    console.error("âŒ Error creating notification tables:", err);
 
   }
 
@@ -137,22 +137,22 @@ async function sendNotification(firebaseToken, record) {
 
   switch (change_category) {
     case 'significant_decrease':
-      title = '🚨 Significant Vegetation Decrease';
+      title = 'ðŸš¨ Significant Vegetation Decrease';
       body = `NDVI dropped from ${jan_ndvi} to ${feb_ndvi}`;
       break;
 
     case 'moderate_decrease':
-      title = '⚠️ Moderate Vegetation Decrease';
+      title = 'âš ï¸ Moderate Vegetation Decrease';
       body = `NDVI decreased from ${jan_ndvi} to ${feb_ndvi}`;
       break;
 
     case 'significant_increase':
-      title = '🌱 Significant Vegetation Improvement';
+      title = 'ðŸŒ± Significant Vegetation Improvement';
       body = `NDVI increased from ${jan_ndvi} to ${feb_ndvi}`;
       break;
 
     case 'moderate_increase':
-      title = '📈 Moderate Vegetation Improvement';
+      title = 'ðŸ“ˆ Moderate Vegetation Improvement';
       body = `NDVI improved from ${jan_ndvi} to ${feb_ndvi}`;
       break;
   }
@@ -270,22 +270,22 @@ async function setNotificationSent(id) {
 //     switch (record.change_category) {
 
 //       case "significant_decrease":
-//         title = "🚨 Significant Vegetation Decrease";
+//         title = "ðŸš¨ Significant Vegetation Decrease";
 //         body = `NDVI dropped from ${record.jan_ndvi} to ${record.feb_ndvi}`;
 //         break;
 
 //       case "moderate_decrease":
-//         title = "⚠️ Moderate Vegetation Decrease";
+//         title = "âš ï¸ Moderate Vegetation Decrease";
 //         body = `NDVI decreased from ${record.jan_ndvi} to ${record.feb_ndvi}`;
 //         break;
 
 //       case "significant_increase":
-//         title = "🌱 Significant Vegetation Improvement";
+//         title = "ðŸŒ± Significant Vegetation Improvement";
 //         body = `NDVI increased from ${record.jan_ndvi} to ${record.feb_ndvi}`;
 //         break;
 
 //       case "moderate_increase":
-//         title = "📈 Moderate Vegetation Improvement";
+//         title = "ðŸ“ˆ Moderate Vegetation Improvement";
 //         body = `NDVI improved from ${record.jan_ndvi} to ${record.feb_ndvi}`;
 //         break;
 //     }
@@ -309,7 +309,7 @@ async function setNotificationSent(id) {
 //         month: monthtext,
 //       }
 //     };
-// console.log("📩 Sending notification with payload:", message);
+// console.log("ðŸ“© Sending notification with payload:", message);
 //     const response = await admin.messaging().send(message);
 
 //     // ------------------------------------------------
@@ -377,7 +377,7 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
     }
 
     // ------------------------------------------------
-    // 1️⃣ Ensure columns exist (idempotent)
+    // 1ï¸âƒ£ Ensure columns exist (idempotent)
     // ------------------------------------------------
     const extraCols = ['division', 'range', 'round', 'beat'];
     for (const col of extraCols) {
@@ -385,7 +385,7 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
     }
 
     // ------------------------------------------------
-    // 2️⃣ Insert or update user subscription (with division/range/round/beat)
+    // 2ï¸âƒ£ Insert or update user subscription (with division/range/round/beat)
     // ------------------------------------------------
     await client.query(
       `
@@ -742,19 +742,19 @@ async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) 
 
         switch (record.change_category) {
           case 'significant_decrease':
-            title = `🚨 Significant Vegetation Decrease — ${prevMonthLabel}`;
+            title = `ðŸš¨ Significant Vegetation Decrease â€” ${prevMonthLabel}`;
             body = `NDVI dropped significantly in ${user.village_name}`;
             break;
           case 'moderate_decrease':
-            title = `⚠️ Moderate Vegetation Decrease — ${prevMonthLabel}`;
+            title = `âš ï¸ Moderate Vegetation Decrease â€” ${prevMonthLabel}`;
             body = `NDVI decreased in ${user.village_name}`;
             break;
           case 'significant_increase':
-            title = `🌱 Significant Vegetation Improvement — ${prevMonthLabel}`;
+            title = `ðŸŒ± Significant Vegetation Improvement â€” ${prevMonthLabel}`;
             body = `NDVI improved significantly in ${user.village_name}`;
             break;
           case 'moderate_increase':
-            title = `📈 Moderate Vegetation Improvement — ${prevMonthLabel}`;
+            title = `ðŸ“ˆ Moderate Vegetation Improvement â€” ${prevMonthLabel}`;
             body = `NDVI improved in ${user.village_name}`;
             break;
         }
@@ -788,7 +788,7 @@ async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) 
           result.sent++;
           result.details.push({ table: tableName, pixel_id: pixelId, category: record.change_category });
         } catch (sendErr) {
-          console.error(`[pending-notifications] ❌ Firebase send error:`, sendErr.message);
+          console.error(`[pending-notifications] âŒ Firebase send error:`, sendErr.message);
           result.errors++;
 
           // Clear invalid token
@@ -848,7 +848,7 @@ router.post('/send-pending-notifications', verifyJwt, upload.none(), async (req,
     if (!token) {
       return res.json({
         success: true,
-        message: 'No firebase token available — user not subscribed or token cleared',
+        message: 'No firebase token available â€” user not subscribed or token cleared',
         sent: 0,
       });
     }
@@ -886,7 +886,7 @@ router.post('/send-pending-notifications', verifyJwt, upload.none(), async (req,
 });
 
 const getDivisionFromNdviTableName = (tableName) => {
-  if (!tableName) return 'N/A';
+  if (!tableName) return '-';
   return tableName
     .replace(/_coupe_NDVI_Change$/i, '')
     .replace(/^\d{4}[-_]\d{2}[-_]\d{2}[-_]/, '')
@@ -896,7 +896,7 @@ const getDivisionFromNdviTableName = (tableName) => {
 
 const getMonthFromNdviTableName = (tableName) => {
   const match = String(tableName || '').match(/^(\d{4})[-_](\d{2})[-_]\d{2}/);
-  return match ? `${match[1]}-${match[2]}` : 'N/A';
+  return match ? `${match[1]}-${match[2]}` : '-';
 };
 
 const getDateFromNdviTableName = (tableName) => {
@@ -1013,7 +1013,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         `, [sourceTable]);
         const sourceColumns = new Map(columnInfo.rows.map(row => [row.column_name, row.data_type]));
 
-        // Build SELECT clause dynamically — quote all identifiers to handle
+        // Build SELECT clause dynamically â€” quote all identifiers to handle
         // reserved words. NOTE: division/range/round/beat come from ndvi_notification_users
         // (stored at login time), NOT from the NDVI change table.
         const colOrNull = (name) => sourceColumns.has(name) ? `"${name}"` : 'NULL::text';
@@ -1022,6 +1022,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
           colOrNull('note') + ' AS note',
           sourceColumns.has('image_data') ? '("image_data" IS NOT NULL) AS has_table_image' : 'false AS has_table_image',
           sourceColumns.has('status') ? '"status" AS status' : 'NULL::text AS status',
+          sourceColumns.has('latitude') ? '"latitude" AS latitude' : 'NULL::text AS latitude',
+          sourceColumns.has('longitude') ? '"longitude" AS longitude' : 'NULL::text AS longitude',
         ];
 
         // Determine the ID column: prefer pixle_id, fall back to id
@@ -1105,14 +1107,16 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         month: getMonthFromNdviTableName(row.table_name),
         // division/range/round/beat are read directly from ndvi_notification_users (joined in reportQuery)
         division: row.division || getDivisionFromNdviTableName(row.table_name),
-        range:    row.range    || 'N/A',
-        round:    row.round    || 'N/A',
-        beat:     row.beat     || 'N/A',
-        village: sourceRecord?.village || row.village_name || 'N/A',
+        range:    row.range    || '-',
+        round:    row.round    || '-',
+        beat:     row.beat     || '-',
+        village: sourceRecord?.village || row.village_name || '-',
         alert_status: alertStatus,
         action_taken: actionTaken,
         note: sourceRecord?.note || null,
         has_image: !!sourceRecord?.image_data,
+        latitude: sourceRecord?.latitude || null,
+        longitude: sourceRecord?.longitude || null,
       };
     });
 

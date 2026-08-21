@@ -54,7 +54,7 @@ const parsePatrolTimestamp = (dateTime) => {
 };
 
 const formatDateTime = (dateTime, language = 'en') => {
-  if (!dateTime) return "N/A";
+  if (!dateTime) return "-";
   if (typeof dateTime === "string") {
     const match = dateTime.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
     if (match) {
@@ -63,7 +63,7 @@ const formatDateTime = (dateTime, language = 'en') => {
     }
   }
   const date = parsePatrolTimestamp(dateTime);
-  if (!date) return { date: "N/A", time: "N/A" };
+  if (!date) return { date: "-", time: "-" };
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Kolkata",
     day: "2-digit",
@@ -80,12 +80,12 @@ const formatDateTime = (dateTime, language = 'en') => {
 };
 
 const formatDuration = (startTime, endTime, language = 'en') => {
-  if (!startTime || !endTime) return "N/A";
+  if (!startTime || !endTime) return "-";
   const start = parsePatrolTimestamp(startTime);
   const end = parsePatrolTimestamp(endTime);
-  if (!start || !end) return "N/A";
+  if (!start || !end) return "-";
   const durationMs = end - start;
-  if (!Number.isFinite(durationMs) || durationMs < 0) return "N/A";
+  if (!Number.isFinite(durationMs) || durationMs < 0) return "-";
   const hours = Math.floor(durationMs / (1000 * 60 * 60));
   const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
   
@@ -564,7 +564,7 @@ const BeatPatrolCoverage = () => {
       dataIndex: "distance_kms",
       key: "distance_kms",
       align: "center",
-      render: (distance) => distance ? `${Number(distance).toFixed(2)}` : "N/A",
+      render: (distance) => distance ? `${Number(distance).toFixed(2)}` : "-",
       sorter: (a, b) => parseFloat(a.distance_kms) - parseFloat(b.distance_kms),
     },
     {

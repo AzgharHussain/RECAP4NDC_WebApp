@@ -140,7 +140,7 @@ const PatrolIncidentLogs = () => {
       [text[language].incidentTime]: formatDateTime(item.p_incident_time).time,
       [text[language].location]: item.p_location_gps?.coordinates
         ? `${item.p_location_gps.coordinates[1]}, ${item.p_location_gps.coordinates[0]}`
-        : "N/A",
+        : "-",
       [text[language].description]: item.p_incident_description,
       [text[language].images]: item.p_image_urls?.length || 0,
     }));
@@ -216,7 +216,7 @@ const PatrolIncidentLogs = () => {
           const formattedLon = Math.abs(lon).toFixed(4);
           return `${formattedLat}°${latDirection}, ${formattedLon}°${lonDirection}`;
         }
-        return "N/A";
+        return "-";
       },
       align: "center",
     },

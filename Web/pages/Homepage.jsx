@@ -279,9 +279,9 @@ const Homepage = () => {
                   {t.langGu}
                 </button>
               </div>
-              <div className="l_1">
+              {/* <div className="l_1">
                 <img src={Moef} alt="Ministry of Environment, Forest and Climate Change" style={{ width: '120px' }} />
-              </div>
+              </div> */}
               <div className="l_2">
                 <img src={giz} alt="GIZ logo" style={{ width: '160px' }} />
               </div>

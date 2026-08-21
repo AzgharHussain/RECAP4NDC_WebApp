@@ -1398,9 +1398,9 @@ router.get('/ndvi-change-layer-bounds/:layerName', async (req, res) => {
       },
       featureCount: parseInt(results[0].feature_count),
       metadata: {
-        range: results[0].range || 'N/A',
-        division: results[0].division || 'N/A',
-        circle: results[0].circle || 'N/A'
+        range: results[0].range || '-',
+        division: results[0].division || '-',
+        circle: results[0].circle || '-'
       }
     };
     

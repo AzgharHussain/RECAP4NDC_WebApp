@@ -239,11 +239,11 @@ useEffect(() => {
                         </div>  </div>
                       
                         <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', paddingRight:'45px'}}>
-                            <div className="l_1">
-                                {/* <a href="https://moef.gov.in/" target="_blank">
-                                    </a> */}
+                            {/* <div className="l_1">
+                                <a href="https://moef.gov.in/" target="_blank">
+                                    </a>
                                     <img src={Moef} alt="picture" style={{width:'120px'}}></img>
-                            </div>
+                            </div> */}
                             <div className="l_2">
                                 {/* <a href="https://www.giz.de/de/html/index.html" target="_blank">
                                     </a> */}

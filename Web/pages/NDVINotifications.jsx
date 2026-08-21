@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { Button, Card, Col, DatePicker, Row, Select, Space, Statistic, Table, Tag, message } from "antd";
-import { DownloadOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+﻿import React, { useEffect, useState } from "react";
+import { Button, Card, Col, DatePicker, Descriptions, Image, Modal, Row, Select, Space, Statistic, Table, Tag, message } from "antd";
+import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { API_BASE_URL } from "../config";
 import { getAuthHeaders } from "../utils/authUtils";
@@ -29,7 +29,7 @@ const toIST = (value) => {
 const formatSentAt = (value, _formattedValue) => {
   // Prefer the raw DB value so we can apply IST conversion accurately
   const result = toIST(value);
-  return result || "N/A";
+  return result || "-";
 };
 
 const NDVINotifications = () => {
@@ -39,6 +39,10 @@ const NDVINotifications = () => {
   const [options, setOptions] = useState(emptyOptions);
   const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
   const [filters, setFilters] = useState({ user_id: null, table_name: null, division: null, month: null, status: null, dates: null });
+  const [detailRecord, setDetailRecord] = useState(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailImageUrl, setDetailImageUrl] = useState(null);
+  const [detailImageLoading, setDetailImageLoading] = useState(false);
 
   const fetchReport = async (overrideFilters = filters) => {
     setLoading(true);
@@ -124,29 +128,29 @@ const NDVINotifications = () => {
     const [XLSX, { saveAs }] = await Promise.all([import("xlsx"), import("file-saver")]);
     const rows = data.map((item, index) => ({
       "Sr. No.": index + 1,
-      "User ID": item.user_id || "N/A",
-      "Subscribed Village": item.village_name || "N/A",
-      Division: item.division || "N/A",
-      Range: item.range || "N/A",
-      Round: item.round || "N/A",
-      Beat: item.beat || "N/A",
-      "Alert Village": item.village || item.village_name || "N/A",
-      Month: item.month || "N/A",
-      "Pixel ID": item.pixel_id || "N/A",
+      "User ID": item.user_id || "-",
+      "Subscribed Village": item.village_name || "-",
+      Division: item.division || "-",
+      Range: item.range || "-",
+      Round: item.round || "-",
+      Beat: item.beat || "-",
+      "Alert Village": item.village || item.village_name || "-",
+      Month: item.month || "-",
+      "Pixel ID": item.pixel_id || "-",
       Status: item.alert_status || "Pending",
       "Action Taken": item.action_taken || "No action taken",
-      Note: item.note || "N/A",
+      Note: item.note || "-",
       "Has Image": item.has_image ? "Yes" : "No",
       "Sent At (IST)": formatSentAt(item.sent_at, item.sent_at_formatted),
-      "Report Generated At": item.report_generated_at || "N/A",
+      "Report Generated At": item.report_generated_at || "-",
     }));
     const summaryRows = monthlySummary.map((item) => ({
       Month: item.month,
       Division: item.division,
-      Range: item.range || "N/A",
-      Round: item.round || "N/A",
-      Beat: item.beat || "N/A",
-      Village: item.village || "N/A",
+      Range: item.range || "-",
+      Round: item.round || "-",
+      Beat: item.beat || "-",
+      Village: item.village || "-",
       "Alerts Generated": item.alerts_generated,
       Resolved: item.resolved,
       Pending: item.pending,
@@ -173,15 +177,47 @@ const NDVINotifications = () => {
     saveAs(new Blob([buffer], { type: "application/octet-stream" }), `ndvi_notifications_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`);
   };
 
+  const showDetails = async (record) => {
+    setDetailRecord(record);
+    setDetailModalOpen(true);
+    setDetailImageUrl(null);
+    if (record.has_image && record.table_name && record.pixel_id) {
+      setDetailImageLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/ndvi-change`, {
+          method: "GET",
+          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ NdvicoupeName: record.table_name, id: record.pixel_id }),
+        });
+        const json = await res.json();
+        if (json.success && json.data && json.data[0] && json.data[0].image_data) {
+          setDetailImageUrl(`data:${json.data[0].image_type || "image/jpeg"};base64,${json.data[0].image_data}`);
+        }
+      } catch (err) {
+        console.error("Failed to fetch image:", err);
+      } finally {
+        setDetailImageLoading(false);
+      }
+    }
+  };
+
+  const openInGoogleMaps = (lat, lng) => {
+    if (lat && lng) {
+      window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
+    } else {
+      message.warning("Location coordinates not available");
+    }
+  };
+
   const columns = [
     { title: "User ID", dataIndex: "user_id", key: "user_id" },
-    { title: "Subscribed Village", dataIndex: "village_name", key: "village_name", render: (v) => v || "N/A" },
-    { title: "Division", dataIndex: "division", key: "division", render: (v) => v || "N/A" },
-    { title: "Range", dataIndex: "range", key: "range", render: (v) => v || "N/A" },
-    { title: "Round", dataIndex: "round", key: "round", render: (v) => v || "N/A" },
-    { title: "Beat", dataIndex: "beat", key: "beat", render: (v) => v || "N/A" },
-    { title: "Alert Village", dataIndex: "village", key: "village", render: (v, record) => v || record.village_name || "N/A" },
-    { title: "Month", dataIndex: "month", key: "month", render: (v) => v || "N/A" },
+    { title: "Subscribed Village", dataIndex: "village_name", key: "village_name", render: (v) => v || "-" },
+    { title: "Division", dataIndex: "division", key: "division", render: (v) => v || "-" },
+    { title: "Range", dataIndex: "range", key: "range", render: (v) => v || "-" },
+    { title: "Round", dataIndex: "round", key: "round", render: (v) => v || "-" },
+    { title: "Beat", dataIndex: "beat", key: "beat", render: (v) => v || "-" },
+    { title: "Alert Village", dataIndex: "village", key: "village", render: (v, record) => v || record.village_name || "-" },
+    { title: "Month", dataIndex: "month", key: "month", render: (v) => v || "-" },
     { title: "Pixel ID", dataIndex: "pixel_id", key: "pixel_id" },
     { title: "Status", dataIndex: "alert_status", key: "alert_status", render: (v) => <Tag color={v === "Resolved" ? "success" : "warning"}>{v || "Pending"}</Tag> },
     { title: "Action Taken", dataIndex: "action_taken", key: "action_taken", render: (v) => v || "No action taken" },
@@ -191,15 +227,26 @@ const NDVINotifications = () => {
       key: "sent_at",
       render: (v) => formatSentAt(v),
     },
+    {
+      title: "Action",
+      key: "action",
+      fixed: "right",
+      width: 120,
+      render: (_, record) => (
+        <Button type="link" icon={<EyeOutlined />} onClick={() => showDetails(record)}>
+          View Details
+        </Button>
+      ),
+    },
   ];
 
   const monthlyColumns = [
     { title: "Month", dataIndex: "month", key: "month" },
     { title: "Division", dataIndex: "division", key: "division" },
-    { title: "Range", dataIndex: "range", key: "range", render: (v) => v || "N/A" },
-    { title: "Round", dataIndex: "round", key: "round", render: (v) => v || "N/A" },
-    { title: "Beat", dataIndex: "beat", key: "beat", render: (v) => v || "N/A" },
-    { title: "Village", dataIndex: "village", key: "village", render: (v) => v || "N/A" },
+    { title: "Range", dataIndex: "range", key: "range", render: (v) => v || "-" },
+    { title: "Round", dataIndex: "round", key: "round", render: (v) => v || "-" },
+    { title: "Beat", dataIndex: "beat", key: "beat", render: (v) => v || "-" },
+    { title: "Village", dataIndex: "village", key: "village", render: (v) => v || "-" },
     { title: "Alerts Generated", dataIndex: "alerts_generated", key: "alerts_generated" },
     { title: "Resolved", dataIndex: "resolved", key: "resolved", render: (v) => <Tag color="success">{v}</Tag> },
     { title: "Pending", dataIndex: "pending", key: "pending", render: (v) => <Tag color="warning">{v}</Tag> },
@@ -239,6 +286,103 @@ const NDVINotifications = () => {
       <Card title="Notification Data" extra={<Button icon={<DownloadOutlined />} onClick={exportToExcel}>Export</Button>}>
         <Table columns={columns} dataSource={data} loading={loading} scroll={{ x: "max-content" }} />
       </Card>
+
+      <Modal
+        title="Notification Details"
+        open={detailModalOpen}
+        onCancel={() => setDetailModalOpen(false)}
+        footer={null}
+        width={700}
+      >
+        {detailRecord && (
+          <div>
+            {detailRecord.has_image && (
+              <div style={{ marginBottom: 16, textAlign: "center" }}>
+                {detailImageLoading ? (
+                  <p>Loading image...</p>
+                ) : detailImageUrl ? (
+                  <Image
+                    src={detailImageUrl}
+                    alt="NDVI Alert"
+                    style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }}
+                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                  />
+                ) : (
+                  <p>Image not available</p>
+                )}
+              </div>
+            )}
+
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="User ID">{detailRecord.user_id || "-"}</Descriptions.Item>
+              <Descriptions.Item label="Subscribed Village">{detailRecord.village_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label="Division">{detailRecord.division || "-"}</Descriptions.Item>
+              <Descriptions.Item label="Range">{detailRecord.range || "-"}</Descriptions.Item>
+              <Descriptions.Item label="Round">{detailRecord.round || "-"}</Descriptions.Item>
+              <Descriptions.Item label="Beat">{detailRecord.beat || "-"}</Descriptions.Item>
+              <Descriptions.Item label="Alert Village">{detailRecord.village || detailRecord.village_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label="Month">{detailRecord.month || "-"}</Descriptions.Item>
+              <Descriptions.Item label="Pixel ID">{detailRecord.pixel_id || "-"}</Descriptions.Item>
+              <Descriptions.Item label="NDVI Table">{detailRecord.table_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Tag color={detailRecord.alert_status === "Resolved" ? "success" : "warning"}>
+                  {detailRecord.alert_status || "Pending"}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Has Image">
+                <Tag color={detailRecord.has_image ? "blue" : "default"}>
+                  {detailRecord.has_image ? "Yes" : "No"}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Action Taken" span={2}>
+                {detailRecord.action_taken || "No action taken"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Note" span={2}>
+                {detailRecord.note || "No note available"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Sent At (IST)" span={2}>
+                {formatSentAt(detailRecord.sent_at)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Latitude">
+                {detailRecord.latitude ? (
+                  <Button
+                    type="link"
+                    icon={<EnvironmentOutlined />}
+                    onClick={() => openInGoogleMaps(detailRecord.latitude, detailRecord.longitude)}
+                    style={{ padding: 0 }}
+                  >
+                    {Number(detailRecord.latitude).toFixed(6)}
+                  </Button>
+                ) : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Longitude">
+                {detailRecord.longitude ? (
+                  <Button
+                    type="link"
+                    icon={<EnvironmentOutlined />}
+                    onClick={() => openInGoogleMaps(detailRecord.latitude, detailRecord.longitude)}
+                    style={{ padding: 0 }}
+                  >
+                    {Number(detailRecord.longitude).toFixed(6)}
+                  </Button>
+                ) : "-"}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {detailRecord.latitude && detailRecord.longitude && (
+              <div style={{ marginTop: 16, textAlign: "center" }}>
+                <Button
+                  type="primary"
+                  icon={<EnvironmentOutlined />}
+                  onClick={() => openInGoogleMaps(detailRecord.latitude, detailRecord.longitude)}
+                >
+                  View Location on Google Maps
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
