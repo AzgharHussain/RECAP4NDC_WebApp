@@ -1,7 +1,7 @@
 .leftpanel {
   font-family: "Arial", sans-serif;
   width: 350px;
-  height: 78vh;
+  height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   overflow-anchor: none; /* Prevents auto-scroll jumps when content expands */

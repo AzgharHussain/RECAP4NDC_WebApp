@@ -1,9 +1,10 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Card, Col, DatePicker, Descriptions, Image, Modal, Row, Select, Space, Statistic, Table, Tag, message } from "antd";
 import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { API_BASE_URL } from "../config";
 import { getAuthHeaders } from "../utils/authUtils";
+import { useLanguage } from "../context/LanguageContext";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -15,29 +16,132 @@ const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
 const toIST = (value) => {
   if (!value) return null;
-  // Try native Date first for ISO / Unix strings
   const d = new Date(value);
   if (!isNaN(d.getTime())) {
     const istDate = new Date(d.getTime() + IST_OFFSET_MS);
     const pad = (n) => String(n).padStart(2, "0");
     return `${pad(istDate.getUTCDate())}-${pad(istDate.getUTCMonth() + 1)}-${istDate.getUTCFullYear()} ${pad(istDate.getUTCHours())}:${pad(istDate.getUTCMinutes())}:${pad(istDate.getUTCSeconds())}`;
   }
-  // Fallback: already a formatted string from the DB (e.g. "03-AUG-26 07:00:10")
   return String(value);
 };
 
-const formatSentAt = (value, _formattedValue) => {
-  // Prefer the raw DB value so we can apply IST conversion accurately
+const formatSentAt = (value) => {
   const result = toIST(value);
   return result || "-";
 };
 
+// ── Language strings ──────────────────────────────────────────────────────────
+const TEXTS = {
+  en: {
+    pageTitle: "NDVI Notifications",
+    usersReceived: "Users Received",
+    totalNotifications: "Total Notifications",
+    resolved: "Resolved",
+    pending: "Pending",
+    // Filter placeholders
+    userId: "User ID",
+    division: "Division",
+    month: "Month",
+    status: "Status",
+    filter: "Filter",
+    clear: "Clear",
+    // Table columns
+    subscribedVillage: "Subscribed Village",
+    range: "Range",
+    round: "Round",
+    beat: "Beat",
+    alertVillage: "Alert Village",
+    pixelId: "Pixel ID",
+    actionTaken: "Action Taken",
+    noActionTaken: "No action taken",
+    sentAt: "Sent At (IST)",
+    action: "Action",
+    viewDetails: "View Details",
+    // Section titles
+    monthlySummary: "Monthly Division-wise NDVI Alert Summary",
+    notificationData: "Notification Data",
+    export: "Export",
+    alertsGenerated: "Alerts Generated",
+    village: "Village",
+    // Modal
+    notificationDetails: "Notification Details",
+    loadingImage: "Loading image...",
+    imageNotAvailable: "Image not available",
+    hasImage: "Has Image",
+    yes: "Yes",
+    no: "No",
+    note: "Note",
+    noNote: "No note available",
+    latitude: "Latitude",
+    longitude: "Longitude",
+    viewOnMaps: "View Location on Google Maps",
+    locationUnavailable: "Location coordinates not available",
+    noData: "No notification data available to export",
+    ndviTable: "NDVI Table",
+    startDate: "Start Date",
+    endDate: "End Date",
+  },
+  gu: {
+    pageTitle: "NDVI સૂચનાઓ",
+    usersReceived: "વપરાશકર્તાઓ પ્રાપ્ત",
+    totalNotifications: "કુલ સૂચનાઓ",
+    resolved: "નિવારિત",
+    pending: "બાકી",
+    // Filter placeholders
+    userId: "વપરાશકર્તા ID",
+    division: "વિભાગ",
+    month: "મહિનો",
+    status: "સ્થિતિ",
+    filter: "ફિલ્ટર",
+    clear: "સાફ કરો",
+    // Table columns
+    subscribedVillage: "સભ્ય ગ્રામ",
+    range: "રેન્જ",
+    round: "રાઉન્ડ",
+    beat: "બીટ",
+    alertVillage: "ચેતવણી ગ્રામ",
+    pixelId: "પિક્સેલ ID",
+    actionTaken: "લેવાયેલ પગલું",
+    noActionTaken: "કોઈ પગલું નહીં",
+    sentAt: "મોકલ્યો (IST)",
+    action: "ક્રિયા",
+    viewDetails: "વિગતો જુઓ",
+    // Section titles
+    monthlySummary: "માસિક વિભાગ-વાર NDVI ચેતવણી સારાંશ",
+    notificationData: "સૂચના ડેટા",
+    export: "નિકાસ",
+    alertsGenerated: "ઉત્પન્ન ચેતવણીઓ",
+    village: "ગ્રામ",
+    // Modal
+    notificationDetails: "સૂચના વિગતો",
+    loadingImage: "છબી લોડ થઈ રહી છે...",
+    imageNotAvailable: "છબી ઉપલબ્ધ નથી",
+    hasImage: "છબી છે",
+    yes: "હા",
+    no: "ના",
+    note: "નોંધ",
+    noNote: "કોઈ નોંધ નથી",
+    latitude: "અક્ષાંશ",
+    longitude: "રેખાંશ",
+    viewOnMaps: "Google Maps પર સ્થાન જુઓ",
+    locationUnavailable: "સ્થાન કોઓર્ડિનેટ્સ ઉપલબ્ધ નથી",
+    noData: "નિકાસ માટે કોઈ સૂચના ડેટા ઉપલબ્ધ નથી",
+    ndviTable: "NDVI કોષ્ટક",
+    startDate: "શરૂઆત તારીખ",
+    endDate: "સમાપ્તિ તારીખ",
+  },
+};
+
 const NDVINotifications = () => {
+  const { language } = useLanguage();
+  const t = TEXTS[language] || TEXTS.en;
+
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [monthlySummary, setMonthlySummary] = useState([]);
   const [options, setOptions] = useState(emptyOptions);
   const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
+  // table_name kept in state for API calls but no longer shown as a UI filter
   const [filters, setFilters] = useState({ user_id: null, table_name: null, division: null, month: null, status: null, dates: null });
   const [detailRecord, setDetailRecord] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -57,27 +161,6 @@ const NDVINotifications = () => {
       const res = await fetch(`${API_BASE_URL}/api/ndvi-notification-report?${params.toString()}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to fetch notification report");
-      console.table((json.data || []).map((item) => ({
-        id: item.id,
-        user_id: item.user_id,
-        village_name: item.village_name,
-        division: item.division,
-        range: item.range,
-        round: item.round,
-        beat: item.beat,
-        village: item.village,
-        month: item.month,
-        table_name: item.table_name,
-        pixel_id: item.pixel_id,
-        alert_status: item.alert_status,
-        action_taken: item.action_taken,
-        note: item.note,
-        has_image: item.has_image,
-        sent_at: item.sent_at,
-        sent_at_raw: item.sent_at_raw,
-        sent_at_formatted: item.sent_at_formatted,
-        report_generated_at: item.report_generated_at,
-      })));
       setData((json.data || []).map((item) => ({ ...item, key: item.id })));
       setMonthlySummary((json.monthlyDivisionSummary || []).map((item, index) => ({ ...item, key: `${item.month}-${item.division}-${index}` })));
       setSummary(json.summary || { total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
@@ -121,52 +204,50 @@ const NDVINotifications = () => {
 
   const exportToExcel = async () => {
     if (!data.length) {
-      message.warning("No notification data available to export");
+      message.warning(t.noData);
       return;
     }
 
     const [XLSX, { saveAs }] = await Promise.all([import("xlsx"), import("file-saver")]);
     const rows = data.map((item, index) => ({
       "Sr. No.": index + 1,
-      "User ID": item.user_id || "-",
-      "Subscribed Village": item.village_name || "-",
-      Division: item.division || "-",
-      Range: item.range || "-",
-      Round: item.round || "-",
-      Beat: item.beat || "-",
-      "Alert Village": item.village || item.village_name || "-",
-      Month: item.month || "-",
-      "Pixel ID": item.pixel_id || "-",
-      Status: item.alert_status || "Pending",
-      "Action Taken": item.action_taken || "No action taken",
-      Note: item.note || "-",
-      "Has Image": item.has_image ? "Yes" : "No",
-      "Sent At (IST)": formatSentAt(item.sent_at, item.sent_at_formatted),
-      "Report Generated At": item.report_generated_at || "-",
+      [t.userId]: item.user_id || "-",
+      [t.subscribedVillage]: item.village_name || "-",
+      [t.division]: item.division || "-",
+      [t.range]: item.range || "-",
+      [t.round]: item.round || "-",
+      [t.beat]: item.beat || "-",
+      [t.alertVillage]: item.village || item.village_name || "-",
+      [t.month]: item.month || "-",
+      [t.pixelId]: item.pixel_id || "-",
+      [t.status]: item.alert_status || t.pending,
+      [t.actionTaken]: item.action_taken || t.noActionTaken,
+      [t.note]: item.note || "-",
+      [t.hasImage]: item.has_image ? t.yes : t.no,
+      [t.sentAt]: formatSentAt(item.sent_at),
     }));
     const summaryRows = monthlySummary.map((item) => ({
-      Month: item.month,
-      Division: item.division,
-      Range: item.range || "-",
-      Round: item.round || "-",
-      Beat: item.beat || "-",
-      Village: item.village || "-",
-      "Alerts Generated": item.alerts_generated,
-      Resolved: item.resolved,
-      Pending: item.pending,
+      [t.month]: item.month,
+      [t.division]: item.division,
+      [t.range]: item.range || "-",
+      [t.round]: item.round || "-",
+      [t.beat]: item.beat || "-",
+      [t.village]: item.village || "-",
+      [t.alertsGenerated]: item.alerts_generated,
+      [t.resolved]: item.resolved,
+      [t.pending]: item.pending,
     }));
     const filterRows = [
-      { Filter: "User ID", Value: filters.user_id || "All" },
-      { Filter: "Division", Value: filters.division || "All" },
-      { Filter: "Month", Value: filters.month || "All" },
-      { Filter: "Status", Value: filters.status || "All" },
-      { Filter: "NDVI Table", Value: filters.table_name || "All" },
-      { Filter: "Start Date", Value: filters.dates?.[0]?.format("YYYY-MM-DD") || "All" },
-      { Filter: "End Date", Value: filters.dates?.[1]?.format("YYYY-MM-DD") || "All" },
-      { Filter: "Users Received", Value: summary.users_received || 0 },
-      { Filter: "Total Notifications", Value: summary.total_notifications || 0 },
-      { Filter: "Resolved", Value: summary.resolved || 0 },
-      { Filter: "Pending", Value: summary.pending || 0 },
+      { Filter: t.userId,    Value: filters.user_id  || "All" },
+      { Filter: t.division,  Value: filters.division  || "All" },
+      { Filter: t.month,     Value: filters.month     || "All" },
+      { Filter: t.status,    Value: filters.status    || "All" },
+      { Filter: t.startDate, Value: filters.dates?.[0]?.format("YYYY-MM-DD") || "All" },
+      { Filter: t.endDate,   Value: filters.dates?.[1]?.format("YYYY-MM-DD") || "All" },
+      { Filter: t.usersReceived,      Value: summary.users_received     || 0 },
+      { Filter: t.totalNotifications, Value: summary.total_notifications || 0 },
+      { Filter: t.resolved,           Value: summary.resolved           || 0 },
+      { Filter: t.pending,            Value: summary.pending            || 0 },
     ];
 
     const wb = XLSX.utils.book_new();
@@ -205,90 +286,115 @@ const NDVINotifications = () => {
     if (lat && lng) {
       window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
     } else {
-      message.warning("Location coordinates not available");
+      message.warning(t.locationUnavailable);
     }
   };
 
   const columns = [
-    { title: "User ID", dataIndex: "user_id", key: "user_id" },
-    { title: "Subscribed Village", dataIndex: "village_name", key: "village_name", render: (v) => v || "-" },
-    { title: "Division", dataIndex: "division", key: "division", render: (v) => v || "-" },
-    { title: "Range", dataIndex: "range", key: "range", render: (v) => v || "-" },
-    { title: "Round", dataIndex: "round", key: "round", render: (v) => v || "-" },
-    { title: "Beat", dataIndex: "beat", key: "beat", render: (v) => v || "-" },
-    { title: "Alert Village", dataIndex: "village", key: "village", render: (v, record) => v || record.village_name || "-" },
-    { title: "Month", dataIndex: "month", key: "month", render: (v) => v || "-" },
-    { title: "Pixel ID", dataIndex: "pixel_id", key: "pixel_id" },
-    { title: "Status", dataIndex: "alert_status", key: "alert_status", render: (v) => <Tag color={v === "Resolved" ? "success" : "warning"}>{v || "Pending"}</Tag> },
-    { title: "Action Taken", dataIndex: "action_taken", key: "action_taken", render: (v) => v || "No action taken" },
+    { title: t.userId,            dataIndex: "user_id",      key: "user_id" },
+    { title: t.subscribedVillage, dataIndex: "village_name", key: "village_name", render: (v) => v || "-" },
+    { title: t.division,          dataIndex: "division",     key: "division",     render: (v) => v || "-" },
+    { title: t.range,             dataIndex: "range",        key: "range",        render: (v) => v || "-" },
+    { title: t.round,             dataIndex: "round",        key: "round",        render: (v) => v || "-" },
+    { title: t.beat,              dataIndex: "beat",         key: "beat",         render: (v) => v || "-" },
+    { title: t.alertVillage,      dataIndex: "village",      key: "village",      render: (v, record) => v || record.village_name || "-" },
+    { title: t.month,             dataIndex: "month",        key: "month",        render: (v) => v || "-" },
+    { title: t.pixelId,           dataIndex: "pixel_id",     key: "pixel_id" },
     {
-      title: "Sent At (IST)",
+      title: t.status,
+      dataIndex: "alert_status",
+      key: "alert_status",
+      render: (v) => <Tag color={v === "Resolved" ? "success" : "warning"}>{v || t.pending}</Tag>,
+    },
+    { title: t.actionTaken, dataIndex: "action_taken", key: "action_taken", render: (v) => v || t.noActionTaken },
+    {
+      title: t.sentAt,
       dataIndex: "sent_at",
       key: "sent_at",
       render: (v) => formatSentAt(v),
     },
     {
-      title: "Action",
+      title: t.action,
       key: "action",
       fixed: "right",
-      width: 120,
+      width: 130,
       render: (_, record) => (
         <Button type="link" icon={<EyeOutlined />} onClick={() => showDetails(record)}>
-          View Details
+          {t.viewDetails}
         </Button>
       ),
     },
   ];
 
   const monthlyColumns = [
-    { title: "Month", dataIndex: "month", key: "month" },
-    { title: "Division", dataIndex: "division", key: "division" },
-    { title: "Range", dataIndex: "range", key: "range", render: (v) => v || "-" },
-    { title: "Round", dataIndex: "round", key: "round", render: (v) => v || "-" },
-    { title: "Beat", dataIndex: "beat", key: "beat", render: (v) => v || "-" },
-    { title: "Village", dataIndex: "village", key: "village", render: (v) => v || "-" },
-    { title: "Alerts Generated", dataIndex: "alerts_generated", key: "alerts_generated" },
-    { title: "Resolved", dataIndex: "resolved", key: "resolved", render: (v) => <Tag color="success">{v}</Tag> },
-    { title: "Pending", dataIndex: "pending", key: "pending", render: (v) => <Tag color="warning">{v}</Tag> },
+    { title: t.month,          dataIndex: "month",            key: "month" },
+    { title: t.division,       dataIndex: "division",         key: "division" },
+    { title: t.range,          dataIndex: "range",            key: "range",            render: (v) => v || "-" },
+    { title: t.round,          dataIndex: "round",            key: "round",            render: (v) => v || "-" },
+    { title: t.beat,           dataIndex: "beat",             key: "beat",             render: (v) => v || "-" },
+    { title: t.village,        dataIndex: "village",          key: "village",          render: (v) => v || "-" },
+    { title: t.alertsGenerated, dataIndex: "alerts_generated", key: "alerts_generated" },
+    { title: t.resolved,       dataIndex: "resolved",         key: "resolved",         render: (v) => <Tag color="success">{v}</Tag> },
+    { title: t.pending,        dataIndex: "pending",          key: "pending",          render: (v) => <Tag color="warning">{v}</Tag> },
   ];
 
   return (
     <div className="container ndvi-notifications-page" style={{ padding: 24 }}>
-      <h3 className="main-heading">NDVI Notifications</h3>
+      <h3 className="main-heading">{t.pageTitle}</h3>
+
+      {/* ── Stat cards ── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={12} lg={6}><Card><Statistic title="Users Received" value={summary.users_received || 0} /></Card></Col>
-        <Col xs={24} md={12} lg={6}><Card><Statistic title="Total Notifications" value={summary.total_notifications || 0} /></Card></Col>
-        <Col xs={24} md={12} lg={6}><Card><Statistic title="Resolved" value={summary.resolved || 0} valueStyle={{ color: "#3f8600" }} /></Card></Col>
-        <Col xs={24} md={12} lg={6}><Card><Statistic title="Pending" value={summary.pending || 0} valueStyle={{ color: "#faad14" }} /></Card></Col>
+        <Col xs={24} md={12} lg={6}><Card><Statistic title={t.usersReceived}      value={summary.users_received     || 0} /></Card></Col>
+        <Col xs={24} md={12} lg={6}><Card><Statistic title={t.totalNotifications} value={summary.total_notifications || 0} /></Card></Col>
+        <Col xs={24} md={12} lg={6}><Card><Statistic title={t.resolved}           value={summary.resolved           || 0} valueStyle={{ color: "#3f8600" }} /></Card></Col>
+        <Col xs={24} md={12} lg={6}><Card><Statistic title={t.pending}            value={summary.pending            || 0} valueStyle={{ color: "#faad14" }} /></Card></Col>
       </Row>
 
+      {/* ── Filters (NDVI Table filter removed) ── */}
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
-          {renderSelect("user_id", "User ID", options.user_ids)}
-          {renderSelect("division", "Division", options.divisions)}
-          {renderSelect("month", "Month", options.months)}
-          {renderSelect("status", "Status", options.statuses)}
-          {renderSelect("table_name", "NDVI Table", options.tables, 6)}
-          <Col xs={24} md={8} lg={5}><RangePicker style={{ width: "100%" }} value={filters.dates} onChange={(dates) => setFilters((p) => ({ ...p, dates }))} /></Col>
+          {renderSelect("user_id",  t.userId,   options.user_ids,  5)}
+          {renderSelect("division", t.division, options.divisions, 5)}
+          {renderSelect("month",    t.month,    options.months,    4)}
+          {renderSelect("status",   t.status,   options.statuses,  4)}
           <Col xs={24} md={8} lg={4}>
+            <RangePicker
+              style={{ width: "100%" }}
+              value={filters.dates}
+              onChange={(dates) => setFilters((p) => ({ ...p, dates }))}
+            />
+          </Col>
+          <Col xs={24} md={8} lg={2}>
             <Space>
-              <Button icon={<SearchOutlined />} type="primary" onClick={() => fetchReport()}>Filter</Button>
-              <Button icon={<ReloadOutlined />} onClick={clearFilters}>Clear</Button>
+              <Button icon={<SearchOutlined />} type="primary" onClick={() => fetchReport()}>{t.filter}</Button>
+              <Button icon={<ReloadOutlined />} onClick={clearFilters}>{t.clear}</Button>
             </Space>
           </Col>
         </Row>
       </Card>
 
-      <Card title="Monthly Division-wise NDVI Alert Summary" style={{ marginBottom: 16 }}>
-        <Table columns={monthlyColumns} dataSource={monthlySummary} loading={loading} pagination={{ pageSize: 5 }} scroll={{ x: "max-content" }} />
+      {/* ── Monthly summary table ── */}
+      <Card title={t.monthlySummary} style={{ marginBottom: 16 }}>
+        <Table
+          columns={monthlyColumns}
+          dataSource={monthlySummary}
+          loading={loading}
+          pagination={{ pageSize: 5 }}
+          scroll={{ x: "max-content" }}
+        />
       </Card>
 
-      <Card title="Notification Data" extra={<Button icon={<DownloadOutlined />} onClick={exportToExcel}>Export</Button>}>
+      {/* ── Notification data table ── */}
+      <Card
+        title={t.notificationData}
+        extra={<Button icon={<DownloadOutlined />} onClick={exportToExcel}>{t.export}</Button>}
+      >
         <Table columns={columns} dataSource={data} loading={loading} scroll={{ x: "max-content" }} />
       </Card>
 
+      {/* ── Detail modal ── */}
       <Modal
-        title="Notification Details"
+        title={t.notificationDetails}
         open={detailModalOpen}
         onCancel={() => setDetailModalOpen(false)}
         footer={null}
@@ -299,7 +405,7 @@ const NDVINotifications = () => {
             {detailRecord.has_image && (
               <div style={{ marginBottom: 16, textAlign: "center" }}>
                 {detailImageLoading ? (
-                  <p>Loading image...</p>
+                  <p>{t.loadingImage}</p>
                 ) : detailImageUrl ? (
                   <Image
                     src={detailImageUrl}
@@ -308,42 +414,42 @@ const NDVINotifications = () => {
                     fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
                   />
                 ) : (
-                  <p>Image not available</p>
+                  <p>{t.imageNotAvailable}</p>
                 )}
               </div>
             )}
 
             <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label="User ID">{detailRecord.user_id || "-"}</Descriptions.Item>
-              <Descriptions.Item label="Subscribed Village">{detailRecord.village_name || "-"}</Descriptions.Item>
-              <Descriptions.Item label="Division">{detailRecord.division || "-"}</Descriptions.Item>
-              <Descriptions.Item label="Range">{detailRecord.range || "-"}</Descriptions.Item>
-              <Descriptions.Item label="Round">{detailRecord.round || "-"}</Descriptions.Item>
-              <Descriptions.Item label="Beat">{detailRecord.beat || "-"}</Descriptions.Item>
-              <Descriptions.Item label="Alert Village">{detailRecord.village || detailRecord.village_name || "-"}</Descriptions.Item>
-              <Descriptions.Item label="Month">{detailRecord.month || "-"}</Descriptions.Item>
-              <Descriptions.Item label="Pixel ID">{detailRecord.pixel_id || "-"}</Descriptions.Item>
-              <Descriptions.Item label="NDVI Table">{detailRecord.table_name || "-"}</Descriptions.Item>
-              <Descriptions.Item label="Status">
+              <Descriptions.Item label={t.userId}>{detailRecord.user_id || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.subscribedVillage}>{detailRecord.village_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.division}>{detailRecord.division || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.range}>{detailRecord.range || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.round}>{detailRecord.round || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.beat}>{detailRecord.beat || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.alertVillage}>{detailRecord.village || detailRecord.village_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.month}>{detailRecord.month || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.pixelId}>{detailRecord.pixel_id || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.ndviTable}>{detailRecord.table_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.status}>
                 <Tag color={detailRecord.alert_status === "Resolved" ? "success" : "warning"}>
-                  {detailRecord.alert_status || "Pending"}
+                  {detailRecord.alert_status || t.pending}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Has Image">
+              <Descriptions.Item label={t.hasImage}>
                 <Tag color={detailRecord.has_image ? "blue" : "default"}>
-                  {detailRecord.has_image ? "Yes" : "No"}
+                  {detailRecord.has_image ? t.yes : t.no}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Action Taken" span={2}>
-                {detailRecord.action_taken || "No action taken"}
+              <Descriptions.Item label={t.actionTaken} span={2}>
+                {detailRecord.action_taken || t.noActionTaken}
               </Descriptions.Item>
-              <Descriptions.Item label="Note" span={2}>
-                {detailRecord.note || "No note available"}
+              <Descriptions.Item label={t.note} span={2}>
+                {detailRecord.note || t.noNote}
               </Descriptions.Item>
-              <Descriptions.Item label="Sent At (IST)" span={2}>
+              <Descriptions.Item label={t.sentAt} span={2}>
                 {formatSentAt(detailRecord.sent_at)}
               </Descriptions.Item>
-              <Descriptions.Item label="Latitude">
+              <Descriptions.Item label={t.latitude}>
                 {detailRecord.latitude ? (
                   <Button
                     type="link"
@@ -355,7 +461,7 @@ const NDVINotifications = () => {
                   </Button>
                 ) : "-"}
               </Descriptions.Item>
-              <Descriptions.Item label="Longitude">
+              <Descriptions.Item label={t.longitude}>
                 {detailRecord.longitude ? (
                   <Button
                     type="link"
@@ -376,7 +482,7 @@ const NDVINotifications = () => {
                   icon={<EnvironmentOutlined />}
                   onClick={() => openInGoogleMaps(detailRecord.latitude, detailRecord.longitude)}
                 >
-                  View Location on Google Maps
+                  {t.viewOnMaps}
                 </Button>
               </div>
             )}

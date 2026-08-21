@@ -709,6 +709,19 @@ body {
   }
 }
 
+/* === Small laptop (1025 – 1280px) === */
+@media (max-width: 1280px) {
+  .patrol-filter-card {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .patrol-logs-page .main-heading {
+    font-size: 22px !important;
+  }
+}
+
 @media (max-width: 1024px) {
   .patrol-filter-card {
     grid-template-columns: repeat(2, minmax(160px, 1fr));
@@ -720,6 +733,27 @@ body {
 
   .patrol-progress-pane {
     display: none;
+  }
+}
+
+/* === Tablet insight cards (768 – 1024px) === */
+@media (max-width: 900px) {
+  .patrol-insight-card {
+    padding: 14px 16px;
+  }
+
+  .patrol-insight-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+
+  .patrol-mini-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .patrol-mini-stat:nth-child(2) {
+    border-right: 0;
   }
 }
 

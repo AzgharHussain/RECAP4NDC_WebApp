@@ -16,35 +16,10 @@ body {
   font-family: arial !important;
 }
 
-.css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root.Mui-error{
-  color: rgba(0, 0, 0, 0.6) !important;
-}
+/* === Remove stale MUI auto-generated class overrides ===
+   These reference internal MUI class names that change between versions.
+   Use .ndvi-dashboard-page selectors below instead. */
 
-.css-1hgcujo-MuiPickersInputBase-root-MuiPickersOutlinedInput-root.Mui-error .MuiPickersOutlinedInput-notchedOutline{
-  border-color: rgba(0, 0, 0, 0.23) !important;
-}
-
-.css-1hgcujo-MuiPickersInputBase-root-MuiPickersOutlinedInput-root.Mui-error .MuiPickersOutlinedInput-notchedOutline:hover{
-  border-color: black !important;
-}
-
-.css-phs6im.Mui-error{
-  color: rgba(0, 0, 0, 0.6) !important;
-}
-
-.css-18qp6qv.Mui-error .MuiPickersOutlinedInput-notchedOutline{
-    border-color: rgba(0, 0, 0, 0.23) !important;
-}
-
-.css-2npcip-MuiContainer-root{
-  padding-bottom: 0px !important;
-  min-height: 89vh !important;
-}
-
-.css-kgharg{
-    padding-bottom: 0px !important;
-  min-height: 10vh !important;
-}
 
 /* Main container layout */
 #root,
@@ -86,6 +61,7 @@ body {
 .css-17rbn86-MuiContainer-root{
   min-height: 87vh !important;
 }
+
 
 .ndvi-dashboard-page {
   background: #ffffff;
@@ -224,7 +200,26 @@ body {
 }
 
 .ndvi-dashboard-page canvas {
-  max-height: 360px;
+  max-height: 400px;
+}
+
+/* === Large monitor (> 1440px) — let canvas breathe === */
+@media (min-width: 1440px) {
+  .ndvi-dashboard-page canvas {
+    max-height: 500px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .ndvi-dashboard-page {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .ndvi-summary-grid .MuiGrid-item {
+    flex-basis: 50% !important;
+    max-width: 50% !important;
+  }
 }
 
 @media (max-width: 900px) {
@@ -242,6 +237,11 @@ body {
 @media (max-width: 600px) {
   .ndvi-dashboard-page .MuiTypography-h4 {
     font-size: 1.5rem;
+  }
+
+  .ndvi-summary-grid .MuiGrid-item {
+    flex-basis: 100% !important;
+    max-width: 100% !important;
   }
 
   .ndvi-dashboard-page .MuiButton-root {

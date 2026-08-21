@@ -115,12 +115,16 @@
   background-color: #f5f5f5;
 }
   
-  .map-wrapper {
-    display: flex;
-    flex-direction: column;
-   
-
-  }
+.map-wrapper {
+  display: flex;
+  flex-direction: column;
+  /* Fill the parent .content container rather than using viewport calc,
+     which left white space when the header height varied. */
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
   
   .map-header2 {
     display: flex;
@@ -282,10 +286,13 @@
     color: white;
   }
   
+  /* The map layout sits below the header and fills remaining height */
   .map-layout {
     display: flex;
     flex: 1;
     position: relative;
+    min-height: 0;
+    overflow: hidden;
   }
   
   .map-top-left {
@@ -1284,12 +1291,15 @@ color: #000;
   margin-bottom: 0;
 }
 
-/* Main container for the map */
+/* Main container: layer panel + map side-by-side, fills all available height */
 .main-container {
   display: flex;
   flex-direction: row;
-  
-  height: 40vh !important;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100% !important;
+  overflow: hidden;
 }
 
 /* Leaflet scale control */
@@ -1368,7 +1378,9 @@ color: #000;
 .map-wrapper {
   display: flex;
   flex-direction: column;
- 
+  flex: 1;
+  min-height: 0;
+  height: 100%;
 }
 
 /* Adjust map header */
@@ -1419,7 +1431,7 @@ color: #000;
 
   /* Adjust map wrapper height for mobile */
   .map-wrapper {
-    height: calc(100vh - 60px); /* Subtract header height */
+    height: 100%;
   }
 
   .leaflet-control-scale {
@@ -1548,22 +1560,100 @@ color: #000;
   height: 64px !important; /* equal or greater specificity */
 }
 
-@media only screen 
-  and (min-width: 1560px) {
-  
+/* Map container: fills remaining horizontal space, full height */
+.map-container {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+}
+
+/* === Responsive breakpoints for GeoDashboard === */
+
+/* Standard laptop (1025–1280px) */
+@media (max-width: 1280px) {
   .map-wrapper {
-    height: 14vh;
+    height: 100%;
   }
 }
 
-.map-container {
-  height: 82vh;
-  width: 80vw;
+/* Tablet (769–1024px) — layer panel goes above the map */
+@media (max-width: 1024px) {
+  .map-wrapper {
+    height: 100%;
+  }
+
+  /* Keep side-by-side row — panel narrows, map fills the rest */
+  .main-container {
+    flex-direction: row;
+  }
+
+  .main-container > div:first-child {
+    flex: 0 0 260px;   /* fixed-width panel */
+    overflow-y: auto;
+    width: 260px;
+  }
+
+  .map-container {
+    flex: 1 1 0;
+    width: auto;
+    min-height: 0;
+  }
 }
 
-@media (min-width: 1560px) {
-  .map-container {
-    width: 81vw;
-    height: 85vh;
+/* Mobile (≤ 768px) */
+@media (max-width: 768px) {
+  .map-wrapper {
+    height: 100%;
+  }
+
+  .map-header2 {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 4px 8px;
+    gap: 4px;
+  }
+
+  .map-header-mapview-h1 {
+    font-size: 14px !important;
+  }
+
+  .map-header-tab {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+
+  /* Layer panel collapses to compact height on phone */
+  .main-container > div:first-child {
+    max-height: 160px;
+  }
+
+  .map-top-left {
+    top: 8px;
+    right: 6px;
+  }
+
+  .left-sidebar .tool-button,
+  .left-sidebar .tool-button-active {
+    width: 28px;
+    font-size: 1rem;
+  }
+}
+
+/* Extra small (≤ 480px) */
+@media (max-width: 480px) {
+  .map-header-mapview-h1 {
+    font-size: 12px !important;
+  }
+
+  .map-header-tab {
+    font-size: 10px;
+    padding: 3px 5px;
+  }
+}
+
+/* Large monitor (≥ 1440px) */
+@media (min-width: 1440px) {
+  .map-wrapper {
+    height: 100%;
   }
 }

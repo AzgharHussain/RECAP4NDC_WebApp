@@ -108,8 +108,8 @@ button {
 .chart-card {
   backdrop-filter: blur(10px);
   padding: 1px;
-  flex: 1 1 48%;
-  min-width: 300px;
+  flex: 1 1 45%;
+  min-width: 280px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   border-radius: 20px;
   border: 1.949px solid rgba(255, 255, 255, 0.23);
@@ -295,7 +295,22 @@ button {
 
 @media (max-width: 1024px) {
   .dashboard-container {
-    max-height: 1200px;
     overflow-y: auto;
+  }
+
+  .charts-grid {
+    gap: 14px;
+  }
+
+  .chart-card {
+    flex: 1 1 100%;
+  }
+}
+
+/* === Small laptop (1025 – 1280px) === */
+@media (max-width: 1280px) {
+  .chart-card {
+    flex: 1 1 100%;
+    min-width: 240px;
   }
 }

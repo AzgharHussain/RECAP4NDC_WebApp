@@ -18,7 +18,8 @@ const DB_PASS = 'Reb@$hyd@08052026';
 const DB_HOST = 'gsdc-psql.gujarat.gov.in';
 const DB_PORT = 9999;
 const DB_SSL = false;
-const DB_CONNECT_TIMEOUT_MS = 15000;
+const DB_CONNECT_TIMEOUT_MS = 30000;  // increased from 15s to 30s
+const DB_KEEPALIVE_PING_EVERY = 50;   // ping the DB every N rows to keep connection alive
 
 // ── Proxy support ─────────────────────────────────────────────────────────────
 // The @google/earthengine client makes its own HTTPS requests and does NOT
@@ -97,8 +98,10 @@ function createDbClient() {
     password: DB_PASS,
     ssl: DB_SSL ? { rejectUnauthorized: false } : false,
     connectionTimeoutMillis: DB_CONNECT_TIMEOUT_MS,
+    // TCP keepalive — sends keepalive probes after 10s of idle so the
+    // OS/network does not silently drop long-lived connections.
     keepAlive: true,
-    keepAliveInitialDelayMillis: 30000,
+    keepAliveInitialDelayMillis: 10000,
   });
 }
 
@@ -113,6 +116,18 @@ async function validateDbConnection() {
   } finally {
     await db.end().catch(() => {});
   }
+}
+
+/**
+ * Connect a pg.Client with automatic retry on transient failures.
+ * Returns a connected client — caller is responsible for db.end().
+ */
+async function connectDbWithRetry(label = 'DB connect') {
+  return retryWithBackoff(async () => {
+    const db = createDbClient();
+    await db.connect();
+    return db;
+  }, label, 3);
 }
 
 // ── Earth Engine service-account key ─────────────────────────────────────────
@@ -701,9 +716,8 @@ async function processRow(db, sourceTable, targetTable, row, index, total) {
 
 async function processCoupe(sourceTable) {
   const targetTable = `${MONTH.runDate}_${sourceTable}_NDVI_Change`;
-  const db = createDbClient();
+  let db = await connectDbWithRetry(`${sourceTable} initial connect`);
 
-  await db.connect();
   try {
     await ensureTargetTable(db, targetTable);
     await clearTargetTable(db, targetTable);
@@ -712,17 +726,45 @@ async function processCoupe(sourceTable) {
     log(`Target table: public."${targetTable}"`);
 
     for (let i = 0; i < rows.length; i += 1) {
+      // ── Keepalive ping every N rows ─────────────────────────────────────
+      // Long GEE evaluations leave the DB socket idle. A periodic SELECT 1
+      // keeps the connection alive through network/firewall idle timeouts.
+      if (i > 0 && i % DB_KEEPALIVE_PING_EVERY === 0) {
+        try {
+          await db.query('SELECT 1');
+        } catch (pingErr) {
+          // Connection was dropped — reconnect and continue
+          log(`[WARN] ${sourceTable}: DB keepalive ping failed at row ${i + 1} (${pingErr.message}). Reconnecting...`);
+          try { await db.end(); } catch (_) {}
+          db = await connectDbWithRetry(`${sourceTable} reconnect at row ${i + 1}`);
+          log(`[INFO] ${sourceTable}: DB reconnected successfully at row ${i + 1}.`);
+        }
+      }
+
       try {
         await processRow(db, sourceTable, targetTable, rows[i], i + 1, rows.length);
       } catch (error) {
         const rowMsg = `${sourceTable} row id=${rows[i].id}: ${error.message || error}`;
         logError('COUPE', rowMsg);
+
+        // If the DB connection was lost mid-row, reconnect so remaining rows can proceed
+        if (isTransientError(error) || String(error.message || error).toLowerCase().includes('connection')) {
+          log(`[WARN] ${sourceTable}: DB error on row ${i + 1} — attempting reconnect...`);
+          try { await db.end(); } catch (_) {}
+          try {
+            db = await connectDbWithRetry(`${sourceTable} reconnect after row error ${i + 1}`);
+            log(`[INFO] ${sourceTable}: DB reconnected after row error at row ${i + 1}.`);
+          } catch (reconnErr) {
+            log(`[ERROR] ${sourceTable}: Could not reconnect after row error. Aborting coupe: ${reconnErr.message}`);
+            throw reconnErr;
+          }
+        }
       }
     }
 
     log(`Done. Results inserted into public."${targetTable}"`);
   } finally {
-    await db.end();
+    await db.end().catch(() => {});
   }
 }
 
@@ -804,36 +846,79 @@ END $$;
 
 // ── GeoServer publish ─────────────────────────────────────────────────────────
 async function publishToGeoserver() {
-  if (!GEOSERVER_URL || GEOSERVER_UNREACHABLE) {
-    log('=== GeoServer publish SKIPPED (GeoServer not available) ===');
+  if (!GEOSERVER_URL) {
+    log('=== GeoServer publish SKIPPED (GEOSERVER_URL not set) ===');
     return;
   }
+
+  // Retry GeoServer connection at publish time — it may have been
+  // unreachable at startup but is now available.
+  if (GEOSERVER_UNREACHABLE) {
+    log('=== Retrying GeoServer connection before publishing ===');
+    try {
+      await geoserverRequest('GET', '/rest/about/version.json');
+      log(`[CHECK] GeoServer NOW reachable: ${GEOSERVER_URL}`);
+      GEOSERVER_UNREACHABLE = false;
+    } catch (error) {
+      log(`[WARN] GeoServer still unreachable: ${error.message || error}`);
+      log('=== GeoServer publish SKIPPED (GeoServer not available) ===');
+      return;
+    }
+  }
+
   log('=== Publishing to GeoServer ===');
   log(`Published layers list: ${publishedFile}`);
   log(`Publish errors list:   ${errorFile}`);
 
   await styleExists();
-  const published = new Set(await listFeaturetypes());
-  const available = new Set(await listAvailableFeaturetypes());
+
+  // Get the list of layers already published in GeoServer
+  let published;
+  try {
+    published = new Set(await listFeaturetypes());
+  } catch (err) {
+    log(`[ERROR] Failed to list published feature types: ${err.message || err}`);
+    log('=== GeoServer publish SKIPPED (cannot list existing layers) ===');
+    return;
+  }
+
+  // Get the list of layers available in the datastore (DB tables)
+  let available;
+  try {
+    available = new Set(await listAvailableFeaturetypes());
+  } catch (err) {
+    log(`[WARN] Could not list available feature types: ${err.message || err}`);
+    available = new Set();
+  }
+
   const candidates = Array.from(new Set([...published, ...available]))
     .filter((name) => name.startsWith('2026'))
     .sort();
 
   // Log the full list of candidate layers so the user can audit it
   log(`Candidate layers to process (${candidates.length}):`);
-  candidates.forEach((name) => log(`  - ${name}`));
+  candidates.forEach((name) => {
+    const status = published.has(name) ? 'ALREADY PUBLISHED' : 'NOT PUBLISHED';
+    log(`  - ${name} [${status}]`);
+  });
 
+  let publishedCount = 0;
   let styled = 0;
   let skipped = 0;
   for (const featuretype of candidates) {
     try {
+      // Check if already published — if not, publish it
       if (!published.has(featuretype)) {
         await publishFeaturetype(featuretype);
         published.add(featuretype);
+        publishedCount += 1;
         log(`PUBLISHED ${featuretype}`);
         logPublished(`PUBLISHED  ${featuretype}`);
+      } else {
+        log(`ALREADY PUBLISHED ${featuretype} — skipping publish step`);
       }
 
+      // Check attributes and apply style
       const attributes = await getAttributeNames(featuretype);
       if (!attributes.has('change_category')) {
         skipped += 1;
@@ -851,11 +936,14 @@ async function publishToGeoserver() {
       logError('PUBLISH', `${featuretype}: ${error.message || error}`);
     }
   }
-  log(`GeoServer publish completed. Styled ${styled}, skipped ${skipped}.`);
+  log(`GeoServer publish completed. Newly published: ${publishedCount}, styled: ${styled}, skipped: ${skipped}.`);
 }
 
 async function runPostprocessAndPublish() {
+  // Always run postprocess SQL — it operates on PostgreSQL, not GeoServer
   await runPostprocessSql();
+  // Publish to GeoServer — will retry connection at publish time
+  // and skip gracefully if still unreachable
   await publishToGeoserver();
 }
 
@@ -865,6 +953,29 @@ async function main() {
   log(`Published log:  ${publishedFile}`);
   log(`Error log:      ${errorFile}`);
   log(`Checkpoint:     ${checkpointFile}`);
+
+  // ── Command-line: --postprocess-only ──────────────────────────────────────
+  // Skips coupe processing and only runs postprocess SQL + GeoServer publish.
+  // Useful when coupes are already processed but GeoServer was unreachable
+  // at the time and layers need to be published now.
+  const postprocessOnly = process.argv.includes('--postprocess-only');
+
+  if (postprocessOnly) {
+    log('=== --postprocess-only mode: skipping coupe processing ===');
+
+    // Validate DB connection
+    try {
+      await retryWithBackoff(() => validateDbConnection(), 'DB check (postprocess-only)', 3);
+    } catch (error) {
+      logError('STARTUP', `PostgreSQL: ${error.message || error}`);
+      throw error;
+    }
+
+    // Run postprocess + publish
+    await runPostprocessAndPublish();
+    log('Postprocess and publish complete.');
+    return;
+  }
 
   ensureMonthlySchedule();
 
@@ -876,7 +987,13 @@ async function main() {
   log('=== Checking service connections ===');
 
   try {
-    await validateDbConnection();
+    // Wrap the initial DB check in retryWithBackoff so rapid PM2 restarts
+    // after a partial failure do not immediately fail on a transient DB hiccup.
+    await retryWithBackoff(
+      () => validateDbConnection(),
+      'DB startup check',
+      3
+    );
   } catch (error) {
     logError('STARTUP', `PostgreSQL: ${error.message || error}`);
     throw error; // caught by main().catch() for FATAL handling
@@ -910,6 +1027,14 @@ async function main() {
   if (completedSet.size > 0) {
     log(`[RESUME] Found checkpoint. Already completed ${completedSet.size} coupe(s): ${checkpoint.completed.join(', ')}`);
     log(`[RESUME] Skipping those and continuing from where we left off.`);
+
+    // Brief pause when resuming after failures so that PM2 rapid-restart
+    // loops do not hammer the DB with simultaneous connection attempts.
+    if (checkpoint.failed && checkpoint.failed.length > 0) {
+      const pauseMs = 15000;
+      log(`[RESUME] ${checkpoint.failed.length} previously failed coupe(s): ${checkpoint.failed.join(', ')}. Waiting ${pauseMs / 1000}s before retrying to let DB recover...`);
+      await new Promise((r) => setTimeout(r, pauseMs));
+    }
   } else {
     log('[START] No checkpoint found. Starting fresh run.');
   }

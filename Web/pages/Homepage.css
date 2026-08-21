@@ -578,6 +578,27 @@ body {
   }
 }
 
+/* === 3-column overview step at 900px === */
+@media (max-width: 1100px) and (min-width: 901px) {
+  .overview-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .section-title {
+    font-size: 28px;
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 720px) {
   .hero-title {
     font-size: 32px;
@@ -619,5 +640,31 @@ body {
 
   .l_3 img {
     height: 40px !important;
+  }
+}
+
+/* === Very small screens (< 400px) === */
+@media (max-width: 400px) {
+  .hero-title {
+    font-size: 26px;
+  }
+
+  .hero-desc {
+    font-size: 13px;
+  }
+
+  .hero-cta {
+    font-size: 13px;
+    padding: 12px 22px;
+  }
+
+  .section-title {
+    font-size: 24px;
+  }
+
+  .overview-section-new,
+  .tools-section-new,
+  .faq-section {
+    padding: 50px 4%;
   }
 }

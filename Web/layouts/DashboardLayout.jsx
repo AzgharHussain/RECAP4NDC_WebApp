@@ -37,11 +37,23 @@ export default function DashboardLayout() {
   const [isWorkingPlanOpen, setIsWorkingPlanOpen] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate(); // Add useNavigate hook
+  const navigate = useNavigate();
   const { language, toggleLanguage } = useLanguage();
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const headerRef = useRef(null);
-const [contentHeight, setContentHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  // Track viewport width for responsive hamburger
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close sidebar when navigating on small screens
+  useEffect(() => {
+    if (windowWidth <= 1024) setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   // Language Texts
   const text = {
@@ -76,7 +88,7 @@ const [contentHeight, setContentHeight] = useState(0);
       viewCoupe: "કૂપ બાઉન્ડરી જુાા",
       coupeLog: "કૂપ અવલોકન લોગ",
       patrollingIncident: "પેટ્રોલિંગ",
-      logout: "લ಼ોગઆઉટ",
+      logout: "લૉગઆઉટ",
       admin: "એડમિન",
       language: "ભાષા",
       english: "અંગ્રેજી",
@@ -255,6 +267,15 @@ useEffect(() => {
           </div>
         </div>
       )}
+
+      {/* Sidebar backdrop for tablet/mobile */}
+      {isSidebarOpen && windowWidth <= 1024 && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       {/* Header */}
       <header className="header" ref={headerRef}>
         {/* ===== TOP ROW ===== */}
@@ -313,12 +334,18 @@ useEffect(() => {
 
         <header id="after-login-header">
                 <div className="container-fluid22">
-                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'100%',borderRadius:'50px'}}>
+                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px', padding:'2px',width:'100%',borderRadius:'50px'}}>
                         <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'25px'}}>
-                            {/* <a href="indexs.aspx">
-                                </a> */}
-                                <img src={gujaratlogo} alt="logo picture" style={{width:'50px'}}></img>
-                      
+                          {/* Hamburger — visible on tablet and mobile */}
+                          <button
+                            className="hamburger-btn"
+                            aria-label="Toggle navigation menu"
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                          >
+                            {isSidebarOpen ? <FaTimes /> : <FaBars />}
+                          </button>
+                            <img src={gujaratlogo} alt="logo picture" style={{width:'50px'}}></img>
+                        
                         <div className="portal-header">
                             <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>{text[language].appTitle}</b></h2>
                         </div>  </div>
