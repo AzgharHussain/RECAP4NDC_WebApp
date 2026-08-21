@@ -1013,9 +1013,10 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         `, [sourceTable]);
         const sourceColumns = new Map(columnInfo.rows.map(row => [row.column_name, row.data_type]));
 
-        // Build SELECT clause dynamically â€” quote all identifiers to handle
-        // reserved words. NOTE: division/range/round/beat come from ndvi_notification_users
-        // (stored at login time), NOT from the NDVI change table.
+        // Build SELECT clause dynamically — quote all identifiers to handle
+        // reserved words. division/range/round/beat are fetched from the NDVI
+        // change table (matched by pixel_id), with fallback to the values
+        // stored in ndvi_notification_users.
         const colOrNull = (name) => sourceColumns.has(name) ? `"${name}"` : 'NULL::text';
         const selectParts = [
           colOrNull('village') + ' AS village',
@@ -1024,6 +1025,10 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
           sourceColumns.has('status') ? '"status" AS status' : 'NULL::text AS status',
           sourceColumns.has('latitude') ? '"latitude" AS latitude' : 'NULL::text AS latitude',
           sourceColumns.has('longitude') ? '"longitude" AS longitude' : 'NULL::text AS longitude',
+          colOrNull('division') + ' AS src_division',
+          colOrNull('range') + ' AS src_range',
+          colOrNull('round') + ' AS src_round',
+          colOrNull('beat') + ' AS src_beat',
         ];
 
         // Determine the ID column: prefer pixle_id, fall back to id
@@ -1105,11 +1110,13 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         sent_at_formatted: row.sent_at_formatted || new Date(sentAtFallback).toLocaleString('en-GB', { hour12: false }),
         report_generated_at: reportGeneratedAt,
         month: getMonthFromNdviTableName(row.table_name),
-        // division/range/round/beat are read directly from ndvi_notification_users (joined in reportQuery)
-        division: row.division || getDivisionFromNdviTableName(row.table_name),
-        range:    row.range    || '-',
-        round:    row.round    || '-',
-        beat:     row.beat     || '-',
+        // division/range/round/beat: prefer values from the NDVI change table
+        // (matched by pixel_id), fall back to ndvi_notification_users values,
+        // then to table-name extraction / '-'.
+        division: sourceRecord?.src_division || row.division || getDivisionFromNdviTableName(row.table_name),
+        range:    sourceRecord?.src_range    || row.range    || '-',
+        round:    sourceRecord?.src_round    || row.round    || '-',
+        beat:     sourceRecord?.src_beat     || row.beat     || '-',
         village: sourceRecord?.village || row.village_name || '-',
         alert_status: alertStatus,
         action_taken: actionTaken,
