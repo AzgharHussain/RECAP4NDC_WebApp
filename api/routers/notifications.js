@@ -1011,7 +1011,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     `);
 
     const reportGeneratedAt = new Date().toISOString();
-    const { user_id, village_name, coupe_name, table_name, status, month, division, start_date, end_date } = req.query;
+    const { user_id, username, village_name, coupe_name, table_name, status, month, division, start_date, end_date } = req.query;
     const conditions = [];
     const values = [];
 
@@ -1020,7 +1020,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       conditions.push(sql.replace('?', `$${values.length}`));
     };
 
-    if (user_id) addCondition('u.user_id = ?', user_id);
+    if (user_id) addCondition('l.user_id = ?', user_id);
+    if (username) addCondition('g.username = ?', username);
     if (village_name) addCondition('u.village_name = ?', village_name);
     if (coupe_name) addCondition('u.coupe_name = ?', coupe_name);
     if (table_name) addCondition('l.table_name = ?', table_name);
@@ -1034,6 +1035,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       SELECT
         l.id,
         l.user_id,
+        g.username,
         u.village_name,
         u.division,
         u.range,
@@ -1046,6 +1048,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         TO_CHAR(COALESCE(l.sent_at, CURRENT_TIMESTAMP), 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted
       FROM public.ndvi_notification_log l
       LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
+      LEFT JOIN public.government_department_users g ON g.username = l.user_id
       ${whereClause}
       ORDER BY l.sent_at DESC NULLS LAST, l.id DESC
       LIMIT 5000
@@ -1062,12 +1065,13 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
 
     const optionsQuery = `
       SELECT
-        ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.user_id ORDER BY u.user_id), NULL) AS user_ids,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT g.username ORDER BY g.username), NULL) AS usernames,
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.village_name ORDER BY u.village_name), NULL) AS villages,
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.coupe_name ORDER BY u.coupe_name), NULL) AS coupes,
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT l.table_name ORDER BY l.table_name), NULL) AS tables
       FROM public.ndvi_notification_log l
       LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
+      LEFT JOIN public.government_department_users g ON g.username = l.user_id
     `;
 
     const [report, counts, options] = await Promise.all([

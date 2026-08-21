@@ -9,7 +9,7 @@ import { useLanguage } from "../context/LanguageContext";
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-const emptyOptions = { user_ids: [], villages: [], coupes: [], tables: [], divisions: [], months: [], statuses: ["Pending", "Resolved"] };
+const emptyOptions = { usernames: [], villages: [], coupes: [], tables: [], divisions: [], months: [], statuses: ["Pending", "Resolved"] };
 
 // Convert any timestamp to IST (UTC+5:30) and display as DD-MM-YYYY HH:mm:ss
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
@@ -40,6 +40,7 @@ const TEXTS = {
     pending: "Pending",
     // Filter placeholders
     userId: "User ID",
+    userName: "User Name",
     division: "Division",
     month: "Month",
     status: "Status",
@@ -89,6 +90,7 @@ const TEXTS = {
     pending: "બાકી",
     // Filter placeholders
     userId: "વપરાશકર્તા ID",
+    userName: "વપરાશકર્તા નામ",
     division: "વિભાગ",
     month: "મહિનો",
     status: "સ્થિતિ",
@@ -142,7 +144,7 @@ const NDVINotifications = () => {
   const [options, setOptions] = useState(emptyOptions);
   const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
   // table_name kept in state for API calls but no longer shown as a UI filter
-  const [filters, setFilters] = useState({ user_id: null, table_name: null, division: null, month: null, status: null, dates: null });
+  const [filters, setFilters] = useState({ username: null, table_name: null, division: null, month: null, status: null, dates: null });
   const [detailRecord, setDetailRecord] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailImageUrl, setDetailImageUrl] = useState(null);
@@ -152,7 +154,7 @@ const NDVINotifications = () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      ["user_id", "table_name", "division", "month", "status"].forEach((key) => {
+      ["username", "table_name", "division", "month", "status"].forEach((key) => {
         if (overrideFilters[key]) params.append(key, overrideFilters[key]);
       });
       if (overrideFilters.dates?.[0]) params.append("start_date", overrideFilters.dates[0].format("YYYY-MM-DD"));
@@ -181,7 +183,7 @@ const NDVINotifications = () => {
   }, []);
 
   const clearFilters = () => {
-    const cleared = { user_id: null, table_name: null, division: null, month: null, status: null, dates: null };
+    const cleared = { username: null, table_name: null, division: null, month: null, status: null, dates: null };
     setFilters(cleared);
     fetchReport(cleared);
   };
@@ -212,6 +214,7 @@ const NDVINotifications = () => {
     const rows = data.map((item, index) => ({
       "Sr. No.": index + 1,
       [t.userId]: item.user_id || "-",
+      [t.userName]: item.username || "-",
       [t.subscribedVillage]: item.village_name || "-",
       [t.division]: item.division || "-",
       [t.range]: item.range || "-",
@@ -238,7 +241,7 @@ const NDVINotifications = () => {
       [t.pending]: item.pending,
     }));
     const filterRows = [
-      { Filter: t.userId,    Value: filters.user_id  || "All" },
+      { Filter: t.userName, Value: filters.username || "All" },
       { Filter: t.division,  Value: filters.division  || "All" },
       { Filter: t.month,     Value: filters.month     || "All" },
       { Filter: t.status,    Value: filters.status    || "All" },
@@ -302,6 +305,7 @@ const NDVINotifications = () => {
 
   const columns = [
     { title: t.userId,            dataIndex: "user_id",      key: "user_id" },
+    { title: t.userName,          dataIndex: "username",     key: "username",     render: (v) => v || "-" },
     { title: t.subscribedVillage, dataIndex: "village_name", key: "village_name", render: (v) => v || "-" },
     { title: t.division,          dataIndex: "division",     key: "division",     render: (v) => v || "-" },
     { title: t.range,             dataIndex: "range",        key: "range",        render: (v) => v || "-" },
@@ -376,7 +380,7 @@ const NDVINotifications = () => {
       {/* ── Filters (NDVI Table filter removed) ── */}
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
-          {renderSelect("user_id",  t.userId,   options.user_ids,  5)}
+          {renderSelect("username", t.userName, options.usernames, 5)}
           {renderSelect("division", t.division, options.divisions, 5)}
           {renderSelect("month",    t.month,    options.months,    4)}
           {renderSelect("status",   t.status,   options.statuses,  4)}
@@ -456,6 +460,7 @@ const NDVINotifications = () => {
 
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label={t.userId}>{detailRecord.user_id || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.userName}>{detailRecord.username || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.subscribedVillage}>{detailRecord.village_name || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.division}>{detailRecord.division || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.range}>{detailRecord.range || "-"}</Descriptions.Item>
