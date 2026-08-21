@@ -5,6 +5,8 @@ import dayjs from "dayjs";
 import { API_BASE_URL } from "../config";
 import { getAuthHeaders } from "../utils/authUtils";
 import { useLanguage } from "../context/LanguageContext";
+import gujaratlogo from "../assets/FOREST DEPT.jpg";
+import gisfylogo from "../assets/Gisfylogo.png";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -276,14 +278,11 @@ const NDVINotifications = () => {
           id: String(record.pixel_id),
         });
         const url = `${API_BASE_URL}/api/ndvi-change?${params}`;
-        console.log("[showDetails] Fetching image from:", url);
         const res = await fetch(url, {
           method: "GET",
           headers: { ...getAuthHeaders() },
         });
-        console.log("[showDetails] Response status:", res.status);
         const json = await res.json();
-        console.log("[showDetails] Response:", json.success, json.data?.length, json.data?.[0]?.image_data ? "has image" : "no image", json.message);
         if (json.success && json.data && json.data[0] && json.data[0].image_data) {
           setDetailImageUrl(`data:${json.data[0].image_type || "image/jpeg"};base64,${json.data[0].image_data}`);
         }
@@ -303,28 +302,41 @@ const NDVINotifications = () => {
     }
   };
 
+  // Generic sorter for string/number values
+  const genericSorter = (dataIndex) => (a, b) => {
+    const av = a[dataIndex];
+    const bv = b[dataIndex];
+    if (av == null && bv == null) return 0;
+    if (av == null) return -1;
+    if (bv == null) return 1;
+    if (typeof av === "number" && typeof bv === "number") return av - bv;
+    return String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
+  };
+
   const columns = [
-    { title: t.userId,            dataIndex: "user_id",      key: "user_id" },
-    { title: t.userName,          dataIndex: "username",     key: "username",     render: (v) => v || "-" },
-    { title: t.subscribedVillage, dataIndex: "village_name", key: "village_name", render: (v) => v || "-" },
-    { title: t.division,          dataIndex: "division",     key: "division",     render: (v) => v || "-" },
-    { title: t.range,             dataIndex: "range",        key: "range",        render: (v) => v || "-" },
-    { title: t.round,             dataIndex: "round",        key: "round",        render: (v) => v || "-" },
-    { title: t.beat,              dataIndex: "beat",         key: "beat",         render: (v) => v || "-" },
-    { title: t.alertVillage,      dataIndex: "village",      key: "village",      render: (v, record) => v || record.village_name || "-" },
-    { title: t.month,             dataIndex: "month",        key: "month",        render: (v) => v || "-" },
-    { title: t.pixelId,           dataIndex: "pixel_id",     key: "pixel_id" },
+    { title: t.userId,            dataIndex: "user_id",      key: "user_id",      sorter: genericSorter("user_id") },
+    { title: t.userName,          dataIndex: "username",     key: "username",     sorter: genericSorter("username"),     render: (v) => v || "-" },
+    { title: t.subscribedVillage, dataIndex: "village_name", key: "village_name", sorter: genericSorter("village_name"), render: (v) => v || "-" },
+    { title: t.division,          dataIndex: "division",     key: "division",     sorter: genericSorter("division"),     render: (v) => v || "-" },
+    { title: t.range,             dataIndex: "range",        key: "range",        sorter: genericSorter("range"),        render: (v) => v || "-" },
+    { title: t.round,             dataIndex: "round",        key: "round",        sorter: genericSorter("round"),        render: (v) => v || "-" },
+    { title: t.beat,              dataIndex: "beat",         key: "beat",         sorter: genericSorter("beat"),         render: (v) => v || "-" },
+    { title: t.alertVillage,      dataIndex: "village",      key: "village",      sorter: genericSorter("village"),      render: (v, record) => v || record.village_name || "-" },
+    { title: t.month,             dataIndex: "month",        key: "month",        sorter: genericSorter("month"),        render: (v) => v || "-" },
+    { title: t.pixelId,           dataIndex: "pixel_id",     key: "pixel_id",     sorter: genericSorter("pixel_id") },
     {
       title: t.status,
       dataIndex: "alert_status",
       key: "alert_status",
+      sorter: genericSorter("alert_status"),
       render: (v) => <Tag color={v === "Resolved" ? "success" : "warning"}>{v || t.pending}</Tag>,
     },
-    { title: t.actionTaken, dataIndex: "action_taken", key: "action_taken", render: (v) => v || t.noActionTaken },
+    { title: t.actionTaken, dataIndex: "action_taken", key: "action_taken", sorter: genericSorter("action_taken"), render: (v) => v || t.noActionTaken },
     {
       title: t.hasImage,
       dataIndex: "has_image",
       key: "has_image",
+      sorter: genericSorter("has_image"),
       render: (hasImage, record) =>
         hasImage ? (
           <Button type="link" style={{ padding: 0 }} onClick={() => showDetails(record)}>
@@ -338,6 +350,7 @@ const NDVINotifications = () => {
       title: t.sentAt,
       dataIndex: "sent_at",
       key: "sent_at",
+      sorter: genericSorter("sent_at"),
       render: (v) => formatSentAt(v),
     },
     {
@@ -354,15 +367,15 @@ const NDVINotifications = () => {
   ];
 
   const monthlyColumns = [
-    { title: t.month,          dataIndex: "month",            key: "month" },
-    { title: t.division,       dataIndex: "division",         key: "division" },
-    { title: t.range,          dataIndex: "range",            key: "range",            render: (v) => v || "-" },
-    { title: t.round,          dataIndex: "round",            key: "round",            render: (v) => v || "-" },
-    { title: t.beat,           dataIndex: "beat",             key: "beat",             render: (v) => v || "-" },
-    { title: t.village,        dataIndex: "village",          key: "village",          render: (v) => v || "-" },
-    { title: t.alertsGenerated, dataIndex: "alerts_generated", key: "alerts_generated" },
-    { title: t.resolved,       dataIndex: "resolved",         key: "resolved",         render: (v) => <Tag color="success">{v}</Tag> },
-    { title: t.pending,        dataIndex: "pending",          key: "pending",          render: (v) => <Tag color="warning">{v}</Tag> },
+    { title: t.month,          dataIndex: "month",            key: "month",            sorter: genericSorter("month") },
+    { title: t.division,       dataIndex: "division",         key: "division",         sorter: genericSorter("division") },
+    { title: t.range,          dataIndex: "range",            key: "range",            sorter: genericSorter("range"),            render: (v) => v || "-" },
+    { title: t.round,          dataIndex: "round",            key: "round",            sorter: genericSorter("round"),            render: (v) => v || "-" },
+    { title: t.beat,           dataIndex: "beat",             key: "beat",             sorter: genericSorter("beat"),             render: (v) => v || "-" },
+    { title: t.village,        dataIndex: "village",          key: "village",          sorter: genericSorter("village"),          render: (v) => v || "-" },
+    { title: t.alertsGenerated, dataIndex: "alerts_generated", key: "alerts_generated", sorter: genericSorter("alerts_generated") },
+    { title: t.resolved,       dataIndex: "resolved",         key: "resolved",         sorter: genericSorter("resolved"),         render: (v) => <Tag color="success">{v}</Tag> },
+    { title: t.pending,        dataIndex: "pending",          key: "pending",          sorter: genericSorter("pending"),          render: (v) => <Tag color="warning">{v}</Tag> },
   ];
 
   return (
@@ -529,6 +542,33 @@ const NDVINotifications = () => {
           </div>
         )}
       </Modal>
+
+      {/* FOOTER */}
+      <footer className="footer" style={{
+        color: 'black',
+        textAlign: 'center',
+        padding: '15px',
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center'
+      }}>
+        <div>
+          <p style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            © 2026 Gujarat Forest Department
+            <img src={gujaratlogo} alt="logo picture" style={{ width: '40px' }} />
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <p>Powered by</p>
+          <a href="https://www.gisfy.co.in/" target="_blank" rel="noopener noreferrer">
+            <img
+              src={gisfylogo}
+              alt="logo picture"
+              style={{ width: '100px', height: '40px' }}
+            />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };

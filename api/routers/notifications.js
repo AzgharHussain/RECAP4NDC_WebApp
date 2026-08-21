@@ -921,11 +921,6 @@ const buildNdviActionText = (record) => {
   if (record?.status === true || record?.status === 'true') actions.push('Status updated');
   if (isRealNote(record?.note)) actions.push('Note added');
   if (record?.image_data) actions.push('Image uploaded');
-  // Debug: log what we received for this pixel
-  if (record?.note !== undefined) {
-    const raw = String(record.note);
-    console.log('[buildNdviActionText] note:', JSON.stringify(record.note), 'len:', raw.length, 'isRealNote:', isRealNote(record.note));
-  }
   return actions.length ? actions.join(', ') : 'No action taken';
 };
 
@@ -1021,8 +1016,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     };
 
     if (user_id) addCondition('l.user_id = ?', user_id);
-    if (username) addCondition('g.username = ?', username);
-    if (village_name) addCondition('u.village_name = ?', village_name);
+    if (username) addCondition('g.username = ?', username);    if (village_name) addCondition('u.village_name = ?', village_name);
     if (coupe_name) addCondition('u.coupe_name = ?', coupe_name);
     if (table_name) addCondition('l.table_name = ?', table_name);
     if (month) addCondition('l.table_name LIKE ?', `${month}-%`);
@@ -1048,7 +1042,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         TO_CHAR(COALESCE(l.sent_at, CURRENT_TIMESTAMP), 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted
       FROM public.ndvi_notification_log l
       LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
-      LEFT JOIN public.government_department_users g ON g.username = l.user_id
+      LEFT JOIN public.government_department_users g ON g.user_id::text = l.user_id
       ${whereClause}
       ORDER BY l.sent_at DESC NULLS LAST, l.id DESC
       LIMIT 5000
@@ -1071,7 +1065,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT l.table_name ORDER BY l.table_name), NULL) AS tables
       FROM public.ndvi_notification_log l
       LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
-      LEFT JOIN public.government_department_users g ON g.username = l.user_id
+      LEFT JOIN public.government_department_users g ON g.user_id::text = l.user_id
     `;
 
     const [report, counts, options] = await Promise.all([
@@ -1264,7 +1258,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       },
       monthlyDivisionSummary: Array.from(monthlyDivisionMap.values()).sort((a, b) => b.month.localeCompare(a.month) || a.division.localeCompare(b.division)),
       options: {
-        user_ids: optionRows.user_ids || [],
+        usernames: optionRows.usernames || [],
         villages: optionRows.villages || [],
         coupes: optionRows.coupes || [],
         tables: tableOptions,

@@ -596,8 +596,6 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
     const { NdvicoupeName } = req.query;
     const { id } = req.query;
 
-    console.log('[GET /ndvi-change] NdvicoupeName:', NdvicoupeName, 'id:', id);
-
     if (!NdvicoupeName) {
         return res.status(400).json({
             success: false,
@@ -655,15 +653,12 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
 
         // Fetch image from MongoDB only (not from PostgreSQL table)
         const candidates = getRecordIdCandidates(id);
-        console.log('[GET /ndvi-change] image candidates for recordId:', candidates);
 
         const mongoImage = await MongoImage.findOne({
           sourceType: 'ndvi',
           coupeName: NdvicoupeName,
           recordId: { $in: candidates }
         }).lean();
-
-        console.log('[GET /ndvi-change] mongoImage found:', !!mongoImage, mongoImage ? `recordId: ${mongoImage.recordId}, type: ${typeof mongoImage.recordId}` : 'none');
 
         results[0].image_data = mongoImage ? mongoImage.imageData : null;
         results[0].image_type = mongoImage ? mongoImage.imageType : null;
