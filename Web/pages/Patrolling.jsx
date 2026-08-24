@@ -1397,18 +1397,34 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       dataIndex: "division",
       key: "division",
       align: "center",
+      render: (value, record) => {
+        // Show Division only for Inside Forest
+        const loc = (record.patrolling_location || "").toLowerCase();
+        if (loc.includes("inside") || loc.includes("forest")) return value || "-";
+        return "-";
+      },
     },
     {
       title: language === "gu" ? "રેન્જ" : "Range",
       dataIndex: "range",
       key: "range",
       align: "center",
+      render: (value, record) => {
+        const loc = (record.patrolling_location || "").toLowerCase();
+        if (loc.includes("inside") || loc.includes("forest")) return value || "-";
+        return "-";
+      },
     },
     {
       title: language === "gu" ? "બીટ" : "Beat",
       dataIndex: "beat",
       key: "beat",
       align: "center",
+      render: (value, record) => {
+        const loc = (record.patrolling_location || "").toLowerCase();
+        if (loc.includes("inside") || loc.includes("forest")) return value || "-";
+        return "-";
+      },
     },
     {
       title: language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location",
@@ -1422,14 +1438,23 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       dataIndex: "current_location_distict",
       key: "current_location_distict",
       align: "center",
-      render: (value) => value || "-",
+      render: (value, record) => {
+        // Show District only for Outside Forest
+        const loc = (record.patrolling_location || "").toLowerCase();
+        if (loc.includes("outside") || loc.includes("village") || loc.includes("city")) return value || "-";
+        return "-";
+      },
     },
     {
       title: language === "gu" ? "ગામ" : "Village",
       dataIndex: "current_location_village",
       key: "current_location_village",
       align: "center",
-      render: (value) => value || "-",
+      render: (value, record) => {
+        const loc = (record.patrolling_location || "").toLowerCase();
+        if (loc.includes("outside") || loc.includes("village") || loc.includes("city")) return value || "-";
+        return "-";
+      },
     },
     {
       title: language === "gu" ? "શરૂઆતની તારીખ" : "Search by Start Date",
@@ -1608,7 +1633,20 @@ const exportTableToExcel = async () => {
   };
 
   // Sheet 1: Patrol Logs Data (with separate date and time columns)
-  const patrolLogsData = filteredData.map((item, index) => ({
+  const patrolLogsData = filteredData.map((item, index) => {
+    // Collect notes from all images
+    const allNotes = (item.images || [])
+      .filter(img => img.note)
+      .map(img => img.note)
+      .join('; ') || "-";
+
+    // Count images
+    const imageCount = (item.images || []).length;
+    const imageCategories = (item.images || [])
+      .map(img => img.image_category || 'image')
+      .join(', ') || "-";
+
+    return {
     [language === "gu" ? "ક્રમાંક" : "Sr. No."]: index + 1,
     [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: getTypeDisplayName(item.type_name),
     [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "-",
@@ -1625,7 +1663,11 @@ const exportTableToExcel = async () => {
     [language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location"]: item.start_location || "-",
     [language === "gu" ? "અંતિમ સ્થાન" : "End Location"]: item.end_location || "-",
     [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: item.distance_kms || "0",
-  }));
+    [language === "gu" ? "નોંધો" : "Notes"]: allNotes,
+    [language === "gu" ? "છબીઓની સંખ્યા" : "Image Count"]: imageCount,
+    [language === "gu" ? "છબી પ્રકાર" : "Image Categories"]: imageCategories,
+    };
+  });
 
   // Sheet 2: Patrol Analysis Dashboard Summary
   const calculateTypeStatsForExport = (type) => {
@@ -2187,6 +2229,112 @@ const exportTableToExcel = async () => {
             <div style={{ marginBottom: 16 }}>
               {selectedPatrol.images && selectedPatrol.images.length > 0 ? (
                 <>
+                  {/* Images with notes — shown separately for easier review */}
+                  {selectedPatrol.images.some(img => img.note) && (
+                    <>
+                      <h4 style={{ marginBottom: 12, color: '#0066cc', borderTop: '1px solid #e0e0e0', paddingTop: 12 }}>
+                        {language === "gu" ? "નોંધ સાથેની છબીઓ" : "Images with Notes"} ({selectedPatrol.images.filter(img => img.note).length})
+                      </h4>
+                      <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
+                        {selectedPatrol.images.filter(img => img.note).map((image, index) => {
+                          const getImageLabel = () => {
+                            if (language === "gu") {
+                              switch(image.image_category) {
+                                case 'start_image': return 'શરૂઆતની છબી';
+                                case 'end_image': return 'અંતિમ છબી';
+                                default:
+                                  if (image.image_category && image.image_category.startsWith('image_')) {
+                                    const num = image.image_category.replace('image_', '');
+                                    return `છબી ${num}`;
+                                  }
+                                  return `છબી ${index + 1}`;
+                              }
+                            } else {
+                              switch(image.image_category) {
+                                case 'start_image': return 'Start Image';
+                                case 'end_image': return 'End Image';
+                                default:
+                                  if (image.image_category && image.image_category.startsWith('image_')) {
+                                    const num = image.image_category.replace('image_', '');
+                                    return `Image ${num}`;
+                                  }
+                                  return `Image ${index + 1}`;
+                              }
+                            }
+                          };
+
+                          return (
+                            <Col xs={12} sm={8} md={6} key={`note_image_${index}`}>
+                              <div style={{
+                                border: '1px solid #0066cc',
+                                borderRadius: 4,
+                                padding: 4,
+                                height: '100%',
+                                background: '#f0f6ff'
+                              }}>
+                                <Image
+                                  src={`data:${image.image_type};base64,${image.image_data}`}
+                                  alt={getImageLabel()}
+                                  style={{
+                                    width: 170,
+                                    height: 150,
+                                    objectFit: 'cover',
+                                    borderRadius: 2
+                                  }}
+                                  preview={{
+                                    mask: (
+                                      <div style={{
+                                        color: '#fff',
+                                        fontSize: 12,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        height: '100%'
+                                      }}>
+                                        {language === "gu" ? "જૂઓ" : "View"}
+                                      </div>
+                                    )
+                                  }}
+                                />
+                                <div style={{
+                                  fontSize: 10,
+                                  color: '#666',
+                                  marginTop: 4,
+                                  padding: '0 2px',
+                                  textAlign: 'center'
+                                }}>
+                                  {getImageLabel()}
+                                  <div style={{
+                                    fontSize: 10,
+                                    color: '#0066cc',
+                                    fontWeight: 600,
+                                    marginTop: 2,
+                                    padding: '2px 4px',
+                                    background: '#e6f0ff',
+                                    borderRadius: 2,
+                                    whiteSpace: 'normal',
+                                    wordBreak: 'break-word'
+                                  }}>
+                                    {language === "gu" ? "નોંધ" : "Note"}: {image.note}
+                                  </div>
+                                  <Button
+                                    size="small"
+                                    icon={<DownloadOutlined />}
+                                    style={{ marginTop: 6, width: '100%' }}
+                                    onClick={() => downloadBase64Image(image, `patrol_${selectedPatrol.patrol_id || 'image'}_${image.image_category || index + 1}_with_note`)}
+                                  >
+                                    {language === "gu" ? "ડાઉનલોડ" : "Download"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </Col>
+                          );
+                        })}
+                      </Row>
+                    </>
+                  )}
+
+                  {/* All images */}
                   <h4 style={{ marginBottom: 12 }}>
                     {language === "gu" ? "પેટ્રોલ છબીઓ" : "Patrol Images"} ({selectedPatrol.images.length})
                   </h4>
@@ -2198,7 +2346,7 @@ const exportTableToExcel = async () => {
                             case 'start_image': return 'શરૂઆતની છબી';
                             case 'end_image': return 'અંતિમ છબી';
                             default:
-                              if (image.image_category.startsWith('image_')) {
+                              if (image.image_category && image.image_category.startsWith('image_')) {
                                 const num = image.image_category.replace('image_', '');
                                 return `છબી ${num}`;
                               }
@@ -2209,7 +2357,7 @@ const exportTableToExcel = async () => {
                             case 'start_image': return 'Start Image';
                             case 'end_image': return 'End Image';
                             default:
-                              if (image.image_category.startsWith('image_')) {
+                              if (image.image_category && image.image_category.startsWith('image_')) {
                                 const num = image.image_category.replace('image_', '');
                                 return `Image ${num}`;
                               }
@@ -2220,8 +2368,8 @@ const exportTableToExcel = async () => {
 
                       return (
                         <Col xs={12} sm={8} md={6} key={`image_${index}`}>
-                          <div style={{ 
-                            border: '1px solid #d9d9d9', 
+                          <div style={{
+                            border: '1px solid #d9d9d9',
                             borderRadius: 4,
                             padding: 4,
                             height: '100%'
@@ -2229,7 +2377,7 @@ const exportTableToExcel = async () => {
                             <Image
                               src={`data:${image.image_type};base64,${image.image_data}`}
                               alt={getImageLabel()}
-                              style={{ 
+                              style={{
                                 width: 170,
                                 height: 150,
                                 objectFit: 'cover',
@@ -2237,7 +2385,7 @@ const exportTableToExcel = async () => {
                               }}
                               preview={{
                                 mask: (
-                                  <div style={{ 
+                                  <div style={{
                                     color: '#fff',
                                     fontSize: 12,
                                     display: 'flex',
@@ -2250,7 +2398,7 @@ const exportTableToExcel = async () => {
                                 )
                               }}
                             />
-                            <div style={{ 
+                            <div style={{
                               fontSize: 10,
                               color: '#666',
                               marginTop: 4,
@@ -2286,8 +2434,8 @@ const exportTableToExcel = async () => {
                   </Row>
                 </>
               ) : (
-                <div style={{ 
-                  textAlign: 'center', 
+                <div style={{
+                  textAlign: 'center',
                   padding: 20,
                   color: '#999'
                 }}>

@@ -924,12 +924,31 @@ router.get('/patrolling-division', async (req, res) => {
   try {
     const query = `
       SELECT DISTINCT division
-      FROM patrols;
+      FROM patrols
+      WHERE division IS NOT NULL
+        AND TRIM(division) != ''
+        AND UPPER(TRIM(division)) NOT IN ('N/A', 'NA', 'NULL', 'NONE', '-')
+      ORDER BY division;
     `;
     const result = await client.query(query);
+
+    // Deduplicate: merge entries that are the same after removing
+    // "Forest Division" suffix (e.g. "Bhavnagar" and "Bhavnagar Forest Division")
+    const seen = new Map();
+    result.rows.forEach(row => {
+      const name = (row.division || '').trim();
+      if (!name) return;
+      // Normalize: remove "Forest Division" suffix for comparison
+      const normalized = name.replace(/\s*Forest\s*Division\s*$/i, '').trim().toLowerCase();
+      if (!seen.has(normalized)) {
+        seen.set(normalized, name);
+      }
+    });
+
+    const divisions = [...seen.values()].sort();
     res.json({
       message: 'All patrolling division fetched successfully',
-      data: result.rows
+      data: divisions.map(d => ({ division: d }))
     });
   } catch (err) {
     console.error(err);

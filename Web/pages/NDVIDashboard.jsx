@@ -89,7 +89,8 @@ import {
   CloseFullscreen,
   Send,
   KeyboardArrowDown,
-  KeyboardArrowUp
+  KeyboardArrowUp,
+  Directions as DirectionIcon
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { useLanguage } from "../context/LanguageContext"; // Add this import
@@ -737,9 +738,16 @@ const NDVIChangeDashboard = () => {
   };
 
   const isMonthAvailable = (date) => {
-    if (!date || availableMonths.length === 0) return true;
+    if (!date) return false;
+    if (availableMonths.length === 0) return true; // fallback: allow all if not loaded yet
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     return availableMonths.includes(monthKey);
+  };
+
+  // Check if a year has any available months
+  const isYearAvailable = (year) => {
+    if (availableMonths.length === 0) return true;
+    return availableMonths.some(m => m.startsWith(`${year}-`));
   };
 
   useEffect(() => {
@@ -2477,6 +2485,7 @@ const handleExportToPDF = () => {
       onChange={handleStartDateChange}
       shouldDisableDate={(date) => !isMonthAvailable(date)}
       shouldDisableMonth={(date) => !isMonthAvailable(date)}
+      shouldDisableYear={(date) => !isYearAvailable(date.getFullYear())}
       minDate={new Date(2020, 0, 1)}
       maxDate={endDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
@@ -2504,6 +2513,7 @@ const handleExportToPDF = () => {
       onChange={handleEndDateChange}
       shouldDisableDate={(date) => !isMonthAvailable(date)}
       shouldDisableMonth={(date) => !isMonthAvailable(date)}
+      shouldDisableYear={(date) => !isYearAvailable(date.getFullYear())}
       minDate={startDate || new Date(2020, 0, 1)}
       maxDate={startDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
@@ -3032,6 +3042,16 @@ const handleExportToPDF = () => {
                                 <Typography variant="caption" display="block" color="text.secondary">
                                   {t.lon}: {row.longitude?.toFixed(6) || '-'}
                                 </Typography>
+                                {row.latitude && row.longitude && (
+                                  <Button
+                                    size="small"
+                                    startIcon={<DirectionIcon />}
+                                    onClick={() => openCoordinatesInMap(row.latitude, row.longitude)}
+                                    sx={{ mt: 0.5, textTransform: 'none', fontSize: 11 }}
+                                  >
+                                    {language === 'gu' ? 'દિશા મેળવો' : 'Get Directions'}
+                                  </Button>
+                                )}
                               </Box>
                             </TableCell>
                             <TableCell>
@@ -3293,6 +3313,17 @@ const handleExportToPDF = () => {
                               >
                                 {t.lon}: {selectedRecord.longitude?.toFixed(6) || '-'}
                               </Typography>
+                              {selectedRecord.latitude && selectedRecord.longitude && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<DirectionIcon />}
+                                  onClick={() => openCoordinatesInMap(selectedRecord.latitude, selectedRecord.longitude)}
+                                  sx={{ mt: 1, textTransform: 'none' }}
+                                >
+                                  {language === 'gu' ? 'દિશા મેળવો' : 'Get Directions'}
+                                </Button>
+                              )}
                             </>
                           }
                         />

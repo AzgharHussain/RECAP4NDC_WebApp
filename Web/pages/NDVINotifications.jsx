@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Button, Card, Col, DatePicker, Descriptions, Image, Modal, Row, Select, Space, Statistic, Table, Tag, message } from "antd";
-import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Button, Card, Col, DatePicker, Descriptions, Image, Modal, Row, Select, Space, Statistic, Table, Tag, Tooltip, message } from "antd";
+import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { API_BASE_URL } from "../config";
 import { getAuthHeaders } from "../utils/authUtils";
@@ -50,10 +50,12 @@ const TEXTS = {
     clear: "Clear",
     // Table columns
     subscribedVillage: "Subscribed Village",
+    subscribedVillageHint: "The village the user subscribed to receive NDVI alerts for",
     range: "Range",
     round: "Round",
     beat: "Beat",
     alertVillage: "Alert Village",
+    alertVillageHint: "The village where the NDVI vegetation change was detected",
     pixelId: "Pixel ID",
     actionTaken: "Action Taken",
     noActionTaken: "No action taken",
@@ -100,10 +102,12 @@ const TEXTS = {
     clear: "સાફ કરો",
     // Table columns
     subscribedVillage: "સભ્ય ગ્રામ",
+    subscribedVillageHint: "વપરાશકર્તાએ NDVI ચેતવણી માટે સભ્યતા લીધેલું ગામ",
     range: "રેન્જ",
     round: "રાઉન્ડ",
     beat: "બીટ",
     alertVillage: "ચેતવણી ગ્રામ",
+    alertVillageHint: "NDVI વનસ્પતિ પરિવર્તન જોવામાં આવેલું ગામ",
     pixelId: "પિક્સેલ ID",
     actionTaken: "લેવાયેલ પગલું",
     noActionTaken: "કોઈ પગલું નહીં",
@@ -268,7 +272,7 @@ const NDVINotifications = () => {
     setDetailModalOpen(true);
     setDetailImageUrl(null);
     setDetailImageLoading(false);
-    // Always attempt to fetch the image if we have table_name and pixel_id,
+    // Always attempt to fetch the image and note if we have table_name and pixel_id,
     // even if has_image is false (the flag may be stale).
     if (record.table_name && record.pixel_id) {
       setDetailImageLoading(true);
@@ -283,8 +287,20 @@ const NDVINotifications = () => {
           headers: { ...getAuthHeaders() },
         });
         const json = await res.json();
-        if (json.success && json.data && json.data[0] && json.data[0].image_data) {
-          setDetailImageUrl(`data:${json.data[0].image_type || "image/jpeg"};base64,${json.data[0].image_data}`);
+        if (json.success && json.data && json.data[0]) {
+          const data = json.data[0];
+          // Update image
+          if (data.image_data) {
+            setDetailImageUrl(`data:${data.image_type || "image/jpeg"};base64,${data.image_data}`);
+          }
+          // Update note and other fields from the source table
+          setDetailRecord((prev) => ({
+            ...prev,
+            note: data.note || prev.note,
+            latitude: data.latitude || prev.latitude,
+            longitude: data.longitude || prev.longitude,
+            status: data.status !== undefined ? data.status : prev.status,
+          }));
         }
       } catch (err) {
         console.error("Failed to fetch image:", err);
@@ -316,12 +332,18 @@ const NDVINotifications = () => {
   const columns = [
     { title: t.userId,            dataIndex: "user_id",      key: "user_id",      sorter: genericSorter("user_id") },
     { title: t.userName,          dataIndex: "username",     key: "username",     sorter: genericSorter("username"),     render: (v) => v || "-" },
-    { title: t.subscribedVillage, dataIndex: "village_name", key: "village_name", sorter: genericSorter("village_name"), render: (v) => v || "-" },
+    { title: t.subscribedVillage, dataIndex: "village_name", key: "village_name", sorter: genericSorter("village_name"), render: (v) => v || "-",
+      titleRender: () => (
+        <span>{t.subscribedVillage} <Tooltip title={t.subscribedVillageHint}><InfoCircleOutlined style={{ color: '#999', fontSize: 12 }} /></Tooltip></span>
+      ) },
     { title: t.division,          dataIndex: "division",     key: "division",     sorter: genericSorter("division"),     render: (v) => v || "-" },
     { title: t.range,             dataIndex: "range",        key: "range",        sorter: genericSorter("range"),        render: (v) => v || "-" },
     { title: t.round,             dataIndex: "round",        key: "round",        sorter: genericSorter("round"),        render: (v) => v || "-" },
     { title: t.beat,              dataIndex: "beat",         key: "beat",         sorter: genericSorter("beat"),         render: (v) => v || "-" },
-    { title: t.alertVillage,      dataIndex: "village",      key: "village",      sorter: genericSorter("village"),      render: (v, record) => v || record.village_name || "-" },
+    { title: t.alertVillage,      dataIndex: "village",      key: "village",      sorter: genericSorter("village"),      render: (v, record) => v || record.village_name || "-",
+      titleRender: () => (
+        <span>{t.alertVillage} <Tooltip title={t.alertVillageHint}><InfoCircleOutlined style={{ color: '#999', fontSize: 12 }} /></Tooltip></span>
+      ) },
     { title: t.month,             dataIndex: "month",        key: "month",        sorter: genericSorter("month"),        render: (v) => v || "-" },
     { title: t.pixelId,           dataIndex: "pixel_id",     key: "pixel_id",     sorter: genericSorter("pixel_id") },
     {
@@ -474,12 +496,12 @@ const NDVINotifications = () => {
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label={t.userId}>{detailRecord.user_id || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.userName}>{detailRecord.username || "-"}</Descriptions.Item>
-              <Descriptions.Item label={t.subscribedVillage}>{detailRecord.village_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label={<span>{t.subscribedVillage} <Tooltip title={t.subscribedVillageHint}><InfoCircleOutlined style={{ color: '#999', fontSize: 12 }} /></Tooltip></span>}>{detailRecord.village_name || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.division}>{detailRecord.division || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.range}>{detailRecord.range || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.round}>{detailRecord.round || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.beat}>{detailRecord.beat || "-"}</Descriptions.Item>
-              <Descriptions.Item label={t.alertVillage}>{detailRecord.village || detailRecord.village_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label={<span>{t.alertVillage} <Tooltip title={t.alertVillageHint}><InfoCircleOutlined style={{ color: '#999', fontSize: 12 }} /></Tooltip></span>}>{detailRecord.village || detailRecord.village_name || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.month}>{detailRecord.month || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.pixelId}>{detailRecord.pixel_id || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.ndviTable}>{detailRecord.table_name || "-"}</Descriptions.Item>
