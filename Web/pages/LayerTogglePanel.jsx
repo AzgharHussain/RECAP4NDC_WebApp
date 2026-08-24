@@ -1980,7 +1980,11 @@ const CoupeGroupWithoutCheckbox = ({
 // Handle checkbox toggle - with NDVI change layer bounds
 const handleGroupCheckbox = useCallback(async (e) => {
   e.stopPropagation();
-  
+
+  console.log(`[handleGroupCheckbox] CLICKED — groupId="${groupId}", isChecked=${isChecked}, currentLayerName="${currentLayerName}"`);
+  console.log(`[handleGroupCheckbox] group.title="${group.title}", validSelection=`, validSelection);
+  console.log(`[handleGroupCheckbox] availableMonths=`, availableMonths);
+
   if (isChecked) {
     // Remove all layers from this group
     const keysToRemove = Object.keys(addedLayers).filter(key => key.includes(`-${groupId}-`));
@@ -2012,19 +2016,25 @@ const handleGroupCheckbox = useCallback(async (e) => {
     }));
   } else {
     // Add the current layer
-    if (!currentLayerName) return;
-    
+    if (!currentLayerName) {
+      console.warn(`[handleGroupCheckbox] ⚠️ No currentLayerName — cannot add layer. validSelection=`, validSelection, 'availableMonths=', availableMonths);
+      return;
+    }
+
+    console.log(`[handleGroupCheckbox] Adding layer "${currentLayerName}"...`);
     // Set loading to true BEFORE adding layer
     setIsLayerLoading(true);
-    
+
     try {
       const layer = await layerManager.addLayer(
-        currentLayerName, 
+        currentLayerName,
         `${group.title} (${months[validSelection.month]} ${validSelection.year})`
       );
-      
+      console.log(`[handleGroupCheckbox] addLayer returned:`, layer);
+
       if (layer) {
         const newKey = `${currentLayerName}-${groupId}-0`;
+        console.log(`[handleGroupCheckbox] ✅ Layer added with key "${newKey}"`);
         setAddedLayers((prev) => ({ ...prev, [newKey]: layer }));
         setOpacity((prev) => ({ ...prev, [newKey]: 1 }));
         layer.setOpacity(1);
@@ -2383,9 +2393,16 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
 }, [availableCoupeLayers]);
 
   const getLegendUrl = (layerName) => {
-    // Clean the layer name for the legend request
-    const cleanLayerName = layerName.replace(/^cite:/, '');
-    return `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${cleanLayerName}`;
+    // Determine the correct workspace for the legend request
+    let legendLayer = layerName;
+    if (!layerName.includes(':')) {
+      if (/^\d{4}[_-]/.test(layerName)) {
+        legendLayer = `Recap4NDC:${layerName}`;
+      } else {
+        legendLayer = `cite:${layerName}`;
+      }
+    }
+    return `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${legendLayer}`;
   };
 
   const getFeatureInfo = useCallback(async (latlng, layerName) => {
@@ -2403,18 +2420,28 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
       const bounds = map.getBounds();
       const size = map.getSize();
       const point = map.latLngToContainerPoint(latlng);
-      
+
+      // Determine the correct WMS layer name with workspace prefix
+      let wmsLayerName = layerName;
+      if (!layerName.includes(':')) {
+        if (/^\d{4}[_-]/.test(layerName)) {
+          wmsLayerName = `Recap4NDC:${layerName}`;
+        } else {
+          wmsLayerName = `cite:${layerName}`;
+        }
+      }
+
       const params = new URLSearchParams({
         REQUEST: 'GetFeatureInfo',
         SERVICE: 'WMS',
         VERSION: '1.1.1',
-        LAYERS: layerName,
+        LAYERS: wmsLayerName,
         STYLES: '',
         SRS: 'EPSG:4326',
         BBOX: `${bounds.getSouthWest().lng},${bounds.getSouthWest().lat},${bounds.getNorthEast().lng},${bounds.getNorthEast().lat}`,
         WIDTH: size.x,
         HEIGHT: size.y,
-        QUERY_LAYERS: layerName,
+        QUERY_LAYERS: wmsLayerName,
         INFO_FORMAT: 'application/json',
         X: Math.round(point.x),
         Y: Math.round(point.y),
@@ -2638,15 +2665,42 @@ const handleMapClick = useCallback(async (e) => {
 
   const createLayer = (layerName, layerLabel, zIndex, wmsLayerName) => {
     try {
-     
-return L.nonTiledLayer.wms(GEOSERVER_WMS, {
-  layers: wmsLayerName || layerName,
-  format: "image/png",
-  transparent: true,
-  version: "1.3.0"
-});
+      // Determine the correct WMS layer name with workspace prefix
+      let wmsLayers = wmsLayerName || layerName;
+
+      // If no explicit wmsLayerName, add the appropriate workspace prefix
+      if (!wmsLayerName) {
+        if (/^\d{4}[_-]/.test(layerName)) {
+          // NDVI change layers (e.g. "2026-07-01_bhavnagar_coupe_NDVI_Change") are in Recap4NDC workspace
+          wmsLayers = `Recap4NDC:${layerName}`;
+        } else {
+          // Static boundary layers (e.g. "Gujarat_district") are in cite workspace
+          wmsLayers = `cite:${layerName}`;
+        }
+      }
+
+      console.log(`[createLayer] layerName="${layerName}", wmsLayers="${wmsLayers}", GEOSERVER_WMS="${GEOSERVER_WMS}", zIndex=${zIndex}`);
+
+      // Use standard Leaflet tileLayer.wms (built-in, reliable, used by GeoDashboard)
+      // instead of nonTiledLayer which makes a single large image request that can fail
+      const layer = L.tileLayer.wms(GEOSERVER_WMS, {
+        layers: wmsLayers,
+        format: "image/png",
+        transparent: true,
+        version: "1.1.0",
+        tileSize: 512,
+        zIndex: zIndex || 1000,
+        // Log every tile URL so we can see exactly what's being requested
+        detectRetina: false
+      });
+
+      // Log the full WMS URL template that Leaflet will use for tiles
+      console.log(`[createLayer] WMS base URL: ${GEOSERVER_WMS}`);
+      console.log(`[createLayer] Full layer config:`, { layers: wmsLayers, format: "image/png", transparent: true, version: "1.1.0", tileSize: 512 });
+
+      return layer;
     } catch (error) {
-      console.error(`Error creating layer ${layerName}:`, error);
+      console.error(`[createLayer] Error creating layer ${layerName}:`, error);
       return null;
     }
   };
@@ -2660,10 +2714,13 @@ const layerManager = {
 
     try {
       const zIndex = calculateZIndex();
+      console.log(`[addLayer] START — layerName="${layerName}", label="${layerLabel}", wmsLayerName="${wmsLayerName}", zIndex=${zIndex}`);
       const newLayer = createLayer(layerName, layerLabel, zIndex, wmsLayerName);
       if (!newLayer) throw new Error("Layer creation failed");
 
+      console.log(`[addLayer] Layer object created, adding to map...`);
       newLayer.addTo(mapRef.current);
+      console.log(`[addLayer] Layer added to map. Map has layer: ${mapRef.current.hasLayer(newLayer)}`);
 
       newLayer._metadata = {
         name: layerName,
@@ -2672,19 +2729,33 @@ const layerManager = {
       
       return new Promise((resolve) => {
         const timeout = setTimeout(() => {
-          console.warn(`[addLayer] Timeout while loading "${layerName}" (15s)`);
+          console.warn(`[addLayer] ⚠️ Timeout while loading "${layerName}" (15s) — layer may not have rendered`);
           resolve(newLayer);
         }, 15000);
 
         newLayer.on("load", () => {
+          console.log(`[addLayer] ✅ Layer "${layerName}" loaded successfully`);
           clearTimeout(timeout);
           resolve(newLayer);
         });
 
+        newLayer.on("tileload", (e) => {
+          console.log(`[addLayer] 🟢 tileload "${layerName}" — tile URL:`, e?.coords, e?.url || '(no url)');
+        });
+
         newLayer.on("tileerror", (error) => {
-          console.warn(`[addLayer] Tile error in "${layerName}"`, error);
+          console.error(`[addLayer] 🔴 tileerror in "${layerName}":`, {
+            error: error?.error || error,
+            tile: error?.tile,
+            coords: error?.coords,
+            url: error?.url || error?.tile?.src || '(no url)'
+          });
           clearTimeout(timeout);
           resolve(newLayer);
+        });
+
+        newLayer.on("tileabort", (error) => {
+          console.warn(`[addLayer] 🟡 tileabort in "${layerName}":`, error);
         });
       });
     } catch (error) {
@@ -2820,10 +2891,14 @@ const getLayerBoundsFromAPI = useCallback(async (layerName, isNdviChangeLayer = 
 const toggleLayer = useCallback(
   async (layerConfig, groupId) => {
     const uniqueKey = `${layerConfig.Name}-${groupId}`;
+    console.log(`[toggleLayer] CLICKED — Name="${layerConfig.Name}", Layer="${layerConfig.Layer}", wmsLayer="${layerConfig.wmsLayer}", groupId="${groupId}", uniqueKey="${uniqueKey}"`);
+    console.log(`[toggleLayer] layerConfig:`, layerConfig);
+    console.log(`[toggleLayer] Already added? ${!!addedLayers[uniqueKey]}`);
 
     try {
       if (addedLayers[uniqueKey]) {
         // Remove the layer
+        console.log(`[toggleLayer] Removing layer "${layerConfig.Name}"...`);
         await layerManager.removeLayer(layerConfig.Name);
         setAddedLayers((prev) => {
           const { [uniqueKey]: removedLayer, ...rest } = prev;
@@ -2835,6 +2910,7 @@ const toggleLayer = useCallback(
         });
       } else {
         // Set loading to true BEFORE adding layer
+        console.log(`[toggleLayer] Adding new layer...`);
         setIsLayerLoading(true);
 
         // Add the new layer
@@ -2852,10 +2928,13 @@ const toggleLayer = useCallback(
         // Determine if this is an NDVI change layer
         const isNdviChangeLayer = layerConfig.Name.includes('NDVI_Change') ||
                                   layerConfig.Name.includes('coupe_NDVI_Change');
+        console.log(`[toggleLayer] isNdviChangeLayer=${isNdviChangeLayer} for "${layerConfig.Name}"`);
 
         // Get bounds from API and zoom
         try {
+          console.log(`[toggleLayer] Fetching bounds for "${layerConfig.Name}"...`);
           const bounds = await getLayerBoundsFromAPI(layerConfig.Name, isNdviChangeLayer);
+          console.log(`[toggleLayer] Bounds received:`, bounds);
 
           if (bounds && mapRef.current) {
             const sw = L.latLng(bounds.minY, bounds.minX);
