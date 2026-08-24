@@ -833,8 +833,18 @@ BEGIN
         );
         EXECUTE format('ALTER TABLE public.%I DROP COLUMN IF EXISTS geom;', rec.table_name);
         EXECUTE format('ALTER TABLE public.%I RENAME COLUMN geom_multipolygon TO geom;', rec.table_name);
-        EXECUTE format('ALTER TABLE public.%I DROP COLUMN IF EXISTS pixle_id;', rec.table_name);
-        EXECUTE format('ALTER TABLE public.%I RENAME COLUMN id TO pixle_id;', rec.table_name);
+        EXECUTE format(
+            'DO $ren$ BEGIN
+                 IF EXISTS (SELECT 1 FROM information_schema.columns
+                            WHERE table_schema = ''public''
+                              AND table_name = %L
+                              AND column_name = ''id'') THEN
+                     ALTER TABLE public.%I DROP COLUMN IF EXISTS pixle_id;
+                     ALTER TABLE public.%I RENAME COLUMN id TO pixle_id;
+                 END IF;
+             END $ren$;',
+            rec.table_name, rec.table_name, rec.table_name
+        );
     END LOOP;
 END $$;
     `);
