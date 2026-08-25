@@ -694,7 +694,7 @@ async function ensureTargetTable(db, targetTable) {
   await db.query(`
     CREATE TABLE IF NOT EXISTS public."${targetTable}" (
       id bigserial PRIMARY KEY,
-      geom geometry(Point, 4326),
+      geom geometry(MultiPolygon, 4326),
       "NDVI_change" double precision,
       change_category text,
       latitude double precision,
@@ -731,6 +731,21 @@ async function ensureTargetTable(db, targetTable) {
       END IF;
     END $fix$;
   `);
+  await db.query(`
+    ALTER TABLE public."${targetTable}"
+    ALTER COLUMN geom TYPE geometry(MultiPolygon, 4326)
+    USING CASE
+      WHEN geom IS NULL THEN NULL
+      WHEN GeometryType(geom) IN ('POLYGON', 'MULTIPOLYGON') THEN ST_Multi(geom)::geometry(MultiPolygon, 4326)
+      WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN ST_Multi(ST_Transform(ST_MakeEnvelope(
+        FLOOR(ST_X(ST_Transform(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326), 32643)) / 10) * 10,
+        FLOOR(ST_Y(ST_Transform(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326), 32643)) / 10) * 10,
+        FLOOR(ST_X(ST_Transform(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326), 32643)) / 10) * 10 + 10,
+        FLOOR(ST_Y(ST_Transform(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326), 32643)) / 10) * 10 + 10,
+        32643), 4326))::geometry(MultiPolygon, 4326)
+      ELSE NULL
+    END
+  `);
 }
 
 async function clearTargetTable(db, targetTable) {
@@ -766,7 +781,12 @@ async function insertPixel(db, sourceTable, targetTable, row, feature) {
       geom, "NDVI_change", change_category, latitude, longitude, division, range, round, beat,
       village, ${quoteIdentifier(PREV_NDVI_COLUMN)}, ${quoteIdentifier(CURRENT_NDVI_COLUMN)}, pixle_id, note, image_data, status, coupe_no
     ) VALUES (
-      ST_SetSRID(ST_MakePoint($1, $2), 4326), $3, $4, $2, $1, $5, $6, $7, $8,
+      ST_Multi(ST_Transform(ST_MakeEnvelope(
+        FLOOR(ST_X(ST_Transform(ST_SetSRID(ST_MakePoint($1, $2), 4326), 32643)) / 10) * 10,
+        FLOOR(ST_Y(ST_Transform(ST_SetSRID(ST_MakePoint($1, $2), 4326), 32643)) / 10) * 10,
+        FLOOR(ST_X(ST_Transform(ST_SetSRID(ST_MakePoint($1, $2), 4326), 32643)) / 10) * 10 + 10,
+        FLOOR(ST_Y(ST_Transform(ST_SetSRID(ST_MakePoint($1, $2), 4326), 32643)) / 10) * 10 + 10,
+        32643), 4326)), $3, $4, $2, $1, $5, $6, $7, $8,
       $9, $10, $11, $12::text, $13, $14::jsonb, $15, $16
     )`,
     [
