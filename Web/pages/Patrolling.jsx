@@ -1649,8 +1649,8 @@ const exportTableToExcel = async () => {
     return;
   }
 
-  const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
-    import("exceljs"),
+  const [XLSX, { saveAs }] = await Promise.all([
+    import("xlsx"),
     import("file-saver"),
   ]);
 
@@ -1912,101 +1912,72 @@ const exportTableToExcel = async () => {
     ];
   }
 
-  const imageNotesData = exportData.flatMap((item, itemIndex) => (item.images || []).map((img, imgIndex) => ({
-    [language === "gu" ? "ક્રમાંક" : "Sr. No."]: `${itemIndex + 1}.${imgIndex + 1}`,
-    [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: item.patrol_id || "-",
-    [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "-",
-    [language === "gu" ? "છબી પ્રકાર" : "Image Category"]: img.image_category || `Image ${imgIndex + 1}`,
-    [language === "gu" ? "નોંધ" : "Note"]: img.note || "-",
-  })));
+  const hasImageNotes = exportData.some(item => (item.images || []).length > 0);
 
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'RECAP4NDC';
-  workbook.created = new Date();
+  const wb = XLSX.utils.book_new();
+  wb.Props = {
+    Title: 'RECAP4NDC Patrol Report',
+    Author: 'RECAP4NDC',
+    CreatedDate: new Date(),
+  };
 
-  const addObjectSheet = (name, rows) => {
+  // Helper: append an array-of-objects sheet
+  const appendObjectSheet = (name, rows) => {
     if (!rows || rows.length === 0) return null;
-    const sheet = workbook.addWorksheet(name);
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Auto-width based on content
     const headers = Object.keys(rows[0]);
-    sheet.addRow(headers);
-    rows.forEach((row) => sheet.addRow(headers.map((header) => row[header])));
-    sheet.getRow(1).font = { bold: true };
-    sheet.columns = headers.map((header) => ({
-      key: header,
-      width: Math.max(12, Math.min(50, Math.max(header.length, ...rows.map((row) => String(row[header] ?? '').length)) + 2)),
-    }));
-    return sheet;
-  };
-
-  const getExcelImageExtension = (mimeType = '') => {
-    if (mimeType.includes('png')) return 'png';
-    if (mimeType.includes('gif')) return 'gif';
-    if (mimeType.includes('jpeg') || mimeType.includes('jpg')) return 'jpeg';
-    return null;
-  };
-
-  const summarySheet = workbook.addWorksheet('Officer Patrol Summary Report');
-  summaryData.forEach((row) => summarySheet.addRow(row));
-  summaryMerges.forEach((range) => summarySheet.mergeCells(range));
-  summaryColumnWidths.forEach((width, index) => {
-    summarySheet.getColumn(index + 1).width = width;
-  });
-  summarySheet.getRow(1).font = { bold: true, size: 14 };
-  summarySheet.getRow(2).font = { bold: true };
-  summarySheet.getRow(3).font = { bold: true };
-
-  addObjectSheet('Patrol Logs', patrolLogsData);
-  addObjectSheet('Analysis Summary', analysisSummary);
-  addObjectSheet('Patrol Type Breakdown', typeBreakdownData);
-
-  if (imageNotesData.length > 0) {
-    const imageSheet = workbook.addWorksheet('Image Notes');
-    const headers = [
-      language === "gu" ? "ક્રમાંક" : "Sr. No.",
-      language === "gu" ? "પેટ્રોલ ID" : "Patrol ID",
-      language === "gu" ? "અધિકારીનું નામ" : "Officer Name",
-      language === "gu" ? "છબી પ્રકાર" : "Image Category",
-      language === "gu" ? "નોંધ" : "Note",
-      language === "gu" ? "છબી" : "Image",
-    ];
-    imageSheet.addRow(headers);
-    imageSheet.getRow(1).font = { bold: true };
-    imageSheet.columns = [
-      { width: 12 },
-      { width: 12 },
-      { width: 24 },
-      { width: 20 },
-      { width: 42 },
-      { width: 24 },
-    ];
-
-    exportData.forEach((item, itemIndex) => {
-      (item.images || []).forEach((img, imgIndex) => {
-        const rowNumber = imageSheet.rowCount + 1;
-        imageSheet.addRow([
-          `${itemIndex + 1}.${imgIndex + 1}`,
-          item.patrol_id || "-",
-          item.patrol_officer_name || "-",
-          img.image_category || `Image ${imgIndex + 1}`,
-          img.note || "-",
-          img.image_data ? (language === "gu" ? "જોડાયેલ" : "Attached") : "-",
-        ]);
-        imageSheet.getRow(rowNumber).height = img.image_data ? 90 : 24;
-
-        const extension = getExcelImageExtension(img.image_type);
-        if (img.image_data && extension) {
-          const imageId = workbook.addImage({ base64: `data:${img.image_type};base64,${img.image_data}`, extension });
-          imageSheet.addImage(imageId, {
-            tl: { col: 5.1, row: rowNumber - 0.9 },
-            ext: { width: 120, height: 80 },
-          });
-        }
-      });
+    ws['!cols'] = headers.map((header) => {
+      const maxContent = Math.max(
+        header.length,
+        ...rows.map((row) => String(row[header] ?? '').length)
+      );
+      return { wch: Math.max(12, Math.min(50, maxContent + 2)) };
     });
+    XLSX.utils.book_append_sheet(wb, ws, name);
+    return ws;
+  };
+
+  // Sheet: Officer Patrol Summary Report (with merges)
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+  summarySheet['!merges'] = summaryMerges.map((range) => {
+    const decode = (addr) => {
+      const m = addr.match(/^([A-Z]+)(\d+)$/);
+      if (!m) return { r: 0, c: 0 };
+      let c = 0;
+      for (let i = 0; i < m[1].length; i++) c = c * 26 + (m[1].charCodeAt(i) - 64);
+      return { r: parseInt(m[2], 10) - 1, c: c - 1 };
+    };
+    const start = decode(range.split(':')[0]);
+    const end = decode(range.split(':')[1]);
+    return { s: start, e: end };
+  });
+  summarySheet['!cols'] = summaryColumnWidths.map((w) => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, summarySheet, 'Officer Patrol Summary Report');
+
+  appendObjectSheet('Patrol Logs', patrolLogsData);
+  appendObjectSheet('Analysis Summary', analysisSummary);
+  appendObjectSheet('Patrol Type Breakdown', typeBreakdownData);
+
+  // Sheet: Image Notes (text only — no embedded images)
+  if (hasImageNotes) {
+    const imageRows = exportData.flatMap((item, itemIndex) =>
+      (item.images || []).map((img, imgIndex) => ({
+        [language === "gu" ? "ક્રમાંક" : "Sr. No."]: `${itemIndex + 1}.${imgIndex + 1}`,
+        [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: item.patrol_id || "-",
+        [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "-",
+        [language === "gu" ? "છબી પ્રકાર" : "Image Category"]: img.image_category || `Image ${imgIndex + 1}`,
+        [language === "gu" ? "નોંધ" : "Note"]: img.note || "-",
+        [language === "gu" ? "છબી" : "Image"]: img.image_data ? (language === "gu" ? "જોડાયેલ" : "Attached") : "-",
+      }))
+    );
+    appendObjectSheet('Image Notes', imageRows);
   }
 
-  addObjectSheet('Filter Criteria', filterCriteria);
-  addObjectSheet('Coverage Analysis', coverageDataSheet);
+  appendObjectSheet('Filter Criteria', filterCriteria);
+  if (coverageDataSheet.length > 0) {
+    appendObjectSheet('Coverage Analysis', coverageDataSheet);
+  }
 
   if (coverageDataSheet.length > 0 && coveragePatrols && coveragePatrols.length > 0) {
     const formatDateForExportCoverage = (datetime) => {
@@ -2019,7 +1990,7 @@ const exportTableToExcel = async () => {
       return getPatrolDateTimeParts(datetime)?.time || "-";
     };
 
-    addObjectSheet('Covering Patrols', coveragePatrols.map((patrol, idx) => ({
+    appendObjectSheet('Covering Patrols', coveragePatrols.map((patrol, idx) => ({
       [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
       [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_id || "-",
       [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "-",
@@ -2031,10 +2002,10 @@ const exportTableToExcel = async () => {
     })));
   }
 
-  const excelBuffer = await workbook.xlsx.writeBuffer();
+  const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
   const fileName = `patrol_complete_report_${new Date().toISOString().split('T')[0]}.xlsx`;
-  saveAs(new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), fileName);
-  
+  saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
+
   message.success(language === "gu" ? "સંપૂર્ણ રિપોર્ટ સફળતાપૂર્વક નિકાસ થયો" : "Complete report exported successfully");
 };
 
