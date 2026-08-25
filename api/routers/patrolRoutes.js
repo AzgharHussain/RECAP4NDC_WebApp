@@ -1,53 +1,104 @@
 const express = require('express');
-const { Pool } = require('pg');
 const multer = require('multer');
 const jwt = require("jsonwebtoken");
-const { verifyJwt } = require("../middlewares/verifyJwt"); 
+const { verifyJwt } = require("../middlewares/verifyJwt");
 const { clean } = require("../middlewares/sanitize");
 const MongoImage = require("../models/Image");
 const { logFromRequest } = require("../utils/auditLogger");
-
+const { sequelize } = require("../config/r_quire");
 
 const router = express.Router();
 
-// PostgreSQL connection pool — sized for high concurrency
-const client = new Pool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  port: Number(process.env.DB_PORT),
-  database: process.env.DB_NAME,
-  max: Number(process.env.DB_POOL_MAX || 50),
-  min: 5,
-  acquireTimeoutMillis: 60000,
-  idleTimeoutMillis: 30000,
-  options: '-c datestyle=ISO,YMD',
-});
-client.on('connect', (pgClient) => {
-  pgClient.query("SET datestyle = 'ISO, YMD'").catch((err) => {
-    console.error('Failed to set PostgreSQL DateStyle:', err.message);
-  });
-});
-client.on('error', (err) => {
-  console.error('Unexpected PostgreSQL pool error:', err.message);
-});
-client.query('SELECT 1')
-  .then(async () => {
-    try {
-      const connectionResult = await client.query(`
-        SELECT current_database() AS database_name, current_user AS database_user, inet_server_addr() AS server_ip, inet_server_port() AS server_port, current_setting('DateStyle') AS date_style
-      `);
-
-      const sampleResult = await client.query(`
-        SELECT patrol_id, start_time, end_time, start_time::text AS start_time_raw, end_time::text AS end_time_raw
-        FROM public.patrols
-        ORDER BY start_time DESC NULLS LAST, patrol_id DESC
-        LIMIT 5
-      `);
-    } catch (err) {
+// ─────────────────────────────────────────────────────────
+// Use a thin adapter that delegates to Sequelize so ALL queries share the
+// ONE connection pool (database.js). Replacing the old separate pg.Pool which
+// was creating a second pool that timed out in production (ETIMEDOUT).
+// Supports:
+//   client.query(sql, params)         → { rows: [...] }
+//   client.connect()                  → pseudo-client for transactions
+// ─────────────────────────────────────────────────────────
+const client = {
+  query: async (sql, params) => {
+    const trimmed = sql.trim().toUpperCase();
+    let queryType;
+    if (/^SELECT/.test(trimmed)) queryType = sequelize.QueryTypes.SELECT;
+    else if (/^INSERT/.test(trimmed)) queryType = sequelize.QueryTypes.INSERT;
+    else if (/^UPDATE/.test(trimmed)) queryType = sequelize.QueryTypes.UPDATE;
+    else if (/^DELETE/.test(trimmed)) queryType = sequelize.QueryTypes.DELETE;
+    else queryType = sequelize.QueryTypes.RAW;
+    const options = { raw: true, type: queryType };
+    if (params) options.bind = Array.isArray(params) ? params : [params];
+    const result = await sequelize.query(sql, options);
+    let rows;
+    if (queryType === sequelize.QueryTypes.SELECT) {
+      rows = Array.isArray(result) ? result : (result ? [result] : []);
+    } else if (Array.isArray(result[0])) {
+      rows = result[0];
+    } else if (result[0] !== null && result[0] !== undefined) {
+      rows = [result[0]];
+    } else {
+      rows = [];
     }
-  })
-  .catch((err) => console.error('Database not connected:', err.message));
+    return { rows };
+  },
+
+  // Transaction support — mimics pg.Pool.connect()
+  // Returns an object with query() and release() methods.
+  // BEGIN/COMMIT/ROLLBACK are intercepted to manage the Sequelize transaction.
+  connect: async () => {
+    const t = await sequelize.transaction();
+    let isDone = false;
+
+    const txClient = {
+      query: async (sql, params) => {
+        const trimmed = sql.trim().toUpperCase();
+
+        // Intercept transaction control commands
+        if (trimmed === 'BEGIN') return { rows: [] };
+        if (trimmed === 'COMMIT') {
+          if (!isDone) { await t.commit(); isDone = true; }
+          return { rows: [] };
+        }
+        if (trimmed === 'ROLLBACK') {
+          if (!isDone) { await t.rollback(); isDone = true; }
+          return { rows: [] };
+        }
+
+        // Regular query within the transaction
+        let queryType;
+        if (/^SELECT/.test(trimmed)) queryType = sequelize.QueryTypes.SELECT;
+        else if (/^INSERT/.test(trimmed)) queryType = sequelize.QueryTypes.INSERT;
+        else if (/^UPDATE/.test(trimmed)) queryType = sequelize.QueryTypes.UPDATE;
+        else if (/^DELETE/.test(trimmed)) queryType = sequelize.QueryTypes.DELETE;
+        else if (/^ALTER/.test(trimmed)) queryType = sequelize.QueryTypes.RAW;
+        else queryType = sequelize.QueryTypes.RAW;
+
+        const options = { raw: true, type: queryType, transaction: t };
+        if (params) options.bind = Array.isArray(params) ? params : [params];
+        const result = await sequelize.query(sql, options);
+        let rows;
+        if (queryType === sequelize.QueryTypes.SELECT) {
+          rows = Array.isArray(result) ? result : (result ? [result] : []);
+        } else if (Array.isArray(result[0])) {
+          rows = result[0];
+        } else if (result[0] !== null && result[0] !== undefined) {
+          rows = [result[0]];
+        } else {
+          rows = [];
+        }
+        return { rows };
+      },
+      release: () => {
+        // If transaction wasn't committed or rolled back, roll it back
+        if (!isDone) {
+          t.rollback().catch(() => {});
+          isDone = true;
+        }
+      },
+    };
+    return txClient;
+  },
+};
 
 // Multer memory storage
 const storage = multer.memoryStorage();

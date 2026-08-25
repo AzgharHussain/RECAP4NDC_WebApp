@@ -16,6 +16,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
 import axios from "axios";
 import { getAuthToken, getAuthHeaders, handleUnauthorized } from "../utils/authUtils";
+import { capitalizeFirst } from "../utils/textFormat";
 
 import startIconImg from "../assets/marker-icon.png";
 import endIconImg from "../assets/marker-icon-end.png";
@@ -2056,7 +2057,7 @@ const exportTableToExcel = async () => {
                 }
                 return divisionValue ? (
                   <Option key={`div-${index}`} value={divisionValue}>
-                    {divisionLabel}
+                    {capitalizeFirst(divisionLabel)}
                   </Option>
                 ) : null;
               })
@@ -2090,7 +2091,7 @@ const exportTableToExcel = async () => {
               }
               return rangeValue ? (
                 <Option key={`range-${index}`} value={rangeValue}>
-                  {rangeLabel}
+                  {capitalizeFirst(rangeLabel)}
                 </Option>
               ) : null;
             })}
@@ -2119,7 +2120,7 @@ const exportTableToExcel = async () => {
               }
               return beatValue ? (
                 <Option key={`beat-${index}`} value={beatValue}>
-                  {beatLabel}
+                  {capitalizeFirst(beatLabel)}
                 </Option>
               ) : null;
             })}
@@ -2136,7 +2137,7 @@ const exportTableToExcel = async () => {
           >
             <Option value="">{language === "gu" ? "બધા સ્થાનો" : "All Locations"}</Option>
             {patrolLocations.map((loc) => (
-              <Option key={loc} value={loc}>{loc}</Option>
+              <Option key={loc} value={loc}>{capitalizeFirst(loc)}</Option>
             ))}
           </Select>
 

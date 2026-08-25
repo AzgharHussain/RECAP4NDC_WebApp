@@ -46,10 +46,12 @@ const client = {
     }
     const result = await sequelize.query(sql, options);
     // Normalize to { rows: [...] }
-    // SELECT → result[0] is array of rows
-    // INSERT/UPDATE/DELETE/RAW → result[0] may be null, a number, or an array
+    // SELECT → result is the array of rows directly (not [rows, metadata])
+    // INSERT/UPDATE/DELETE/RAW → result[0] is the rows array (or metadata)
     let rows;
-    if (Array.isArray(result[0])) {
+    if (queryType === sequelize.QueryTypes.SELECT) {
+      rows = Array.isArray(result) ? result : (result ? [result] : []);
+    } else if (Array.isArray(result[0])) {
       rows = result[0];
     } else if (result[0] !== null && result[0] !== undefined) {
       rows = [result[0]];

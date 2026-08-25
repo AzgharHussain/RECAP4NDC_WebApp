@@ -4,6 +4,7 @@ import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, Sea
 import dayjs from "dayjs";
 import { API_BASE_URL } from "../config";
 import { getAuthHeaders } from "../utils/authUtils";
+import { capitalizeFirst } from "../utils/textFormat";
 import { useLanguage } from "../context/LanguageContext";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
 import gisfylogo from "../assets/Gisfylogo.png";
@@ -226,7 +227,7 @@ const NDVINotifications = () => {
         style={{ width: "100%" }}
         optionFilterProp="children"
       >
-        {(values || []).map((value) => <Option key={value} value={value}>{value}</Option>)}
+        {(values || []).map((value) => <Option key={value} value={value}>{capitalizeFirst(value)}</Option>)}
       </Select>
     </Col>
   );

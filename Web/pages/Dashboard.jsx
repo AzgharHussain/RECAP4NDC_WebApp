@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { Select, Table } from "antd";
 import { useLanguage } from "../context/LanguageContext";
+import { capitalizeFirst } from "../utils/textFormat";
 import "./Dashboard.css";
 import filterIcon from "../assets/filter.png";
 import { API_BASE_URL } from "../config";
@@ -667,10 +668,10 @@ export default function Dashboard() {
               {patrollingTypes.map((t) => {
                 const id = t.type_id ?? t.id ?? t.value ?? t.key;
                 const name = t.type_name ?? t.name ?? t.label;
-                
+
                 return (
                   <Option key={id || name} value={id || name}>
-                    {name || id}
+                    {capitalizeFirst(name || id)}
                   </Option>
                 );
               })}

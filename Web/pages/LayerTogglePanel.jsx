@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { FaChevronDown, FaChevronUp, FaLayerGroup, FaCircle, FaFolder, FaFolderOpen, FaLeaf } from "react-icons/fa";
-import { BsGraphDownArrow, BsShieldFill, BsInfoCircle } from "react-icons/bs";
-import { MdForest, MdLocationOn, MdBusiness, MdTerrain, MdClose } from "react-icons/md";
-import { FiX, FiMapPin, FiLayers, FiTrendingUp, FiTrendingDown, FiCompass, FiMap, FiInfo, FiArrowLeft, FiSearch, FiMinimize2, FiTrash2 } from "react-icons/fi";
+import {
+  MdForest, MdLocationOn, MdBusiness, MdTerrain, MdClose,
+  MdExpandMore, MdExpandLess, MdLayers, MdEco, MdShield,
+  MdTrendingUp, MdTrendingDown, MdExplore, MdMap, MdInfo,
+  MdSearch, MdFullscreenExit, MdDelete
+} from "react-icons/md";
 import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
@@ -167,11 +169,12 @@ const MonthRangeSelector = ({ onMonthSelect, selectedMonth, selectedYear, langua
 // Nested Layer Group Component - UPDATED to remove coupe layer items
 const getGroupIcon = (title) => {
   const t = (title || "").toLowerCase();
-  if (t.includes('forest')) return <MdForest style={{ marginRight: "8px", color: '#2e7d32', fontSize: '18px' }} />;
-  if (t.includes('circle') || t.includes('division')) return <BsShieldFill style={{ marginRight: "8px", color: '#2e7d32', fontSize: '16px' }} />;
-  if (t.includes('range')) return <MdTerrain style={{ marginRight: "8px", color: '#2e7d32', fontSize: '18px' }} />;
-  if (t.includes('gujarat')) return <FiMap style={{ marginRight: "8px", color: '#2e7d32', fontSize: '16px' }} />;
-  return <FaLayerGroup style={{ marginRight: "8px", color: '#2e7d32' }} />;
+  const iconStyle = { marginRight: "8px", color: '#2e7d32', fontSize: '18px' };
+  if (t.includes('forest')) return <MdForest style={iconStyle} />;
+  if (t.includes('circle') || t.includes('division')) return <MdShield style={iconStyle} />;
+  if (t.includes('range')) return <MdTerrain style={iconStyle} />;
+  if (t.includes('gujarat')) return <MdMap style={iconStyle} />;
+  return <MdLayers style={iconStyle} />;
 };
 
 const NestedLayerGroup = React.memo(({
@@ -208,7 +211,7 @@ const NestedLayerGroup = React.memo(({
           )}
         </span>
         <span className="arrow-icon">
-          {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+          {isExpanded ? <MdExpandLess /> : <MdExpandMore />}
         </span>
       </button>
 
@@ -408,17 +411,18 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
 
   const getIconForKey = (keyStr, value) => {
     const k = keyStr.toLowerCase();
+    const iconStyle = { fontSize: '16px' };
     if (k.includes('ndvi')) {
       const num = parseFloat(value);
-      if (!isNaN(num) && num < 0) return <FiTrendingDown style={{ color: '#2e7d32' }} />;
-      return <FiTrendingUp style={{ color: '#2e7d32' }} />;
+      if (!isNaN(num) && num < 0) return <MdTrendingDown style={{ ...iconStyle, color: '#e74c3c' }} />;
+      return <MdTrendingUp style={{ ...iconStyle, color: '#2e7d32' }} />;
     }
-    if (k.includes('category') || k.includes('change')) return <FaLeaf style={{ color: '#4caf50' }} />;
-    if (k.includes('lat')) return <FiCompass style={{ color: '#555' }} />;
-    if (k.includes('lon') || k.includes('lng')) return <FiCompass style={{ color: '#555' }} />;
-    if (k.includes('div')) return <MdBusiness style={{ color: '#555' }} />;
-    if (k.includes('range')) return <MdTerrain style={{ color: '#555' }} />;
-    return <FiInfo style={{ color: '#555' }} />;
+    if (k.includes('category') || k.includes('change')) return <MdEco style={{ ...iconStyle, color: '#4caf50' }} />;
+    if (k.includes('lat')) return <MdExplore style={{ ...iconStyle, color: '#555' }} />;
+    if (k.includes('lon') || k.includes('lng')) return <MdExplore style={{ ...iconStyle, color: '#555' }} />;
+    if (k.includes('div')) return <MdBusiness style={{ ...iconStyle, color: '#555' }} />;
+    if (k.includes('range')) return <MdTerrain style={{ ...iconStyle, color: '#555' }} />;
+    return <MdInfo style={{ ...iconStyle, color: '#555' }} />;
   };
 
   // --- Boundary-aware positioning (kept inside the map) ---
@@ -550,7 +554,7 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
             borderRadius: '8px',
             border: '1px solid #d6eaf8'
           }}>
-            <FiLayers style={{ fontSize: '20px', color: '#1976d2', marginRight: '12px' }} />
+            <MdLayers style={{ fontSize: '20px', color: '#1976d2', marginRight: '12px' }} />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '11px', color: '#1976d2', fontWeight: '600', textTransform: 'uppercase' }}>Layer</span>
               <strong style={{ fontSize: '15px', color: '#0d47a1', marginTop: '2px' }}>
@@ -2104,7 +2108,7 @@ const handleGroupCheckbox = useCallback(async (e) => {
             onMouseDown={(e) => e.preventDefault()}
             style={{ marginRight: "8px", cursor: 'pointer' }}
           />
-          {/* <FaLayerGroup style={{ marginRight: "8px" }} /> */}
+          {/* <MdLayers style={{ marginRight: "8px" }} /> */}
           {group.title}
           {isChecked && activeInfo && (
             <span className="active-indicator" style={{
@@ -2117,7 +2121,7 @@ const handleGroupCheckbox = useCallback(async (e) => {
           )}
         </span>
         <span className="arrow-icon">
-          {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+          {isExpanded ? <MdExpandLess /> : <MdExpandMore />}
         </span>
       </button>
       
@@ -3179,7 +3183,7 @@ const renderGroup = (group, index, section = "layers") => {
             )}
           </span>
           <span className="arrow-icon">
-            {openGroups[groupId] ? <FaChevronUp /> : <FaChevronDown />}
+            {openGroups[groupId] ? <MdExpandLess /> : <MdExpandMore />}
           </span>
         </div>
         
@@ -3293,14 +3297,14 @@ const renderGroup = (group, index, section = "layers") => {
     <aside className="leftpanel">
         <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '10px', marginBottom: '10px' }}>
           <h3 className="sidebar-title" style={{ margin: 0, display: 'flex', alignItems: 'center', fontSize: '18px', color: '#111' }}>
-            <FiLayers style={{ marginRight: "10px", fontSize: '20px', color: '#2e7d32' }} />
+            <MdLayers style={{ marginRight: "10px", fontSize: '20px', color: '#2e7d32' }} />
             Layer Explorer
           </h3>
       
         </div>
 
         <div className="search-container" style={{ position: 'relative', marginBottom: '15px' }}>
-          <FiSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+          <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#888', fontSize: '18px' }} />
           <input 
             type="text" 
             placeholder="Search layers..." 
@@ -3316,7 +3320,7 @@ const renderGroup = (group, index, section = "layers") => {
             onClick={() => setOpenGroups({})}
             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', border: '1px solid #4CAF50', color: '#2e7d32', background: '#e8f5e9', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
           >
-            <FiMinimize2 /> Collapse all
+            <MdFullscreenExit style={{ fontSize: '16px' }} /> Collapse all
           </button>
           <button 
             className="action-btn clear-btn"
@@ -3324,7 +3328,7 @@ const renderGroup = (group, index, section = "layers") => {
             disabled={Object.keys(addedLayers).length === 0}
             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', border: '1px solid #e74c3c', color: '#e74c3c', background: '#ffebee', cursor: 'pointer', fontWeight: 600, fontSize: '13px', opacity: Object.keys(addedLayers).length === 0 ? 0.5 : 1 }}
           >
-            <FiTrash2 /> Clear
+            <MdDelete style={{ fontSize: '16px' }} /> Clear
           </button>
         </div>
         
@@ -3338,11 +3342,11 @@ const renderGroup = (group, index, section = "layers") => {
         <div className="coupe-section">
           <div className="coupe-header" onClick={() => setIsCoupesDataOpen(!isCoupesDataOpen)}>
             <h3 style={{ cursor: 'pointer', fontSize: "14px", marginLeft: "5px", fontWeight: 600 }}>
-              <BsGraphDownArrow style={{ marginLeft: "8px", fontSize: "14px" }} />
+              <MdTrendingDown style={{ marginLeft: "8px", fontSize: "16px" }} />
               <span style={{ marginLeft: "8px" }}>{text[language].coupesData}</span>
             </h3>
             <span style={{ cursor: 'pointer', marginRight: "15px" }}>
-              {isCoupesDataOpen ? <FaChevronUp /> : <FaChevronDown />}
+              {isCoupesDataOpen ? <MdExpandLess /> : <MdExpandMore />}
             </span>
           </div>
 
@@ -3366,7 +3370,7 @@ const renderGroup = (group, index, section = "layers") => {
         
         <div style={{ position: 'sticky', bottom: '-10px', left: 0, right: 0, padding: '12px', background: 'rgba(232, 245, 233, 0.95)', borderTop: '1px solid #c8e6c9', borderRadius: '0 0 12px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#1b5e20', fontSize: '13px', fontWeight: 500, backdropFilter: 'blur(5px)', marginTop: 'auto', zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <FiLayers style={{ fontSize: '16px' }} /> 
+            <MdLayers style={{ fontSize: '16px' }} /> 
             <span>{Object.keys(addedLayers).length} active {Object.keys(addedLayers).length === 1 ? 'layer' : 'layers'}</span>
           </div>
           <button 
@@ -3374,7 +3378,7 @@ const renderGroup = (group, index, section = "layers") => {
             style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #c8e6c9', borderRadius: '20px', padding: '4px 12px', color: '#2e7d32', cursor: 'pointer', fontWeight: 600, fontSize: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
             title="Toggle Legend"
           >
-            <FiMap /> {isLegendVisible ? "Hide Legend" : "Show Legend"}
+            <MdMap style={{ fontSize: '16px' }} /> {isLegendVisible ? "Hide Legend" : "Show Legend"}
           </button>
         </div>
 
