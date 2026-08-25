@@ -18,7 +18,7 @@ const DB_PASS = 'Reb@$hyd@08052026';
 const DB_HOST = 'gsdc-psql.gujarat.gov.in';
 const DB_PORT = 9999;
 const DB_SSL = false;
-const DB_CONNECT_TIMEOUT_MS = 30000;  // increased from 15s to 30s
+const DB_CONNECT_TIMEOUT_MS = 120000;  // increased to 120s — GSDC DB on port 9999 is slow to accept new connections
 const DB_KEEPALIVE_PING_EVERY = 50;   // ping the DB every N rows to keep connection alive
 
 // ── Proxy support ─────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ async function connectDbWithRetry(label = 'DB connect') {
     const db = createDbClient();
     await db.connect();
     return db;
-  }, label, 3);
+  }, label, 5);  // 5 retries instead of 3 for slow GSDC DB connections
 }
 
 // ── Earth Engine service-account key ─────────────────────────────────────────
@@ -279,32 +279,87 @@ function loadCheckpoint() {
       const data = JSON.parse(raw);
       // Ensure the shape is correct even if the file is from an older version
       return {
-        completed: Array.isArray(data.completed) ? data.completed : [],
-        failed:    Array.isArray(data.failed)    ? data.failed    : [],
+        completed:       Array.isArray(data.completed)       ? data.completed       : [],
+        failed:          Array.isArray(data.failed)          ? data.failed          : [],
+        // Stage-level tracking — so postprocess/publish can be skipped if already done
+        postprocessDone: data.postprocessDone === true,
+        publishDone:     data.publishDone     === true,
+        // Per-coupe row tracking — so a coupe can resume from the failed row
+        coupeProgress:   data.coupeProgress && typeof data.coupeProgress === 'object' ? data.coupeProgress : {},
+        // Metadata for debugging
+        startedAt:       data.startedAt       || new Date().toISOString(),
+        lastUpdated:     data.lastUpdated     || new Date().toISOString(),
+        lastStage:       data.lastStage       || 'init',
       };
     }
   } catch (err) {
     log(`[WARN] Could not read checkpoint file (${checkpointFile}): ${err.message}. Starting fresh.`);
   }
-  return { completed: [], failed: [] };
+  return {
+    completed: [],
+    failed: [],
+    postprocessDone: false,
+    publishDone: false,
+    coupeProgress: {},
+    startedAt: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(),
+    lastStage: 'init',
+  };
 }
 
 function saveCheckpoint(checkpoint) {
   try {
+    checkpoint.lastUpdated = new Date().toISOString();
     fs.writeFileSync(checkpointFile, JSON.stringify(checkpoint, null, 2), 'utf8');
   } catch (err) {
     log(`[WARN] Could not save checkpoint file: ${err.message}`);
   }
 }
 
+// Update the last stage in the checkpoint and save
+function updateStage(checkpoint, stage) {
+  checkpoint.lastStage = stage;
+  saveCheckpoint(checkpoint);
+}
+
+// Record per-coupe row progress so we can resume mid-coupe
+function saveCoupeProgress(checkpoint, coupe, rowIndex, totalRows) {
+  if (!checkpoint.coupeProgress) checkpoint.coupeProgress = {};
+  checkpoint.coupeProgress[coupe] = { lastCompletedRow: rowIndex, totalRows, updatedAt: new Date().toISOString() };
+  saveCheckpoint(checkpoint);
+}
+
+// Get the row index to resume from for a coupe (0 = start from beginning)
+function getCoupeResumeRow(checkpoint, coupe) {
+  if (!checkpoint.coupeProgress || !checkpoint.coupeProgress[coupe]) return 0;
+  const progress = checkpoint.coupeProgress[coupe];
+  // Resume from the row AFTER the last completed one
+  return progress.lastCompletedRow != null ? progress.lastCompletedRow + 1 : 0;
+}
+
 // ── Scheduled task ────────────────────────────────────────────────────────────
+// Runs automatically on the 10th of every month.
+// On Windows: uses schtasks.exe
+// On Linux:   prints the crontab entry to install (or installs it if --install-cron is passed)
+const SCHEDULE_DAY = 10;
+const SCHEDULE_TIME = '00:30'; // 12:30 AM on the 10th of every month
+
 function ensureMonthlySchedule() {
-  if (process.platform !== 'win32' || process.argv.includes('--no-schedule')) {
+  if (process.argv.includes('--no-schedule')) {
     return;
   }
 
+  if (process.platform === 'win32') {
+    ensureWindowsSchedule();
+  } else {
+    ensureLinuxCronSchedule();
+  }
+}
+
+function ensureWindowsSchedule() {
   try {
     execFileSync('schtasks.exe', ['/Query', '/TN', TASK_NAME], { stdio: 'ignore' });
+    // Task exists — check if it's still on day 10; if not, recreate it
     log(`Scheduled task already exists: ${TASK_NAME}`);
     return;
   } catch (_) {}
@@ -313,22 +368,57 @@ function ensureMonthlySchedule() {
   try {
     execFileSync('schtasks.exe', [
       '/Create',
-      '/TN',
-      TASK_NAME,
-      '/TR',
-      taskRun,
-      '/SC',
-      'MONTHLY',
-      '/D',
-      '6',
-      '/ST',
-      '00:30',
+      '/TN', TASK_NAME,
+      '/TR', taskRun,
+      '/SC', 'MONTHLY',
+      '/D',  String(SCHEDULE_DAY),
+      '/ST', SCHEDULE_TIME,
       '/F',
     ], { stdio: 'ignore' });
     log(`Scheduled task created: ${TASK_NAME}`);
-    log('Schedule: every month on day 6 at 12:30 AM');
+    log(`Schedule: every month on day ${SCHEDULE_DAY} at ${SCHEDULE_TIME}`);
   } catch (error) {
     log(`WARN: Could not create scheduled task automatically: ${error.message}`);
+  }
+}
+
+function ensureLinuxCronSchedule() {
+  // Build the cron entry
+  const [hh, mm] = SCHEDULE_TIME.split(':');
+  const scriptPath = __filename;
+  const nodePath = process.execPath;
+  const cronEntry = `${mm} ${hh} ${SCHEDULE_DAY} * * ${nodePath} ${scriptPath} --no-schedule >> /opt/RECAP4NDC_WebApp/recapfixxing/logs/cron_monthly.log 2>&1`;
+
+  // Check if cron is already installed
+  let existingCrontab = '';
+  try {
+    existingCrontab = execFileSync('crontab', ['-l'], { encoding: 'utf8' }).trim();
+  } catch (_) {
+    // No crontab yet
+  }
+
+  if (existingCrontab.includes(scriptPath)) {
+    log(`Cron job already installed (day ${SCHEDULE_DAY} at ${SCHEDULE_TIME}).`);
+    log(`Cron entry: ${cronEntry}`);
+    return;
+  }
+
+  if (process.argv.includes('--install-cron')) {
+    const newCrontab = (existingCrontab ? existingCrontab + '\n' : '') + cronEntry + '\n';
+    try {
+      execFileSync('crontab', ['-'], { input: newCrontab, encoding: 'utf8' });
+      log(`Cron job INSTALLED: every month on day ${SCHEDULE_DAY} at ${SCHEDULE_TIME}`);
+      log(`Cron entry: ${cronEntry}`);
+    } catch (error) {
+      log(`WARN: Could not install cron job: ${error.message}`);
+      log(`Install manually with: crontab -e`);
+      log(`Add this line: ${cronEntry}`);
+    }
+  } else {
+    log(`=== Cron schedule NOT installed yet ===`);
+    log(`To install automatically:  ${nodePath} ${scriptPath} --install-cron`);
+    log(`Or add this to crontab manually (crontab -e):`);
+    log(`  ${cronEntry}`);
   }
 }
 
@@ -731,22 +821,32 @@ async function processRow(db, sourceTable, targetTable, row, index, total) {
   }
 }
 
-async function processCoupe(sourceTable) {
+async function processCoupe(sourceTable, checkpoint) {
   const targetTable = `${MONTH.runDate}_${sourceTable}_NDVI_Change`;
   let db = await connectDbWithRetry(`${sourceTable} initial connect`);
 
+  // Determine if we're resuming mid-coupe
+  const resumeFromRow = checkpoint ? getCoupeResumeRow(checkpoint, sourceTable) : 0;
+  const isResuming = resumeFromRow > 0;
+
   try {
     await ensureTargetTable(db, targetTable);
-    await clearTargetTable(db, targetTable);
+    // Only clear the table if we're starting fresh (not resuming)
+    if (!isResuming) {
+      await clearTargetTable(db, targetTable);
+      log(`[INFO] ${sourceTable}: Starting fresh — target table cleared.`);
+    } else {
+      log(`[INFO] ${sourceTable}: RESUMING from row ${resumeFromRow + 1} (previous progress: ${resumeFromRow} rows completed).`);
+    }
     const rows = await fetchSourceRows(db, sourceTable);
-    log(`Processing ${rows.length} ${sourceTable} geometries at ${SCALE}m scale`);
+    log(`Processing ${rows.length} ${sourceTable} geometries at ${SCALE}m scale${isResuming ? ` (resuming from row ${resumeFromRow + 1})` : ''}`);
     log(`Target table: public."${targetTable}"`);
 
-    for (let i = 0; i < rows.length; i += 1) {
+    for (let i = resumeFromRow; i < rows.length; i += 1) {
       // ── Keepalive ping every N rows ─────────────────────────────────────
       // Long GEE evaluations leave the DB socket idle. A periodic SELECT 1
       // keeps the connection alive through network/firewall idle timeouts.
-      if (i > 0 && i % DB_KEEPALIVE_PING_EVERY === 0) {
+      if (i > resumeFromRow && (i - resumeFromRow) % DB_KEEPALIVE_PING_EVERY === 0) {
         try {
           await db.query('SELECT 1');
         } catch (pingErr) {
@@ -760,8 +860,12 @@ async function processCoupe(sourceTable) {
 
       try {
         await processRow(db, sourceTable, targetTable, rows[i], i + 1, rows.length);
+        // Save per-row progress so we can resume if the process dies
+        if (checkpoint) {
+          saveCoupeProgress(checkpoint, sourceTable, i, rows.length);
+        }
       } catch (error) {
-        const rowMsg = `${sourceTable} row id=${rows[i].id}: ${error.message || error}`;
+        const rowMsg = `${sourceTable} row ${i + 1}/${rows.length} id=${rows[i].id}: ${error.message || error}`;
         logError('COUPE', rowMsg);
 
         // If the DB connection was lost mid-row, reconnect so remaining rows can proceed
@@ -772,7 +876,7 @@ async function processCoupe(sourceTable) {
             db = await connectDbWithRetry(`${sourceTable} reconnect after row error ${i + 1}`);
             log(`[INFO] ${sourceTable}: DB reconnected after row error at row ${i + 1}.`);
           } catch (reconnErr) {
-            log(`[ERROR] ${sourceTable}: Could not reconnect after row error. Aborting coupe: ${reconnErr.message}`);
+            log(`[ERROR] ${sourceTable}: Could not reconnect after row error. Aborting coupe at row ${i + 1}: ${reconnErr.message}`);
             throw reconnErr;
           }
         }
@@ -980,12 +1084,30 @@ async function publishToGeoserver() {
   log(`GeoServer publish completed. Newly published: ${publishedCount}, styled: ${styled}, skipped: ${skipped}.`);
 }
 
-async function runPostprocessAndPublish() {
-  // Always run postprocess SQL — it operates on PostgreSQL, not GeoServer
-  await runPostprocessSql();
-  // Publish to GeoServer — will retry connection at publish time
-  // and skip gracefully if still unreachable
-  await publishToGeoserver();
+async function runPostprocessAndPublish(checkpoint) {
+  // Run postprocess SQL if not already done
+  if (checkpoint && checkpoint.postprocessDone) {
+    log('[SKIP] Postprocess SQL already completed — skipping.');
+  } else {
+    updateStage(checkpoint, 'postprocess');
+    await runPostprocessSql();
+    if (checkpoint) {
+      checkpoint.postprocessDone = true;
+      saveCheckpoint(checkpoint);
+    }
+  }
+
+  // Publish to GeoServer if not already done
+  if (checkpoint && checkpoint.publishDone) {
+    log('[SKIP] GeoServer publish already completed — skipping.');
+  } else {
+    updateStage(checkpoint, 'publish');
+    await publishToGeoserver();
+    if (checkpoint) {
+      checkpoint.publishDone = true;
+      saveCheckpoint(checkpoint);
+    }
+  }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -1006,15 +1128,27 @@ async function main() {
 
     // Validate DB connection
     try {
-      await retryWithBackoff(() => validateDbConnection(), 'DB check (postprocess-only)', 3);
+      await retryWithBackoff(() => validateDbConnection(), 'DB check (postprocess-only)', 5);
     } catch (error) {
       logError('STARTUP', `PostgreSQL: ${error.message || error}`);
       throw error;
     }
 
-    // Run postprocess + publish
-    await runPostprocessAndPublish();
+    // Load checkpoint for stage tracking
+    const checkpoint = loadCheckpoint();
+    log(`[postprocess-only] Checkpoint state: postprocessDone=${checkpoint.postprocessDone}, publishDone=${checkpoint.publishDone}`);
+
+    // Run postprocess + publish (with stage skipping)
+    await runPostprocessAndPublish(checkpoint);
     log('Postprocess and publish complete.');
+
+    // Clean up checkpoint on full success
+    if (checkpoint.postprocessDone && checkpoint.publishDone) {
+      try {
+        fs.unlinkSync(checkpointFile);
+        log(`[DONE] Checkpoint file removed (postprocess-only run complete).`);
+      } catch (_) {}
+    }
     return;
   }
 
@@ -1065,15 +1199,23 @@ async function main() {
   const checkpoint = loadCheckpoint();
   const completedSet = new Set(checkpoint.completed);
 
-  if (completedSet.size > 0) {
+  if (completedSet.size > 0 || Object.keys(checkpoint.coupeProgress || {}).length > 0) {
     log(`[RESUME] Found checkpoint. Already completed ${completedSet.size} coupe(s): ${checkpoint.completed.join(', ')}`);
-    log(`[RESUME] Skipping those and continuing from where we left off.`);
+    if (checkpoint.failed && checkpoint.failed.length > 0) {
+      log(`[RESUME] ${checkpoint.failed.length} previously failed coupe(s): ${checkpoint.failed.join(', ')}`);
+    }
+    if (checkpoint.postprocessDone) log(`[RESUME] Postprocess SQL already done.`);
+    if (checkpoint.publishDone)     log(`[RESUME] GeoServer publish already done.`);
+    log(`[RESUME] Last stage: ${checkpoint.lastStage || 'unknown'}`);
+    log(`[RESUME] Started at: ${checkpoint.startedAt || 'unknown'}`);
+    log(`[RESUME] Last updated: ${checkpoint.lastUpdated || 'unknown'}`);
+    log(`[RESUME] Continuing from where we left off.`);
 
     // Brief pause when resuming after failures so that PM2 rapid-restart
     // loops do not hammer the DB with simultaneous connection attempts.
     if (checkpoint.failed && checkpoint.failed.length > 0) {
       const pauseMs = 15000;
-      log(`[RESUME] ${checkpoint.failed.length} previously failed coupe(s): ${checkpoint.failed.join(', ')}. Waiting ${pauseMs / 1000}s before retrying to let DB recover...`);
+      log(`[RESUME] Waiting ${pauseMs / 1000}s before retrying to let DB recover...`);
       await new Promise((r) => setTimeout(r, pauseMs));
     }
   } else {
@@ -1091,8 +1233,9 @@ async function main() {
     }
 
     log(`=== Starting ${coupe} (${i + 1}/${COUPES.length}) ===`);
+    updateStage(checkpoint, `coupe:${coupe}`);
     try {
-      await processCoupe(coupe);
+      await processCoupe(coupe, checkpoint);
       log(`FINISHED ${coupe}`);
 
       // Mark as completed and save checkpoint immediately
@@ -1100,7 +1243,15 @@ async function main() {
       completedSet.add(coupe);
       // Remove from failed list in case it was previously failed and is now retried
       checkpoint.failed = checkpoint.failed.filter((c) => c !== coupe);
+      // Clear per-coupe row progress since the coupe is fully done
+      if (checkpoint.coupeProgress) delete checkpoint.coupeProgress[coupe];
       saveCheckpoint(checkpoint);
+
+      // Brief pause between coupes to let the remote DB recover before the next connection
+      if (i < COUPES.length - 1) {
+        log(`[PAUSE] Waiting 5s before next coupe...`);
+        await new Promise((r) => setTimeout(r, 5000));
+      }
     } catch (error) {
       failed += 1;
       const msg = `${coupe}: ${error.message || error}`;
@@ -1118,11 +1269,14 @@ async function main() {
   if (failed > 0) {
     log('Skipping postprocess and publish due to failures.');
     log(`Re-run the script to resume from the checkpoint and retry failed coupes.`);
+    log(`Checkpoint file: ${checkpointFile}`);
+    log(`Failed coupes: ${checkpoint.failed.join(', ')}`);
     process.exitCode = 1;
     return;
   }
 
-  await runPostprocessAndPublish();
+  // ── 4. Postprocess and publish (with stage tracking) ──────────────────────
+  await runPostprocessAndPublish(checkpoint);
   log('All steps complete.');
 
   // Clean up checkpoint on full success so the next month starts fresh
@@ -1144,6 +1298,33 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('exit', (code) => {
   console.error(`[PROCESS EXIT] code=${code}`);
   log(`[PROCESS EXIT] code=${code}`);
+
+  // Print a summary of the checkpoint state on exit so the user can see
+  // exactly where the process stopped and what to do next.
+  try {
+    if (fs.existsSync(checkpointFile)) {
+      const cp = JSON.parse(fs.readFileSync(checkpointFile, 'utf8'));
+      log('=== RUN SUMMARY (from checkpoint) ===');
+      log(`  Started at:    ${cp.startedAt || 'unknown'}`);
+      log(`  Last updated:  ${cp.lastUpdated || 'unknown'}`);
+      log(`  Last stage:    ${cp.lastStage || 'unknown'}`);
+      log(`  Completed:     ${cp.completed ? cp.completed.length : 0} coupe(s) — ${(cp.completed || []).join(', ') || 'none'}`);
+      log(`  Failed:        ${cp.failed ? cp.failed.length : 0} coupe(s) — ${(cp.failed || []).join(', ') || 'none'}`);
+      log(`  Postprocess:   ${cp.postprocessDone ? 'DONE' : 'NOT DONE'}`);
+      log(`  Publish:       ${cp.publishDone ? 'DONE' : 'NOT DONE'}`);
+      if (cp.coupeProgress && Object.keys(cp.coupeProgress).length > 0) {
+        log(`  In-progress coupes:`);
+        for (const [coupe, prog] of Object.entries(cp.coupeProgress)) {
+          log(`    ${coupe}: row ${prog.lastCompletedRow + 1}/${prog.totalRows} (updated ${prog.updatedAt})`);
+        }
+      }
+      if (code !== 0) {
+        log(`  → To resume: re-run the script (it will continue from this checkpoint).`);
+        log(`  → To start fresh: delete ${checkpointFile} and re-run.`);
+      }
+      log('=== END SUMMARY ===');
+    }
+  } catch (_) {}
 });
 process.on('SIGTERM', () => {
   console.error('[SIGTERM received]');

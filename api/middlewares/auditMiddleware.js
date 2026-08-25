@@ -64,6 +64,7 @@ function inferResourceType(path) {
 }
 
 function auditMiddleware(req, res, next) {
+  // Fast path: skip wrapping for GET requests (most traffic)
   if (shouldSkip(req.method, req.path)) {
     return next();
   }
@@ -86,14 +87,17 @@ function auditMiddleware(req, res, next) {
         }
       }
 
-      logFromRequest(req, {
-        action: status === 'FAILED' && action === 'LOGIN' ? 'LOGIN_FAILED' : action,
-        status,
-        statusCode: res.statusCode,
-        resourceType,
-        resourceId: req.params?.id || null,
-        errorMessage,
-        retentionCategory: 'SYSTEM_EVENT',
+      // Fire-and-forget — don't block the response
+      setImmediate(() => {
+        logFromRequest(req, {
+          action: status === 'FAILED' && action === 'LOGIN' ? 'LOGIN_FAILED' : action,
+          status,
+          statusCode: res.statusCode,
+          resourceType,
+          resourceId: req.params?.id || null,
+          errorMessage,
+          retentionCategory: 'SYSTEM_EVENT',
+        });
       });
     }
 

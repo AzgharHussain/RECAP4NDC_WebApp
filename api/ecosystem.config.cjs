@@ -24,7 +24,9 @@ module.exports = {
     name: 'recap4ndc-api',
     script: 'cluster.js',
 
-    // Instances: 'max' uses all CPU cores. Set a number to limit.
+    // Instances: 'max' uses all CPU cores.
+    // For 1M users, PM2 handles clustering directly (no need for cluster.js
+    // to also fork). Set to 'max' so PM2 manages worker lifecycle.
     instances: 'max',
 
     // Cluster mode — each instance runs in its own process
@@ -32,15 +34,16 @@ module.exports = {
 
     // Auto-restart on crash
     autorestart: true,
-    max_restarts: 10,
+    max_restarts: 20,
     min_uptime: '10s',         // must run for 10s before it's considered "up"
-    restart_delay: 3000,       // wait 3s between restarts
+    restart_delay: 2000,       // wait 2s between restarts (faster recovery)
 
-    // Memory-based restart — restart if process uses > 1.5GB
-    max_memory_restart: '1500M',
+    // Memory-based restart — restart if process uses > 2GB
+    // Increased from 1.5GB to 2GB for larger DB pool sizes
+    max_memory_restart: '2000M',
 
     // Health check — PM2 will restart the process if this fails
-    health_check_graceful_period: 10000,
+    health_check_graceful_period: 15000,
     health_check: {
       interval: 30000,         // check every 30s
       timeout: 5000,           // 5s timeout
@@ -51,6 +54,9 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: 5002,
+      // DB pool sized for 1M users with cluster mode
+      DB_POOL_MAX: 100,        // per worker — with 8 workers = 800 total
+      DB_POOL_MIN: 10,
     },
     env_dev: {
       NODE_ENV: 'development',
@@ -67,7 +73,7 @@ module.exports = {
     watch: false,
 
     // Graceful shutdown — PM2 sends SIGTERM, waits, then SIGKILL
-    kill_timeout: 5000,        // wait 5s for graceful shutdown
-    listen_timeout: 10000,     // wait 10s for app to start listening
+    kill_timeout: 10000,       // wait 10s for graceful shutdown (drain connections)
+    listen_timeout: 15000,     // wait 15s for app to start listening
   }],
 };

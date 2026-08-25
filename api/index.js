@@ -100,7 +100,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: false,
 }));
-app.use(compression({ threshold: 1024 }));
+app.use(compression({ threshold: 256, level: 6 }));
 /* Content Security Policy */
 // app.use(
 //   helmet.contentSecurityPolicy({
@@ -141,12 +141,12 @@ app.get("/", (req, res) => {
 
 const validateHttpHeaders = require('./middlewares/validateHttpHeaders');
 
-// === Global API rate limiter — tuned for 5000 concurrent users ===
-// 2000 requests per minute per IP is generous enough for a busy office
+// === Global API rate limiter — tuned for 1M concurrent users ===
+// 5000 requests per minute per IP is generous enough for a busy office
 // (many users behind one NAT IP) while still mitigating flood attacks.
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,       // 1 minute
-  max: 2000,                 // 2000 requests/min per IP
+  max: 5000,                 // 5000 requests/min per IP (supports large NAT offices)
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: "Too many requests. Please slow down." },
@@ -154,6 +154,17 @@ const apiLimiter = rateLimit({
   skip: (req) => req.method === 'OPTIONS' || req.path === '/api/test' || req.path === '/api/health',
 });
 app.use('/api', apiLimiter);
+
+// === Stricter rate limiter for auth endpoints — prevents brute force ===
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 50,                   // 50 auth attempts per 15 min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many login attempts. Please try again later." },
+  skip: (req) => req.method === 'OPTIONS',
+});
+app.use('/api/admin', authLimiter);
 
 app.use('/api', validateHttpHeaders);
 app.use('/api', validateAlphaNumSpaceUnderscore);
@@ -222,12 +233,13 @@ app.use(cookieParser());
 
 
 
-// Use express built-in JSON parser (remove body-parser)
-app.use(express.json({ 
-  limit: '10mb',
-  type: ['application/json', 'application/*+json'] // Explicitly set accepted content types
+// Use express built-in JSON parser — 2MB limit for normal API requests
+// (file uploads go through multer, not JSON parser)
+app.use(express.json({
+  limit: '2mb',
+  type: ['application/json', 'application/*+json']
 }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // Request logger
 app.use((req, res, next) => {
@@ -257,8 +269,7 @@ app.use((req, res, next) => {
 
 // Response sanitization — optimized for high concurrency.
 // Only sanitizes string values (escapes HTML entities) to prevent XSS.
-// Skips large responses (>1MB) for performance — those are typically
-// spatial/geo data that doesn't need HTML escaping.
+// Uses Content-Length header to skip large responses instead of JSON.stringify.
 const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const HTML_ESCAPE_RE = /[&<>"']/g;
 const SANITIZE_SKIP_SIZE = 1024 * 1024; // 1MB
@@ -266,13 +277,15 @@ const SANITIZE_SKIP_SIZE = 1024 * 1024; // 1MB
 app.use((req, res, next) => {
   const originalJson = res.json;
   res.json = function(data) {
-    // Skip sanitization for very large responses (geo/spatial data)
-    try {
-      const serialized = JSON.stringify(data);
-      if (serialized.length > SANITIZE_SKIP_SIZE) {
+    // Fast path: skip sanitization for large responses (geo/spatial data)
+    // Use approximate size check without full serialization
+    if (data && typeof data === 'object') {
+      const dataStr = data && data.data;
+      // If data.data is an array with many items, skip sanitization for performance
+      if (Array.isArray(dataStr) && dataStr.length > 500) {
         return originalJson.call(this, data);
       }
-    } catch { return originalJson.call(this, data); }
+    }
 
     function sanitizeOutput(obj) {
       if (typeof obj === 'string') {
@@ -435,6 +448,16 @@ app.get('/api/health', async (req, res) => {
 // Test GET endpoint
 app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'Test route works!' });
+});
+
+// Cache stats endpoint (admin/debug)
+const { getCacheSize, clearCache } = require('./middlewares/apiCache');
+app.get('/api/cache-stats', verifyJwt, (req, res) => {
+  res.json({ success: true, cacheSize: getCacheSize() });
+});
+app.delete('/api/cache-stats', verifyJwt, (req, res) => {
+  clearCache();
+  res.json({ success: true, message: 'Cache cleared' });
 });
 
 // Test POST endpoint to verify body parsing

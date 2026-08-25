@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { verifyJwt } = require("../middlewares/verifyJwt"); 
+const { verifyJwt } = require("../middlewares/verifyJwt");
+const { cacheMiddleware } = require("../middlewares/apiCache");
 
 const { sequelize } = require('../config/ndvidatabase');
 
@@ -62,7 +63,7 @@ router.post('/divisions', async (req, res) => {
   }
 });
 
-router.get('/hierarchy_coupes', async (req, res) => {
+router.get('/hierarchy_coupes', cacheMiddleware(300), async (req, res) => {
   try {
     const query = `
       SELECT * FROM coupe_all;
@@ -98,7 +99,7 @@ const normalizeDivision = (value) => {
 /* ============================================================
    GET ALL DIVISIONS
 ============================================================ */
-router.get('/hierarchy-divisions', verifyJwt, async (req, res) => {
+router.get('/hierarchy-divisions', verifyJwt, cacheMiddleware(300), async (req, res) => {
   try {
     const query = `
       SELECT DISTINCT division
@@ -897,7 +898,7 @@ router.post('/hierarchy', async (req, res) => {
 });
 
 // Get forest types
-router.get('/forest-types', async (req, res) => {
+router.get('/forest-types', cacheMiddleware(3600), async (req, res) => {
   try {
     const  myquery = `
       SELECT forest_id, forest_type
@@ -1162,7 +1163,7 @@ const getNdviHierarchyValues = async (column, filters = {}) => {
 };
 
 // Get all divisions from generated NDVI Change tables
-router.get('/coupe-divisions',  verifyJwt,async (req, res) => {
+router.get('/coupe-divisions',  verifyJwt, cacheMiddleware(300), async (req, res) => {
   try {
     const tables = await getNdviChangeTables();
     const divisions = [...new Set(tables.map((table) => normalizeNdviDivisionName(table.tablename)))]
@@ -1231,7 +1232,7 @@ router.post('/coupe-beats', async (req, res) => {
 });
 
 // Get all divisions
-router.get('/beat-coupe-divisions',  verifyJwt,async (req, res) => {
+router.get('/beat-coupe-divisions',  verifyJwt, cacheMiddleware(300), async (req, res) => {
   try {
     const query = `
       SELECT DISTINCT division

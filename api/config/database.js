@@ -25,10 +25,10 @@ const sequelize = new Sequelize(
     logging: false,
     pool: {
       max:     Number(process.env.DB_POOL_MAX     || 50),
-      min:     Number(process.env.DB_POOL_MIN     || 5),
-      acquire: Number(process.env.DB_POOL_ACQUIRE || 60000),
-      idle:    Number(process.env.DB_POOL_IDLE    || 30000),
-      evict:   Number(process.env.DB_POOL_EVICT   || 10000),
+      min:     Number(process.env.DB_POOL_MIN     || 10),
+      acquire: Number(process.env.DB_POOL_ACQUIRE || 30000),
+      idle:    Number(process.env.DB_POOL_IDLE    || 10000),
+      evict:   Number(process.env.DB_POOL_EVICT   || 1000),
     },
     // Keep idle connections alive so remote DBs / firewalls don't drop them.
     // Without this, idle pooled connections silently die and the next query
@@ -40,13 +40,19 @@ const sequelize = new Sequelize(
             rejectUnauthorized:
               String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false',
           },
-          // TCP keepalive: probe every 30s after 30s idle
+          // TCP keepalive + PostgreSQL session options
           keepAlive: true,
-          keepAliveInitialDelayMillis: 30000,
+          keepAliveInitialDelayMillis: 300000,
+          statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT || 30000),
+          idle_in_transaction_session_timeout: Number(process.env.DB_IDLE_TX_TIMEOUT || 60000),
+          application_name: process.env.DB_APPLICATION_NAME || 'recap4ndc_api',
         }
       : {
           keepAlive: true,
-          keepAliveInitialDelayMillis: 30000,
+          keepAliveInitialDelayMillis: 300000,
+          statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT || 30000),
+          idle_in_transaction_session_timeout: Number(process.env.DB_IDLE_TX_TIMEOUT || 60000),
+          application_name: process.env.DB_APPLICATION_NAME || 'recap4ndc_api',
         },
     // Query timeout: abort any query that takes longer than 30 seconds.
     // This prevents slow spatial/geo queries from blocking the event loop.
