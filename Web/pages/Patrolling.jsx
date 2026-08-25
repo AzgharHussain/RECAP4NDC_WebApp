@@ -819,7 +819,7 @@ const fetchDashboardData = useCallback(async () => {
       if (handleUnauthorized(response.status)) return;
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      
+
       let formattedData = Array.isArray(data.data) ? data.data : [];
       formattedData = formattedData
         .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
@@ -836,7 +836,7 @@ const fetchDashboardData = useCallback(async () => {
           start_location: stripHtmlTags(item.start_location),
           end_location: stripHtmlTags(item.end_location)
         }));
-      
+
       // ========== ADD SAME DATE FILTER HERE ==========
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
         const selectedDate = startFilter.format('YYYY-MM-DD');
@@ -847,7 +847,7 @@ const fetchDashboardData = useCallback(async () => {
         });
       }
       // ========== END OF ADDED CODE ==========
-      
+
       setDashboardData(applyPatrolFilters(formattedData));
     } else {
       // Similar filtering for filtered data
@@ -867,7 +867,7 @@ const fetchDashboardData = useCallback(async () => {
       if (handleUnauthorized(response.status)) return;
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      
+
       let formattedData = Array.isArray(data.data) ? data.data : [];
       formattedData = formattedData
         .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
@@ -884,7 +884,7 @@ const fetchDashboardData = useCallback(async () => {
           start_location: stripHtmlTags(item.start_location),
           end_location: stripHtmlTags(item.end_location)
         }));
-      
+
       // ========== ADD SAME DATE FILTER HERE ==========
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
         const selectedDate = startFilter.format('YYYY-MM-DD');
@@ -951,7 +951,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
         start_location: stripHtmlTags(item.start_location),
         end_location: stripHtmlTags(item.end_location)
       }));
-    
+
     // ========== ADD THE DATE FILTER HERE ==========
     // Filter for same date selection
     if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
@@ -1457,27 +1457,27 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       title: language === "gu" ? "શરૂઆતની તારીખ" : "Search by Start Date",
       key: "start_date",
       align: "center",
-      render: (record) => formatDateTime(record.start_time).date,
+      render: (_, record) => formatDateTime(record.start_time).date,
       sorter: (a, b) => (parsePatrolTimestamp(a.start_time)?.getTime() || 0) - (parsePatrolTimestamp(b.start_time)?.getTime() || 0),
     },
     {
       title: language === "gu" ? "શરૂઆતનો સમય" : "Start Time",
       key: "start_time",
       align: "center",
-      render: (record) => formatDateTime(record.start_time).time,
+      render: (_, record) => formatDateTime(record.start_time).time,
     },
     {
       title: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date",
       key: "end_date",
       align: "center",
-      render: (record) => formatDateTime(record.end_time).date,
+      render: (_, record) => formatDateTime(record.end_time).date,
       sorter: (a, b) => (parsePatrolTimestamp(a.end_time)?.getTime() || 0) - (parsePatrolTimestamp(b.end_time)?.getTime() || 0),
     },
     {
       title: language === "gu" ? "સમાપ્તિ સમય" : "End Time",
       key: "end_time",
       align: "center",
-      render: (record) => formatDateTime(record.end_time).time,
+      render: (_, record) => formatDateTime(record.end_time).time,
     },
     {
       title: language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location",
@@ -1502,7 +1502,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       title: language === "gu" ? "રસ્તો" : "Route",
       key: "route",
       align: "center",
-      render: (record) => (
+      render: (_, record) => (
         <Button
           style={{
             borderRadius: "4.618px",

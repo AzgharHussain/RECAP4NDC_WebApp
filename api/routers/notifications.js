@@ -42,7 +42,9 @@ const client = {
     }
     const options = { raw: true, type: queryType };
     if (params) {
-      options.bind = Array.isArray(params) ? params : [params];
+      // Replace undefined with null — Sequelize's bind throws on undefined values
+      const safeParams = (Array.isArray(params) ? params : [params]).map(v => v === undefined ? null : v);
+      options.bind = safeParams;
     }
     const result = await sequelize.query(sql, options);
     // Normalize to { rows: [...] }

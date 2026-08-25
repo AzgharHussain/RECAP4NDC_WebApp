@@ -243,7 +243,6 @@ const NDVINotifications = () => {
       "Sr. No.": index + 1,
       [t.userId]: item.user_id || "-",
       [t.userName]: item.username || "-",
-      [t.subscribedVillage]: item.village_name || "-",
       [t.division]: item.division || "-",
       [t.range]: item.range || "-",
       [t.round]: item.round || "-",
@@ -354,10 +353,6 @@ const NDVINotifications = () => {
   const columns = [
     { title: t.userId,            dataIndex: "user_id",      key: "user_id",      sorter: genericSorter("user_id") },
     { title: t.userName,          dataIndex: "username",     key: "username",     sorter: genericSorter("username"),     render: (v) => v || "-" },
-    { title: t.subscribedVillage, dataIndex: "village_name", key: "village_name", sorter: genericSorter("village_name"), render: (v) => v || "-",
-      titleRender: () => (
-        <span>{t.subscribedVillage} <Tooltip title={t.subscribedVillageHint}><InfoCircleOutlined style={{ color: '#999', fontSize: 12 }} /></Tooltip></span>
-      ) },
     { title: t.division,          dataIndex: "division",     key: "division",     sorter: genericSorter("division"),     render: (v) => v || "-" },
     { title: t.range,             dataIndex: "range",        key: "range",        sorter: genericSorter("range"),        render: (v) => v || "-" },
     { title: t.round,             dataIndex: "round",        key: "round",        sorter: genericSorter("round"),        render: (v) => v || "-" },
@@ -532,7 +527,6 @@ const NDVINotifications = () => {
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label={t.userId}>{detailRecord.user_id || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.userName}>{detailRecord.username || "-"}</Descriptions.Item>
-              <Descriptions.Item label={<span>{t.subscribedVillage} <Tooltip title={t.subscribedVillageHint}><InfoCircleOutlined style={{ color: '#999', fontSize: 12 }} /></Tooltip></span>}>{detailRecord.village_name || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.division}>{detailRecord.division || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.range}>{detailRecord.range || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.round}>{detailRecord.round || "-"}</Descriptions.Item>

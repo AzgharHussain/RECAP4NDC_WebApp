@@ -19,6 +19,11 @@ const router = express.Router();
 // ─────────────────────────────────────────────────────────
 const client = {
   query: async (sql, params) => {
+    // Support both plain SQL string and pg-style config object { text, values, timeout }
+    if (sql && typeof sql === 'object' && !Array.isArray(sql)) {
+      params = sql.values || params;
+      sql = sql.text;
+    }
     const trimmed = sql.trim().toUpperCase();
     let queryType;
     if (/^SELECT/.test(trimmed)) queryType = sequelize.QueryTypes.SELECT;
@@ -27,7 +32,11 @@ const client = {
     else if (/^DELETE/.test(trimmed)) queryType = sequelize.QueryTypes.DELETE;
     else queryType = sequelize.QueryTypes.RAW;
     const options = { raw: true, type: queryType };
-    if (params) options.bind = Array.isArray(params) ? params : [params];
+    if (params) {
+      // Replace undefined with null — Sequelize's bind throws on undefined values
+      const safeParams = (Array.isArray(params) ? params : [params]).map(v => v === undefined ? null : v);
+      options.bind = safeParams;
+    }
     const result = await sequelize.query(sql, options);
     let rows;
     if (queryType === sequelize.QueryTypes.SELECT) {
@@ -51,6 +60,11 @@ const client = {
 
     const txClient = {
       query: async (sql, params) => {
+        // Support both plain SQL string and pg-style config object { text, values, timeout }
+        if (sql && typeof sql === 'object' && !Array.isArray(sql)) {
+          params = sql.values || params;
+          sql = sql.text;
+        }
         const trimmed = sql.trim().toUpperCase();
 
         // Intercept transaction control commands
@@ -74,7 +88,11 @@ const client = {
         else queryType = sequelize.QueryTypes.RAW;
 
         const options = { raw: true, type: queryType, transaction: t };
-        if (params) options.bind = Array.isArray(params) ? params : [params];
+        if (params) {
+          // Replace undefined with null — Sequelize's bind throws on undefined values
+          const safeParams = (Array.isArray(params) ? params : [params]).map(v => v === undefined ? null : v);
+          options.bind = safeParams;
+        }
         const result = await sequelize.query(sql, options);
         let rows;
         if (queryType === sequelize.QueryTypes.SELECT) {
@@ -111,9 +129,26 @@ const upload = multer({
 
 function formatPatrolTimestamp(dateValue) {
   if (!dateValue) return null;
-  const date = new Date(dateValue);
+
+  // If it's already a Date object, use it directly
+  let date;
+  if (dateValue instanceof Date) {
+    date = dateValue;
+  } else if (typeof dateValue === 'string') {
+    // PostgreSQL text format: "2026-07-30 22:20:29.532+00" or ISO "2026-07-30T22:20:29.532Z"
+    // Normalize: replace space with 'T' for ISO parsing if needed
+    let normalized = dateValue.trim();
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(normalized)) {
+      normalized = normalized.replace(' ', 'T');
+    }
+    date = new Date(normalized);
+  } else {
+    date = new Date(dateValue);
+  }
+
   if (Number.isNaN(date.getTime())) return null;
 
+  // Convert to IST (Asia/Kolkata) and format as DD-MM-YYYY HH:mm
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Kolkata',
     day: '2-digit',
@@ -131,7 +166,18 @@ function formatPatrolTimestamp(dateValue) {
 }
 
 function parseToUTC(dateValue) {
-  return new Date(dateValue).toISOString();
+  if (!dateValue) return null;
+  if (dateValue instanceof Date) return dateValue.toISOString();
+  if (typeof dateValue === 'string') {
+    // Try to normalize common formats like "2025-01-15 08:00:00" to ISO
+    const normalized = dateValue
+      .replace(' ', 'T')
+      .replace(/(\d{2}):(\d{2}):(\d{2})$/, '$1:$2:$3+00:00');
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+  const date = new Date(dateValue);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function normalizeImageNotes(body = {}) {
@@ -377,7 +423,20 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
     }
 
   } catch (err) {
-    console.error(err);
+    console.error('[patrol-post] Error:', err);
+    console.error('[patrol-post] Error stack:', err.stack);
+    console.error('[patrol-post] Request body:', {
+      user_id: pat_data.user_id,
+      patrol_officer_name: pat_data.patrol_officer_name,
+      start_time: pat_data.start_time,
+      end_time: pat_data.end_time,
+      startUTC,
+      endUTC,
+      beat: pat_data.beat,
+      range: pat_data.range,
+      division: pat_data.division,
+      distance_kms: pat_data.distance_kms,
+    });
 
     logFromRequest(req, {
       action: 'RECORD_CREATE',
@@ -387,7 +446,7 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
       resourceType: 'patrol',
       errorMessage: err.message,
     });
-    res.status(500).json({ error: 'Data insertion failed' });
+    res.status(500).json({ error: 'Data insertion failed', details: err.message });
   }
 });
 
@@ -399,7 +458,9 @@ router.get('/patrol-info-all', verifyJwt, async (req, res) => {
     const query = `
       SELECT
         p.*,
-        pt.type_name
+        pt.type_name,
+        p.start_time::text AS start_time_raw,
+        p.end_time::text AS end_time_raw
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC;
@@ -409,9 +470,8 @@ router.get('/patrol-info-all', verifyJwt, async (req, res) => {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_time: formatPatrolTimestamp(patrol.start_time),
-      end_time: formatPatrolTimestamp(patrol.end_time),
-     
+      start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
     }));
 
     res.json({ message: 'All patrols fetched successfully', data: formattedData });
@@ -428,7 +488,9 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
     const query = `
       SELECT
         p.*,
-        pt.type_name
+        pt.type_name,
+        p.start_time::text AS start_time_raw,
+        p.end_time::text AS end_time_raw
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ORDER BY p.patrol_id DESC
@@ -469,8 +531,8 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
   current_location_distict: clean(patrol.current_location_distict),
   current_location_village: clean(patrol.current_location_village),
 
-  start_time: formatPatrolTimestamp(patrol.start_time),
-  end_time: formatPatrolTimestamp(patrol.end_time),
+  start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
+  end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
 
   images: (imagesMap[patrol.patrol_id] || []).map(img => ({
     ...img,
@@ -610,7 +672,9 @@ if (end_date) {
     const query = `
       SELECT
         p.*,
-        pt.type_name
+        pt.type_name,
+        p.start_time::text AS start_time_raw,
+        p.end_time::text AS end_time_raw
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ${whereClause}
@@ -659,8 +723,8 @@ if (end_date) {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_time: formatPatrolTimestamp(patrol.start_time),
-      end_time: formatPatrolTimestamp(patrol.end_time),
+      start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
       images: imagesMap[patrol.patrol_id] || []
     }));
 
@@ -821,11 +885,13 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
     const query = `
       SELECT
         p.*,
-        pt.type_name
+        pt.type_name,
+        p.start_time::text AS start_time_raw,
+        p.end_time::text AS end_time_raw
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ${whereClause}
-      GROUP BY p.patrol_id, pt.type_name
+      GROUP BY p.patrol_id, pt.type_name, p.start_time_raw, p.end_time_raw
       ORDER BY p.start_time DESC NULLS LAST
       LIMIT $${limitIndex} OFFSET $${offsetIndex};
     `;
@@ -879,8 +945,8 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_time: formatPatrolTimestamp(patrol.start_time),
-      end_time: formatPatrolTimestamp(patrol.end_time),
+      start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
       images: imagesMap[patrol.patrol_id] || []
     }));
 
@@ -913,11 +979,13 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
     const query = `
       SELECT
         p.*,
-        pt.type_name
+        pt.type_name,
+        p.start_time::text AS start_time_raw,
+        p.end_time::text AS end_time_raw
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       WHERE p.user_id = $1
-      GROUP BY p.patrol_id, pt.type_name
+      GROUP BY p.patrol_id, pt.type_name, p.start_time_raw, p.end_time_raw
       ORDER BY p.patrol_id DESC;
     `;
 
@@ -942,8 +1010,8 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
-      start_time: formatPatrolTimestamp(patrol.start_time),
-      end_time: formatPatrolTimestamp(patrol.end_time),
+      start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
       images: (imagesMap[patrol.patrol_id] || []).map(img => ({
         ...img,
         image_data: img.image_data || null
@@ -968,11 +1036,13 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
     const query = `
       SELECT
         p.*,
-        pt.type_name
+        pt.type_name,
+        p.start_time::text AS start_time_raw,
+        p.end_time::text AS end_time_raw
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       WHERE p.patrol_id = $1
-      GROUP BY p.patrol_id, pt.type_name;
+      GROUP BY p.patrol_id, pt.type_name, p.start_time_raw, p.end_time_raw;
     `;
 
     const result = await client.query(query, [patrol_id]);
@@ -993,8 +1063,8 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
 
     const formattedPatrol = {
       ...patrol,
-      start_time: formatPatrolTimestamp(patrol.start_time),
-      end_time: formatPatrolTimestamp(patrol.end_time),
+      start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
+      end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
       images
     };
 
