@@ -11,6 +11,36 @@ const { clean } = require("../middlewares/sanitize");
 const { logFromRequest } = require("../utils/auditLogger");
 const { body, param, validationResult } = require('express-validator');
 
+// ── Schema migration cache ───────────────────────────────────────────────────
+// Tracks which NDVI tables have already had the required columns added during
+// this process lifetime. ALTER TABLE runs at most ONCE per table — never on
+// every HTTP request (which caused 200–500 ms schema-lock delays).
+const _alteredTables = new Set();
+
+async function ensureNdviColumns(tableName) {
+  if (_alteredTables.has(tableName)) return; // fast-path: already done
+  const alterSql = `
+    ALTER TABLE public."${tableName}"
+    ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
+    ADD COLUMN IF NOT EXISTS note TEXT,
+    ADD COLUMN IF NOT EXISTS image_data TEXT,
+    ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `;
+  try {
+    await sequelize.query(alterSql);
+    _alteredTables.add(tableName);
+  } catch (err) {
+    // If columns already exist Sequelize may throw — still mark as done to avoid retrying
+    if (err.message && err.message.includes('already exists')) {
+      _alteredTables.add(tableName);
+    } else {
+      throw err;
+    }
+  }
+}
+
 // POST: Create new NDVI record (with auto-generated ID)
 router.post('/ndvi-change', verifyJwt, async (req, res) => {
 
@@ -34,17 +64,7 @@ router.post('/ndvi-change', verifyJwt, async (req, res) => {
 
  try {
 
-   const alterTableQuery = `
-     ALTER TABLE public."${coupename}"
-     ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
-     ADD COLUMN IF NOT EXISTS note TEXT,
-     ADD COLUMN IF NOT EXISTS image_data TEXT,
-     ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT true,
-     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-     ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-   `;
-
-   await sequelize.query(alterTableQuery);
+   await ensureNdviColumns(coupename);
 
    const selectQuery = `
      SELECT pixle_id, longitude, latitude
@@ -205,18 +225,8 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
             whereClause = 'WHERE ' + conditions.join(' AND ');
         }
 
-        // First ensure columns exist
-        const alterTableQuery = `
-            ALTER TABLE public."${actualTableName}"
-            ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
-            ADD COLUMN IF NOT EXISTS note TEXT,
-            ADD COLUMN IF NOT EXISTS image_data TEXT,
-            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
-            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-        `;
-
-        await sequelize.query(alterTableQuery);
+        // First ensure columns exist (runs once per table per process)
+        await ensureNdviColumns(actualTableName);
 
         // Fetch filtered data (image_data fetched separately from MongoDB)
         const selectQuery = `
@@ -533,18 +543,8 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
     }
 
     try {
-        // 1️⃣ Create columns if NOT EXISTS
-        const alterTableQuery = `
-            ALTER TABLE public."${NdvicoupeName}"
-            ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
-            ADD COLUMN IF NOT EXISTS note TEXT,
-            ADD COLUMN IF NOT EXISTS image_data TEXT,
-            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
-            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-        `;
-
-        await sequelize.query(alterTableQuery);
+        // Ensure columns exist (once per table per process)
+        await ensureNdviColumns(NdvicoupeName);
 
         // 2️⃣ Fetch all data (image_data fetched separately from MongoDB)
         const selectQuery = `

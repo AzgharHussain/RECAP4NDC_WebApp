@@ -4,7 +4,7 @@ import {
   Card, Row, Col, Statistic, Progress, Typography, Pagination, 
   Space, Spin, Alert, message 
 } from "antd";
-import { 
+import {
   SearchOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, DownloadOutlined
 } from "@ant-design/icons";
 import { FaCalendarCheck, FaRoute, FaUsers, FaSun, FaMoon, FaShieldAlt, FaUserTie, FaTrophy, FaMapMarkedAlt } from "react-icons/fa";
@@ -780,7 +780,7 @@ const applyPatrolFilters = useCallback((records) => {
     if (roundFilter && item.round !== roundFilter) return false;
     if (beatFilter && item.beat !== beatFilter) return false;
     if (forestId && String(item.forest_id || '') !== String(forestId)) return false;
-    if (patrolLocationFilter && (item.patrolling_location || '') !== patrolLocationFilter) return false;
+    if (patrolLocationFilter && (item.patrolling_location || '').trim().toLowerCase() !== patrolLocationFilter.trim().toLowerCase()) return false;
 
     if (startDate || endDate) {
       const parsedStart = parsePatrolTimestamp(item.start_time);
@@ -826,12 +826,12 @@ const fetchDashboardData = useCallback(async () => {
           key: item.patrol_id || `patrol-${index}`,
           ...item,
           patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-          division: stripHtmlTags(item.division),
-          range: stripHtmlTags(item.range),
-          beat: stripHtmlTags(item.beat),
-          patrolling_location: stripHtmlTags(item.patrolling_location),
-          current_location_distict: stripHtmlTags(item.current_location_distict),
-          current_location_village: stripHtmlTags(item.current_location_village),
+          division: stripHtmlTags(item.division || item.Division),
+          range: stripHtmlTags(item.range || item.Range),
+          beat: stripHtmlTags(item.beat || item.Beat),
+          patrolling_location: stripHtmlTags(item.patrolling_location || item.patrolling_Location || item.patrollingLocation),
+          current_location_distict: stripHtmlTags(item.current_location_distict || item.current_location_district || item.currentLocationDistrict),
+          current_location_village: stripHtmlTags(item.current_location_village || item.currentLocationVillage),
           start_location: stripHtmlTags(item.start_location),
           end_location: stripHtmlTags(item.end_location)
         }));
@@ -874,12 +874,12 @@ const fetchDashboardData = useCallback(async () => {
           key: item.patrol_id || `patrol-filtered-${index}`,
           ...item,
           patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-          division: stripHtmlTags(item.division),
-          range: stripHtmlTags(item.range),
-          beat: stripHtmlTags(item.beat),
-          patrolling_location: stripHtmlTags(item.patrolling_location),
-          current_location_distict: stripHtmlTags(item.current_location_distict),
-          current_location_village: stripHtmlTags(item.current_location_village),
+          division: stripHtmlTags(item.division || item.Division),
+          range: stripHtmlTags(item.range || item.Range),
+          beat: stripHtmlTags(item.beat || item.Beat),
+          patrolling_location: stripHtmlTags(item.patrolling_location || item.patrolling_Location || item.patrollingLocation),
+          current_location_distict: stripHtmlTags(item.current_location_distict || item.current_location_district || item.currentLocationDistrict),
+          current_location_village: stripHtmlTags(item.current_location_village || item.currentLocationVillage),
           start_location: stripHtmlTags(item.start_location),
           end_location: stripHtmlTags(item.end_location)
         }));
@@ -933,7 +933,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     if (handleUnauthorized(response.status)) return;
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
-    
+
     let formattedData = Array.isArray(data.data) ? data.data : [];
     formattedData = formattedData
       .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
@@ -941,12 +941,12 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
         key: item.patrol_id || `patrol-${index}`,
         ...item,
         patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-        division: stripHtmlTags(item.division),
-        range: stripHtmlTags(item.range),
-        beat: stripHtmlTags(item.beat),
-        patrolling_location: stripHtmlTags(item.patrolling_location),
-        current_location_distict: stripHtmlTags(item.current_location_distict),
-        current_location_village: stripHtmlTags(item.current_location_village),
+        division: stripHtmlTags(item.division || item.Division),
+        range: stripHtmlTags(item.range || item.Range),
+        beat: stripHtmlTags(item.beat || item.Beat),
+        patrolling_location: stripHtmlTags(item.patrolling_location || item.patrolling_Location || item.patrollingLocation),
+        current_location_distict: stripHtmlTags(item.current_location_distict || item.current_location_district || item.currentLocationDistrict),
+        current_location_village: stripHtmlTags(item.current_location_village || item.currentLocationVillage),
         start_location: stripHtmlTags(item.start_location),
         end_location: stripHtmlTags(item.end_location)
       }));
@@ -1371,6 +1371,24 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     }
   };
 
+  const getResolvedPatrolLocation = (record) => {
+    const location = record.patrolling_location || record.patrolling_Location || record.patrollingLocation;
+    if (location) return location;
+    if (record.division || record.range || record.beat) return "Inside Forest";
+    if (record.current_location_distict || record.current_location_district || record.currentLocationDistrict || record.current_location_village || record.currentLocationVillage) return "Outside Forest";
+    return "";
+  };
+
+  const isInsideForestPatrol = (record) => {
+    const loc = getResolvedPatrolLocation(record).toLowerCase();
+    return loc.includes("inside") || loc.includes("forest") || (!loc && (record.division || record.range || record.beat));
+  };
+
+  const isOutsideForestPatrol = (record) => {
+    const loc = getResolvedPatrolLocation(record).toLowerCase();
+    return loc.includes("outside") || loc.includes("village") || loc.includes("city") || (!isInsideForestPatrol(record) && (record.current_location_distict || record.current_location_district || record.currentLocationDistrict || record.current_location_village || record.currentLocationVillage));
+  };
+
   const columns = [
     {
       title: language === "gu" ? "ક્રમાંક" : "Sr. No.",
@@ -1397,64 +1415,42 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       dataIndex: "division",
       key: "division",
       align: "center",
-      render: (value, record) => {
-        // Show Division only for Inside Forest
-        const loc = (record.patrolling_location || "").toLowerCase();
-        if (loc.includes("inside") || loc.includes("forest")) return value || "-";
-        return "-";
-      },
+      render: (value, record) => isInsideForestPatrol(record) ? (value || record.Division || "-") : "-",
     },
     {
       title: language === "gu" ? "રેન્જ" : "Range",
       dataIndex: "range",
       key: "range",
       align: "center",
-      render: (value, record) => {
-        const loc = (record.patrolling_location || "").toLowerCase();
-        if (loc.includes("inside") || loc.includes("forest")) return value || "-";
-        return "-";
-      },
+      render: (value, record) => isInsideForestPatrol(record) ? (value || record.Range || "-") : "-",
     },
     {
       title: language === "gu" ? "બીટ" : "Beat",
       dataIndex: "beat",
       key: "beat",
       align: "center",
-      render: (value, record) => {
-        const loc = (record.patrolling_location || "").toLowerCase();
-        if (loc.includes("inside") || loc.includes("forest")) return value || "-";
-        return "-";
-      },
+      render: (value, record) => isInsideForestPatrol(record) ? (value || record.Beat || "-") : "-",
     },
     {
       title: language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location",
       dataIndex: "patrolling_location",
       key: "patrolling_location",
       align: "center",
-      render: (value) => value || "-",
+      render: (value, record) => value || getResolvedPatrolLocation(record) || "-",
     },
     {
       title: language === "gu" ? "જિલ્લો" : "District",
       dataIndex: "current_location_distict",
       key: "current_location_distict",
       align: "center",
-      render: (value, record) => {
-        // Show District only for Outside Forest
-        const loc = (record.patrolling_location || "").toLowerCase();
-        if (loc.includes("outside") || loc.includes("village") || loc.includes("city")) return value || "-";
-        return "-";
-      },
+      render: (value, record) => isOutsideForestPatrol(record) ? (value || record.current_location_district || record.currentLocationDistrict || "-") : "-",
     },
     {
       title: language === "gu" ? "ગામ" : "Village",
       dataIndex: "current_location_village",
       key: "current_location_village",
       align: "center",
-      render: (value, record) => {
-        const loc = (record.patrolling_location || "").toLowerCase();
-        if (loc.includes("outside") || loc.includes("village") || loc.includes("city")) return value || "-";
-        return "-";
-      },
+      render: (value, record) => isOutsideForestPatrol(record) ? (value || record.currentLocationVillage || "-") : "-",
     },
     {
       title: language === "gu" ? "શરૂઆતની તારીખ" : "Search by Start Date",
@@ -1550,7 +1546,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     `${language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"}: ${typeFilter ? getTypeDisplayName(typeFilter) : "All"}`,
     `${language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"}: ${startFilter ? startFilter.format('YYYY-MM-DD') : "All"}`,
     `${language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"}: ${endFilter ? endFilter.format('YYYY-MM-DD') : "All"}`,
-    `${language === "gu" ? "કુલ રેકોર્ડ" : "Total Records"}: ${filteredData.length}`,
+    `${language === "gu" ? "કુલ રેકોર્ડ" : "Total Records"}: ${totalItems}`,
   ];
 
   const confirmExportTableToExcel = () => {
@@ -1611,14 +1607,50 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
 
   // Add this function after your existing exportCoverageToExcel function
 // Add this function after your existing exportCoverageToExcel function
+const fetchExportPatrolData = async () => {
+  const filters = buildFilters();
+  const params = new URLSearchParams({
+    page: "1",
+    limit: String(Math.max(totalItems || filteredData.length || 0, 1)),
+    ...filters
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+    method: "GET",
+    headers: getAuthHeaders({ "Content-Type": "application/json" }),
+  });
+
+  if (handleUnauthorized(response.status)) return [];
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+  const data = await response.json();
+  return (Array.isArray(data.data) ? data.data : [])
+    .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
+    .map((item, index) => ({
+      key: item.patrol_id || `patrol-export-${index}`,
+      ...item,
+      patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+      division: stripHtmlTags(item.division || item.Division),
+      range: stripHtmlTags(item.range || item.Range),
+      beat: stripHtmlTags(item.beat || item.Beat),
+      patrolling_location: stripHtmlTags(item.patrolling_location || item.patrolling_Location || item.patrollingLocation),
+      current_location_distict: stripHtmlTags(item.current_location_distict || item.current_location_district || item.currentLocationDistrict),
+      current_location_village: stripHtmlTags(item.current_location_village || item.currentLocationVillage),
+      start_location: stripHtmlTags(item.start_location),
+      end_location: stripHtmlTags(item.end_location)
+    }));
+};
+
 const exportTableToExcel = async () => {
-  if (!filteredData || filteredData.length === 0) {
+  const exportData = await fetchExportPatrolData();
+
+  if (!exportData || exportData.length === 0) {
     message.warning(language === "gu" ? "કોઈ ડેટા નિકાસ કરવા માટે ઉપલબ્ધ નથી" : "No data available to export");
     return;
   }
 
-  const [XLSX, { saveAs }] = await Promise.all([
-    import("xlsx"),
+  const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
+    import("exceljs"),
     import("file-saver"),
   ]);
 
@@ -1633,11 +1665,11 @@ const exportTableToExcel = async () => {
   };
 
   // Sheet 1: Patrol Logs Data (with separate date and time columns)
-  const patrolLogsData = filteredData.map((item, index) => {
+  const patrolLogsData = exportData.map((item, index) => {
     // Collect notes from all images
     const allNotes = (item.images || [])
       .filter(img => img.note)
-      .map(img => img.note)
+      .map((img, imgIndex) => `${img.image_category || `Image ${imgIndex + 1}`}: ${img.note}`)
       .join('; ') || "-";
 
     // Count images
@@ -1764,7 +1796,7 @@ const exportTableToExcel = async () => {
   };
 
   const officerMap = {};
-  filteredData.forEach((item) => {
+  exportData.forEach((item) => {
     const name = item.patrol_officer_name || "Unknown";
     if (!officerMap[name]) officerMap[name] = [];
     officerMap[name].push(item);
@@ -1811,9 +1843,9 @@ const exportTableToExcel = async () => {
     ]);
   });
 
-  const dayTotal = computeTypeStats(filteredData, "Day patrolling");
-  const nightTotal = computeTypeStats(filteredData, "Night patrolling");
-  const beatTotal = computeTypeStats(filteredData, "Beat checking");
+  const dayTotal = computeTypeStats(exportData, "Day patrolling");
+  const nightTotal = computeTypeStats(exportData, "Night patrolling");
+  const beatTotal = computeTypeStats(exportData, "Beat checking");
 
   summaryData.push([
     language === "gu" ? "કુલ" : "TOTAL",
@@ -1829,20 +1861,15 @@ const exportTableToExcel = async () => {
     "", "", "", "", "", "", "", "", "", "", "",
   ]);
 
-  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-  summarySheet["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
-    { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
-    { s: { r: 1, c: 1 }, e: { r: 1, c: 4 } },
-    { s: { r: 1, c: 5 }, e: { r: 1, c: 8 } },
-    { s: { r: 1, c: 9 }, e: { r: 1, c: 12 } },
-    { s: { r: summaryData.length - 1, c: 1 }, e: { r: summaryData.length - 1, c: 12 } },
+  const summaryMerges = [
+    'A1:M1',
+    'A2:A3',
+    'B2:E2',
+    'F2:I2',
+    'J2:M2',
+    `B${summaryData.length}:M${summaryData.length}`,
   ];
-  summarySheet["!cols"] = [
-    { wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-  ];
+  const summaryColumnWidths = [24, 14, 12, 12, 12, 14, 12, 12, 12, 14, 12, 12, 12];
 
   // Sheet 4: Filter Criteria Applied
   const filterCriteria = [
@@ -1854,7 +1881,7 @@ const exportTableToExcel = async () => {
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type", [language === "gu" ? "મૂલ્ય" : "Value"]: typeFilter ? getTypeDisplayName(typeFilter) : "-" },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date", [language === "gu" ? "મૂલ્ય" : "Value"]: startFilter ? startFilter.format('YYYY-MM-DD') : "-" },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date", [language === "gu" ? "મૂલ્ય" : "Value"]: endFilter ? endFilter.format('YYYY-MM-DD') : "-" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "કુલ રેકોર્ડ" : "Total Records", [language === "gu" ? "મૂલ્ય" : "Value"]: filteredData.length },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "કુલ રેકોર્ડ" : "Total Records", [language === "gu" ? "મૂલ્ય" : "Value"]: totalItems || exportData.length },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "નિકાસ તારીખ" : "Export Date", [language === "gu" ? "મૂલ્ય" : "Value"]: new Date().toLocaleString() },
   ];
 
@@ -1885,90 +1912,128 @@ const exportTableToExcel = async () => {
     ];
   }
 
-  // Create workbook with multiple sheets
-  const workbook = XLSX.utils.book_new();
+  const imageNotesData = exportData.flatMap((item, itemIndex) => (item.images || []).map((img, imgIndex) => ({
+    [language === "gu" ? "ક્રમાંક" : "Sr. No."]: `${itemIndex + 1}.${imgIndex + 1}`,
+    [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: item.patrol_id || "-",
+    [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "-",
+    [language === "gu" ? "છબી પ્રકાર" : "Image Category"]: img.image_category || `Image ${imgIndex + 1}`,
+    [language === "gu" ? "નોંધ" : "Note"]: img.note || "-",
+  })));
 
-  // Sheet 1: Officer Patrol Summary Report (multi-level grouped headers)
-  workbook.SheetNames.unshift("Officer Patrol Summary Report");
-  workbook.Sheets["Officer Patrol Summary Report"] = summarySheet;
-  
-  // Sheet 2: Patrol Logs (with separate date and time columns)
-  const patrolSheet = XLSX.utils.json_to_sheet(patrolLogsData);
-  XLSX.utils.book_append_sheet(workbook, patrolSheet, "Patrol Logs");
-  
-  // Sheet 2: Analysis Summary
-  const analysisSheet = XLSX.utils.json_to_sheet(analysisSummary);
-  XLSX.utils.book_append_sheet(workbook, analysisSheet, "Analysis Summary");
-  
-  // Sheet 3: Type Breakdown
-  if (typeBreakdownData.length > 0) {
-    const typeSheet = XLSX.utils.json_to_sheet(typeBreakdownData);
-    XLSX.utils.book_append_sheet(workbook, typeSheet, "Patrol Type Breakdown");
-  }
-  
-  // Sheet 4: Filter Criteria
-  const filterSheet = XLSX.utils.json_to_sheet(filterCriteria);
-  XLSX.utils.book_append_sheet(workbook, filterSheet, "Filter Criteria");
-  
-  // Sheet 5: Coverage Analysis (if available)
-  if (coverageDataSheet.length > 0) {
-    const coverageSheet = XLSX.utils.json_to_sheet(coverageDataSheet);
-    XLSX.utils.book_append_sheet(workbook, coverageSheet, "Coverage Analysis");
-    
-    // Sheet 6: Covering Patrols (if available)
-    if (coveragePatrols && coveragePatrols.length > 0) {
-      const formatDateForExportCoverage = (datetime) => {
-        if (!datetime) return "-";
-        return getPatrolDateTimeParts(datetime)?.date || "-";
-      };
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'RECAP4NDC';
+  workbook.created = new Date();
 
-      const formatTimeForExportCoverage = (datetime) => {
-        if (!datetime) return "-";
-        return getPatrolDateTimeParts(datetime)?.time || "-";
-      };
+  const addObjectSheet = (name, rows) => {
+    if (!rows || rows.length === 0) return null;
+    const sheet = workbook.addWorksheet(name);
+    const headers = Object.keys(rows[0]);
+    sheet.addRow(headers);
+    rows.forEach((row) => sheet.addRow(headers.map((header) => row[header])));
+    sheet.getRow(1).font = { bold: true };
+    sheet.columns = headers.map((header) => ({
+      key: header,
+      width: Math.max(12, Math.min(50, Math.max(header.length, ...rows.map((row) => String(row[header] ?? '').length)) + 2)),
+    }));
+    return sheet;
+  };
 
-      const coveringPatrolsData = coveragePatrols.map((patrol, idx) => ({
-        [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
-        [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_id || "-",
-        [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "-",
-        [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExportCoverage(patrol.start_time),
-        [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExportCoverage(patrol.start_time),
-        [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExportCoverage(patrol.end_time),
-        [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExportCoverage(patrol.end_time),
-        [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: patrol.distance_kms || "0",
-      }));
-      const coveringSheet = XLSX.utils.json_to_sheet(coveringPatrolsData);
-      XLSX.utils.book_append_sheet(workbook, coveringSheet, "Covering Patrols");
-    }
-  }
-  
-  // Auto-size columns for all sheets
-  const sheets = ['Officer Patrol Summary Report', 'Patrol Logs', 'Analysis Summary', 'Patrol Type Breakdown', 'Filter Criteria', 'Coverage Analysis', 'Covering Patrols'];
-  sheets.forEach(sheetName => {
-    const sheet = workbook.Sheets[sheetName];
-    if (sheet) {
-      const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
-      const colWidths = {};
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          const cell = sheet[cellAddress];
-          if (cell && cell.v) {
-            const value = cell.v.toString();
-            const width = Math.min(value.length, 50);
-            if (!colWidths[C] || width > colWidths[C]) {
-              colWidths[C] = width;
-            }
-          }
-        }
-      }
-      sheet['!cols'] = Object.keys(colWidths).map(c => ({ wch: Math.max(colWidths[c] + 2, 12) }));
-    }
+  const getExcelImageExtension = (mimeType = '') => {
+    if (mimeType.includes('png')) return 'png';
+    if (mimeType.includes('gif')) return 'gif';
+    if (mimeType.includes('jpeg') || mimeType.includes('jpg')) return 'jpeg';
+    return null;
+  };
+
+  const summarySheet = workbook.addWorksheet('Officer Patrol Summary Report');
+  summaryData.forEach((row) => summarySheet.addRow(row));
+  summaryMerges.forEach((range) => summarySheet.mergeCells(range));
+  summaryColumnWidths.forEach((width, index) => {
+    summarySheet.getColumn(index + 1).width = width;
   });
+  summarySheet.getRow(1).font = { bold: true, size: 14 };
+  summarySheet.getRow(2).font = { bold: true };
+  summarySheet.getRow(3).font = { bold: true };
 
-  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  addObjectSheet('Patrol Logs', patrolLogsData);
+  addObjectSheet('Analysis Summary', analysisSummary);
+  addObjectSheet('Patrol Type Breakdown', typeBreakdownData);
+
+  if (imageNotesData.length > 0) {
+    const imageSheet = workbook.addWorksheet('Image Notes');
+    const headers = [
+      language === "gu" ? "ક્રમાંક" : "Sr. No.",
+      language === "gu" ? "પેટ્રોલ ID" : "Patrol ID",
+      language === "gu" ? "અધિકારીનું નામ" : "Officer Name",
+      language === "gu" ? "છબી પ્રકાર" : "Image Category",
+      language === "gu" ? "નોંધ" : "Note",
+      language === "gu" ? "છબી" : "Image",
+    ];
+    imageSheet.addRow(headers);
+    imageSheet.getRow(1).font = { bold: true };
+    imageSheet.columns = [
+      { width: 12 },
+      { width: 12 },
+      { width: 24 },
+      { width: 20 },
+      { width: 42 },
+      { width: 24 },
+    ];
+
+    exportData.forEach((item, itemIndex) => {
+      (item.images || []).forEach((img, imgIndex) => {
+        const rowNumber = imageSheet.rowCount + 1;
+        imageSheet.addRow([
+          `${itemIndex + 1}.${imgIndex + 1}`,
+          item.patrol_id || "-",
+          item.patrol_officer_name || "-",
+          img.image_category || `Image ${imgIndex + 1}`,
+          img.note || "-",
+          img.image_data ? (language === "gu" ? "જોડાયેલ" : "Attached") : "-",
+        ]);
+        imageSheet.getRow(rowNumber).height = img.image_data ? 90 : 24;
+
+        const extension = getExcelImageExtension(img.image_type);
+        if (img.image_data && extension) {
+          const imageId = workbook.addImage({ base64: `data:${img.image_type};base64,${img.image_data}`, extension });
+          imageSheet.addImage(imageId, {
+            tl: { col: 5.1, row: rowNumber - 0.9 },
+            ext: { width: 120, height: 80 },
+          });
+        }
+      });
+    });
+  }
+
+  addObjectSheet('Filter Criteria', filterCriteria);
+  addObjectSheet('Coverage Analysis', coverageDataSheet);
+
+  if (coverageDataSheet.length > 0 && coveragePatrols && coveragePatrols.length > 0) {
+    const formatDateForExportCoverage = (datetime) => {
+      if (!datetime) return "-";
+      return getPatrolDateTimeParts(datetime)?.date || "-";
+    };
+
+    const formatTimeForExportCoverage = (datetime) => {
+      if (!datetime) return "-";
+      return getPatrolDateTimeParts(datetime)?.time || "-";
+    };
+
+    addObjectSheet('Covering Patrols', coveragePatrols.map((patrol, idx) => ({
+      [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
+      [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_id || "-",
+      [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "-",
+      [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExportCoverage(patrol.start_time),
+      [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExportCoverage(patrol.start_time),
+      [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExportCoverage(patrol.end_time),
+      [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExportCoverage(patrol.end_time),
+      [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: patrol.distance_kms || "0",
+    })));
+  }
+
+  const excelBuffer = await workbook.xlsx.writeBuffer();
   const fileName = `patrol_complete_report_${new Date().toISOString().split('T')[0]}.xlsx`;
-  saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
+  saveAs(new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), fileName);
   
   message.success(language === "gu" ? "સંપૂર્ણ રિપોર્ટ સફળતાપૂર્વક નિકાસ થયો" : "Complete report exported successfully");
 };
@@ -2406,16 +2471,20 @@ const exportTableToExcel = async () => {
                               textAlign: 'center'
                             }}>
                               {getImageLabel()}
-                              {image.note && (
+                              {(image.note) && (
                                 <div style={{
-                                  fontSize: 9,
-                                  color: '#999',
-                                  marginTop: 2,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
+                                  fontSize: 10,
+                                  color: '#0066cc',
+                                  fontWeight: 600,
+                                  marginTop: 4,
+                                  padding: '2px 4px',
+                                  background: '#e6f0ff',
+                                  borderRadius: 2,
+                                  whiteSpace: 'normal',
+                                  wordBreak: 'break-word',
+                                  textAlign: 'left'
                                 }}>
-                                  {image.note}
+                                  {language === "gu" ? "નોંધ" : "Note"}: {image.note}
                                 </div>
                               )}
                               <Button
@@ -2499,7 +2568,7 @@ const exportTableToExcel = async () => {
           <ul style={{ paddingLeft: 18, marginBottom: 0 }}>
             {getExportFilterSummary().map((item) => <li key={item}>{item}</li>)}
           </ul>
-          {(!filteredData || filteredData.length === 0) && (
+          {totalItems === 0 && (
             <p style={{ color: "#faad14", marginTop: 8 }}>
               {language === "gu" ? "કોઈ ડેટા ઉપલબ્ધ નથી. નિકાસ ખાલી રહેશે." : "No data available. Export will be empty."}
             </p>

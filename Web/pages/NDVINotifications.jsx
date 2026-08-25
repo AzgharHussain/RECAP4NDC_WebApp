@@ -155,8 +155,10 @@ const NDVINotifications = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailImageUrl, setDetailImageUrl] = useState(null);
   const [detailImageLoading, setDetailImageLoading] = useState(false);
+  // Pagination state — server-driven
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 500, total: 0 });
 
-  const fetchReport = async (overrideFilters = filters) => {
+  const fetchReport = async (overrideFilters = filters, page = pagination.current, pageSize = pagination.pageSize) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -165,6 +167,8 @@ const NDVINotifications = () => {
       });
       if (overrideFilters.dates?.[0]) params.append("start_date", overrideFilters.dates[0].format("YYYY-MM-DD"));
       if (overrideFilters.dates?.[1]) params.append("end_date", overrideFilters.dates[1].format("YYYY-MM-DD"));
+      params.append("page", String(page));
+      params.append("pageSize", String(pageSize));
 
       const res = await fetch(`${API_BASE_URL}/api/ndvi-notification-report?${params.toString()}`, { headers: getAuthHeaders() });
       const json = await res.json();
@@ -173,6 +177,14 @@ const NDVINotifications = () => {
       setMonthlySummary((json.monthlyDivisionSummary || []).map((item, index) => ({ ...item, key: `${item.month}-${item.division}-${index}` })));
       setSummary(json.summary || { total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
       setOptions({ ...emptyOptions, ...(json.options || {}) });
+      if (json.pagination) {
+        setPagination(prev => ({
+          ...prev,
+          current: json.pagination.page,
+          pageSize: json.pagination.pageSize,
+          total: json.pagination.total,
+        }));
+      }
     } catch (err) {
       console.error(err);
       message.error(err.message || "Failed to fetch NDVI notifications");
@@ -188,10 +200,19 @@ const NDVINotifications = () => {
     fetchReport();
   }, []);
 
+  // Handle Ant Design Table page change
+  const handleTableChange = (pag) => {
+    const newPage = pag.current;
+    const newPageSize = pag.pageSize;
+    setPagination(prev => ({ ...prev, current: newPage, pageSize: newPageSize }));
+    fetchReport(filters, newPage, newPageSize);
+  };
+
   const clearFilters = () => {
     const cleared = { username: null, table_name: null, division: null, month: null, status: null, dates: null };
     setFilters(cleared);
-    fetchReport(cleared);
+    setPagination(prev => ({ ...prev, current: 1 }));
+    fetchReport(cleared, 1, pagination.pageSize);
   };
 
   const renderSelect = (key, placeholder, values, span = 4) => (
@@ -448,12 +469,26 @@ const NDVINotifications = () => {
         />
       </Card>
 
-      {/* ── Notification data table ── */}
+      {/* ── Notification data table (server-side pagination) ── */}
       <Card
         title={t.notificationData}
         extra={<Button icon={<DownloadOutlined />} onClick={exportToExcel}>{t.export}</Button>}
       >
-        <Table columns={columns} dataSource={data} loading={loading} scroll={{ x: "max-content" }} />
+        <Table
+          columns={columns}
+          dataSource={data}
+          loading={loading}
+          scroll={{ x: "max-content" }}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total || summary.total_notifications,
+            showSizeChanger: true,
+            pageSizeOptions: [100, 250, 500, 1000],
+            showTotal: (total, range) => `${range[0]}–${range[1]} of ${total} items`,
+          }}
+          onChange={handleTableChange}
+        />
       </Card>
 
       {/* ── Detail modal ── */}

@@ -59,4 +59,30 @@ imageSchema.pre('save', async function (next) {
   next();
 });
 
-module.exports = mongoose.model('Image', imageSchema);
+const Image = mongoose.model('Image', imageSchema);
+
+// On startup, ensure every patrol image has a `note` field.
+// Also migrate any legacy `notes` field into `note` for consistency.
+Image.ensurePatrolNotesField = async function () {
+  // 1. Add `note` field (default null) to any patrol image missing it
+  const addResult = await this.updateMany(
+    { sourceType: 'patrol', note: { $exists: false } },
+    [{ $set: { note: { $ifNull: ['$note', null] } } }]
+  );
+
+  // 2. Migrate legacy `notes` field into `note` if `note` is empty
+  const migrateResult = await this.updateMany(
+    { sourceType: 'patrol', note: null, notes: { $type: 'string', $ne: '' } },
+    [{ $set: { note: '$notes' } }]
+  );
+
+  // 3. Remove the legacy `notes` field from all patrol images
+  const unsetResult = await this.updateMany(
+    { sourceType: 'patrol', notes: { $exists: true } },
+    { $unset: { notes: '' } }
+  );
+
+  console.log(`[Image.notes migration] added note field to ${addResult.modifiedCount} image(s), migrated notes->note for ${migrateResult.modifiedCount} image(s), removed legacy notes field from ${unsetResult.modifiedCount} image(s)`);
+};
+
+module.exports = Image;

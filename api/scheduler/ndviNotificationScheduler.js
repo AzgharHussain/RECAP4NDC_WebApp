@@ -35,40 +35,78 @@ async function queryWithRetry(client, sql, options = {}, maxRetries = 3) {
   throw lastErr;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// One-time startup DDL guard — ensures the notification log table exists and
+// pixel_id/sent_at columns are correctly typed.  Runs ONCE per process lifetime
+// regardless of how many times the scheduler ticks.  DDL on every cron tick
+// (especially ALTER COLUMN TYPE) can lock the table and slow every query.
+// ─────────────────────────────────────────────────────────────────────────────
+let setupDone = false;
+
 async function ensureNotificationLogPixelIdText(client) {
-  await queryWithRetry(client, `
-    CREATE TABLE IF NOT EXISTS public.ndvi_notification_log (
-      id SERIAL PRIMARY KEY,
-      user_id TEXT,
-      table_name TEXT,
-      pixel_id TEXT,
-      sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_id, table_name, pixel_id)
-    )
-  `);
-  await queryWithRetry(client, `
-    ALTER TABLE public.ndvi_notification_log
-    ALTER COLUMN pixel_id TYPE TEXT USING pixel_id::text
-  `);
-  await queryWithRetry(client, `
-    ALTER TABLE public.ndvi_notification_log
-    ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  `);
-  await queryWithRetry(client, `
-    UPDATE public.ndvi_notification_log
-    SET sent_at = CURRENT_TIMESTAMP
-    WHERE sent_at IS NULL
-  `);
+  if (setupDone) return; // already ran — skip all DDL
+  setupDone = true;
+  try {
+    await queryWithRetry(client, `
+      CREATE TABLE IF NOT EXISTS public.ndvi_notification_log (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT,
+        table_name TEXT,
+        pixel_id TEXT,
+        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, table_name, pixel_id)
+      )
+    `);
+
+    // Only run the ALTER COLUMN TYPE if the column is NOT already TEXT.
+    // ALTER COLUMN TYPE TEXT USING ... does a full table rewrite + ACCESS EXCLUSIVE lock.
+    // On a large table this blocks the ENTIRE server. Skip if already correct type.
+    const colType = await queryWithRetry(client, `
+      SELECT data_type
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'ndvi_notification_log'
+        AND column_name = 'pixel_id'
+      LIMIT 1
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    if (colType.length > 0 && colType[0].data_type !== 'text') {
+      // Only alter if not already text (avoids full table rewrite on every restart)
+      await queryWithRetry(client, `
+        ALTER TABLE public.ndvi_notification_log
+        ALTER COLUMN pixel_id TYPE TEXT USING pixel_id::text
+      `);
+    }
+
+    await queryWithRetry(client, `
+      ALTER TABLE public.ndvi_notification_log
+      ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+    await queryWithRetry(client, `
+      UPDATE public.ndvi_notification_log
+      SET sent_at = CURRENT_TIMESTAMP
+      WHERE sent_at IS NULL
+    `);
+  } catch (err) {
+    // If setup failed, allow retry next tick
+    setupDone = false;
+    throw err;
+  }
 }
 
 const DEFAULT_NOTE_TEXT = 'NDVI decrease less than -0.3';
 
+// Guard: only run note cleanup once per process (it iterates every NDVI table)
+let cleanupDefaultNotesDone = false;
+
 /**
  * Clean up the default auto-generated note from all NDVI Change tables.
  * Sets note = NULL where note = 'NDVI decrease less than -0.3'.
- * Runs once per scheduler tick (idempotent — no-op if already clean).
+ * Runs ONCE per process lifetime (guarded by flag).
  */
 async function cleanupDefaultNotes(client) {
+  if (cleanupDefaultNotesDone) return; // no-op after first run
+  cleanupDefaultNotesDone = true;
   try {
     const tables = await queryWithRetry(client, `
       SELECT table_name
@@ -96,15 +134,26 @@ async function cleanupDefaultNotes(client) {
       } catch (_) {}
     }
   } catch (err) {
+    cleanupDefaultNotesDone = false; // allow retry if it failed
     console.error('[ndviScheduler] Failed to cleanup default notes:', err.message);
   }
 }
 
+// Track whether a Firebase credential error has occurred — if so, stop all
+// further send attempts for the rest of this scheduler run (they all fail).
+let firebaseCredentialError = false;
+
 /**
  * Core NDVI notification logic — runs on server startup AND on cron schedule.
  * Sends pending NDVI alerts to all subscribed users.
+ *
+ * Performance notes:
+ *  - DDL (table/column setup) runs ONCE per process lifetime via `setupDone`.
  */
 async function runNdviNotifications(admin) {
+  // Reset credential error flag at the start of each run
+  firebaseCredentialError = false;
+
   try {
     const client = sequelize.getQueryInterface().sequelize;
     await ensureNotificationLogPixelIdText(client);
@@ -152,15 +201,35 @@ async function runNdviNotifications(admin) {
 
       // ------------------------------------------------
       // 3.5️⃣ Ensure the table has a `pixle_id` column.
-      //    Some NDVI tables are auto-created without it; the scheduler
-      //    SELECTs pixle_id below, so we add + populate it (unique values,
-      //    not a primary key) when missing. Idempotent & cheap.
       // ------------------------------------------------
       try {
         await ensurePixleIdColumn(client, tableName, { isSequelize: true });
       } catch (ensureErr) {
         console.error(`❌ ensurePixleId failed for "${tableName}":`, ensureErr.message);
         // continue anyway — the query below has its own try/catch
+      }
+
+      // ------------------------------------------------
+      // OPTIMIZATION: Prefetch ALL already-sent pixel IDs for this table
+      // in a SINGLE query, keyed by "user_id::pixel_id" for O(1) lookup.
+      // Replaces N per-user SELECT queries (one per user per table) with 1.
+      // ------------------------------------------------
+      let sentSet = new Set();
+      try {
+        const sentRows = await queryWithRetry(client, `
+          SELECT user_id, pixel_id
+          FROM public.ndvi_notification_log
+          WHERE table_name = $1
+        `, {
+          bind: [tableName],
+          type: sequelize.QueryTypes.SELECT
+        });
+        for (const row of sentRows) {
+          sentSet.add(`${row.user_id}::${String(row.pixel_id)}`);
+        }
+      } catch (prefetchErr) {
+        console.warn(`[ndvi-scheduler] Could not prefetch sent log for "${tableName}": ${prefetchErr.message}`);
+        // sentSet stays empty — all notifications will be re-checked below (safe fallback)
       }
 
       for (const user of users) {
@@ -205,23 +274,14 @@ async function runNdviNotifications(admin) {
         const pixelId = String(record.pixle_id);
 
         // ------------------------------------------------
-        // 5️⃣ Check if already notified
+        // 5️⃣ Check if already notified — O(1) Set lookup (no DB query)
         // ------------------------------------------------
-        const alreadySent = await queryWithRetry(client, `
-          SELECT 1
-          FROM public.ndvi_notification_log
-          WHERE user_id = $1
-          AND table_name = $2
-          AND pixel_id = $3
-          LIMIT 1
-        `, {
-          bind: [user_id, tableName, pixelId],
-          type: sequelize.QueryTypes.SELECT
-        });
-
-        if (alreadySent.length) {
+        if (sentSet.has(`${user_id}::${pixelId}`)) {
           continue;
         }
+
+        // Stop all sends if Firebase credentials are invalid
+        if (firebaseCredentialError) break;
 
         // ------------------------------------------------
         // 6️⃣ Prepare Firebase message
@@ -252,7 +312,7 @@ async function runNdviNotifications(admin) {
           await admin.messaging().send(message);
 
           // ------------------------------------------------
-          // 8️⃣ Insert log record
+          // 8️⃣ Insert log record & update local sentSet
           // ------------------------------------------------
           await queryWithRetry(client, `
             INSERT INTO public.ndvi_notification_log
@@ -263,6 +323,8 @@ async function runNdviNotifications(admin) {
             bind: [user_id, tableName, pixelId],
             type: sequelize.QueryTypes.INSERT
           });
+          // Update local set so sibling iterations don't re-send
+          sentSet.add(`${user_id}::${pixelId}`);
 
         } catch (err) {
 
@@ -273,6 +335,7 @@ async function runNdviNotifications(admin) {
           );
 
           if (isCredentialError) {
+            firebaseCredentialError = true;
             console.error("❌ Firebase credential error — notifications will not be sent until the service account key is regenerated.");
             console.error("   Generate a new key at: https://console.firebase.google.com/project/recap4ndc-add07/settings/serviceaccounts/adminsdk");
             break; // stop trying — all sends will fail with the same credential error
@@ -318,20 +381,29 @@ async function runNdviNotifications(admin) {
 
 module.exports = function startNdviScheduler(admin) {
 
-  // ─────────────────────────────────────────────────────────────
-  // Run immediately on server startup — don't wait for the cron
-  // ─────────────────────────────────────────────────────────────
-  console.log('[ndvi-scheduler] Running on startup...');
-  runNdviNotifications(admin).catch((err) => {
-    console.error('[ndvi-scheduler] Startup run failed:', err.message);
-  });
+  // ───────────────────────────────────────────────────────────────
+  // IMPORTANT: Do NOT run notifications synchronously at startup.
+  // The startup run (ensureNotificationLog + cleanupNotes + Firebase sends)
+  // performs ALTER TABLE, information_schema scans and Firebase calls
+  // which block the entire event loop and prevent the server from accepting
+  // any HTTP connections until they complete.
+  // Instead, defer by 30 seconds so the HTTP server binds first.
+  // ───────────────────────────────────────────────────────────────
+  console.log('[ndvi-scheduler] Startup run deferred by 30s to let server bind first...');
+  setTimeout(() => {
+    console.log('[ndvi-scheduler] Running deferred startup run...');
+    runNdviNotifications(admin).catch((err) => {
+      console.error('[ndvi-scheduler] Deferred startup run failed:', err.message);
+    });
+  }, 30 * 1000); // 30 seconds after startup
 
-  // ─────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────
   // Then run on cron schedule (every 10 minutes)
-  // ─────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────
   cron.schedule("*/10 * * * *", async () => {
     console.log('[ndvi-scheduler] Cron tick — running...');
     await runNdviNotifications(admin);
   });
 
+  console.log('[ndvi-scheduler] Scheduler registered. Startup run deferred 30s. Cron: every 10 minutes.');
 };

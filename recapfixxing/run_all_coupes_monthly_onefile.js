@@ -161,6 +161,7 @@ const GEOSERVER_WORKSPACE       ='Recap4NDC';
 const GEOSERVER_STORE           = 'Recap4NDC_Query';
 const GEOSERVER_STYLE_WORKSPACE = 'Recap4NDC_New';
 const GEOSERVER_STYLE           = 'NDVI_CHANGE_NEW2222';
+const GEOSERVER_REQUEST_TIMEOUT_MS = Number(process.env.GEOSERVER_REQUEST_TIMEOUT_MS || 60000);
 let GEOSERVER_UNREACHABLE = false;
 
 const TASK_NAME = 'Recap NDVI Monthly Coupe Computation';
@@ -381,8 +382,8 @@ function geoserverRequest(method, requestPath, body) {
       if (request) {
         try { request.destroy(); } catch (_) {}
       }
-      safeReject(new Error(`GeoServer request timed out after 15s: ${method} ${url.href}`));
-    }, 15000);
+      safeReject(new Error(`GeoServer request timed out after ${Math.round(GEOSERVER_REQUEST_TIMEOUT_MS / 1000)}s: ${method} ${url.href}`));
+    }, GEOSERVER_REQUEST_TIMEOUT_MS);
 
     try {
       request = https.request({
@@ -392,7 +393,7 @@ function geoserverRequest(method, requestPath, body) {
         path: `${url.pathname}${url.search}`,
         headers,
         rejectUnauthorized: false,
-        timeout: 15000,
+        timeout: GEOSERVER_REQUEST_TIMEOUT_MS,
       }, (response) => {
         let raw = '';
         response.on('data', (chunk) => {
@@ -624,6 +625,22 @@ async function ensureTargetTable(db, targetTable) {
       coupe_no text
     )
   `);
+  // If the table already existed (from a previous run where postprocess renamed
+  // id→pixle_id making it bigint), fix the column type back to text so string
+  // pixel IDs can be inserted.
+  await db.query(`
+    DO $fix$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = '${targetTable.replace(/'/g, "''")}'
+          AND column_name = 'pixle_id'
+          AND data_type <> 'text'
+      ) THEN
+        ALTER TABLE public."${targetTable}" ALTER COLUMN pixle_id TYPE text USING pixle_id::text;
+      END IF;
+    END $fix$;
+  `);
 }
 
 async function clearTargetTable(db, targetTable) {
@@ -660,7 +677,7 @@ async function insertPixel(db, sourceTable, targetTable, row, feature) {
       village, ${quoteIdentifier(PREV_NDVI_COLUMN)}, ${quoteIdentifier(CURRENT_NDVI_COLUMN)}, pixle_id, note, image_data, status, coupe_no
     ) VALUES (
       ST_SetSRID(ST_MakePoint($1, $2), 4326), $3, $4, $2, $1, $5, $6, $7, $8,
-      $9, $10, $11, $12, $13, $14::jsonb, $15, $16
+      $9, $10, $11, $12::text, $13, $14::jsonb, $15, $16
     )`,
     [
       lon,
@@ -833,17 +850,25 @@ BEGIN
         );
         EXECUTE format('ALTER TABLE public.%I DROP COLUMN IF EXISTS geom;', rec.table_name);
         EXECUTE format('ALTER TABLE public.%I RENAME COLUMN geom_multipolygon TO geom;', rec.table_name);
+        -- Drop the bigserial 'id' column; keep pixle_id (text) which already has meaningful IDs
         EXECUTE format(
             'DO $ren$ BEGIN
                  IF EXISTS (SELECT 1 FROM information_schema.columns
                             WHERE table_schema = ''public''
                               AND table_name = %L
                               AND column_name = ''id'') THEN
-                     ALTER TABLE public.%I DROP COLUMN IF EXISTS pixle_id;
-                     ALTER TABLE public.%I RENAME COLUMN id TO pixle_id;
+                     ALTER TABLE public.%I DROP COLUMN id;
+                 END IF;
+                 -- Ensure pixle_id is text type (in case it was bigint from an older run)
+                 IF EXISTS (SELECT 1 FROM information_schema.columns
+                            WHERE table_schema = ''public''
+                              AND table_name = %L
+                              AND column_name = ''pixle_id''
+                              AND data_type <> ''text'') THEN
+                     ALTER TABLE public.%I ALTER COLUMN pixle_id TYPE text USING pixle_id::text;
                  END IF;
              END $ren$;',
-            rec.table_name, rec.table_name, rec.table_name
+            rec.table_name, rec.table_name, rec.table_name, rec.table_name
         );
     END LOOP;
 END $$;
@@ -880,7 +905,13 @@ async function publishToGeoserver() {
   log(`Published layers list: ${publishedFile}`);
   log(`Publish errors list:   ${errorFile}`);
 
-  await styleExists();
+  try {
+    await styleExists();
+  } catch (err) {
+    log(`[ERROR] Required GeoServer style is not reachable: ${err.message || err}`);
+    log('=== GeoServer publish SKIPPED (cannot verify style) ===');
+    return;
+  }
 
   // Get the list of layers already published in GeoServer
   let published;

@@ -83,6 +83,43 @@ function parseToUTC(dateValue) {
   return new Date(dateValue).toISOString();
 }
 
+function normalizeImageNotes(body = {}) {
+  const parseList = (value) => {
+    if (value === undefined || value === null) return [];
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return [];
+      try {
+        const parsed = JSON.parse(trimmed);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch (err) {
+        return trimmed.includes('|||') ? trimmed.split('|||') : [trimmed];
+      }
+    }
+    return [value];
+  };
+
+  const candidates = [
+    ...parseList(body.image_notes),
+    ...parseList(body.imageNotes),
+    ...parseList(body.notes),
+    ...parseList(body.note),
+  ];
+
+  return candidates.map((item) => {
+    if (item && typeof item === 'object') return clean(item.note ?? item.notes ?? item.value ?? '');
+    return clean(item);
+  });
+}
+
+function getImageNote(body, file, index, notes) {
+  const fieldNote = body[`${file.fieldname}_note`] ?? body[`${file.fieldname}Note`] ?? body[`note_${index}`] ?? body[`image_note_${index}`] ?? body[`imageNotes[${index}]`] ?? body[`image_notes[${index}]`];
+  const note = fieldNote !== undefined ? fieldNote : notes[index];
+  const cleaned = clean(note);
+  return cleaned || null;
+}
+
 async function ensurePatrolLocationColumns(dbClient = client) {
   await dbClient.query(`
     ALTER TABLE public.patrols
@@ -96,9 +133,10 @@ ensurePatrolLocationColumns().catch((err) => {
   console.error('Failed to ensure patrol location columns:', err.message);
 });
 
-// POST route for patrol with multiple images (no notes)
+// POST route for patrol with multiple images and optional notes
 router.post('/patrol-post', verifyJwt, upload.any(), async (req, res) => {
   const pat_data = req.body;
+  const imageNotes = normalizeImageNotes(pat_data);
 
   pat_data.patrol_officer_name = clean(pat_data.patrol_officer_name);
 pat_data.start_location = clean(pat_data.start_location);
@@ -248,6 +286,7 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
             i === 0 ? 'start_image' :
             i === 1 ? 'end_image' :
             `image_${i - 1}`;
+          const note = getImageNote(pat_data, file, i, imageNotes);
 
           return {
             imageId: nextId++,
@@ -256,6 +295,7 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
             imageCategory,
             imageType: file.mimetype,
             imageData: base64Image,
+            note,
           };
         });
 
@@ -357,7 +397,7 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
           image_data: img.imageData,
           image_type: img.imageType,
           image_category: img.imageCategory,
-          note: img.note,
+          note: img.note || null,
         });
         return acc;
       }, {});
@@ -416,7 +456,8 @@ router.get('/patrol-info-page', verifyJwt, async (req, res) => {
       range,
       round,
       beat,
-      forest_id 
+      forest_id,
+      patrolling_location
     } = req.query;
 
     // Build WHERE clause dynamically based on filters
@@ -500,6 +541,12 @@ if (end_date) {
       paramIndex++;
     }
 
+    if (patrolling_location) {
+      conditions.push(`p.patrolling_location ILIKE $${paramIndex}`);
+      values.push(patrolling_location);
+      paramIndex++;
+    }
+
     // Build the WHERE clause
     const whereClause = conditions.length > 0 
       ? 'WHERE ' + conditions.join(' AND ')
@@ -553,7 +600,7 @@ if (end_date) {
           image_data: img.imageData,
           image_type: img.imageType,
           image_category: img.imageCategory,
-          note: img.note,
+          note: img.note || null,
         });
         return acc;
       }, {});
@@ -601,7 +648,8 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       round,
       location,
       coupe,
-      forest_id
+      forest_id,
+      patrolling_location
     } = req.query;
 
     const pageInt = parseInt(page) || 1;
@@ -688,6 +736,12 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       paramIndex++;
     }
 
+    if (patrolling_location) {
+      whereConditions.push(`p.patrolling_location ILIKE $${paramIndex}`);
+      queryParams.push(patrolling_location);
+      paramIndex++;
+    }
+
     // -----------------------------
     // WHERE CLAUSE
     // -----------------------------
@@ -766,7 +820,7 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
           image_data: img.imageData,
           image_type: img.imageType,
           image_category: img.imageCategory,
-          note: img.note,
+          note: img.note || null,
         });
         return acc;
       }, {});
@@ -829,7 +883,7 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
           image_data: img.imageData,
           image_type: img.imageType,
           image_category: img.imageCategory,
-          note: img.note,
+          note: img.note || null,
         });
         return acc;
       }, {});
@@ -883,7 +937,7 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
       image_data: img.imageData || null,
       image_type: img.imageType,
       image_category: img.imageCategory,
-      note: img.note,
+      note: img.note || null,
     }));
 
     const formattedPatrol = {
@@ -898,6 +952,63 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch patrol' });
+  }
+});
+
+router.put('/patrol-images/:image_id/note', verifyJwt, async (req, res) => {
+  try {
+    const imageId = parseInt(req.params.image_id, 10);
+    if (!Number.isInteger(imageId)) return res.status(400).json({ error: 'Invalid image_id' });
+
+    const note = clean(req.body?.note ?? req.body?.notes ?? '');
+    const updatedImage = await MongoImage.findOneAndUpdate(
+      { sourceType: 'patrol', imageId },
+      { $set: { note: note || null } },
+      { new: true }
+    ).lean();
+
+    if (!updatedImage) return res.status(404).json({ error: 'Patrol image not found' });
+
+    res.json({
+      message: 'Patrol image note updated successfully',
+      data: {
+        image_id: updatedImage.imageId,
+        patrol_id: updatedImage.patrolId,
+        image_category: updatedImage.imageCategory,
+        note: updatedImage.note || null,
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update patrol image note' });
+  }
+});
+
+router.delete('/patrol-images/:image_id/note', verifyJwt, async (req, res) => {
+  try {
+    const imageId = parseInt(req.params.image_id, 10);
+    if (!Number.isInteger(imageId)) return res.status(400).json({ error: 'Invalid image_id' });
+
+    const updatedImage = await MongoImage.findOneAndUpdate(
+      { sourceType: 'patrol', imageId },
+      { $set: { note: null } },
+      { new: true }
+    ).lean();
+
+    if (!updatedImage) return res.status(404).json({ error: 'Patrol image not found' });
+
+    res.json({
+      message: 'Patrol image note deleted successfully',
+      data: {
+        image_id: updatedImage.imageId,
+        patrol_id: updatedImage.patrolId,
+        image_category: updatedImage.imageCategory,
+        note: null,
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete patrol image note' });
   }
 });
 

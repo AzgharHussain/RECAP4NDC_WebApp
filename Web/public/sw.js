@@ -75,7 +75,10 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => {
           // Network failed — try cache
-          return caches.match(request);
+          return caches.match(request).then((cached) => cached || new Response(
+            JSON.stringify({ error: 'Network unavailable' }),
+            { status: 503, headers: { 'Content-Type': 'application/json' } }
+          ));
         })
     );
     return;
@@ -90,13 +93,15 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
+        return fetch(request)
+          .then((response) => {
+            if (response.ok) {
+              const clone = response.clone();
+              caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
+            }
+            return response;
+          })
+          .catch(() => new Response('', { status: 504, statusText: 'Gateway Timeout' }));
       })
     );
     return;

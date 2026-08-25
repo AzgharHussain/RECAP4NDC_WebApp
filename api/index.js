@@ -21,35 +21,55 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+console.log('[DEBUG] After dotenv');
 // === Global query timeout — must be loaded BEFORE any router ===
 // Patches pg.Pool.prototype.query so every DB query across ALL routers
 // gets a 30-second statement_timeout. Prevents slow queries from blocking
 // the event loop and making the server unreachable.
 const setupQueryTimeout = require('./middlewares/queryTimeout');
+console.log('[DEBUG] Required queryTimeout');
 setupQueryTimeout({ timeoutMs: 30000 });
+console.log('[DEBUG] Executed setupQueryTimeout');
 
+console.log('[DEBUG] Required middlewares');
 const validateAlphaNumSpaceUnderscore = require("./middlewares/validateAlphaNumSpaceUnderscore");
 const { verifyJwt } = require("./middlewares/verifyJwt");
+console.log('[DEBUG] Requiring database.js');
 const { sequelize, testConnection } = require('./config/database');
+console.log('[DEBUG] Requiring mongo.js');
 const { connectMongo } = require('./config/mongo');
+console.log('[DEBUG] Requiring bcrypt');
 const bcrypt = require('bcrypt');
+console.log('[DEBUG] Requiring cacheControl');
 const setNoCacheHeaders = require('./middlewares/cacheControl');
+console.log('[DEBUG] Requiring firebase-admin');
 const admin = require("firebase-admin");
+console.log('[DEBUG] Requiring errorHandler');
 const errorHandler = require("./middlewares/errorHandler");
+console.log('[DEBUG] Requiring joi');
 const Joi = require("joi");
 // At top of server.js
+console.log('[DEBUG] Requiring tokenBlacklist');
 const blacklistedTokens = require("./middlewares/tokenBlacklist");
+console.log('[DEBUG] Requiring helmet');
 const helmet = require("helmet");
+console.log('[DEBUG] Requiring crypto');
 const crypto = require('crypto');
+console.log('[DEBUG] Requiring rate-limit');
 const rateLimit = require("express-rate-limit");
+console.log('[DEBUG] Requiring forest-login');
 const forestRoutes = require("./routers/forest-login");
+console.log('[DEBUG] Done requiring other deps');
 const auditMiddleware = require("./middlewares/auditMiddleware");
 const auditLogsRouter = require("./routers/auditLogs");
 const { logFromRequest } = require("./utils/auditLogger");
 const app = express();
 app.set('trust proxy', 1);
+console.log('[DEBUG] Requiring ndviNotificationScheduler');
 const startNdviScheduler = require("./scheduler/ndviNotificationScheduler");
+console.log('[DEBUG] Requiring dataRetentionScheduler');
 const startDataRetentionScheduler = require("./scheduler/dataRetentionScheduler");
+console.log('[DEBUG] Schedulers required');
 
 
 // ----------------------------------------------------
@@ -998,6 +1018,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5002;
 
 const server = app.listen(PORT, "0.0.0.0" , async () => {
+  console.log(`✅ Backend server listening on http://0.0.0.0:${PORT}`);
   try {
     await sequelize.authenticate();
   } catch (err) {
@@ -1007,8 +1028,12 @@ const server = app.listen(PORT, "0.0.0.0" , async () => {
   // Connect to MongoDB
   try {
     await connectMongo();
+    console.log('✅ MongoDB connected successfully');
+    const MongoImage = require('./models/Image');
+    await MongoImage.ensurePatrolNotesField();
+    console.log('✅ Patrol image notes field ensured');
   } catch (err) {
-    console.error('❌ MongoDB connection failed:', err.message);
+    console.error('❌ MongoDB connection/notes field check failed:', err.message);
   }
 
   // Add database indexes (async — don't block startup)

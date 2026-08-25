@@ -1,5 +1,4 @@
 const express = require('express');
-const { Pool } = require('pg');
 const multer = require('multer');
 const admin = require("firebase-admin");
 const { DATE } = require('sequelize');
@@ -12,27 +11,54 @@ const { logFromRequest } = require("../utils/auditLogger");
 const { ensurePixleIdColumn } = require("../utils/ensurePixleId");
 const MongoImage = require("../models/Image");
 
-
-// ----------------------------------------------------
-// 2. Postgres Connection Pool
-// ----------------------------------------------------
-const client = new Pool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  port: Number(process.env.DB_PORT),
-  database: process.env.DB_NAME,
-  max: Number(process.env.DB_POOL_MAX || 50),
-  min: 5,
-  acquireTimeoutMillis: 60000,
-  idleTimeoutMillis: 30000,
-});
-
-client.on('error', (err) => {
-  console.error('Unexpected PostgreSQL pool error:', err.message);
-});
-
-
+// ─────────────────────────────────────────────────────────
+// Use a thin adapter that delegates to Sequelize so ALL queries share the
+// ONE connection pool (database.js). Replacing the old separate pg.Pool which
+// was creating a second pool that fired DDL at module load and blocked startup
+// by holding connections for up to 60 s (acquireTimeoutMillis).
+// ─────────────────────────────────────────────────────────
+const client = {
+  /**
+   * Executes any SQL via the shared Sequelize pool.
+   * Returns { rows: [...] } to match the pg Pool API used throughout this file.
+   *
+   * Supports:
+   *   client.query(sql)           → { rows: [] }
+   *   client.query(sql, params)   → { rows: [...] }   (positional $1, $2...)
+   */
+  query: async (sql, params) => {
+    const trimmed = sql.trim().toUpperCase();
+    let queryType;
+    if (/^SELECT/.test(trimmed)) {
+      queryType = sequelize.QueryTypes.SELECT;
+    } else if (/^INSERT/.test(trimmed)) {
+      queryType = sequelize.QueryTypes.INSERT;
+    } else if (/^UPDATE/.test(trimmed)) {
+      queryType = sequelize.QueryTypes.UPDATE;
+    } else if (/^DELETE/.test(trimmed)) {
+      queryType = sequelize.QueryTypes.DELETE;
+    } else {
+      queryType = sequelize.QueryTypes.RAW;
+    }
+    const options = { raw: true, type: queryType };
+    if (params) {
+      options.bind = Array.isArray(params) ? params : [params];
+    }
+    const result = await sequelize.query(sql, options);
+    // Normalize to { rows: [...] }
+    // SELECT → result[0] is array of rows
+    // INSERT/UPDATE/DELETE/RAW → result[0] may be null, a number, or an array
+    let rows;
+    if (Array.isArray(result[0])) {
+      rows = result[0];
+    } else if (result[0] !== null && result[0] !== undefined) {
+      rows = [result[0]];
+    } else {
+      rows = [];
+    }
+    return { rows };
+  },
+};
 
 
 // ----------------------------------------------------
@@ -86,11 +112,24 @@ async function createNotificationTables() {
       )
     `);
 
-    await client.query(`
-      ALTER TABLE public.ndvi_notification_log
-      ALTER COLUMN pixel_id TYPE TEXT USING pixel_id::text
+    // Migrate pixel_id to TEXT only if the column is not already TEXT.
+    // ALTER COLUMN TYPE causes a full table rewrite + ACCESS EXCLUSIVE lock.
+    // Running it unconditionally on every startup hangs the server.
+    const pixelIdType = await client.query(`
+      SELECT data_type FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'ndvi_notification_log'
+        AND column_name = 'pixel_id'
+      LIMIT 1
     `);
+    if (pixelIdType.rows.length > 0 && pixelIdType.rows[0].data_type !== 'text') {
+      await client.query(`
+        ALTER TABLE public.ndvi_notification_log
+        ALTER COLUMN pixel_id TYPE TEXT USING pixel_id::text
+      `);
+    }
 
+    // Ensure sent_at column exists and is populated (idempotent)
     await client.query(`
       ALTER TABLE public.ndvi_notification_log
       ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -102,17 +141,50 @@ async function createNotificationTables() {
       WHERE sent_at IS NULL
     `);
 
+    // Performance indexes — created once at startup, skipped if already exist
+    // Use non-concurrent creation to avoid issues inside transactions
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ndvi_log_user_table
+      ON public.ndvi_notification_log (user_id, table_name)
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ndvi_users_token
+      ON public.ndvi_notification_users (firebase_token)
+      WHERE firebase_token IS NOT NULL
+    `).catch(() => {});
+
+    // Additional indexes for report query performance
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ndvi_log_table_pixel
+      ON public.ndvi_notification_log (table_name, pixel_id)
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ndvi_log_sent_at
+      ON public.ndvi_notification_log (sent_at DESC NULLS LAST)
+    `).catch(() => {});
 
   } catch (err) {
 
-    console.error("âŒ Error creating notification tables:", err);
+    console.error("❌ Error creating notification tables:", err);
 
   }
 
 }
 
-// run once
-createNotificationTables();
+// Defer ALL startup DDL to well after the server has bound its port.
+// createNotificationTables() runs ALTER TABLE, CREATE INDEX, UPDATE — these
+// take exclusive locks and block the pool. Running them at module load time
+// (before app.listen) starves other startup code and hangs the server.
+console.log('[notifications] Module loaded. Table setup deferred 5s to let server bind first.');
+setTimeout(() => {
+  createNotificationTables().catch(err => console.error('[notifications] startup table setup failed:', err.message));
+  // Run default note cleanup after table setup (30s delay for safety)
+  setTimeout(() => {
+    cleanupDefaultNotes().catch(err => console.error('[notifications] startup note cleanup failed:', err.message));
+  }, 30000);
+}, 5000);
 
 // ----------------------------------------------------
 // 4. Helper: Send Notification using Firebase Admin
@@ -137,22 +209,22 @@ async function sendNotification(firebaseToken, record) {
 
   switch (change_category) {
     case 'significant_decrease':
-      title = 'ðŸš¨ Significant Vegetation Decrease';
+      title = '🚨 Significant Vegetation Decrease';
       body = `NDVI dropped from ${jan_ndvi} to ${feb_ndvi}`;
       break;
 
     case 'moderate_decrease':
-      title = 'âš ï¸ Moderate Vegetation Decrease';
+      title = '⚠️ Moderate Vegetation Decrease';
       body = `NDVI decreased from ${jan_ndvi} to ${feb_ndvi}`;
       break;
 
     case 'significant_increase':
-      title = 'ðŸŒ± Significant Vegetation Improvement';
+      title = '🌱 Significant Vegetation Improvement';
       body = `NDVI increased from ${jan_ndvi} to ${feb_ndvi}`;
       break;
 
     case 'moderate_increase':
-      title = 'ðŸ“ˆ Moderate Vegetation Improvement';
+      title = '📈 Moderate Vegetation Improvement';
       body = `NDVI improved from ${jan_ndvi} to ${feb_ndvi}`;
       break;
   }
@@ -205,143 +277,6 @@ async function setNotificationSent(id) {
 // ----------------------------------------------------
 // 6. API: Send NDVI Notifications
 // ----------------------------------------------------
-// router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) => {
-
-//   try {
-
-//     const firebase_token = (req.body.firebase_token || "").trim();
-//     const user_id = (req.body.user_id || "").trim();
-//     const village_name = (req.body.village_name || "").trim();
-//     const coupe_name = (req.body.coupe_name || "").trim();
-
-//     if (!firebase_token || !user_id || !village_name || !coupe_name) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "invalid request"
-//       });
-//     }
-
-//     // ------------------------------------------------
-//     // Generate NDVI Table Name
-//     // ------------------------------------------------
-//     const degraded_forest_Layer = `"2026-01-01_${coupe_name}_NDVI_Change"`;
-
-//     // month extraction
-//     const date = "2026-01-01";
-//     const dateObj = new Date(date);
-//     const monthFull = dateObj.toLocaleString('default', { month: 'long' }).toUpperCase();
-
-//     // ------------------------------------------------
-//     // Query NDVI record
-//     // ------------------------------------------------
-//     const q = `
-//       SELECT
-//         pixle_id as id,
-//         "Dec_NDVI" as jan_ndvi,
-//         "Jan_NDVI" as feb_ndvi,
-//         "NDVI_change" as ndvi_change,
-//         change_category,
-//         longitude,
-//         latitude
-//       FROM public.${degraded_forest_Layer}
-//       WHERE village = $1
-//       AND notification_sent = FALSE
-//       ORDER BY "NDVI_change" DESC
-//       LIMIT 1
-//     `;
-
-//     const result = await client.query(q, [village_name]);
-
-//     if (result.rows.length === 0) {
-//       return res.json({
-//         success: true,
-//         message: "No NDVI alerts for this village"
-//       });
-//     }
-
-//     const record = result.rows[0];
-
-//     // ------------------------------------------------
-//     // Notification Title
-//     // ------------------------------------------------
-//     let title = `NDVI Alert For ${monthFull}`;
-//     let body = `Coupe: ${coupe_name}`;
-
-//     switch (record.change_category) {
-
-//       case "significant_decrease":
-//         title = "ðŸš¨ Significant Vegetation Decrease";
-//         body = `NDVI dropped from ${record.jan_ndvi} to ${record.feb_ndvi}`;
-//         break;
-
-//       case "moderate_decrease":
-//         title = "âš ï¸ Moderate Vegetation Decrease";
-//         body = `NDVI decreased from ${record.jan_ndvi} to ${record.feb_ndvi}`;
-//         break;
-
-//       case "significant_increase":
-//         title = "ðŸŒ± Significant Vegetation Improvement";
-//         body = `NDVI increased from ${record.jan_ndvi} to ${record.feb_ndvi}`;
-//         break;
-
-//       case "moderate_increase":
-//         title = "ðŸ“ˆ Moderate Vegetation Improvement";
-//         body = `NDVI improved from ${record.jan_ndvi} to ${record.feb_ndvi}`;
-//         break;
-//     }
-
-//     // ------------------------------------------------
-//     // Send Firebase Notification
-//     // ------------------------------------------------
-//     const monthtext = "JANUARY";
-//     const message = {
-//       token: firebase_token,
-//       notification: {
-//         title,
-//         body
-//       },
-//       data: {
-//         id: String(record.id),
-//         latitude: String(record.latitude || ""),
-//         longitude: String(record.longitude || ""),
-//         village_name,
-//         coupe_name,
-//         month: monthtext,
-//       }
-//     };
-// console.log("ðŸ“© Sending notification with payload:", message);
-//     const response = await admin.messaging().send(message);
-
-//     // ------------------------------------------------
-//     // Update notification flag
-//     // ------------------------------------------------
-//     await client.query(
-//       `UPDATE public.${degraded_forest_Layer}
-//        SET notification_sent = TRUE
-//        WHERE pixle_id = $1`,
-//       [record.id]
-//     );
-
-//   res.json({
-//   success: true,
-//   messageId: response,
-//   data: record,
-//   month: monthtext,
-// });
-
-//   } catch (err) {
-
-//     console.error("Notification Error:", err);
-
-//     res.status(500).json({
-//       success: false,
-//       error: err.message
-//     });
-
-//   }
-
-// });
-
 router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) => {
 
   try {
@@ -377,15 +312,9 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
     }
 
     // ------------------------------------------------
-    // 1ï¸âƒ£ Ensure columns exist (idempotent)
-    // ------------------------------------------------
-    const extraCols = ['division', 'range', 'round', 'beat'];
-    for (const col of extraCols) {
-      await client.query(`ALTER TABLE public.ndvi_notification_users ADD COLUMN IF NOT EXISTS ${col} TEXT`);
-    }
-
-    // ------------------------------------------------
-    // 2ï¸âƒ£ Insert or update user subscription (with division/range/round/beat)
+    // Insert or update user subscription (with division/range/round/beat)
+    // NOTE: Columns are guaranteed by createNotificationTables() at startup.
+    // DO NOT run ALTER TABLE here — it blocks the connection pool on every call.
     // ------------------------------------------------
     await client.query(
       `
@@ -930,6 +859,21 @@ const buildNdviActionText = (record) => {
  * Also cleans up any note column in ndvi_notification_log if it exists.
  * Runs once per server startup.
  */
+// In-memory column cache: tableName -> Map<columnName, dataType>
+// Populated lazily and never evicted (tables don't change schema at runtime).
+const _columnInfoCache = new Map();
+
+async function getTableColumns(tableName) {
+  if (_columnInfoCache.has(tableName)) return _columnInfoCache.get(tableName);
+  const columnInfo = await client.query(
+    `SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`,
+    [tableName]
+  );
+  const map = new Map(columnInfo.rows.map(r => [r.column_name, r.data_type]));
+  _columnInfoCache.set(tableName, map);
+  return map;
+}
+
 let defaultNoteCleanupDone = false;
 async function cleanupDefaultNotes() {
   if (defaultNoteCleanupDone) return;
@@ -992,21 +936,21 @@ async function cleanupDefaultNotes() {
 
 router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
   try {
-    // Clean up default notes on first report fetch after server startup
-    await cleanupDefaultNotes();
-
-    await client.query(`
-      ALTER TABLE public.ndvi_notification_log
-      ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    `);
-    await client.query(`
-      UPDATE public.ndvi_notification_log
-      SET sent_at = CURRENT_TIMESTAMP
-      WHERE sent_at IS NULL
-    `);
+    // NOTE: cleanupDefaultNotes() and table setup run once at module startup — NOT here.
+    // DDL / bulk UPDATEs in request handlers block the connection pool.
 
     const reportGeneratedAt = new Date().toISOString();
-    const { user_id, username, village_name, coupe_name, table_name, status, month, division, start_date, end_date } = req.query;
+    const {
+      user_id, username, village_name, coupe_name, table_name,
+      status, month, division, start_date, end_date,
+      page: pageParam, pageSize: pageSizeParam
+    } = req.query;
+
+    // Server-side pagination — default 500 rows per page
+    const pageSize = Math.min(Math.max(parseInt(pageSizeParam) || 500, 1), 2000);
+    const page = Math.max(parseInt(pageParam) || 1, 1);
+    const offset = (page - 1) * pageSize;
+
     const conditions = [];
     const values = [];
 
@@ -1016,7 +960,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     };
 
     if (user_id) addCondition('l.user_id = ?', user_id);
-    if (username) addCondition('g.username = ?', username);    if (village_name) addCondition('u.village_name = ?', village_name);
+    if (username) addCondition('g.username = ?', username);
+    if (village_name) addCondition('u.village_name = ?', village_name);
     if (coupe_name) addCondition('u.coupe_name = ?', coupe_name);
     if (table_name) addCondition('l.table_name = ?', table_name);
     if (month) addCondition('l.table_name LIKE ?', `${month}-%`);
@@ -1025,6 +970,10 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     if (end_date) addCondition('l.sent_at::date <= ?', end_date);
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Build paginated query — use $N+1 and $N+2 for LIMIT/OFFSET after filter params
+    const limitIdx = values.length + 1;
+    const offsetIdx = values.length + 2;
     const reportQuery = `
       SELECT
         l.id,
@@ -1045,7 +994,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       LEFT JOIN public.government_department_users g ON g.user_id::text = l.user_id
       ${whereClause}
       ORDER BY l.sent_at DESC NULLS LAST, l.id DESC
-      LIMIT 5000
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `;
 
     const countQuery = `
@@ -1069,7 +1018,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     `;
 
     const [report, counts, options] = await Promise.all([
-      client.query(reportQuery, values),
+      client.query(reportQuery, [...values, pageSize, offset]),
       client.query(countQuery, values),
       client.query(optionsQuery),
     ]);
@@ -1077,107 +1026,136 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     const tableRecords = new Map();
     const tableNames = [...new Set(report.rows.map(row => row.table_name).filter(Boolean))];
 
-    for (const sourceTable of tableNames) {
-      try {
-        const pixelIds = [...new Set(report.rows
-          .filter(row => row.table_name === sourceTable)
-          .map(row => String(row.pixel_id))
-          .filter(Boolean))];
+    if (tableNames.length > 0) {
+      // ── OPTIMIZATION: Single bulk MongoDB query for ALL tables ──────────────
+      // Build the full set of record IDs across all tables for a single $in query
+      const allPixelIdsForMongo = [...new Set(
+        report.rows
+          .map(r => String(r.pixel_id))
+          .filter(Boolean)
+          .flatMap(id => {
+            const n = Number(id);
+            return !Number.isNaN(n) ? [id, n] : [id];
+          })
+      )];
 
-        if (pixelIds.length === 0) {
-          tableRecords.set(sourceTable, new Map());
-          continue;
-        }
+      // Single MongoDB query for all tables/IDs at once
+      const allMongoImages = await MongoImage.find({
+        sourceType: 'ndvi',
+        coupeName: { $in: tableNames },
+        recordId: { $in: allPixelIdsForMongo }
+      }).lean();
 
-        // Detect available columns once
-        const columnInfo = await client.query(`
-          SELECT column_name, data_type
-          FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = $1
-        `, [sourceTable]);
-        const sourceColumns = new Map(columnInfo.rows.map(row => [row.column_name, row.data_type]));
-
-        // Build SELECT clause dynamically — quote all identifiers to handle
-        // reserved words. division/range/round/beat are fetched from the NDVI
-        // change table (matched by pixel_id), with fallback to the values
-        // stored in ndvi_notification_users.
-        const colOrNull = (name) => sourceColumns.has(name) ? `"${name}"` : 'NULL::text';
-        const selectParts = [
-          colOrNull('village') + ' AS village',
-          sourceColumns.has('note') ? `CASE WHEN btrim("note") = 'NDVI decrease less than -0.3' THEN NULL ELSE "note" END AS note` : 'NULL::text AS note',
-          sourceColumns.has('status') ? '"status" AS status' : 'NULL::text AS status',
-          sourceColumns.has('latitude') ? '"latitude" AS latitude' : 'NULL::text AS latitude',
-          sourceColumns.has('longitude') ? '"longitude" AS longitude' : 'NULL::text AS longitude',
-          colOrNull('division') + ' AS src_division',
-          colOrNull('range') + ' AS src_range',
-          colOrNull('round') + ' AS src_round',
-          colOrNull('beat') + ' AS src_beat',
-        ];
-
-        // Determine the ID column: prefer pixle_id, fall back to id
-        const hasPxCol = sourceColumns.has('pixle_id');
-        const hasIdCol = sourceColumns.has('id');
-        let idColumn, idCast;
-        if (hasPxCol) {
-          idColumn = '"pixle_id"';
-          idCast = '"pixle_id"::text';
-        } else if (hasIdCol) {
-          idColumn = '"id"';
-          idCast = '"id"::text';
-        } else {
-          console.warn(`[ndvi-notification-report] Table "${sourceTable}" has neither pixle_id nor id column`);
-          tableRecords.set(sourceTable, new Map());
-          continue;
-        }
-
-        // Use IN clause with individual parameters for reliability.
-        // Try text match first; if nothing found try integer cast (handles numeric pixle_id stored as text).
-        const placeholders = pixelIds.map((_, i) => `$${i + 1}`).join(', ');
-        let sourceRows = await client.query(`
-          SELECT
-            ${idCast} AS pixel_id,
-            ${selectParts.join(',\n            ')}
-          FROM public."${sourceTable}"
-          WHERE ${idCast} IN (${placeholders})
-        `, pixelIds);
-
-        // Fallback: try numeric cast for integer pixle_id columns
-        if (sourceRows.rows.length === 0 && hasPxCol) {
-          const numericIds = pixelIds.map(Number).filter(n => !Number.isNaN(n));
-          if (numericIds.length > 0) {
-            const numPlaceholders = numericIds.map((_, i) => `$${i + 1}`).join(', ');
-            try {
-              sourceRows = await client.query(`
-                SELECT
-                  "pixle_id"::text AS pixel_id,
-                  ${selectParts.join(',\n                  ')}
-                FROM public."${sourceTable}"
-                WHERE "pixle_id" IN (${numPlaceholders})
-              `, numericIds);
-            } catch (_) { /* column type may not support numeric comparison */ }
-          }
-        }
-
-        if (sourceRows.rows.length > 0) {
-        } else {
-        }
-
-        const mongoImages = await MongoImage.find({
-          sourceType: 'ndvi',
-          coupeName: sourceTable,
-          recordId: { $in: pixelIds.flatMap(id => [id, Number(id)].filter(value => !Number.isNaN(value))) }
-        }).lean();
-        const imageIds = new Set(mongoImages.map(img => String(img.recordId)));
-        const recordMap = new Map(sourceRows.rows.map(row => [String(row.pixel_id), {
-          ...row,
-          // Only count as having an image if it exists in MongoDB
-          image_data: imageIds.has(String(row.pixel_id))
-        }]));
-        tableRecords.set(sourceTable, recordMap);
-      } catch (err) {
-        console.warn(`Failed to read NDVI source table ${sourceTable}: ${err.message}`);
-        tableRecords.set(sourceTable, new Map());
+      // Index mongo images by (coupeName, recordId) for O(1) lookup
+      const mongoImageIndex = new Map();
+      for (const img of allMongoImages) {
+        const key = `${img.coupeName}::${String(img.recordId)}`;
+        mongoImageIndex.set(key, true);
       }
+
+      // ── OPTIMIZATION: Use cached column info — one introspection per table ever ──
+      // Fetch column info for all uncached tables in parallel
+      const uncachedTables = tableNames.filter(t => !_columnInfoCache.has(t));
+      if (uncachedTables.length > 0) {
+        // Single query to get columns for all uncached tables at once
+        const bulkColInfo = await client.query(`
+          SELECT table_name, column_name, data_type
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = ANY($1::text[])
+          ORDER BY table_name, ordinal_position
+        `, [uncachedTables]);
+
+        // Populate cache for each uncached table
+        for (const t of uncachedTables) {
+          _columnInfoCache.set(t, new Map());
+        }
+        for (const row of bulkColInfo.rows) {
+          _columnInfoCache.get(row.table_name).set(row.column_name, row.data_type);
+        }
+      }
+
+      // Process each source table — column info is now from cache (no DB round-trip)
+      // Run source table data queries in parallel for maximum throughput
+      await Promise.all(tableNames.map(async (sourceTable) => {
+        try {
+          const pixelIds = [...new Set(report.rows
+            .filter(row => row.table_name === sourceTable)
+            .map(row => String(row.pixel_id))
+            .filter(Boolean))];
+
+          if (pixelIds.length === 0) {
+            tableRecords.set(sourceTable, new Map());
+            return;
+          }
+
+          // Get column info from cache (populated above)
+          const sourceColumns = _columnInfoCache.get(sourceTable) || new Map();
+
+          // Build SELECT clause dynamically
+          const colOrNull = (name) => sourceColumns.has(name) ? `"${name}"` : 'NULL::text';
+          const selectParts = [
+            colOrNull('village') + ' AS village',
+            sourceColumns.has('note') ? `CASE WHEN btrim("note") = 'NDVI decrease less than -0.3' THEN NULL ELSE "note" END AS note` : 'NULL::text AS note',
+            sourceColumns.has('status') ? '"status" AS status' : 'NULL::text AS status',
+            sourceColumns.has('latitude') ? '"latitude" AS latitude' : 'NULL::text AS latitude',
+            sourceColumns.has('longitude') ? '"longitude" AS longitude' : 'NULL::text AS longitude',
+            colOrNull('division') + ' AS src_division',
+            colOrNull('range') + ' AS src_range',
+            colOrNull('round') + ' AS src_round',
+            colOrNull('beat') + ' AS src_beat',
+          ];
+
+          // Determine the ID column: prefer pixle_id, fall back to id
+          const hasPxCol = sourceColumns.has('pixle_id');
+          const hasIdCol = sourceColumns.has('id');
+          let idCast;
+          if (hasPxCol) {
+            idCast = '"pixle_id"::text';
+          } else if (hasIdCol) {
+            idCast = '"id"::text';
+          } else {
+            tableRecords.set(sourceTable, new Map());
+            return;
+          }
+
+          const placeholders = pixelIds.map((_, i) => `$${i + 1}`).join(', ');
+          let sourceRows = await client.query(`
+            SELECT
+              ${idCast} AS pixel_id,
+              ${selectParts.join(',\n              ')}
+            FROM public."${sourceTable}"
+            WHERE ${idCast} IN (${placeholders})
+          `, pixelIds);
+
+          // Fallback: try numeric cast for integer pixle_id columns
+          if (sourceRows.rows.length === 0 && hasPxCol) {
+            const numericIds = pixelIds.map(Number).filter(n => !Number.isNaN(n));
+            if (numericIds.length > 0) {
+              const numPlaceholders = numericIds.map((_, i) => `$${i + 1}`).join(', ');
+              try {
+                sourceRows = await client.query(`
+                  SELECT
+                    "pixle_id"::text AS pixel_id,
+                    ${selectParts.join(',\n                    ')}
+                  FROM public."${sourceTable}"
+                  WHERE "pixle_id" IN (${numPlaceholders})
+                `, numericIds);
+              } catch (_) { /* column type may not support numeric comparison */ }
+            }
+          }
+
+          // Use mongo index built above — O(1) lookup per row
+          const recordMap = new Map(sourceRows.rows.map(row => [String(row.pixel_id), {
+            ...row,
+            image_data: mongoImageIndex.has(`${sourceTable}::${String(row.pixel_id)}`)
+          }]));
+          tableRecords.set(sourceTable, recordMap);
+        } catch (err) {
+          console.warn(`Failed to read NDVI source table ${sourceTable}: ${err.message}`);
+          tableRecords.set(sourceTable, new Map());
+        }
+      }));
     }
 
     let annotatedRows = report.rows.map((row) => {
@@ -1246,13 +1224,21 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     const divisionOptions = [...new Set(tableOptions.map(getDivisionFromNdviTableName))].filter(Boolean).sort();
     const monthOptions = [...new Set(tableOptions.map(getMonthFromNdviTableName))].filter(Boolean).sort().reverse();
 
+    const totalCount = counts.rows[0] || { total_notifications: 0, users_received: 0 };
+
     res.json({
       success: true,
       data: annotatedRows,
+      pagination: {
+        page,
+        pageSize,
+        total: totalCount.total_notifications,
+        totalPages: Math.ceil(totalCount.total_notifications / pageSize),
+      },
       summary: {
-        ...(counts.rows[0] || { total_notifications: 0, users_received: 0 }),
-        total_notifications: annotatedRows.length,
-        users_received: new Set(annotatedRows.map(row => row.user_id).filter(Boolean)).size,
+        ...totalCount,
+        // Note: resolved/pending counts below reflect the current page only.
+        // Full counts require a separate query — kept simple for performance.
         resolved: annotatedRows.filter(row => row.alert_status === 'Resolved').length,
         pending: annotatedRows.filter(row => row.alert_status === 'Pending').length,
       },
