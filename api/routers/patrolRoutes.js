@@ -891,7 +891,6 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       ${whereClause}
-      GROUP BY p.patrol_id, pt.type_name, p.start_time_raw, p.end_time_raw
       ORDER BY p.start_time DESC NULLS LAST
       LIMIT $${limitIndex} OFFSET $${offsetIndex};
     `;
@@ -985,7 +984,6 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
       WHERE p.user_id = $1
-      GROUP BY p.patrol_id, pt.type_name, p.start_time_raw, p.end_time_raw
       ORDER BY p.patrol_id DESC;
     `;
 
@@ -1041,8 +1039,7 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
         p.end_time::text AS end_time_raw
       FROM patrols p
       LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
-      WHERE p.patrol_id = $1
-      GROUP BY p.patrol_id, pt.type_name, p.start_time_raw, p.end_time_raw;
+      WHERE p.patrol_id = $1;
     `;
 
     const result = await client.query(query, [patrol_id]);

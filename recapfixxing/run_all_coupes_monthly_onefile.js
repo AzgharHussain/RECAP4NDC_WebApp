@@ -30,10 +30,11 @@ if (PROXY_URL) {
   try {
     process.env.GLOBAL_AGENT_HTTP_PROXY = PROXY_URL;
     process.env.GLOBAL_AGENT_HTTPS_PROXY = PROXY_URL;
-    // Always exclude the PostgreSQL DB host and Google APIs from proxy.
+    // Always exclude internal hosts, the PostgreSQL DB host, GeoServer, and Google APIs from proxy.
     const dbNoProxy = `${DB_HOST},172.17.31.173`;
+    const geoServerNoProxy = process.env.GEOSERVER_NO_PROXY || 'localhost,127.0.0.1,172.16.40.20,fmps.gujarat.gov.in,172.16.0.0/16';
     const googleHosts = 'googleapis.com,accounts.google.com,oauth2.googleapis.com,earthengine.googleapis.com,www.googleapis.com,storage.googleapis.com';
-    process.env.GLOBAL_AGENT_NO_PROXY = ['localhost,127.0.0.1', dbNoProxy, googleHosts]
+    process.env.GLOBAL_AGENT_NO_PROXY = ['localhost,127.0.0.1', dbNoProxy, geoServerNoProxy, googleHosts]
       .filter(Boolean).join(',');
     process.env.NO_PROXY = process.env.GLOBAL_AGENT_NO_PROXY;
     process.env.no_proxy = process.env.GLOBAL_AGENT_NO_PROXY;
@@ -154,13 +155,13 @@ const CHANGE_THRESHOLD = 0.3;
 // GeoServer is optional — if GEOSERVER_URL is not set, the script will skip
 // GeoServer validation and publishing, but still process NDVI data and insert
 // results into PostgreSQL.
-const GEOSERVER_URL             = 'https://fmps.gujarat.gov.in/geoserver';
-const GEOSERVER_USER            =  'admin';
-const GEOSERVER_PASSWORD        =  'Geo@$ecure#%26';
-const GEOSERVER_WORKSPACE       ='Recap4NDC';
-const GEOSERVER_STORE           = 'Recap4NDC_Query';
-const GEOSERVER_STYLE_WORKSPACE = 'Recap4NDC_New';
-const GEOSERVER_STYLE           = 'NDVI_CHANGE_NEW2222';
+const GEOSERVER_URL             = process.env.GEOSERVER_URL || 'http://127.0.0.1:8080/geoserver';
+const GEOSERVER_USER            = process.env.GEOSERVER_USER || 'admin';
+const GEOSERVER_PASSWORD        = process.env.GEOSERVER_PASSWORD || 'geoserver';
+const GEOSERVER_WORKSPACE       = process.env.GEOSERVER_WORKSPACE || 'Recap4NDC';
+const GEOSERVER_STORE           = process.env.GEOSERVER_STORE || 'Recap4NDC_Query';
+const GEOSERVER_STYLE_WORKSPACE = process.env.GEOSERVER_STYLE_WORKSPACE || 'Recap4NDC_New';
+const GEOSERVER_STYLE           = process.env.GEOSERVER_STYLE || 'NDVI_CHANGE_NEW2222';
 const GEOSERVER_REQUEST_TIMEOUT_MS = Number(process.env.GEOSERVER_REQUEST_TIMEOUT_MS || 60000);
 let GEOSERVER_UNREACHABLE = false;
 

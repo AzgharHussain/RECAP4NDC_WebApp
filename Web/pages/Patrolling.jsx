@@ -1651,7 +1651,7 @@ const exportTableToExcel = async () => {
   }
 
   const [ExcelJSModule, { saveAs }] = await Promise.all([
-    import("exceljs"),
+    import("exceljs/dist/exceljs.min.js"),
     import("file-saver"),
   ]);
   const ExcelJS = ExcelJSModule.default || ExcelJSModule;
