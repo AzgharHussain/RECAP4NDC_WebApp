@@ -4,6 +4,7 @@ const fs = require('fs');
 const ee = require('@google/earthengine');
 const { Client } = require('pg');
 const { execFileSync } = require('child_process');
+const http = require('http');
 const https = require('https');
 
 // ── Retry / network resilience ────────────────────────────────────────────────
@@ -477,15 +478,18 @@ function geoserverRequest(method, requestPath, body) {
     }, GEOSERVER_REQUEST_TIMEOUT_MS);
 
     try {
-      request = https.request({
+      const transport = url.protocol === 'http:' ? http : https;
+      const requestOptions = {
         method,
         hostname: url.hostname,
-        port: url.port || 443,
+        port: url.port || (url.protocol === 'http:' ? 80 : 443),
         path: `${url.pathname}${url.search}`,
         headers,
-        rejectUnauthorized: false,
         timeout: GEOSERVER_REQUEST_TIMEOUT_MS,
-      }, (response) => {
+      };
+      if (url.protocol === 'https:') requestOptions.rejectUnauthorized = false;
+
+      request = transport.request(requestOptions, (response) => {
         let raw = '';
         response.on('data', (chunk) => {
           raw += chunk;
