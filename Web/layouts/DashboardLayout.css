@@ -720,10 +720,14 @@ body{
   transition: transform 0.2s;
 }
 
+.user-dropdown {
+  position: relative;
+}
+
 .dropdown-menu {
-  position: fixed;
-  top: auto;
-  right: 12px;
+  position: absolute;
+  top: 100%;
+  right: 0;
   margin-top: 4px;
   padding: 8px 0;
   background: white;

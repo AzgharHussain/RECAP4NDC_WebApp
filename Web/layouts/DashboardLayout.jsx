@@ -461,8 +461,22 @@ useEffect(() => {
 
     </div>
 
-    {/* Dropdown menu */}
+    {/* Dropdown menu — positioned relative to user-dropdown */}
+    {isDropdownOpen && (
+      <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
+        <div className="username">
+        <b>{username}</b>
+        {isAdmin && <span className="admin-badge"> (Admin)</span>}
+      </div>
 
+        <button
+          className="logout-btn dropdown-item"
+          onClick={handleLogout}
+        >
+          {text[language].logout}
+        </button>
+      </div>
+    )}
   </div>
 </div>
         </div>
@@ -503,21 +517,6 @@ useEffect(() => {
           
         </div>
       )}
-         {isDropdownOpen && (
-      <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
-        <div className="username">
-        <b>{username}</b>
-        {isAdmin && <span className="admin-badge"> (Admin)</span>}
-      </div>
-
-        <button
-          className="logout-btn dropdown-item"
-          onClick={handleLogout}
-        >
-          {text[language].logout}
-        </button>
-      </div>
-    )}
     </div>
   );
 }
