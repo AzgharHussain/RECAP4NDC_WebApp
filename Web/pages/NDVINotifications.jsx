@@ -146,7 +146,9 @@ const NDVINotifications = () => {
   const t = TEXTS[language] || TEXTS.en;
 
   // Check if the logged-in user has a division to lock
-  const lockedDivision = getUserDivision();
+  // Use state + useEffect to avoid stale reads when component mounts before
+  // userData is set in localStorage (right after login).
+  const [lockedDivision, setLockedDivision] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
@@ -154,10 +156,9 @@ const NDVINotifications = () => {
   const [options, setOptions] = useState(emptyOptions);
   const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
   // table_name kept in state for API calls but no longer shown as a UI filter
-  // If user has a locked division, initialize the filter with it
   const [filters, setFilters] = useState({
     username: null, table_name: null,
-    division: lockedDivision || null,
+    division: null,
     month: null, status: null, dates: null
   });
   const [detailRecord, setDetailRecord] = useState(null);
@@ -219,8 +220,17 @@ const NDVINotifications = () => {
     }
   };
 
+  // Read the user's division from localStorage once userData is available,
+  // then update the filters and fetch the report.
   useEffect(() => {
-    fetchReport();
+    const div = getUserDivision();
+    setLockedDivision(div);
+    if (div) {
+      setFilters(prev => ({ ...prev, division: div }));
+      fetchReport({ ...filters, division: div });
+    } else {
+      fetchReport();
+    }
   }, []);
 
   // Handle Ant Design Table page change

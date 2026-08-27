@@ -93,7 +93,9 @@ const PatrolIncidentLogs = () => {
   };
 
   useEffect(() => {
-    fetchIncidentData();
+    // Small delay to ensure localStorage is populated after login navigation
+    const timer = setTimeout(() => fetchIncidentData(), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const formatDateTime = (datetime) => {

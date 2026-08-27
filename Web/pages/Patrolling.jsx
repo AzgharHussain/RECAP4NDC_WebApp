@@ -695,18 +695,26 @@ const PatrolIncidentLogs = () => {
   const [showmaproute, setShowMapRoute] = useState(false);
   
   // Filter states
-  const _lockedDivision = getUserDivision();
+  // Locked division state — set in useEffect to avoid stale reads after login
+  const [_lockedDivision, _setLockedDivision] = useState(null);
   const [searchText, setSearchText] = useState("");
   const [startFilter, setStartFilter] = useState(null);
   const [endFilter, setEndFilter] = useState(null);
   const [typeFilter, setTypeFilter] = useState("");
-  const [divisionFilter, setDivisionFilter] = useState(_lockedDivision || "");
+  const [divisionFilter, setDivisionFilter] = useState("");
   const [rangeFilter, setRangeFilter] = useState("");
   const [beatFilter, setBeatFilter] = useState("");
   const [forestId, setForestId] = useState("");
   const [roundFilter, setRoundFilter] = useState("");
   const [patrolLocationFilter, setPatrolLocationFilter] = useState("");
   const [patrolLocations, setPatrolLocations] = useState([]);
+
+  // Read the user's division from localStorage once userData is available
+  useEffect(() => {
+    const div = getUserDivision();
+    _setLockedDivision(div);
+    setDivisionFilter(div || "");
+  }, []);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);

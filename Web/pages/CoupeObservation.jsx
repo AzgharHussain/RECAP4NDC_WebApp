@@ -93,7 +93,9 @@ const CoupeObservation = () => {
       }
     };
 
-    fetchData();
+    // Small delay to ensure localStorage is populated after login navigation
+    const timer = setTimeout(() => fetchData(), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Apply filters to the original data

@@ -2145,6 +2145,13 @@ const handleGroupCheckbox = useCallback(async (e) => {
 
 const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolSidebar, isInfoToolActive, setIsInfoToolActive   }) => {
   const { language } = useLanguage();
+  // Division lock state — read from localStorage in useEffect to avoid
+  // stale reads when the component mounts before userData is set (after login).
+  const [lockedDivision, setLockedDivision] = useState(null);
+
+  useEffect(() => {
+    setLockedDivision(getUserDivision());
+  }, []);
   const [addedLayers, setAddedLayers] = useState({});
   const [opacity, setOpacity] = useState({});
   const [openGroups, setOpenGroups] = useState({});
@@ -2180,12 +2187,12 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         const result = await response.json();
         if (result.success && result.data) {
           // Filter layers by the logged-in user's division if they have one
-          const userDivision = getUserDivision();
+          const userDiv = lockedDivision || getUserDivision();
           let layers = result.data;
-          if (userDivision) {
+          if (userDiv) {
             // Fuzzy match: "Dahod SF" matches "dahod", "dahodsf", "dahod_sf", etc.
             layers = result.data.filter(layerName =>
-              matchesDivision(layerName, userDivision)
+              matchesDivision(layerName, userDiv)
             );
           }
           setAvailableCoupeLayers(layers);
@@ -2201,7 +2208,7 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
     };
 
     fetchNDVIChangeLayers();
-  }, []);
+  }, [lockedDivision]);
 
   useEffect(() => {
     const fetchAdminCoupeBoundaries = async () => {
@@ -2213,9 +2220,15 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         if (!response.ok) throw new Error('Failed to fetch uploaded coupe boundaries');
 
         const result = await response.json();
+        const userDiv = lockedDivision || getUserDivision();
         const dynamicLayers = (result.data || [])
           .map((item) => item.coupe_name)
           .filter(Boolean)
+          // Filter by user's division if they have one
+          .filter((tableName) => {
+            if (!userDiv) return true;
+            return matchesDivision(tableName, userDiv);
+          })
           .map((tableName) => {
             const cleanName = tableName.replace(/^Recap4NDC:/, '');
             const label = cleanName
@@ -2238,17 +2251,27 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
     };
 
     fetchAdminCoupeBoundaries();
-  }, []);
+  }, [lockedDivision]);
 
   // Merge dynamic admin-uploaded coupe boundary layers into the static "Coupe Boundaries" group
+  // Also filter both static and dynamic coupe boundaries by the user's division
   const mergedGroups = useMemo(() => {
-    if (!adminCoupeBoundaryLayers.length) return layersData.groups;
+    const userDiv = lockedDivision || getUserDivision();
 
     return layersData.groups.map((group) => {
       if (group.title !== "Coupe Boundaries") return group;
 
+      // Filter static children by division
+      let staticChildren = group.children || [];
+      if (userDiv) {
+        staticChildren = staticChildren.filter((child) =>
+          matchesDivision(child.Name || '', userDiv) ||
+          matchesDivision(child.Layer || '', userDiv)
+        );
+      }
+
       const existingNames = new Set(
-        (group.children || []).map((c) => (c.Name || "").toLowerCase())
+        staticChildren.map((c) => (c.Name || "").toLowerCase())
       );
 
       const dynamicChildren = adminCoupeBoundaryLayers.filter(
@@ -2257,10 +2280,10 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
 
       return {
         ...group,
-        children: [...(group.children || []), ...dynamicChildren],
+        children: [...staticChildren, ...dynamicChildren],
       };
     });
-  }, [adminCoupeBoundaryLayers]);
+  }, [adminCoupeBoundaryLayers, lockedDivision]);
 
   // Initialize open groups for nested structure
   useEffect(() => {

@@ -156,11 +156,18 @@ export default function Dashboard() {
   const [patrollingTypes, setPatrollingTypes] = useState([]);
 
   const [selectedForest, setSelectedForest] = useState("all");
-  // If user has a locked division, use it as the initial value
-  const _userDivision = getUserDivision();
-  const [selectedDivision, setSelectedDivision] = useState(_userDivision || "all");
+  // Locked division state — set in useEffect to avoid stale reads after login
+  const [_userDivision, _setUserDivision] = useState(null);
+  const [selectedDivision, setSelectedDivision] = useState("all");
   const [selectedRange, setSelectedRange] = useState("all");
   const [selectedPatrolType, setSelectedPatrolType] = useState("all");
+
+  // Read the user's division from localStorage once userData is available
+  useEffect(() => {
+    const div = getUserDivision();
+    _setUserDivision(div);
+    setSelectedDivision(div || "all");
+  }, []);
 
   const [forestChangeData, setForestChangeData] = useState([]);
   const [loadingForest, setLoadingForest] = useState(false);

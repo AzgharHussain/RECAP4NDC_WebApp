@@ -346,7 +346,9 @@ const BeatPatrolCoverage = () => {
   const t = translations[language] || translations.en;
 
   // Selection states
-  const lockedDivision = getUserDivision();
+  // Use state + useEffect to avoid stale reads when component mounts before
+  // userData is set in localStorage (right after login).
+  const [lockedDivision, setLockedDivision] = useState(null);
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
@@ -788,6 +790,11 @@ const BeatPatrolCoverage = () => {
   };
 
   useEffect(() => {
+    setLockedDivision(getUserDivision());
+  }, []);
+
+  useEffect(() => {
+    if (lockedDivision === null) return; // Wait until division is resolved
     fetchDivisions();
     fetchPatrolBoundaries();
 
@@ -805,7 +812,7 @@ const BeatPatrolCoverage = () => {
       window.removeEventListener('focus', refetchInitialDropdowns);
       document.removeEventListener('visibilitychange', refetchInitialDropdowns);
     };
-  }, []);
+  }, [lockedDivision]);
 
   const handleDivisionChange = (selectedOption) => {
     setSelectedDivision(selectedOption);
