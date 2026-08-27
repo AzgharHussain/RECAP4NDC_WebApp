@@ -348,7 +348,8 @@ const BeatPatrolCoverage = () => {
   // Selection states
   // Use state + useEffect to avoid stale reads when component mounts before
   // userData is set in localStorage (right after login).
-  const [lockedDivision, setLockedDivision] = useState(null);
+  // undefined = not yet resolved, null = no division (PCCF), string = locked division
+  const [lockedDivision, setLockedDivision] = useState(undefined);
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
@@ -794,7 +795,7 @@ const BeatPatrolCoverage = () => {
   }, []);
 
   useEffect(() => {
-    if (lockedDivision === null) return; // Wait until division is resolved
+    if (lockedDivision === undefined) return; // Wait until division is resolved
     fetchDivisions();
     fetchPatrolBoundaries();
 

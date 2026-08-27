@@ -2147,7 +2147,8 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
   const { language } = useLanguage();
   // Division lock state — read from localStorage in useEffect to avoid
   // stale reads when the component mounts before userData is set (after login).
-  const [lockedDivision, setLockedDivision] = useState(null);
+  // undefined = not yet resolved, null = no division (PCCF), string = locked division
+  const [lockedDivision, setLockedDivision] = useState(undefined);
 
   useEffect(() => {
     setLockedDivision(getUserDivision());
@@ -2178,6 +2179,8 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
 
   // Fetch available NDVI change layers from API
   useEffect(() => {
+    if (lockedDivision === undefined) return; // Wait until division is resolved
+
     const fetchNDVIChangeLayers = async () => {
       setIsLoadingCoupes(true);
       try {
@@ -2187,12 +2190,11 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         const result = await response.json();
         if (result.success && result.data) {
           // Filter layers by the logged-in user's division if they have one
-          const userDiv = lockedDivision || getUserDivision();
           let layers = result.data;
-          if (userDiv) {
+          if (lockedDivision) {
             // Fuzzy match: "Dahod SF" matches "dahod", "dahodsf", "dahod_sf", etc.
             layers = result.data.filter(layerName =>
-              matchesDivision(layerName, userDiv)
+              matchesDivision(layerName, lockedDivision)
             );
           }
           setAvailableCoupeLayers(layers);
@@ -2211,6 +2213,8 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
   }, [lockedDivision]);
 
   useEffect(() => {
+    if (lockedDivision === undefined) return; // Wait until division is resolved
+
     const fetchAdminCoupeBoundaries = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -2220,14 +2224,13 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         if (!response.ok) throw new Error('Failed to fetch uploaded coupe boundaries');
 
         const result = await response.json();
-        const userDiv = lockedDivision || getUserDivision();
         const dynamicLayers = (result.data || [])
           .map((item) => item.coupe_name)
           .filter(Boolean)
           // Filter by user's division if they have one
           .filter((tableName) => {
-            if (!userDiv) return true;
-            return matchesDivision(tableName, userDiv);
+            if (!lockedDivision) return true;
+            return matchesDivision(tableName, lockedDivision);
           })
           .map((tableName) => {
             const cleanName = tableName.replace(/^Recap4NDC:/, '');
@@ -2256,17 +2259,17 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
   // Merge dynamic admin-uploaded coupe boundary layers into the static "Coupe Boundaries" group
   // Also filter both static and dynamic coupe boundaries by the user's division
   const mergedGroups = useMemo(() => {
-    const userDiv = lockedDivision || getUserDivision();
+    if (lockedDivision === undefined) return layersData.groups; // Not resolved yet
 
     return layersData.groups.map((group) => {
       if (group.title !== "Coupe Boundaries") return group;
 
       // Filter static children by division
       let staticChildren = group.children || [];
-      if (userDiv) {
+      if (lockedDivision) {
         staticChildren = staticChildren.filter((child) =>
-          matchesDivision(child.Name || '', userDiv) ||
-          matchesDivision(child.Layer || '', userDiv)
+          matchesDivision(child.Name || '', lockedDivision) ||
+          matchesDivision(child.Layer || '', lockedDivision)
         );
       }
 

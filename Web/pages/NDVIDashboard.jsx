@@ -405,7 +405,8 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
   // Check if the logged-in user has a division to lock
   // Use state + useEffect to avoid stale reads when component mounts before
   // userData is set in localStorage (right after login).
-  const [lockedDivision, setLockedDivision] = useState(null);
+  // undefined = not yet resolved, null = no division (PCCF), string = locked division
+  const [lockedDivision, setLockedDivision] = useState(undefined);
 
   useEffect(() => {
     setLockedDivision(getUserDivision());
@@ -413,7 +414,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
 
   /* ------------------ Load Divisions from coupe_dropdown_master ------------------ */
   useEffect(() => {
-    if (lockedDivision === null) return; // Wait until division is resolved
+    if (lockedDivision === undefined) return; // Wait until division is resolved
 
     const fetchDivisions = async () => {
       try {
