@@ -5,6 +5,7 @@ import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
 import dayjs from "dayjs"; // For date formatting
 import { useLanguage } from "../context/LanguageContext"; // Import language context
+import { getUserDivision, matchesDivision } from "../utils/authUtils";
 
 const { Option } = Select;
 
@@ -76,8 +77,16 @@ const CoupeObservation = () => {
         );
         const result = await response.json();
         if (result && Array.isArray(result)) {
-          setOriginalData(result); // Store the original unfiltered data
-          setFilteredData(result); // Initialize filtered data
+          // Filter by the logged-in user's division if they have one
+          const userDivision = getUserDivision();
+          let filtered = result;
+          if (userDivision) {
+            filtered = result.filter(item =>
+              matchesDivision(item.division || item.Division || '', userDivision)
+            );
+          }
+          setOriginalData(filtered); // Store the original unfiltered data
+          setFilteredData(filtered); // Initialize filtered data
         }
       } catch (error) {
         console.error("Error fetching data:", error);

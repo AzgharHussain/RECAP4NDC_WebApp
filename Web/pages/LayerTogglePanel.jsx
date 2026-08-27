@@ -11,6 +11,7 @@ import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
 import { debounce, min } from 'lodash';
 import { API_BASE_URL } from "../config";
+import { getUserDivision, matchesDivision } from "../utils/authUtils";
 import "leaflet.nontiledlayer";
 const Loader = () => {
   return (
@@ -2178,10 +2179,19 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         
         const result = await response.json();
         if (result.success && result.data) {
-          setAvailableCoupeLayers(result.data);
+          // Filter layers by the logged-in user's division if they have one
+          const userDivision = getUserDivision();
+          let layers = result.data;
+          if (userDivision) {
+            // Fuzzy match: "Dahod SF" matches "dahod", "dahodsf", "dahod_sf", etc.
+            layers = result.data.filter(layerName =>
+              matchesDivision(layerName, userDivision)
+            );
+          }
+          setAvailableCoupeLayers(layers);
           
           // Generate coupe groups from the available layers
-          generateCoupeGroups(result.data);
+          generateCoupeGroups(layers);
         }
       } catch (error) {
         console.error('Error fetching NDVI change layers:', error);
@@ -2400,11 +2410,7 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
     // Determine the correct workspace for the legend request
     let legendLayer = layerName;
     if (!layerName.includes(':')) {
-      if (/^\d{4}[_-]/.test(layerName)) {
-        legendLayer = `Recap4NDC:${layerName}`;
-      } else {
-        legendLayer = `cite:${layerName}`;
-      }
+      legendLayer = `Recap4NDC:${layerName}`;
     }
     return `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${legendLayer}`;
   };
@@ -2428,11 +2434,7 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
       // Determine the correct WMS layer name with workspace prefix
       let wmsLayerName = layerName;
       if (!layerName.includes(':')) {
-        if (/^\d{4}[_-]/.test(layerName)) {
-          wmsLayerName = `Recap4NDC:${layerName}`;
-        } else {
-          wmsLayerName = `cite:${layerName}`;
-        }
+        wmsLayerName = `Recap4NDC:${layerName}`;
       }
 
       const params = new URLSearchParams({
@@ -2674,13 +2676,7 @@ const handleMapClick = useCallback(async (e) => {
 
       // If no explicit wmsLayerName, add the appropriate workspace prefix
       if (!wmsLayerName) {
-        if (/^\d{4}[_-]/.test(layerName)) {
-          // NDVI change layers (e.g. "2026-07-01_bhavnagar_coupe_NDVI_Change") are in Recap4NDC workspace
-          wmsLayers = `Recap4NDC:${layerName}`;
-        } else {
-          // Static boundary layers (e.g. "Gujarat_district") are in cite workspace
-          wmsLayers = `cite:${layerName}`;
-        }
+        wmsLayers = `Recap4NDC:${layerName}`;
       }
 
       console.log(`[createLayer] layerName="${layerName}", wmsLayers="${wmsLayers}", GEOSERVER_WMS="${GEOSERVER_WMS}", zIndex=${zIndex}`);
@@ -2857,7 +2853,7 @@ const clearAllLayers = useCallback(async () => {
 // Add this function to LayerTogglePanel.js - FIXED to handle your API response format
 const getLayerBoundsFromAPI = useCallback(async (layerName, isNdviChangeLayer = false) => {
   try {
-    const cleanLayerName = layerName.replace(/^cite:/, '');
+    const cleanLayerName = layerName.replace(/^(cite|Recap4NDC):/, '');
     
     // Use different API endpoint for NDVI change layers
     const apiEndpoint = isNdviChangeLayer 

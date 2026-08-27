@@ -5,6 +5,7 @@ import "./PatrolIncidentLogs.css"; // Import the CSS for styling
 import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
+import { getUserDivision, matchesDivision } from "../utils/authUtils";
 
 const { Option } = Select;
 
@@ -75,6 +76,15 @@ const PatrolIncidentLogs = () => {
         key: item.p_incident_id || index,
         ...item,
       }));
+
+      // Filter by the logged-in user's division if they have one
+      const userDivision = getUserDivision();
+      if (userDivision) {
+        formatted = formatted.filter(item =>
+          matchesDivision(item.division || item.Division || '', userDivision)
+        );
+      }
+
       setIncidentData(formatted);
     } catch (error) {
       console.error("Error fetching incident data:", error);

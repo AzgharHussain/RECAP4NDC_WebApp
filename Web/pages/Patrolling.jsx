@@ -15,7 +15,7 @@ import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
 import axios from "axios";
-import { getAuthToken, getAuthHeaders, handleUnauthorized } from "../utils/authUtils";
+import { getAuthToken, getAuthHeaders, handleUnauthorized, getUserDivision, matchesDivision } from "../utils/authUtils";
 import { capitalizeFirst } from "../utils/textFormat";
 
 import startIconImg from "../assets/marker-icon.png";
@@ -695,11 +695,12 @@ const PatrolIncidentLogs = () => {
   const [showmaproute, setShowMapRoute] = useState(false);
   
   // Filter states
+  const _lockedDivision = getUserDivision();
   const [searchText, setSearchText] = useState("");
   const [startFilter, setStartFilter] = useState(null);
   const [endFilter, setEndFilter] = useState(null);
   const [typeFilter, setTypeFilter] = useState("");
-  const [divisionFilter, setDivisionFilter] = useState("");
+  const [divisionFilter, setDivisionFilter] = useState(_lockedDivision || "");
   const [rangeFilter, setRangeFilter] = useState("");
   const [beatFilter, setBeatFilter] = useState("");
   const [forestId, setForestId] = useState("");
@@ -776,7 +777,7 @@ const applyPatrolFilters = useCallback((records) => {
     }
 
     if (typeFilter && item.type_name !== typeFilter) return false;
-    if (divisionFilter && item.division !== divisionFilter) return false;
+    if (divisionFilter && !matchesDivision(item.division || '', divisionFilter)) return false;
     if (rangeFilter && item.range !== rangeFilter) return false;
     if (roundFilter && item.round !== roundFilter) return false;
     if (beatFilter && item.beat !== beatFilter) return false;
@@ -1065,7 +1066,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     setEndFilter(null);
     setTypeFilter("");
     setForestId("");
-    setDivisionFilter("");
+    setDivisionFilter(_lockedDivision || "");
     setRangeFilter("");
     setRoundFilter("");
     setBeatFilter("");
@@ -1666,6 +1667,9 @@ const exportTableToExcel = async () => {
     return getPatrolDateTimeParts(datetime)?.time || "-";
   };
 
+  const maxPatrolImages = Math.max(0, ...exportData.map((item) => (item.images || []).filter((img) => img.image_data).length));
+  const patrolImageHeaders = Array.from({ length: maxPatrolImages }, (_, index) => language === "gu" ? `છબી ${index + 1}` : `Image ${index + 1}`);
+
   // Sheet 1: Patrol Logs Data (with separate date and time columns)
   const patrolLogsData = exportData.map((item, index) => {
     // Collect notes from all images
@@ -1679,6 +1683,11 @@ const exportTableToExcel = async () => {
     const imageCategories = (item.images || [])
       .map(img => img.image_category || 'image')
       .join(', ') || "-";
+    const imageColumns = patrolImageHeaders.reduce((acc, header, imgIndex) => {
+      const img = (item.images || []).filter((image) => image.image_data)[imgIndex];
+      acc[header] = img ? (img.image_category || `${language === "gu" ? "છબી" : "Image"} ${imgIndex + 1}`) : "-";
+      return acc;
+    }, {});
 
     return {
     [language === "gu" ? "ક્રમાંક" : "Sr. No."]: index + 1,
@@ -1700,6 +1709,7 @@ const exportTableToExcel = async () => {
     [language === "gu" ? "નોંધો" : "Notes"]: allNotes,
     [language === "gu" ? "છબીઓની સંખ્યા" : "Image Count"]: imageCount,
     [language === "gu" ? "છબી પ્રકાર" : "Image Categories"]: imageCategories,
+    ...imageColumns,
     };
   });
 
@@ -1968,6 +1978,7 @@ const exportTableToExcel = async () => {
   };
 
   const imageCategoriesHeader = language === "gu" ? "છબી પ્રકાર" : "Image Categories";
+  const patrolLogHeaders = patrolLogsData[0] ? Object.keys(patrolLogsData[0]) : [];
 
   const summarySheet = wb.addWorksheet('Officer Patrol Summary Report');
   summaryData.forEach((row) => summarySheet.addRow(row));
@@ -1979,16 +1990,23 @@ const exportTableToExcel = async () => {
 
   const patrolLogsSheet = appendObjectSheet('Patrol Logs', patrolLogsData);
   if (patrolLogsSheet) {
-    const imageColumnNumber = Object.keys(patrolLogsData[0]).indexOf(imageCategoriesHeader) + 1;
-    patrolLogsSheet.getColumn(imageColumnNumber).width = 24;
+    const imageCategoriesColumnNumber = patrolLogHeaders.indexOf(imageCategoriesHeader) + 1;
+    if (imageCategoriesColumnNumber > 0) patrolLogsSheet.getColumn(imageCategoriesColumnNumber).width = 24;
+    const patrolImageColumnNumbers = patrolImageHeaders
+      .map((header) => patrolLogHeaders.indexOf(header) + 1)
+      .filter((columnNumber) => columnNumber > 0);
+    patrolImageColumnNumbers.forEach((columnNumber) => {
+      patrolLogsSheet.getColumn(columnNumber).width = 18;
+    });
     exportData.forEach((item, index) => {
       const rowNumber = index + 2;
       const images = (item.images || []).filter((img) => img.image_data);
-      const firstImage = images[0];
-      if (firstImage && addBase64ImageToCell(patrolLogsSheet, firstImage, rowNumber, imageColumnNumber)) {
-        patrolLogsSheet.getRow(rowNumber).height = 58;
-        patrolLogsSheet.getCell(rowNumber, imageColumnNumber).value = `${images.length} image${images.length > 1 ? 's' : ''}`;
-      }
+      images.forEach((img, imgIndex) => {
+        const columnNumber = patrolImageColumnNumbers[imgIndex];
+        if (columnNumber && addBase64ImageToCell(patrolLogsSheet, img, rowNumber, columnNumber)) {
+          patrolLogsSheet.getRow(rowNumber).height = 58;
+        }
+      });
     });
   }
 
@@ -2096,6 +2114,7 @@ const exportTableToExcel = async () => {
             allowClear
             showSearch
             optionFilterProp="children"
+            disabled={!!_lockedDivision}
           >
             <Option value="">{language === "gu" ? "બધા વિભાગો" : "All Divisions"}</Option>
             {Array.isArray(divisions1) && divisions1.length > 0 ? (

@@ -628,30 +628,45 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
           ORDER BY ordinal_position
         `, { replacements: { tableName: NdvicoupeName }, type: sequelize.QueryTypes.SELECT });
 
-        const cols = colInfo
-          .map(c => c.column_name)
+        const colNames = colInfo.map(c => c.column_name);
+        const hasPixleId = colNames.includes('pixle_id');
+        const hasId = colNames.includes('id');
+        const cols = colNames
           .filter(c => c !== 'image_data')
           .map(c => `"${c}"`)
           .join(', ');
 
-        const selectQuery = `
-            SELECT ${cols}
-            FROM public."${NdvicoupeName}"
-            WHERE pixle_id::text = :id;
-        `;
+        // Determine the ID column: prefer pixle_id, fall back to id
+        const idColumn = hasPixleId ? 'pixle_id' : (hasId ? 'id' : null);
 
-        const [results] = await sequelize.query(selectQuery, {
-          replacements: { id: String(id) }
-        });
+        let results = [];
 
-        if (!results || results.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Bad Request - Invalid syntax'
+        if (idColumn) {
+            const selectQuery = `
+                SELECT ${cols}
+                FROM public."${NdvicoupeName}"
+                WHERE "${idColumn}"::text = :id;
+            `;
+
+            [results] = await sequelize.query(selectQuery, {
+              replacements: { id: String(id) }
             });
+
+            // Fallback: if pixle_id query returned nothing and id column also exists, try id
+            if ((!results || results.length === 0) && hasPixleId && hasId) {
+                const fallbackQuery = `
+                    SELECT ${cols}
+                    FROM public."${NdvicoupeName}"
+                    WHERE "id"::text = :id;
+                `;
+                [results] = await sequelize.query(fallbackQuery, {
+                  replacements: { id: String(id) }
+                });
+            }
         }
 
-        // Fetch image from MongoDB only (not from PostgreSQL table)
+        // Fetch image from MongoDB regardless of whether PG record was found
+        // (the image may exist even if the PG row was deleted or ID mismatch)
         const candidates = getRecordIdCandidates(id);
 
         const mongoImage = await MongoImage.findOne({
@@ -660,8 +675,33 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
           recordId: { $in: candidates }
         }).lean();
 
-        results[0].image_data = mongoImage ? mongoImage.imageData : null;
-        results[0].image_type = mongoImage ? mongoImage.imageType : null;
+        const imageData = mongoImage ? mongoImage.imageData : null;
+        const imageType = mongoImage ? mongoImage.imageType : null;
+
+        if (!results || results.length === 0) {
+            // No PG record found, but return image data if available from MongoDB
+            if (imageData) {
+                return res.json({
+                    success: true,
+                    message: 'Image fetched from MongoDB (no PG record)',
+                    data: [{
+                        image_data: imageData,
+                        image_type: imageType,
+                        note: null,
+                        latitude: null,
+                        longitude: null,
+                        status: null,
+                    }]
+                });
+            }
+            return res.status(404).json({
+                success: false,
+                message: 'Bad Request - Invalid syntax'
+            });
+        }
+
+        results[0].image_data = imageData;
+        results[0].image_type = imageType;
 
         res.json({
             success: true,

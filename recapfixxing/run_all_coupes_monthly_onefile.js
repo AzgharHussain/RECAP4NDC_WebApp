@@ -161,8 +161,32 @@ const GEOSERVER_USER            = process.env.GEOSERVER_USER || 'admin';
 const GEOSERVER_PASSWORD        = process.env.GEOSERVER_PASSWORD || 'geoserver';
 const GEOSERVER_WORKSPACE       = process.env.GEOSERVER_WORKSPACE || 'Recap4NDC';
 const GEOSERVER_STORE           = process.env.GEOSERVER_STORE || 'Recap4NDC_Query';
-const GEOSERVER_STYLE_WORKSPACE = process.env.GEOSERVER_STYLE_WORKSPACE || 'Recap4NDC_New';
+const GEOSERVER_STYLE_WORKSPACE = process.env.GEOSERVER_STYLE_WORKSPACE || GEOSERVER_WORKSPACE;
 const GEOSERVER_STYLE           = process.env.GEOSERVER_STYLE || 'NDVI_CHANGE_NEW2222';
+const GEOSERVER_STYLE_SLD       = `<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/sld http://schemas.opengis.net/sld/1.0.0/StyledLayerDescriptor.xsd">
+  <NamedLayer>
+    <Name>${GEOSERVER_STYLE}</Name>
+    <UserStyle>
+      <Name>${GEOSERVER_STYLE}</Name>
+      <Title>${GEOSERVER_STYLE}</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">#ffcccc</CssParameter>
+              <CssParameter name="fill-opacity">0.45</CssParameter>
+            </Fill>
+            <Stroke>
+              <CssParameter name="stroke">#ff0000</CssParameter>
+              <CssParameter name="stroke-width">3</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>`;
 const GEOSERVER_REQUEST_TIMEOUT_MS = Number(process.env.GEOSERVER_REQUEST_TIMEOUT_MS || 60000);
 let GEOSERVER_UNREACHABLE = false;
 
@@ -439,18 +463,22 @@ function asList(value) {
 
 // ── GeoServer HTTP helper ─────────────────────────────────────────────────────
 function geoserverRequest(method, requestPath, body) {
+  return geoserverRawRequest(method, requestPath, body ? JSON.stringify(body) : null, 'application/json', 'application/json');
+}
+
+function geoserverRawRequest(method, requestPath, body, contentType, accept) {
   let url;
   try {
     url = new URL(`${GEOSERVER_URL}${requestPath}`);
   } catch (e) {
     return Promise.reject(new Error(`Invalid GeoServer URL: ${GEOSERVER_URL}${requestPath} — ${e.message}`));
   }
-  const data = body ? JSON.stringify(body) : null;
+  const data = body == null ? null : body;
   const headers = {
     Authorization: `Basic ${Buffer.from(`${GEOSERVER_USER}:${GEOSERVER_PASSWORD}`).toString('base64')}`,
-    Accept: 'application/json',
+    Accept: accept || 'application/json',
   };
-  if (data) headers['Content-Type'] = 'application/json';
+  if (data) headers['Content-Type'] = contentType || 'application/json';
 
   return new Promise((resolve, reject) => {
     let request;
@@ -499,7 +527,15 @@ function geoserverRequest(method, requestPath, body) {
             safeReject(new Error(`${method} ${url.href} failed: HTTP ${response.statusCode}: ${raw}`));
             return;
           }
-          safeResolve(raw ? JSON.parse(raw) : null);
+          if (!raw || !(accept || 'application/json').includes('json')) {
+            safeResolve(raw || null);
+            return;
+          }
+          try {
+            safeResolve(JSON.parse(raw));
+          } catch (_) {
+            safeResolve(raw);
+          }
         });
         response.on('error', safeReject);
       });
@@ -555,17 +591,33 @@ async function publishFeaturetype(featuretype) {
 }
 
 async function styleExists() {
-  await geoserverRequest('GET', `/rest/workspaces/${q(GEOSERVER_STYLE_WORKSPACE)}/styles/${q(GEOSERVER_STYLE)}.json`);
+  const stylePath = GEOSERVER_STYLE_WORKSPACE
+    ? `/rest/workspaces/${q(GEOSERVER_STYLE_WORKSPACE)}/styles/${q(GEOSERVER_STYLE)}.json`
+    : `/rest/styles/${q(GEOSERVER_STYLE)}.json`;
+  await geoserverRequest('GET', stylePath);
+}
+
+async function ensureGeoserverStyle() {
+  try {
+    await styleExists();
+    return;
+  } catch (err) {
+    if (!String(err && (err.message || err)).includes('HTTP 404')) throw err;
+  }
+
+  const stylePath = GEOSERVER_STYLE_WORKSPACE
+    ? `/rest/workspaces/${q(GEOSERVER_STYLE_WORKSPACE)}/styles?name=${q(GEOSERVER_STYLE)}`
+    : `/rest/styles?name=${q(GEOSERVER_STYLE)}`;
+  await geoserverRawRequest('POST', stylePath, GEOSERVER_STYLE_SLD, 'application/vnd.ogc.sld+xml', 'application/json');
+  log(`CREATED GeoServer style ${GEOSERVER_STYLE}${GEOSERVER_STYLE_WORKSPACE ? ` in workspace ${GEOSERVER_STYLE_WORKSPACE}` : ''}`);
 }
 
 async function setDefaultStyle(layerName) {
+  const defaultStyle = { name: GEOSERVER_STYLE };
+  if (GEOSERVER_STYLE_WORKSPACE) defaultStyle.workspace = GEOSERVER_STYLE_WORKSPACE;
+
   await geoserverRequest('PUT', `/rest/layers/${q(`${GEOSERVER_WORKSPACE}:${layerName}`)}.json`, {
-    layer: {
-      defaultStyle: {
-        name: GEOSERVER_STYLE,
-        workspace: GEOSERVER_STYLE_WORKSPACE,
-      },
-    },
+    layer: { defaultStyle },
   });
 }
 
@@ -1008,6 +1060,23 @@ END $$;
   }
 }
 
+async function listDbNdviTablesForPublish() {
+  const db = await connectDbWithRetry('DB table list for GeoServer publish');
+  try {
+    const result = await db.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+        AND table_name LIKE '2026%NDVI%Change'
+      ORDER BY table_name
+    `);
+    return result.rows.map((row) => row.table_name).filter(Boolean);
+  } finally {
+    await db.end().catch(() => {});
+  }
+}
+
 // ── GeoServer publish ─────────────────────────────────────────────────────────
 async function publishToGeoserver() {
   if (!GEOSERVER_URL) {
@@ -1035,10 +1104,10 @@ async function publishToGeoserver() {
   log(`Publish errors list:   ${errorFile}`);
 
   try {
-    await styleExists();
+    await ensureGeoserverStyle();
   } catch (err) {
-    log(`[ERROR] Required GeoServer style is not reachable: ${err.message || err}`);
-    log('=== GeoServer publish SKIPPED (cannot verify style) ===');
+    log(`[ERROR] Required GeoServer style could not be verified or created: ${err.message || err}`);
+    log('=== GeoServer publish SKIPPED (cannot ensure style) ===');
     return;
   }
 
@@ -1058,7 +1127,14 @@ async function publishToGeoserver() {
     available = new Set(await listAvailableFeaturetypes());
   } catch (err) {
     log(`[WARN] Could not list available feature types: ${err.message || err}`);
-    available = new Set();
+    try {
+      const dbTables = await listDbNdviTablesForPublish();
+      available = new Set(dbTables);
+      log(`[INFO] DB fallback found ${dbTables.length} public tables starting with 2026 for GeoServer publish.`);
+    } catch (dbErr) {
+      log(`[WARN] DB fallback could not list 2026 tables: ${dbErr.message || dbErr}`);
+      available = new Set();
+    }
   }
 
   const candidates = Array.from(new Set([...published, ...available]))
@@ -1141,6 +1217,20 @@ async function main() {
   log(`Published log:  ${publishedFile}`);
   log(`Error log:      ${errorFile}`);
   log(`Checkpoint:     ${checkpointFile}`);
+
+  if (process.argv.includes('--install-cron')) {
+    ensureMonthlySchedule();
+    log('Cron install requested; exiting without running monthly processing.');
+    return;
+  }
+
+  const publishOnly = process.argv.includes('--publish-only');
+  if (publishOnly) {
+    log('=== --publish-only mode: skipping coupe processing and postprocess SQL ===');
+    await publishToGeoserver();
+    log('GeoServer publish-only run complete.');
+    return;
+  }
 
   // ── Command-line: --postprocess-only ──────────────────────────────────────
   // Skips coupe processing and only runs postprocess SQL + GeoServer publish.

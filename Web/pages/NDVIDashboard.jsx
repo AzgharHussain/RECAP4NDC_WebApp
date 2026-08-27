@@ -94,6 +94,7 @@ import {
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { useLanguage } from "../context/LanguageContext"; // Add this import
+import { getUserDivision, matchesDivision } from '../utils/authUtils';
 import "./NDVIDashboard.css";
 
 // Register ChartJS components
@@ -401,6 +402,9 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
   const [beat, setBeat] = useState("");
   const { language } = useLanguage(); // Add this
 
+  // Check if the logged-in user has a division to lock
+  const lockedDivision = getUserDivision();
+
   /* ------------------ Load Divisions from coupe_dropdown_master ------------------ */
   useEffect(() => {
     const fetchDivisions = async () => {
@@ -416,6 +420,16 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           }
         );
         setDivisions(res.data[0] || []);
+
+        // Auto-select the user's division if they have one
+        // Use fuzzy matching to find the closest division option
+        if (lockedDivision) {
+          const allDivisions = res.data[0] || [];
+          const matched = allDivisions.find(d =>
+            matchesDivision(d.division, lockedDivision)
+          );
+          await selectDivision(matched ? matched.division : lockedDivision);
+        }
       } catch (error) {
         console.error("Error fetching divisions:", error);
       }
@@ -425,8 +439,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
   }, []);
 
   /* ------------------ Load Ranges based on selected Division ------------------ */
-  const handleDivisionChange = async (e) => {
-    const selectedDivision = e.target.value;
+  const selectDivision = async (selectedDivision) => {
     setDivision(selectedDivision);
     setRange("");
     setRound("");
@@ -463,6 +476,10 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
     } catch (error) {
       console.error("Error fetching ranges:", error);
     }
+  };
+
+  const handleDivisionChange = async (e) => {
+    await selectDivision(e.target.value);
   };
 
   /* ------------------ Load Rounds based on selected Division and Range ------------------ */
@@ -597,6 +614,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           value={division}
           onChange={handleDivisionChange}
           label={t.division}
+          disabled={!!lockedDivision}
         >
           <MenuItem value="">Select Division</MenuItem>
           <MenuItem value="all" sx={{ fontWeight: 'bold', color: 'primary.main' }}>

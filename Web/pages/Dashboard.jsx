@@ -17,6 +17,7 @@ import { capitalizeFirst } from "../utils/textFormat";
 import "./Dashboard.css";
 import filterIcon from "../assets/filter.png";
 import { API_BASE_URL } from "../config";
+import { getUserDivision, matchesDivision } from "../utils/authUtils";
 
 const { Option } = Select;
 
@@ -155,7 +156,9 @@ export default function Dashboard() {
   const [patrollingTypes, setPatrollingTypes] = useState([]);
 
   const [selectedForest, setSelectedForest] = useState("all");
-  const [selectedDivision, setSelectedDivision] = useState("all");
+  // If user has a locked division, use it as the initial value
+  const _userDivision = getUserDivision();
+  const [selectedDivision, setSelectedDivision] = useState(_userDivision || "all");
   const [selectedRange, setSelectedRange] = useState("all");
   const [selectedPatrolType, setSelectedPatrolType] = useState("all");
 
@@ -348,12 +351,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (selectedForest && selectedForest !== "all") {
       fetchDivisions(selectedForest);
-      setSelectedDivision("all"); // reset division on forest change
-      setSelectedRange("all"); // reset range on forest change
+      // Don't reset division if user has a locked division
+      if (!_userDivision) setSelectedDivision("all");
+      setSelectedRange("all");
     } else {
       setDivisions([]);
       setRanges([]);
-      setSelectedDivision("all");
+      if (!_userDivision) setSelectedDivision("all");
       setSelectedRange("all");
     }
   }, [selectedForest]);
@@ -380,7 +384,13 @@ export default function Dashboard() {
       const rangeCandidates = ["range", "range_id", "rangeId", "range_name", "rangeName"];
 
       const forestMatches = matchesValue(p, forestCandidates, selectedForest);
-      const divisionMatches = matchesValue(p, divisionCandidates, selectedDivision);
+      // Use fuzzy division matching for division field
+      const divisionMatches = !selectedDivision || selectedDivision === "all" ? true :
+        divisionCandidates.some(key => {
+          const val = p[key];
+          if (val == null) return false;
+          return matchesDivision(String(val), selectedDivision);
+        });
       const rangeMatches = matchesValue(p, rangeCandidates, selectedRange);
       
       // Use the specialized function for patrol types
@@ -680,9 +690,9 @@ export default function Dashboard() {
 
           <button
             onClick={() => {
-              // reset all filters
+              // reset all filters (keep locked division if user has one)
               setSelectedForest("all");
-              setSelectedDivision("all");
+              setSelectedDivision(_userDivision || "all");
               setSelectedRange("all");
               setSelectedPatrolType("all");
             }}

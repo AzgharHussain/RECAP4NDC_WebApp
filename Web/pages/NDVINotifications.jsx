@@ -3,7 +3,7 @@ import { Button, Card, Col, DatePicker, Descriptions, Image, Modal, Row, Select,
 import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { API_BASE_URL } from "../config";
-import { getAuthHeaders } from "../utils/authUtils";
+import { getAuthHeaders, getUserDivision, matchesDivision } from "../utils/authUtils";
 import { capitalizeFirst } from "../utils/textFormat";
 import { useLanguage } from "../context/LanguageContext";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
@@ -145,13 +145,21 @@ const NDVINotifications = () => {
   const { language } = useLanguage();
   const t = TEXTS[language] || TEXTS.en;
 
+  // Check if the logged-in user has a division to lock
+  const lockedDivision = getUserDivision();
+
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [monthlySummary, setMonthlySummary] = useState([]);
   const [options, setOptions] = useState(emptyOptions);
   const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
   // table_name kept in state for API calls but no longer shown as a UI filter
-  const [filters, setFilters] = useState({ username: null, table_name: null, division: null, month: null, status: null, dates: null });
+  // If user has a locked division, initialize the filter with it
+  const [filters, setFilters] = useState({
+    username: null, table_name: null,
+    division: lockedDivision || null,
+    month: null, status: null, dates: null
+  });
   const [detailRecord, setDetailRecord] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailImageUrl, setDetailImageUrl] = useState(null);
@@ -174,8 +182,22 @@ const NDVINotifications = () => {
       const res = await fetch(`${API_BASE_URL}/api/ndvi-notification-report?${params.toString()}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to fetch notification report");
-      setData((json.data || []).map((item) => ({ ...item, key: item.id })));
-      setMonthlySummary((json.monthlyDivisionSummary || []).map((item, index) => ({ ...item, key: `${item.month}-${item.division}-${index}` })));
+      // Apply client-side fuzzy division filter as a backup to the backend ILIKE filter
+      let rows = (json.data || []).map((item) => ({ ...item, key: item.id }));
+      if (lockedDivision) {
+        rows = rows.filter(item =>
+          matchesDivision(item.division || '', lockedDivision) ||
+          matchesDivision(item.table_name || '', lockedDivision)
+        );
+      }
+      setData(rows);
+      let monthlyRows = (json.monthlyDivisionSummary || []).map((item, index) => ({ ...item, key: `${item.month}-${item.division}-${index}` }));
+      if (lockedDivision) {
+        monthlyRows = monthlyRows.filter(item =>
+          matchesDivision(item.division || '', lockedDivision)
+        );
+      }
+      setMonthlySummary(monthlyRows);
       setSummary(json.summary || { total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
       setOptions({ ...emptyOptions, ...(json.options || {}) });
       if (json.pagination) {
@@ -210,13 +232,14 @@ const NDVINotifications = () => {
   };
 
   const clearFilters = () => {
-    const cleared = { username: null, table_name: null, division: null, month: null, status: null, dates: null };
+    // Keep the locked division when clearing filters
+    const cleared = { username: null, table_name: null, division: lockedDivision || null, month: null, status: null, dates: null };
     setFilters(cleared);
     setPagination(prev => ({ ...prev, current: 1 }));
     fetchReport(cleared, 1, pagination.pageSize);
   };
 
-  const renderSelect = (key, placeholder, values, span = 4) => (
+  const renderSelect = (key, placeholder, values, span = 4, disabled = false) => (
     <Col xs={24} md={8} lg={span}>
       <Select
         allowClear
@@ -226,6 +249,7 @@ const NDVINotifications = () => {
         onChange={(value) => setFilters((prev) => ({ ...prev, [key]: value }))}
         style={{ width: "100%" }}
         optionFilterProp="children"
+        disabled={disabled}
       >
         {(values || []).map((value) => <Option key={value} value={value}>{capitalizeFirst(value)}</Option>)}
       </Select>
@@ -307,21 +331,31 @@ const NDVINotifications = () => {
           method: "GET",
           headers: { ...getAuthHeaders() },
         });
-        const json = await res.json();
-        if (json.success && json.data && json.data[0]) {
-          const data = json.data[0];
-          // Update image
-          if (data.image_data) {
-            setDetailImageUrl(`data:${data.image_type || "image/jpeg"};base64,${data.image_data}`);
+        if (!res.ok) {
+          console.error("NDVI image fetch failed:", res.status, res.statusText, "URL:", url);
+          const errText = await res.text().catch(() => "");
+          console.error("NDVI image fetch error body:", errText);
+        } else {
+          const json = await res.json();
+          if (json.success && json.data && json.data[0]) {
+            const data = json.data[0];
+            // Update image
+            if (data.image_data) {
+              setDetailImageUrl(`data:${data.image_type || "image/jpeg"};base64,${data.image_data}`);
+            } else {
+              console.warn("NDVI record found but image_data is null. Table:", record.table_name, "Pixel ID:", record.pixel_id);
+            }
+            // Update note and other fields from the source table
+            setDetailRecord((prev) => ({
+              ...prev,
+              note: data.note || prev.note,
+              latitude: data.latitude || prev.latitude,
+              longitude: data.longitude || prev.longitude,
+              status: data.status !== undefined ? data.status : prev.status,
+            }));
+          } else {
+            console.warn("NDVI image fetch returned no data. Response:", JSON.stringify(json).substring(0, 200));
           }
-          // Update note and other fields from the source table
-          setDetailRecord((prev) => ({
-            ...prev,
-            note: data.note || prev.note,
-            latitude: data.latitude || prev.latitude,
-            longitude: data.longitude || prev.longitude,
-            status: data.status !== undefined ? data.status : prev.status,
-          }));
         }
       } catch (err) {
         console.error("Failed to fetch image:", err);
@@ -433,7 +467,7 @@ const NDVINotifications = () => {
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
           {renderSelect("username", t.userName, options.usernames, 5)}
-          {renderSelect("division", t.division, options.divisions, 5)}
+          {renderSelect("division", t.division, options.divisions, 5, !!lockedDivision)}
           {renderSelect("month",    t.month,    options.months,    4)}
           {renderSelect("status",   t.status,   options.statuses,  4)}
           <Col xs={24} md={8} lg={4}>

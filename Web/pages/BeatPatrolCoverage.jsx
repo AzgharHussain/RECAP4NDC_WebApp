@@ -19,6 +19,7 @@ import axios from "axios";
 import "./RouterMap.css";
 import "./BeatPatrolCoverage.css";
 import { API_BASE_URL } from "../config";
+import { getUserDivision, matchesDivision } from "../utils/authUtils";
 import Select from 'react-select';
 import vector from '../assets/Vector.png';
 import gisfylogo from "../assets/Gisfylogo.png";
@@ -345,6 +346,7 @@ const BeatPatrolCoverage = () => {
   const t = translations[language] || translations.en;
 
   // Selection states
+  const lockedDivision = getUserDivision();
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
@@ -678,6 +680,16 @@ const BeatPatrolCoverage = () => {
         label: item.division
       }));
       setDivisions(divisionList);
+
+      // Auto-select the user's locked division if they have one
+      if (lockedDivision) {
+        const matched = divisionList.find(d =>
+          matchesDivision(d.value, lockedDivision)
+        );
+        if (matched) {
+          handleDivisionChange(matched);
+        }
+      }
     } catch (error) {
       console.error("Error fetching divisions:", error);
       message.error(t.failedToLoadDivisions);
@@ -827,7 +839,7 @@ const BeatPatrolCoverage = () => {
   const handleBoundaryChange = (selectedOption) => {
     setSelectedBoundary(selectedOption);
     if (selectedOption) {
-      setSelectedDivision(null);
+      if (!lockedDivision) setSelectedDivision(null);
       setSelectedRange(null);
       setSelectedBeat(null);
       setSelectionMode('boundary');
@@ -1428,7 +1440,7 @@ const BeatPatrolCoverage = () => {
                 <>
                   <div className="coverage-field">
                     <label>{t.division}</label>
-                    <Select value={selectedDivision} onChange={handleDivisionChange} options={divisions} isClearable placeholder={t.selectDivision} styles={customSelectStyles} />
+                    <Select value={selectedDivision} onChange={handleDivisionChange} options={divisions} isClearable placeholder={t.selectDivision} styles={customSelectStyles} isDisabled={!!lockedDivision} />
                   </div>
                   <div className="coverage-field">
                     <label>{t.range}</label>
