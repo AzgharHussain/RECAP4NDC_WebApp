@@ -230,21 +230,7 @@ function Login() {
     }
   };
 
-  const saveUser = async (username, password) => {
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/api/saveuser`,
-        { username, password },
-        { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'x-temp-token': 'RECAP4NDC_TEMP_TOKEN' }, timeout: 10000 }
-      );
-      const { token } = response.data;
-      if (token) {
-        localStorage.setItem("token", token);
-        Cookies.set("authToken", token, { expires: 1, sameSite: 'lax' });
-      }
-      return response.data;
-    } catch { return null; }
-  };
+
 
   const handleLogin = async () => {
     if (!userId || !password) { setError(text[language].errorRequired); return; }
@@ -287,7 +273,6 @@ function Login() {
 
       createSession(userData, false);
       localStorage.setItem("authToken", "forest_authenticated");
-      await saveUser(userId, password);
 
       // Fire-and-forget: trigger pending notifications from previous month
       // The backend also does this automatically on login, but this is a

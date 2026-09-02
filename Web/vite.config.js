@@ -56,6 +56,13 @@ export default defineConfig(({ mode }) => {
 
     // ** ADD THIS SECTION FOR PRODUCTION BUILD **
     build: {
+      // Completely disable modulepreload hint injection — Vite's auto-injected
+      // <link rel="modulepreload"> tags cause "cross-world service worker
+      // resource mismatch" warnings in the browser console on every page.
+      // Setting to `false` removes the <link> tags entirely from the built HTML.
+      // Chunks are still split and loaded correctly via dynamic import().
+      modulePreload: false,
+
       // Use terser for better minification (smaller bundles than esbuild)
       minify: 'terser',
       terserOptions: {

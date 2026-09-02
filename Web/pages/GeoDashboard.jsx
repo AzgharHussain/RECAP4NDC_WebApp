@@ -148,18 +148,7 @@ export default function MapView() {
 //   "cite:2025_09_01_AGAR_view_ndvi_change"
  
 // ];
-  const fetchCoupeLayers = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/coupe_metadata/location`);
-      setCoupeLayers(response.data || []);
-    } catch (error) {
-      console.error("Error fetching coupe layers:", error);
-    }
-  };
 
-  useEffect(() => {
-    fetchCoupeLayers();
-  }, []);
 
   useEffect(() => {
   // Fallback: hide loader after 15s in case map load events never fire

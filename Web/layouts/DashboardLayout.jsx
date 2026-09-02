@@ -258,15 +258,24 @@ useEffect(() => {
 }, []);
   return (
     <div className="layout">
-      {/* Navigation loader overlay — blocks all clicks while loading */}
+      {/* Navigation loader overlay — blocks all clicks/focus while loading */}
       {isNavigating && (
-        <div className="nav-loader-overlay" role="status" aria-live="polite">
+        <div
+          className="nav-loader-overlay"
+          role="status"
+          aria-live="polite"
+          aria-label="Loading page"
+          // inert prevents any focusable descendant from receiving focus while
+          // the overlay is visible, eliminating the aria-hidden/focus conflict.
+          inert=""
+        >
           <div className="nav-loader-box">
             <div className="nav-loader-spinner" />
             <div className="nav-loader-text">Loading…</div>
           </div>
         </div>
       )}
+
 
       {/* Sidebar backdrop for tablet/mobile */}
       {isSidebarOpen && windowWidth <= 1024 && (
