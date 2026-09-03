@@ -453,8 +453,7 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
 
 router.get('/patrol-info-all', verifyJwt, async (req, res) => {
   try {
-    // Removed unnecessary GROUP BY — the LEFT JOIN is 1:1, no duplicates.
-    // Added timeout to prevent blocking the event loop on large tables.
+    // NOTE: dedupe patrolling_types via subquery to prevent row multiplication
     const query = `
       SELECT
         p.*,
@@ -462,7 +461,8 @@ router.get('/patrol-info-all', verifyJwt, async (req, res) => {
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
+        ON p.patrolling_type_id = pt.type_id
       ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC;
     `;
 
@@ -492,7 +492,7 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt ON p.patrolling_type_id = pt.type_id
       ORDER BY p.patrol_id DESC
       LIMIT 5;
     `;
@@ -666,9 +666,9 @@ if (end_date) {
       : '';
 
     // Main query with pagination and filters (no image JOIN)
-    // Removed unnecessary GROUP BY — it forced a full sort/hash aggregation
-    // that made this query take 40-60 seconds. DISTINCT is not needed since
-    // the LEFT JOIN on patrolling_types is 1:1 (one type per patrol).
+    // NOTE: patrolling_types may have duplicate type_id rows, which would
+    // multiply patrol rows via a plain LEFT JOIN. We dedupe via a subquery
+    // so each patrol appears exactly once.
     const query = `
       SELECT
         p.*,
@@ -676,7 +676,8 @@ if (end_date) {
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
+        ON p.patrolling_type_id = pt.type_id
       ${whereClause}
       ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
@@ -689,7 +690,8 @@ if (end_date) {
     const countQuery = `
       SELECT COUNT(*) as total_count
       FROM patrols p
-      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
+        ON p.patrolling_type_id = pt.type_id
       ${whereClause};
     `;
 
@@ -889,7 +891,7 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt ON p.patrolling_type_id = pt.type_id
       ${whereClause}
       ORDER BY p.start_time DESC NULLS LAST
       LIMIT $${limitIndex} OFFSET $${offsetIndex};
@@ -902,7 +904,7 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
     const countQuery = `
       SELECT COUNT(DISTINCT p.patrol_id) AS total_count
       FROM patrols p
-      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt ON p.patrolling_type_id = pt.type_id
       ${whereClause};
     `;
 
@@ -971,10 +973,117 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
   }
 });
 
+// Updated /patrol-info-user/:user_id endpoint with pagination
 router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
   try {
     const { user_id } = req.params;
-    
+
+    // Pagination parameters from query string
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const offset = (page - 1) * limit;
+
+    // Optional filters (same set supported by /patrol-info-page)
+    const {
+      officer_name,
+      start_date,
+      end_date,
+      type_name,
+      division,
+      range,
+      round,
+      beat,
+      forest_id,
+      patrolling_location
+    } = req.query;
+
+    // Build WHERE clause dynamically: always filter by user_id, plus any optional filters
+    const conditions = [`p.user_id = $1`];
+    const values = [user_id];
+    let paramIndex = 2;
+
+    const addCondition = (field, operator, value) => {
+      if (value) {
+        conditions.push(`${field} ${operator} $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
+    };
+
+    // Validate officer_name
+    if (officer_name) {
+      const namePattern = /^[a-zA-Z\s.-]{1,100}$/;
+      if (!namePattern.test(officer_name)) {
+        return res.status(400).json({
+          error: "Invalid officer_name. Only letters, spaces, dot and hyphen allowed."
+        });
+      }
+    }
+
+    if (officer_name) {
+      conditions.push(`p.patrol_officer_name ILIKE $${paramIndex}`);
+      values.push(`%${officer_name}%`);
+      paramIndex++;
+    }
+
+    if (start_date) {
+      conditions.push(`p.start_time >= $${paramIndex}`);
+      values.push(start_date);
+      paramIndex++;
+    }
+
+    if (end_date) {
+      conditions.push(`p.end_time <= $${paramIndex}`);
+      values.push(end_date);
+      paramIndex++;
+    }
+
+    if (type_name) {
+      conditions.push(`pt.type_name = $${paramIndex}`);
+      values.push(type_name);
+      paramIndex++;
+    }
+
+    if (division) {
+      conditions.push(`p.division = $${paramIndex}`);
+      values.push(division);
+      paramIndex++;
+    }
+
+    if (range) {
+      conditions.push(`p.range = $${paramIndex}`);
+      values.push(range);
+      paramIndex++;
+    }
+
+    if (round) {
+      conditions.push(`p.round = $${paramIndex}`);
+      values.push(round);
+      paramIndex++;
+    }
+
+    if (beat) {
+      conditions.push(`p.beat = $${paramIndex}`);
+      values.push(beat);
+      paramIndex++;
+    }
+
+    if (forest_id) {
+      conditions.push(`p.forest_id = $${paramIndex}`);
+      values.push(forest_id);
+      paramIndex++;
+    }
+
+    if (patrolling_location) {
+      conditions.push(`p.patrolling_location ILIKE $${paramIndex}`);
+      values.push(patrolling_location);
+      paramIndex++;
+    }
+
+    const whereClause = 'WHERE ' + conditions.join(' AND ');
+
+    // Main query with pagination
+    // NOTE: dedupe patrolling_types via subquery to prevent row multiplication
     const query = `
       SELECT
         p.*,
@@ -982,13 +1091,34 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
-      WHERE p.user_id = $1
-      ORDER BY p.patrol_id DESC;
+      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
+        ON p.patrolling_type_id = pt.type_id
+      ${whereClause}
+      ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
     `;
 
-    const result = await client.query(query, [user_id]);
+    values.push(limit, offset);
 
+    // Count query for total records with same filters
+    const countQuery = `
+      SELECT COUNT(*) as total_count
+      FROM patrols p
+      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
+        ON p.patrolling_type_id = pt.type_id
+      ${whereClause};
+    `;
+
+    const queryTimeout = 30000;
+    const [result, countResult] = await Promise.all([
+      client.query({ text: query, values, timeout: queryTimeout }),
+      client.query({ text: countQuery, values: values.slice(0, -2), timeout: queryTimeout })
+    ]);
+
+    const totalCount = parseInt(countResult.rows[0].total_count);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // Fetch images from MongoDB for the patrols on this page
     const patrolIds = result.rows.map(p => p.patrol_id);
     let imagesMap = {};
     if (patrolIds.length > 0) {
@@ -1010,19 +1140,24 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
       ...patrol,
       start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
       end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
-      images: (imagesMap[patrol.patrol_id] || []).map(img => ({
-        ...img,
-        image_data: img.image_data || null
-      }))
+      images: imagesMap[patrol.patrol_id] || []
     }));
 
-    res.json({ 
-      message: 'Patrols fetched successfully for user', 
-      data: formattedData 
+    res.json({
+      message: 'Patrols fetched successfully',
+      data: formattedData,
+      pagination: {
+        currentPage: page,
+        pageSize: limit,
+        totalItems: totalCount,
+        totalPages: totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('Error fetching patrols:', err);
     res.status(500).json({ error: 'Failed to fetch patrols' });
   }
 });
@@ -1038,7 +1173,7 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN patrolling_types pt ON p.patrolling_type_id = pt.type_id
+      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt ON p.patrolling_type_id = pt.type_id
       WHERE p.patrol_id = $1;
     `;
 
