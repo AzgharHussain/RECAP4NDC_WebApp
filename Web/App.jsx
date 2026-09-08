@@ -100,7 +100,7 @@ const GlobalDataLoadingOverlay = () => {
   return (
     <div className="global-data-loader-overlay" role="status" aria-live="polite" aria-label="Loading data">
       <div className="global-data-loader-box">
-        <LoadingSpinner />
+        <div className="global-data-loader-spinner" />
         <div className="global-data-loader-text">{loadingMessage}</div>
       </div>
     </div>
