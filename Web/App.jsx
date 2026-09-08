@@ -29,6 +29,7 @@ const Homepage = lazy(() => import("./pages/Homepage"));
 const BeatPatrolCoverage = lazy(() => import("./pages/BeatPatrolCoverage"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const UploadPatrolBoundary = lazy(() => import("./pages/UploadPatrolBoundary"));
+const IncidentLogs = lazy(() => import("./pages/IncidentLogs"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 
@@ -141,6 +142,7 @@ export default function App() {
             <Route path="/ndvi-dashboard" element={<NDVIChangeDashboard />} />
             <Route path="/ndvi-notifications" element={<NDVINotifications />} />
            <Route path="/PatrolCoverageAnalysis" element={<BeatPatrolCoverage />} />
+          <Route path="/incident-logs" element={<IncidentLogs />} />
           </Route>
 
           <Route
@@ -153,6 +155,7 @@ export default function App() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/UploadPatrolBoundary" element={<UploadPatrolBoundary />} />
             <Route path="/changepassword" element={<ChangePassword />} />
+            <Route path="/incident-logs" element={<IncidentLogs />} />
           </Route>
 
           {/* Fallback */}

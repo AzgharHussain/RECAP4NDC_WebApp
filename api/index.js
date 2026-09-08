@@ -370,6 +370,7 @@ const gisupload1 = require('./routers/gis-upload1');
 const forestLoginRoutes = require('./routers/forestLogin');
 const supportRouter = require('./routers/support');
 const incidentLogsRouter = require('./routers/incidentLogs');
+const incidentCategoriesRouter = require('./routers/incidentCategories');
 
 const TEMP_SAVEUSER_TOKEN = process.env.TEMP_SAVEUSER_TOKEN || require('crypto').randomBytes(32).toString('hex');
 const verifyTempToken = (req, res, next) => {
@@ -1015,6 +1016,7 @@ app.use('/api', gisupload1);
 app.use('/api', forestLoginRoutes);
 app.use('/api', supportRouter);
 app.use('/api', incidentLogsRouter);
+app.use('/api', incidentCategoriesRouter);
 app.use("/api", forestRoutes);
 app.use('/api', auditLogsRouter);
 // Error handling middleware
@@ -1046,6 +1048,20 @@ const server = app.listen(PORT, "0.0.0.0" , async () => {
   console.log(`✅ Backend server listening on http://0.0.0.0:${PORT}`);
   try {
     await sequelize.authenticate();
+    // Seed incident categories lookup tables after DB is confirmed ready
+    try {
+      await incidentCategoriesRouter.ensureIncidentCategoryTables();
+      console.log('✅ Incident categories tables ensured & seeded');
+    } catch (e) {
+      console.error('❌ Incident categories seed failed:', e.message);
+    }
+    // Ensure incident_logs table exists after DB is confirmed ready
+    try {
+      await incidentLogsRouter.ensureIncidentLogsTable();
+      console.log('✅ Incident logs table ensured');
+    } catch (e) {
+      console.error('❌ Incident logs table ensure failed:', e.message);
+    }
   } catch (err) {
     console.error('❌ Database connection failed:', err.message);
   }

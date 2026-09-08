@@ -441,6 +441,16 @@ useEffect(() => {
           <FaMapMarkedAlt />
           {text[language].PatrolCoverageAnalysis} 
           </NavLink>
+          <NavLink
+            to="/incident-logs"
+            className={`menu-item ${
+              isActiveLink("/incident-logs") ? "active" : ""
+            }`}
+            onClick={handleLinkClick}
+          >
+          <FaClipboardList />
+          {text[language].incidentLogs}
+          </NavLink>
            </div>
          <div className="header-right">
   {/* Language selector beside profile icon */}

@@ -286,6 +286,14 @@ useEffect(() => {
           >
             {text[language].plantationBoundary}
           </NavLink>
+          <NavLink
+            to="/incident-logs"
+            className={`menu-item ${isActiveLink("/incident-logs") ? "active" : ""}`}
+            onClick={handleLinkClick}
+          >
+          <FaClipboardList />
+          {text[language].incidentLogs}
+          </NavLink>
            </div>
          <div className="header-right">
   <div className="user-dropdown">

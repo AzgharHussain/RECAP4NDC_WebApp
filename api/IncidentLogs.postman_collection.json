@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Incident Logs API",
-    "_postman_id": "b1c2d3e4-5f60-4a7b-8c9d-0e1f2a3b4c5d",
-    "description": "CRUD API for incident logs with image storage in MongoDB. All endpoints require JWT authentication via Authorization header (Bearer token) or authToken cookie.",
+    "name": "Incident Logs & Categories API",
+    "_postman_id": "c2d3e4f5-6a70-4b8c-9d0e-1f2a3b4c5d6e",
+    "description": "Complete CRUD API for incident logs and incident categories lookup. All endpoints require JWT authentication via Authorization header (Bearer token) or authToken cookie.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -48,237 +48,465 @@
       "key": "incident_id",
       "value": "1",
       "type": "string"
+    },
+    {
+      "key": "category_id",
+      "value": "1",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "Create Incident Log",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Accept",
-            "value": "application/json",
-            "type": "text"
-          }
-        ],
-        "body": {
-          "mode": "formdata",
-          "formdata": [
-            {
-              "key": "user_id",
-              "value": "{{user_id}}",
-              "type": "text"
+      "name": "Incident Logs",
+      "description": "CRUD operations for incident logs with MongoDB image storage.",
+      "item": [
+        {
+          "name": "Create Incident Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "incident_type",
+                  "value": "Wildlife poaching",
+                  "type": "text"
+                },
+                {
+                  "key": "incident_category_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "Optional: links to incident_categories table"
+                },
+                {
+                  "key": "incident_subcategory",
+                  "value": "Suspected poaching",
+                  "type": "text",
+                  "description": "Optional: subcategory text"
+                },
+                {
+                  "key": "incident_date",
+                  "value": "2026-09-08",
+                  "type": "text"
+                },
+                {
+                  "key": "incident_time",
+                  "value": "14:30",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Forest fire detected near beat 3",
+                  "type": "text"
+                },
+                {
+                  "key": "incident_image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Optional image file (JPG, PNG, GIF, HEIC)"
+                }
+              ]
             },
-            {
-              "key": "incident_type",
-              "value": "Fire",
-              "type": "text"
+            "url": {
+              "raw": "{{base_url}}/api/incident-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-logs"
+              ]
             },
+            "description": "Create a new incident log. Accepts multipart/form-data. Image is stored in MongoDB with sourceType='incident'."
+          },
+          "event": [
             {
-              "key": "incident_date",
-              "value": "2026-09-08",
-              "type": "text"
-            },
-            {
-              "key": "incident_time",
-              "value": "14:30",
-              "type": "text"
-            },
-            {
-              "key": "description",
-              "value": "Forest fire detected near beat 3",
-              "type": "text"
-            },
-            {
-              "key": "incident_image",
-              "type": "file",
-              "src": ""
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.incident_id) {",
+                  "  pm.environment.set('incident_id', res.data.incident_id);",
+                  "  console.log('Saved incident_id: ' + res.data.incident_id);",
+                  "}"
+                ]
+              }
             }
           ]
         },
-        "url": {
-          "raw": "{{base_url}}/api/incident-logs",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "api",
-            "incident-logs"
-          ]
-        },
-        "description": "Create a new incident log. Accepts multipart/form-data with text fields and an optional image file (incident_image). Image is stored in MongoDB."
-      },
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "var res = pm.response.json();",
-              "if (res.data && res.data.incident_id) {",
-              "  pm.environment.set('incident_id', res.data.incident_id);",
-              "  console.log('Saved incident_id: ' + res.data.incident_id);",
-              "}"
-            ]
+          "name": "Get All Incident Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-logs"
+              ]
+            },
+            "description": "Fetch all incident logs with images from MongoDB and category name from lookup table. Ordered by created_at DESC."
+          }
+        },
+        {
+          "name": "Get Incident Logs by User ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-logs/user/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-logs",
+                "user",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Fetch all incident logs for a specific user_id. Includes images and category name."
+          }
+        },
+        {
+          "name": "Get Single Incident Log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-logs/{{incident_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-logs",
+                "{{incident_id}}"
+              ]
+            },
+            "description": "Fetch a single incident log by incident_id. Includes image and category name."
+          }
+        },
+        {
+          "name": "Update Incident Log",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "incident_type",
+                  "value": "Fire",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_category_id",
+                  "value": "2",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_subcategory",
+                  "value": "Active forest fire",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_date",
+                  "value": "2026-09-09",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_time",
+                  "value": "15:45",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated description",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Optional new image (replaces old)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/incident-logs/{{incident_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-logs",
+                "{{incident_id}}"
+              ]
+            },
+            "description": "Update an incident log. All fields are optional — only sent fields are updated. New image replaces old one in MongoDB."
+          }
+        },
+        {
+          "name": "Delete Incident Log",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-logs/{{incident_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-logs",
+                "{{incident_id}}"
+              ]
+            },
+            "description": "Delete an incident log by incident_id. Also deletes its image from MongoDB."
           }
         }
       ]
     },
     {
-      "name": "Get All Incident Logs",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Accept",
-            "value": "application/json",
-            "type": "text"
+      "name": "Incident Categories",
+      "description": "Lookup table for incident categories and subcategories. Seeded automatically on server start with 13 categories from the Incident Categories document.",
+      "item": [
+        {
+          "name": "Get All Categories (Nested)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-categories"
+              ]
+            },
+            "description": "Fetch all categories with their subcategories nested. Used for dropdowns and frontend display."
           }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/incident-logs",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "api",
-            "incident-logs"
-          ]
         },
-        "description": "Fetch all incident logs with their associated images from MongoDB. Ordered by created_at DESC."
-      }
-    },
-    {
-      "name": "Get Incident Logs by User ID",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Accept",
-            "value": "application/json",
-            "type": "text"
+        {
+          "name": "Get All Categories (Flat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-categories/flat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-categories",
+                "flat"
+              ]
+            },
+            "description": "Fetch a flat list of categories only (no subcategories). For simple dropdowns."
           }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/incident-logs/user/{{user_id}}",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "api",
-            "incident-logs",
-            "user",
-            "{{user_id}}"
-          ]
         },
-        "description": "Fetch all incident logs for a specific user_id. Includes images from MongoDB."
-      }
-    },
-    {
-      "name": "Get Single Incident Log",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Accept",
-            "value": "application/json",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/incident-logs/{{incident_id}}",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "api",
-            "incident-logs",
-            "{{incident_id}}"
-          ]
-        },
-        "description": "Fetch a single incident log by incident_id. Includes its image from MongoDB."
-      }
-    },
-    {
-      "name": "Update Incident Log",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Accept",
-            "value": "application/json",
-            "type": "text"
-          }
-        ],
-        "body": {
-          "mode": "formdata",
-          "formdata": [
-            {
-              "key": "incident_type",
-              "value": "Poaching",
-              "type": "text"
+        {
+          "name": "Get Subcategories by Category ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-categories/{{category_id}}/subcategories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-categories",
+                "{{category_id}}",
+                "subcategories"
+              ]
             },
+            "description": "Fetch subcategories for a specific category. Used for dependent/cascading dropdowns."
+          },
+          "event": [
             {
-              "key": "incident_date",
-              "value": "2026-09-08",
-              "type": "text"
-            },
-            {
-              "key": "incident_time",
-              "value": "15:45",
-              "type": "text"
-            },
-            {
-              "key": "description",
-              "value": "Updated description: poaching incident reported",
-              "type": "text"
-            },
-            {
-              "key": "incident_image",
-              "type": "file",
-              "src": ""
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.category && res.category.category_id) {",
+                  "  pm.environment.set('category_id', res.category.category_id);",
+                  "}"
+                ]
+              }
             }
           ]
         },
-        "url": {
-          "raw": "{{base_url}}/api/incident-logs/{{incident_id}}",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "api",
-            "incident-logs",
-            "{{incident_id}}"
-          ]
-        },
-        "description": "Update an existing incident log. All fields are optional. If a new incident_image file is uploaded, the old image in MongoDB is replaced."
-      }
-    },
-    {
-      "name": "Delete Incident Log",
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Accept",
-            "value": "application/json",
-            "type": "text"
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"New Category\",\n  \"subcategories\": [\n    \"Subcategory 1\",\n    \"Subcategory 2\",\n    \"Subcategory 3\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/incident-categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-categories"
+              ]
+            },
+            "description": "Create a new category. Optionally include a subcategories array of strings."
           }
-        ],
-        "url": {
-          "raw": "{{base_url}}/api/incident-logs/{{incident_id}}",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "api",
-            "incident-logs",
-            "{{incident_id}}"
-          ]
         },
-        "description": "Delete an incident log by incident_id. Also deletes its associated image from MongoDB."
-      }
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"Updated Category Name\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/incident-categories/{{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-categories",
+                "{{category_id}}"
+              ]
+            },
+            "description": "Update a category name."
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-categories/{{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-categories",
+                "{{category_id}}"
+              ]
+            },
+            "description": "Delete a category and all its subcategories (cascade delete)."
+          }
+        }
+      ]
     }
   ]
 }

@@ -241,13 +241,45 @@ async function ensurePatrolLocationColumns(dbClient = client) {
     ALTER TABLE public.patrols
       ADD COLUMN IF NOT EXISTS patrolling_location TEXT,
       ADD COLUMN IF NOT EXISTS current_location_distict TEXT,
-      ADD COLUMN IF NOT EXISTS current_location_village TEXT;
+      ADD COLUMN IF NOT EXISTS current_location_village TEXT,
+      ADD COLUMN IF NOT EXISTS patrol_code VARCHAR(100) UNIQUE;
+  `);
+  // Index for fast lookup by patrol_code
+  await dbClient.query(`
+    CREATE INDEX IF NOT EXISTS idx_patrols_patrol_code
+    ON public.patrols (patrol_code);
   `);
 }
 
 ensurePatrolLocationColumns().catch((err) => {
   console.error('Failed to ensure patrol location columns:', err.message);
 });
+
+// ─────────────────────────────────────────────────────────
+// Generate a human-readable patrol_code:
+//   PAT-<DIVISION>-<USERNAME>-<YYYYMMDD>-<HHMM>-<PATROL_ID>
+// Division and username are sanitized to keep the code URL-safe.
+// patrol_id is appended to guarantee uniqueness when the same user
+// starts two patrols in the same division within the same minute.
+// ─────────────────────────────────────────────────────────
+function sanitizeCodePart(value, maxLen = 15) {
+  if (!value) return 'unknown';
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, maxLen) || 'unknown';
+}
+
+function generatePatrolCode(division, username, startISO, patrolId) {
+  const d = new Date(startISO);
+  if (Number.isNaN(d.getTime())) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  const date = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+  const time = `${pad(d.getHours())}${pad(d.getMinutes())}`;
+  const div = sanitizeCodePart(division, 5).toUpperCase();
+  const usr = sanitizeCodePart(username, 15);
+  return `PAT-${div}-${usr}-${date}-${time}-${patrolId}`;
+}
 
 // POST route for patrol with multiple images and optional notes
 router.post('/patrol-post', verifyJwt, upload.any(), async (req, res) => {
@@ -323,9 +355,9 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
   }
 
   try {
-    // First check if user exists in government_department_users
+    // First check if user exists in government_department_users and fetch username
     const userCheckQuery = `
-      SELECT user_id FROM government_department_users 
+      SELECT user_id, username FROM government_department_users 
       WHERE user_id = $1
     `;
     
@@ -334,6 +366,8 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
     if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: 'User not found in government department users' });
     }
+
+    const username = userCheck.rows[0].username;
 
     const startUTC = parseToUTC(pat_data.start_time);
     const endUTC = parseToUTC(pat_data.end_time);
@@ -391,6 +425,21 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
 
       const patrol_id = result.rows[0].patrol_id;
 
+      // Generate and persist a human-readable patrol_code
+      // Format: PAT-<DIVISION>-<USERNAME>-<YYYYMMDD>-<HHMM>-<PATROL_ID>
+      const patrol_code = generatePatrolCode(
+        pat_data.division,
+        username,
+        startUTC,
+        patrol_id
+      );
+      if (patrol_code) {
+        await txClient.query(
+          'UPDATE patrols SET patrol_code = $1 WHERE patrol_id = $2',
+          [patrol_code, patrol_id]
+        );
+      }
+
       // Insert images into MongoDB if files are uploaded
       if (req.files && req.files.length > 0) {
         const lastImg = await MongoImage.findOne({}, {}, { sort: { imageId: -1 } });
@@ -431,7 +480,7 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
         details: { officer: pat_data.patrol_officer_name, beat: pat_data.beat, distance: pat_data.distance_kms },
       });
 
-      res.json({ message: 'Data created successfully', patrol_id });
+      res.json({ message: 'Data created successfully', patrol_id, patrol_code });
 
     } catch (err) {
       // Rollback transaction on error

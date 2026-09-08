@@ -781,7 +781,8 @@ const applyPatrolFilters = useCallback((records) => {
 
     if (search) {
       const officer = (item.patrol_officer_name || '').toLowerCase();
-      if (!officer.includes(search)) return false;
+      const code = (item.patrol_code || '').toLowerCase();
+      if (!officer.includes(search) && !code.includes(search)) return false;
     }
 
     if (typeFilter && item.type_name !== typeFilter) return false;
@@ -1333,7 +1334,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     }];
 
     const patrolsData = coveragePatrols.map((patrol) => ({
-      "Patrol ID": patrol.patrol_id,
+      "Patrol ID": patrol.patrol_code || (patrol.patrol_id ? `PAT-${patrol.patrol_id}` : "-"),
       "Start Time": formatDateTime(patrol.start_time),
       "End Time": formatDateTime(patrol.end_time),
       "Duration": formatDuration(patrol.start_time, patrol.end_time),
@@ -1406,6 +1407,14 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       align: "center",
       width: 80,
       render: (text, record, index) => (currentPage - 1) * pageSize + index + 1,
+    },
+    {
+      title: language === "gu" ? "પેટ્રોલ ID" : "Patrol ID",
+      dataIndex: "patrol_code",
+      key: "patrol_code",
+      align: "center",
+      width: 180,
+      render: (value, record) => value || (record.patrol_id ? `PAT-${record.patrol_id}` : "-"),
     },
     {
       title: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type",
@@ -2044,7 +2053,7 @@ const exportTableToExcel = async () => {
       (item.images || []).forEach((img, imgIndex) => {
         imageSheet.addRow([
           `${itemIndex + 1}.${imgIndex + 1}`,
-          item.patrol_id || "-",
+          item.patrol_code || (item.patrol_id ? `PAT-${item.patrol_id}` : "-"),
           item.patrol_officer_name || "-",
           img.image_category || `Image ${imgIndex + 1}`,
           img.note || "-",
@@ -2076,7 +2085,7 @@ const exportTableToExcel = async () => {
 
     appendObjectSheet('Covering Patrols', coveragePatrols.map((patrol, idx) => ({
       [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
-      [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_id || "-",
+      [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_code || (patrol.patrol_id ? `PAT-${patrol.patrol_id}` : "-"),
       [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "-",
       [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExportCoverage(patrol.start_time),
       [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExportCoverage(patrol.start_time),
