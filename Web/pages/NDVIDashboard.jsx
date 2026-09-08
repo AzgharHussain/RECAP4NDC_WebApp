@@ -94,7 +94,7 @@ import {
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { useLanguage } from "../context/LanguageContext"; // Add this import
-import { getUserDivision, matchesDivision } from '../utils/authUtils';
+import { getUserDivision, matchesDivision, getMostSpecificLevel } from '../utils/authUtils';
 import "./NDVIDashboard.css";
 
 // Register ChartJS components
@@ -402,14 +402,15 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
   const [beat, setBeat] = useState("");
   const { language } = useLanguage(); // Add this
 
-  // Check if the logged-in user has a division to lock
+  // Check if the logged-in user has a hierarchy level to lock
   // Use state + useEffect to avoid stale reads when component mounts before
   // userData is set in localStorage (right after login).
-  // undefined = not yet resolved, null = no division (PCCF), string = locked division
+  // undefined = not yet resolved, null = no lock (PCCF), string = locked level (most specific)
   const [lockedDivision, setLockedDivision] = useState(undefined);
 
   useEffect(() => {
-    setLockedDivision(getUserDivision());
+    // Use the most specific level the user has (beat → round → range → division → circle)
+    setLockedDivision(getMostSpecificLevel());
   }, []);
 
   /* ------------------ Load Divisions from coupe_dropdown_master ------------------ */

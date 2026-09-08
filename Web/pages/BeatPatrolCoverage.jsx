@@ -19,7 +19,7 @@ import axios from "axios";
 import "./RouterMap.css";
 import "./BeatPatrolCoverage.css";
 import { API_BASE_URL } from "../config";
-import { getUserDivision, matchesDivision } from "../utils/authUtils";
+import { getUserDivision, matchesDivision, getMostSpecificLevel } from "../utils/authUtils";
 import Select from 'react-select';
 import vector from '../assets/Vector.png';
 import gisfylogo from "../assets/Gisfylogo.png";
@@ -791,7 +791,8 @@ const BeatPatrolCoverage = () => {
   };
 
   useEffect(() => {
-    setLockedDivision(getUserDivision());
+    // Use the most specific hierarchy level (beat → round → range → division → circle)
+    setLockedDivision(getMostSpecificLevel());
   }, []);
 
   useEffect(() => {

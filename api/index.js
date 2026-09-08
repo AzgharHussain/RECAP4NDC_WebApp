@@ -371,6 +371,7 @@ const forestLoginRoutes = require('./routers/forestLogin');
 const supportRouter = require('./routers/support');
 const incidentLogsRouter = require('./routers/incidentLogs');
 const incidentCategoriesRouter = require('./routers/incidentCategories');
+const incidentSeverityRouter = require('./routers/incidentSeverity');
 
 const TEMP_SAVEUSER_TOKEN = process.env.TEMP_SAVEUSER_TOKEN || require('crypto').randomBytes(32).toString('hex');
 const verifyTempToken = (req, res, next) => {
@@ -1017,6 +1018,7 @@ app.use('/api', forestLoginRoutes);
 app.use('/api', supportRouter);
 app.use('/api', incidentLogsRouter);
 app.use('/api', incidentCategoriesRouter);
+app.use('/api', incidentSeverityRouter);
 app.use("/api", forestRoutes);
 app.use('/api', auditLogsRouter);
 // Error handling middleware
@@ -1055,12 +1057,26 @@ const server = app.listen(PORT, "0.0.0.0" , async () => {
     } catch (e) {
       console.error('❌ Incident categories seed failed:', e.message);
     }
+    // Seed incident severity levels lookup table
+    try {
+      await incidentSeverityRouter.ensureIncidentSeverityTables();
+      console.log('✅ Incident severity levels ensured & seeded');
+    } catch (e) {
+      console.error('❌ Incident severity levels seed failed:', e.message);
+    }
     // Ensure incident_logs table exists after DB is confirmed ready
     try {
       await incidentLogsRouter.ensureIncidentLogsTable();
       console.log('✅ Incident logs table ensured');
     } catch (e) {
       console.error('❌ Incident logs table ensure failed:', e.message);
+    }
+    // Backfill patrol_code for existing patrols with NULL codes
+    try {
+      await patrolRoutes.backfillPatrolCodes();
+      console.log('✅ Patrol codes backfilled');
+    } catch (e) {
+      console.error('❌ Patrol code backfill failed:', e.message);
     }
   } catch (err) {
     console.error('❌ Database connection failed:', err.message);

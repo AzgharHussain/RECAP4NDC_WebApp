@@ -5,7 +5,7 @@ import "./PatrolIncidentLogs.css"; // Import the CSS for styling
 import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
-import { getUserDivision, matchesDivision } from "../utils/authUtils";
+import { matchesUserHierarchy } from "../utils/authUtils";
 
 const { Option } = Select;
 
@@ -77,13 +77,8 @@ const PatrolIncidentLogs = () => {
         ...item,
       }));
 
-      // Filter by the logged-in user's division if they have one
-      const userDivision = getUserDivision();
-      if (userDivision) {
-        formatted = formatted.filter(item =>
-          matchesDivision(item.division || item.Division || '', userDivision)
-        );
-      }
+      // Filter by the logged-in user's hierarchy (beat → round → range → division → circle)
+      formatted = formatted.filter(item => matchesUserHierarchy(item));
 
       setIncidentData(formatted);
     } catch (error) {

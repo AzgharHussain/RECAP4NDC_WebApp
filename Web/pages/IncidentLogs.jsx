@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Table, Button, Input, Select, DatePicker, Modal, Tag, Space, Card, Row, Col, Statistic } from "antd";
 import { SearchOutlined, EyeOutlined, ExclamationCircleOutlined, FireOutlined, EnvironmentOutlined, UserOutlined } from "@ant-design/icons";
+import { Descriptions } from "antd";
 import "./PatrolIncidentLogs.css";
 import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
@@ -15,9 +16,13 @@ const IncidentLogs = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [severityFilter, setSeverityFilter] = useState("All");
+  const [severityLevels, setSeverityLevels] = useState([]);
   const [dateFilter, setDateFilter] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
+  const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
+  const [selectedIncident, setSelectedIncident] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const { language } = useLanguage();
@@ -35,6 +40,13 @@ const IncidentLogs = () => {
       incidentType: "Incident Type",
       category: "Category",
       subcategory: "Subcategory",
+      division: "Division",
+      range: "Range",
+      round: "Round",
+      beat: "Beat",
+      village: "Village",
+      severity: "Severity",
+      severityFilterPlaceholder: "All Severities",
       incidentDate: "Date",
       incidentTime: "Time",
       description: "Description",
@@ -45,6 +57,12 @@ const IncidentLogs = () => {
       categories: "Categories",
       withImages: "With Images",
       clearFilters: "Clear Filters",
+      actions: "Actions",
+      viewDetails: "View Details",
+      incidentDetails: "Incident Details",
+      createdAt: "Created At",
+      updatedAt: "Updated At",
+      noImages: "No images attached",
     },
     gu: {
       title: "ઘટના લોગ્સ",
@@ -58,6 +76,13 @@ const IncidentLogs = () => {
       incidentType: "ઘટના પ્રકાર",
       category: "શ્રેણી",
       subcategory: "ઉપશ્રેણી",
+      division: "વિભાગ",
+      range: "રેન્જ",
+      round: "રાઉન્ડ",
+      beat: "બીટ",
+      village: "ગામ",
+      severity: "ગંભીરતા",
+      severityFilterPlaceholder: "બધી ગંભીરતા",
       incidentDate: "તારીખ",
       incidentTime: "સમય",
       description: "વર્ણન",
@@ -68,6 +93,12 @@ const IncidentLogs = () => {
       categories: "શ્રેણીઓ",
       withImages: "છબીઓ સાથે",
       clearFilters: "ફિલ્ટર સાફ કરો",
+      actions: "ક્રિયાઓ",
+      viewDetails: "વિગતો જુઓ",
+      incidentDetails: "ઘટના વિગતો",
+      createdAt: "બનાવ્યું",
+      updatedAt: "સુધારેલું",
+      noImages: "કોઈ છબીઓ જોડાયેલ નથી",
     },
   };
 
@@ -85,6 +116,23 @@ const IncidentLogs = () => {
       }
     } catch (err) {
       console.error("Error fetching categories:", err);
+    }
+  };
+
+  // Fetch severity levels for dropdown
+  const fetchSeverityLevels = async () => {
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      const response = await fetch(`${API_BASE_URL}/api/incident-severity`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.success && Array.isArray(data.data)) {
+        setSeverityLevels(data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching severity levels:", err);
     }
   };
 
@@ -116,6 +164,7 @@ const IncidentLogs = () => {
 
   useEffect(() => {
     fetchCategories();
+    fetchSeverityLevels();
     const timer = setTimeout(() => fetchIncidentLogs(), 100);
     return () => clearTimeout(timer);
   }, []);
@@ -139,17 +188,22 @@ const IncidentLogs = () => {
       data = data.filter((item) => String(item.incident_category_id) === String(categoryFilter));
     }
 
+    if (severityFilter !== "All") {
+      data = data.filter((item) => String(item.severity_id) === String(severityFilter));
+    }
+
     if (dateFilter) {
       const selected = dateFilter.format("YYYY-MM-DD");
       data = data.filter((item) => item.incident_date === selected);
     }
 
     setFilteredData(data);
-  }, [searchText, categoryFilter, dateFilter, incidentData]);
+  }, [searchText, categoryFilter, severityFilter, dateFilter, incidentData]);
 
   const handleClearFilters = () => {
     setSearchText("");
     setCategoryFilter("All");
+    setSeverityFilter("All");
     setDateFilter(null);
   };
 
@@ -182,6 +236,12 @@ const IncidentLogs = () => {
         [text[language].incidentType]: item.incident_type || "-",
         [text[language].category]: item.category_name || "-",
         [text[language].subcategory]: item.incident_subcategory || "-",
+        [text[language].division]: item.division || "-",
+        [text[language].range]: item.range_name || "-",
+        [text[language].round]: item.round || "-",
+        [text[language].beat]: item.beat || "-",
+        [text[language].village]: item.village || "-",
+        [text[language].severity]: item.severity_name || "-",
         [text[language].incidentDate]: formatDisplayDate(item.incident_date),
         [text[language].incidentTime]: item.incident_time || "-",
         [text[language].description]: item.description || "-",
@@ -209,6 +269,16 @@ const IncidentLogs = () => {
 
   const handleCancel = () => {
     setIsModalVisible(false);
+  };
+
+  const showDetails = (record) => {
+    setSelectedIncident(record);
+    setIsDetailsModalVisible(true);
+  };
+
+  const handleDetailsCancel = () => {
+    setIsDetailsModalVisible(false);
+    setSelectedIncident(null);
   };
 
   const columns = [
@@ -251,6 +321,58 @@ const IncidentLogs = () => {
       sorter: (a, b) => (a.incident_subcategory || "").localeCompare(b.incident_subcategory || ""),
       align: "center",
       render: (val) => val || "-",
+    },
+    {
+      title: text[language].division,
+      dataIndex: "division",
+      key: "division",
+      sorter: (a, b) => (a.division || "").localeCompare(b.division || ""),
+      align: "center",
+      render: (val) => val || "-",
+    },
+    {
+      title: text[language].range,
+      dataIndex: "range_name",
+      key: "range_name",
+      sorter: (a, b) => (a.range_name || "").localeCompare(b.range_name || ""),
+      align: "center",
+      render: (val) => val || "-",
+    },
+    {
+      title: text[language].round,
+      dataIndex: "round",
+      key: "round",
+      sorter: (a, b) => (a.round || "").localeCompare(b.round || ""),
+      align: "center",
+      render: (val) => val || "-",
+    },
+    {
+      title: text[language].beat,
+      dataIndex: "beat",
+      key: "beat",
+      sorter: (a, b) => (a.beat || "").localeCompare(b.beat || ""),
+      align: "center",
+      render: (val) => val || "-",
+    },
+    {
+      title: text[language].village,
+      dataIndex: "village",
+      key: "village",
+      sorter: (a, b) => (a.village || "").localeCompare(b.village || ""),
+      align: "center",
+      render: (val) => val || "-",
+    },
+    {
+      title: text[language].severity,
+      dataIndex: "severity_name",
+      key: "severity_name",
+      sorter: (a, b) => (a.severity_name || "").localeCompare(b.severity_name || ""),
+      align: "center",
+      render: (val, record) => {
+        if (!val) return "-";
+        const color = record.severity_color || "#999";
+        return <Tag color={color} style={{ color: "#fff", fontWeight: 700 }}>{val}</Tag>;
+      },
     },
     {
       title: text[language].incidentDate,
@@ -302,6 +424,24 @@ const IncidentLogs = () => {
           </Button>
         );
       },
+    },
+    {
+      title: text[language].actions,
+      key: "actions",
+      align: "center",
+      width: 100,
+      fixed: "right",
+      render: (_, record) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => showDetails(record)}
+          style={{ borderRadius: 6 }}
+        >
+          {text[language].viewDetails}
+        </Button>
+      ),
     },
   ];
 
@@ -376,6 +516,18 @@ const IncidentLogs = () => {
               </Option>
             ))}
           </Select>
+          <Select
+            value={severityFilter}
+            onChange={(val) => setSeverityFilter(val)}
+            style={{ width: "100%" }}
+          >
+            <Option value="All">{text[language].severityFilterPlaceholder}</Option>
+            {severityLevels.map((sev) => (
+              <Option key={sev.severity_id} value={String(sev.severity_id)}>
+                {sev.level_name}
+              </Option>
+            ))}
+          </Select>
           <DatePicker
             placeholder={text[language].dateFilterPlaceholder}
             value={dateFilter}
@@ -446,6 +598,101 @@ const IncidentLogs = () => {
             />
           ))}
         </div>
+      </Modal>
+
+      {/* Details modal */}
+      <Modal
+        open={isDetailsModalVisible}
+        onCancel={handleDetailsCancel}
+        footer={null}
+        width={700}
+        title={text[language].incidentDetails}
+      >
+        {selectedIncident && (
+          <div>
+            <Descriptions bordered column={1} size="small">
+              <Descriptions.Item label={text[language].incidentId}>
+                {selectedIncident.incident_id || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].username}>
+                {selectedIncident.username || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].incidentType}>
+                <Tag color="orange">{selectedIncident.incident_type || "-"}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].category}>
+                {selectedIncident.category_name ? <Tag color="green">{selectedIncident.category_name}</Tag> : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].subcategory}>
+                {selectedIncident.incident_subcategory || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].division}>
+                {selectedIncident.division || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].range}>
+                {selectedIncident.range_name || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].round}>
+                {selectedIncident.round || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].beat}>
+                {selectedIncident.beat || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].village}>
+                {selectedIncident.village || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].severity}>
+                {selectedIncident.severity_name ? (
+                  <Tag color={selectedIncident.severity_color || "#999"} style={{ color: "#fff", fontWeight: 700 }}>
+                    {selectedIncident.severity_name}
+                  </Tag>
+                ) : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].incidentDate}>
+                {formatDisplayDate(selectedIncident.incident_date)}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].incidentTime}>
+                {selectedIncident.incident_time ? selectedIncident.incident_time.substring(0, 5) : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].description}>
+                {selectedIncident.description || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].createdAt}>
+                {selectedIncident.created_at ? new Date(selectedIncident.created_at).toLocaleString() : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label={text[language].updatedAt}>
+                {selectedIncident.updated_at ? new Date(selectedIncident.updated_at).toLocaleString() : "-"}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* Images section */}
+            <div style={{ marginTop: 20 }}>
+              <h4>{text[language].images}</h4>
+              {(selectedIncident.incident_image || []).length > 0 ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                  {selectedIncident.incident_image.map((img, idx) => (
+                    <img
+                      key={idx}
+                      src={`data:${img.image_type};base64,${img.image_data}`}
+                      alt={`Incident ${idx}`}
+                      style={{
+                        width: 150,
+                        height: 150,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                        border: "1px solid #e0e0e0",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => showModal(selectedIncident.incident_image.map((i) => `data:${i.image_type};base64,${i.image_data}`))}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: "#999", fontStyle: "italic" }}>{text[language].noImages}</div>
+              )}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Incident Logs & Categories API",
-    "_postman_id": "c2d3e4f5-6a70-4b8c-9d0e-1f2a3b4c5d6e",
-    "description": "Complete CRUD API for incident logs and incident categories lookup. All endpoints require JWT authentication via Authorization header (Bearer token) or authToken cookie.",
+    "name": "RECAP4NDC Incident APIs",
+    "_postman_id": "d3f4e5a6-7b8c-4d9e-0f1a-2b3c4d5e6f7a",
+    "description": "Complete API collection for Incident Logs, Incident Categories, and Incident Severity Levels. All endpoints require JWT authentication via Authorization header (Bearer token) or authToken cookie.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -53,12 +53,17 @@
       "key": "category_id",
       "value": "1",
       "type": "string"
+    },
+    {
+      "key": "severity_id",
+      "value": "1",
+      "type": "string"
     }
   ],
   "item": [
     {
       "name": "Incident Logs",
-      "description": "CRUD operations for incident logs with MongoDB image storage.",
+      "description": "CRUD operations for incident logs with MongoDB image storage. Supports division, range, round, beat, village, and severity level.",
       "item": [
         {
           "name": "Create Incident Log",
@@ -95,6 +100,42 @@
                   "value": "Suspected poaching",
                   "type": "text",
                   "description": "Optional: subcategory text"
+                },
+                {
+                  "key": "division",
+                  "value": "AHM",
+                  "type": "text",
+                  "description": "Optional: Division name"
+                },
+                {
+                  "key": "range_name",
+                  "value": "North Range",
+                  "type": "text",
+                  "description": "Optional: Range name"
+                },
+                {
+                  "key": "round",
+                  "value": "Round 1",
+                  "type": "text",
+                  "description": "Optional: Round name"
+                },
+                {
+                  "key": "beat",
+                  "value": "Beat 5",
+                  "type": "text",
+                  "description": "Optional: Beat name"
+                },
+                {
+                  "key": "village",
+                  "value": "Sample Village",
+                  "type": "text",
+                  "description": "Optional: Village name"
+                },
+                {
+                  "key": "severity_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "Optional: links to incident_severity_levels table (1=Critical, 2=High, 3=Medium, 4=Low)"
                 },
                 {
                   "key": "incident_date",
@@ -168,7 +209,7 @@
                 "incident-logs"
               ]
             },
-            "description": "Fetch all incident logs with images from MongoDB and category name from lookup table. Ordered by created_at DESC."
+            "description": "Fetch all incident logs with images from MongoDB, category name, and severity level. Ordered by created_at DESC."
           }
         },
         {
@@ -194,7 +235,7 @@
                 "{{user_id}}"
               ]
             },
-            "description": "Fetch all incident logs for a specific user_id. Includes images and category name."
+            "description": "Fetch all incident logs for a specific user_id. Includes images, category name, and severity level."
           }
         },
         {
@@ -219,7 +260,7 @@
                 "{{incident_id}}"
               ]
             },
-            "description": "Fetch a single incident log by incident_id. Includes image and category name."
+            "description": "Fetch a single incident log by incident_id. Includes image, category name, and severity level."
           }
         },
         {
@@ -253,6 +294,42 @@
                   "value": "Active forest fire",
                   "type": "text",
                   "description": "Optional"
+                },
+                {
+                  "key": "division",
+                  "value": "AHM",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "range_name",
+                  "value": "South Range",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "round",
+                  "value": "Round 2",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "beat",
+                  "value": "Beat 3",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "village",
+                  "value": "Updated Village",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "severity_id",
+                  "value": "2",
+                  "type": "text",
+                  "description": "Optional: 1=Critical, 2=High, 3=Medium, 4=Low"
                 },
                 {
                   "key": "incident_date",
@@ -504,6 +581,142 @@
               ]
             },
             "description": "Delete a category and all its subcategories (cascade delete)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Incident Severity Levels",
+      "description": "Lookup table for incident severity levels. Seeded automatically on server start with 4 levels: Critical, High, Medium, Low.",
+      "item": [
+        {
+          "name": "Get All Severity Levels",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-severity",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-severity"
+              ]
+            },
+            "description": "Fetch all severity levels ordered by display_order. Returns severity_id, level_name, display_order, and color_code."
+          }
+        },
+        {
+          "name": "Create Severity Level",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"level_name\": \"Very Low\",\n  \"display_order\": 5,\n  \"color_code\": \"#22c55e\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/incident-severity",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-severity"
+              ]
+            },
+            "description": "Create a new severity level. level_name is required; display_order and color_code are optional."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.severity_id) {",
+                  "  pm.environment.set('severity_id', res.data.severity_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Severity Level",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"level_name\": \"Critical\",\n  \"display_order\": 1,\n  \"color_code\": \"#dc2626\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/incident-severity/{{severity_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-severity",
+                "{{severity_id}}"
+              ]
+            },
+            "description": "Update a severity level. All fields are optional — only sent fields are updated."
+          }
+        },
+        {
+          "name": "Delete Severity Level",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/incident-severity/{{severity_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "incident-severity",
+                "{{severity_id}}"
+              ]
+            },
+            "description": "Delete a severity level by severity_id."
           }
         }
       ]

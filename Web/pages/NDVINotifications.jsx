@@ -3,7 +3,7 @@ import { Button, Card, Col, DatePicker, Descriptions, Image, Modal, Row, Select,
 import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { API_BASE_URL } from "../config";
-import { getAuthHeaders, getUserDivision, matchesDivision } from "../utils/authUtils";
+import { getAuthHeaders, getUserDivision, matchesDivision, matchesUserHierarchy, matchesUserHierarchyString, getMostSpecificLevel } from "../utils/authUtils";
 import { capitalizeFirst } from "../utils/textFormat";
 import { useLanguage } from "../context/LanguageContext";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
@@ -183,20 +183,19 @@ const NDVINotifications = () => {
       const res = await fetch(`${API_BASE_URL}/api/ndvi-notification-report?${params.toString()}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to fetch notification report");
-      // Apply client-side fuzzy division filter as a backup to the backend ILIKE filter
+      // Apply client-side hierarchy filter (beat → round → range → division → circle)
+      // as a backup to the backend ILIKE filter
       let rows = (json.data || []).map((item) => ({ ...item, key: item.id }));
       if (lockedDivision) {
         rows = rows.filter(item =>
-          matchesDivision(item.division || '', lockedDivision) ||
-          matchesDivision(item.table_name || '', lockedDivision)
+          matchesUserHierarchy(item) ||
+          matchesUserHierarchyString(item.table_name || '')
         );
       }
       setData(rows);
       let monthlyRows = (json.monthlyDivisionSummary || []).map((item, index) => ({ ...item, key: `${item.month}-${item.division}-${index}` }));
       if (lockedDivision) {
-        monthlyRows = monthlyRows.filter(item =>
-          matchesDivision(item.division || '', lockedDivision)
-        );
+        monthlyRows = monthlyRows.filter(item => matchesUserHierarchy(item));
       }
       setMonthlySummary(monthlyRows);
       setSummary(json.summary || { total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
@@ -223,7 +222,8 @@ const NDVINotifications = () => {
   // Read the user's division from localStorage once userData is available,
   // then update the filters and fetch the report.
   useEffect(() => {
-    const div = getUserDivision();
+    // Use the most specific hierarchy level (beat → round → range → division → circle)
+    const div = getMostSpecificLevel();
     setLockedDivision(div);
     if (div) {
       setFilters(prev => ({ ...prev, division: div }));

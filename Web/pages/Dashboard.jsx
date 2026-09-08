@@ -17,7 +17,7 @@ import { capitalizeFirst } from "../utils/textFormat";
 import "./Dashboard.css";
 import filterIcon from "../assets/filter.png";
 import { API_BASE_URL } from "../config";
-import { getUserDivision, matchesDivision } from "../utils/authUtils";
+import { getUserDivision, getUserRange, matchesDivision, matchesUserHierarchy } from "../utils/authUtils";
 
 const { Option } = Select;
 
@@ -162,11 +162,14 @@ export default function Dashboard() {
   const [selectedRange, setSelectedRange] = useState("all");
   const [selectedPatrolType, setSelectedPatrolType] = useState("all");
 
-  // Read the user's division from localStorage once userData is available
+  // Read the user's division and range from localStorage once userData is available
   useEffect(() => {
     const div = getUserDivision();
     _setUserDivision(div);
     setSelectedDivision(div || "all");
+    // Auto-select range if user has one
+    const rng = getUserRange();
+    if (rng) setSelectedRange(rng);
   }, []);
 
   const [forestChangeData, setForestChangeData] = useState([]);
@@ -384,7 +387,10 @@ export default function Dashboard() {
   const filteredPatrols = useMemo(() => {
     if (!rawPatrolsData || !rawPatrolsData.length) return [];
     
-    return rawPatrolsData.filter((p) => {
+    // First, apply the user's hierarchy filter (beat → round → range → division → circle)
+    const hierarchyFiltered = rawPatrolsData.filter(p => matchesUserHierarchy(p));
+    
+    return hierarchyFiltered.filter((p) => {
       // Guess multiple candidate keys because backend shape can vary
       const forestCandidates = ["forest_id", "forestId", "forest_type_id", "forest_type", "forest_type_name", "forestName"];
       const divisionCandidates = ["division_id", "divisionId", "division_name", "divisionName"];

@@ -64,6 +64,12 @@ async function ensureIncidentLogsTable() {
       incident_type       VARCHAR(255) NOT NULL,
       incident_category_id INTEGER,
       incident_subcategory VARCHAR(255),
+      division            VARCHAR(255),
+      range_name           VARCHAR(255),
+      round                VARCHAR(255),
+      beat                 VARCHAR(255),
+      village              VARCHAR(255),
+      severity_id          INTEGER,
       incident_date       DATE NOT NULL,
       incident_time       TIME NOT NULL,
       description         TEXT,
@@ -72,11 +78,17 @@ async function ensureIncidentLogsTable() {
     );
   `);
 
-  // Add category columns if they don't exist (for existing tables)
+  // Add columns if they don't exist (for existing tables)
   await client.query(`
     ALTER TABLE public.incident_logs
       ADD COLUMN IF NOT EXISTS incident_category_id INTEGER,
-      ADD COLUMN IF NOT EXISTS incident_subcategory VARCHAR(255);
+      ADD COLUMN IF NOT EXISTS incident_subcategory VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS division VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS range_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS round VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS beat VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS village VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS severity_id INTEGER;
   `);
 
   // Index for fast lookup by user_id
@@ -118,7 +130,7 @@ function formatIncidentTimestamp(dateValue, timeValue) {
 //   file: incident_image (single image)
 // ─────────────────────────────────────────────────────────
 router.post('/incident-logs', verifyJwt, upload.single('incident_image'), async (req, res) => {
-  const { user_id, incident_type, incident_category_id, incident_subcategory, incident_date, incident_time, description } = req.body;
+  const { user_id, incident_type, incident_category_id, incident_subcategory, division, range_name, round, beat, village, severity_id, incident_date, incident_time, description } = req.body;
 
   // Validate required fields
   if (!user_id || !incident_type || !incident_date || !incident_time) {
@@ -160,19 +172,31 @@ router.post('/incident-logs', verifyJwt, upload.single('incident_image'), async 
     const cleanType = clean(incident_type);
     const cleanSubcategory = incident_subcategory ? clean(incident_subcategory) : null;
     const cleanDesc = description ? clean(description) : null;
+    const cleanDivision = division ? clean(division) : null;
+    const cleanRange = range_name ? clean(range_name) : null;
+    const cleanRound = round ? clean(round) : null;
+    const cleanBeat = beat ? clean(beat) : null;
+    const cleanVillage = village ? clean(village) : null;
+    const sevId = severity_id ? Number(severity_id) : null;
     const categoryId = incident_category_id ? Number(incident_category_id) : null;
 
     // Insert into PostgreSQL
     const insertQuery = `
-      INSERT INTO public.incident_logs (user_id, incident_type, incident_category_id, incident_subcategory, incident_date, incident_time, description)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING incident_id, user_id, incident_type, incident_category_id, incident_subcategory, incident_date, incident_time, description, created_at;
+      INSERT INTO public.incident_logs (user_id, incident_type, incident_category_id, incident_subcategory, division, range_name, round, beat, village, severity_id, incident_date, incident_time, description)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING incident_id, user_id, incident_type, incident_category_id, incident_subcategory, division, range_name, round, beat, village, severity_id, incident_date, incident_time, description, created_at;
     `;
     const result = await client.query(insertQuery, [
       user_id,
       cleanType,
       categoryId,
       cleanSubcategory,
+      cleanDivision,
+      cleanRange,
+      cleanRound,
+      cleanBeat,
+      cleanVillage,
+      sevId,
       incident_date,
       incident_time,
       cleanDesc,
@@ -242,6 +266,14 @@ router.get('/incident-logs', verifyJwt, async (req, res) => {
         il.incident_category_id,
         ic.category_name,
         il.incident_subcategory,
+        il.division,
+        il.range_name,
+        il.round,
+        il.beat,
+        il.village,
+        il.severity_id,
+        sev.level_name AS severity_name,
+        sev.color_code AS severity_color,
         il.incident_date::text AS incident_date,
         il.incident_time::text AS incident_time,
         il.description,
@@ -251,6 +283,7 @@ router.get('/incident-logs', verifyJwt, async (req, res) => {
       FROM public.incident_logs il
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
+      LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
       ORDER BY il.created_at DESC;
     `;
     const result = await client.query(query);
@@ -309,6 +342,14 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
         il.incident_category_id,
         ic.category_name,
         il.incident_subcategory,
+        il.division,
+        il.range_name,
+        il.round,
+        il.beat,
+        il.village,
+        il.severity_id,
+        sev.level_name AS severity_name,
+        sev.color_code AS severity_color,
         il.incident_date::text AS incident_date,
         il.incident_time::text AS incident_time,
         il.description,
@@ -318,6 +359,7 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
       FROM public.incident_logs il
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
+      LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
       WHERE il.user_id = $1
       ORDER BY il.created_at DESC;
     `;
@@ -376,6 +418,14 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
         il.incident_category_id,
         ic.category_name,
         il.incident_subcategory,
+        il.division,
+        il.range_name,
+        il.round,
+        il.beat,
+        il.village,
+        il.severity_id,
+        sev.level_name AS severity_name,
+        sev.color_code AS severity_color,
         il.incident_date::text AS incident_date,
         il.incident_time::text AS incident_time,
         il.description,
@@ -385,6 +435,7 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
       FROM public.incident_logs il
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
+      LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
       WHERE il.incident_id = $1;
     `;
     const result = await client.query(query, [incident_id]);
@@ -425,7 +476,7 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
 // ─────────────────────────────────────────────────────────
 router.put('/incident-logs/:incident_id', verifyJwt, upload.single('incident_image'), async (req, res) => {
   const { incident_id } = req.params;
-  const { incident_type, incident_category_id, incident_subcategory, incident_date, incident_time, description } = req.body;
+  const { incident_type, incident_category_id, incident_subcategory, division, range_name, round, beat, village, severity_id, incident_date, incident_time, description } = req.body;
 
   try {
     // Check if incident exists
@@ -450,6 +501,12 @@ router.put('/incident-logs/:incident_id', verifyJwt, upload.single('incident_ima
     const cleanSubcategory = incident_subcategory !== undefined ? (incident_subcategory ? clean(incident_subcategory) : null) : undefined;
     const cleanDesc = description !== undefined ? (description ? clean(description) : null) : undefined;
     const categoryId = incident_category_id !== undefined ? (incident_category_id ? Number(incident_category_id) : null) : undefined;
+    const cleanDivision = division !== undefined ? (division ? clean(division) : null) : undefined;
+    const cleanRange = range_name !== undefined ? (range_name ? clean(range_name) : null) : undefined;
+    const cleanRound = round !== undefined ? (round ? clean(round) : null) : undefined;
+    const cleanBeat = beat !== undefined ? (beat ? clean(beat) : null) : undefined;
+    const cleanVillage = village !== undefined ? (village ? clean(village) : null) : undefined;
+    const sevId = severity_id !== undefined ? (severity_id ? Number(severity_id) : null) : undefined;
 
     // Build dynamic UPDATE query
     const setClauses = [];
@@ -467,6 +524,30 @@ router.put('/incident-logs/:incident_id', verifyJwt, upload.single('incident_ima
     if (cleanSubcategory !== undefined) {
       setClauses.push(`incident_subcategory = $${paramIndex++}`);
       params.push(cleanSubcategory);
+    }
+    if (cleanDivision !== undefined) {
+      setClauses.push(`division = $${paramIndex++}`);
+      params.push(cleanDivision);
+    }
+    if (cleanRange !== undefined) {
+      setClauses.push(`range_name = $${paramIndex++}`);
+      params.push(cleanRange);
+    }
+    if (cleanRound !== undefined) {
+      setClauses.push(`round = $${paramIndex++}`);
+      params.push(cleanRound);
+    }
+    if (cleanBeat !== undefined) {
+      setClauses.push(`beat = $${paramIndex++}`);
+      params.push(cleanBeat);
+    }
+    if (cleanVillage !== undefined) {
+      setClauses.push(`village = $${paramIndex++}`);
+      params.push(cleanVillage);
+    }
+    if (sevId !== undefined) {
+      setClauses.push(`severity_id = $${paramIndex++}`);
+      params.push(sevId);
     }
     if (incident_date !== undefined) {
       setClauses.push(`incident_date = $${paramIndex++}`);

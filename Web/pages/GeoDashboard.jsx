@@ -26,7 +26,7 @@ import 'leaflet-measure/dist/leaflet-measure.css';
 // import "./Homepage.css";
 import gisfylogo from "../assets/Gisfylogo.png";
 import { API_BASE_URL } from '../config';
-import { getUserDivision, matchesDivision } from '../utils/authUtils';
+import { matchesUserHierarchy } from '../utils/authUtils';
 
 const Loader = () => {
   return (
@@ -167,12 +167,9 @@ export default function MapView() {
       fetch(`${import.meta.env.VITE_API_URL}/api/incidents-with-images?user_id=${userId}`)
         .then((res) => res.json())
         .then((data) => {
-          // Filter by the logged-in user's division if they have one
-          const userDivision = getUserDivision();
-          if (userDivision && Array.isArray(data)) {
-            return data.filter(item =>
-              matchesDivision(item.division || item.Division || '', userDivision)
-            );
+          // Filter by the logged-in user's hierarchy (beat → round → range → division → circle)
+          if (Array.isArray(data)) {
+            return data.filter(item => matchesUserHierarchy(item));
           }
           return data;
         })

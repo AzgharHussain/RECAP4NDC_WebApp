@@ -281,6 +281,58 @@ function generatePatrolCode(division, username, startISO, patrolId) {
   return `PAT-${div}-${usr}-${date}-${time}-${patrolId}`;
 }
 
+// ─────────────────────────────────────────────────────────
+// Backfill patrol_code for existing patrols that have NULL.
+// Runs on server start. Generates the full code using
+// division, username (looked up), and start_time.
+// ─────────────────────────────────────────────────────────
+async function backfillPatrolCodes() {
+  // Find patrols with NULL patrol_code
+  const missing = await client.query(`
+    SELECT p.patrol_id, p.division, p.start_time, p.user_id, gdu.username
+    FROM public.patrols p
+    LEFT JOIN public.government_department_users gdu ON p.user_id = gdu.user_id
+    WHERE p.patrol_code IS NULL
+    ORDER BY p.patrol_id ASC;
+  `);
+
+  if (missing.rows.length === 0) {
+    console.log('[patrol_code backfill] All patrols already have codes. Nothing to do.');
+    return;
+  }
+
+  console.log(`[patrol_code backfill] Generating codes for ${missing.rows.length} patrol(s)...`);
+
+  let updated = 0;
+  for (const row of missing.rows) {
+    try {
+      const code = generatePatrolCode(
+        row.division,
+        row.username,
+        row.start_time,
+        row.patrol_id
+      );
+      if (code) {
+        await client.query(
+          'UPDATE public.patrols SET patrol_code = $1 WHERE patrol_id = $2 AND patrol_code IS NULL',
+          [code, row.patrol_id]
+        );
+        updated++;
+      }
+    } catch (err) {
+      // Skip if duplicate (unique constraint) — leave as NULL, will retry next start
+      console.warn(`[patrol_code backfill] Skipped patrol_id ${row.patrol_id}: ${err.message}`);
+    }
+  }
+
+  console.log(`[patrol_code backfill] Updated ${updated} of ${missing.rows.length} patrol(s).`);
+}
+
+// Run backfill on module load (server start)
+backfillPatrolCodes().catch((err) => {
+  console.error('[patrol_code backfill] Failed:', err.message);
+});
+
 // POST route for patrol with multiple images and optional notes
 router.post('/patrol-post', verifyJwt, upload.any(), async (req, res) => {
   const pat_data = req.body;
@@ -1571,3 +1623,4 @@ router.get('/patrolling-drb', verifyJwt, async (req, res) => {
 
 
 module.exports = router;
+module.exports.backfillPatrolCodes = backfillPatrolCodes;

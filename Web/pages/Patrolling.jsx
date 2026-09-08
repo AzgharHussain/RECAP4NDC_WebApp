@@ -15,7 +15,7 @@ import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
 import axios from "axios";
-import { getAuthToken, getAuthHeaders, handleUnauthorized, getUserDivision, matchesDivision } from "../utils/authUtils";
+import { getAuthToken, getAuthHeaders, handleUnauthorized, getUserDivision, getUserRange, getUserRound, getUserBeat, matchesDivision } from "../utils/authUtils";
 import { capitalizeFirst } from "../utils/textFormat";
 
 import startIconImg from "../assets/marker-icon.png";
@@ -709,11 +709,15 @@ const PatrolIncidentLogs = () => {
   const [patrolLocationFilter, setPatrolLocationFilter] = useState("");
   const [patrolLocations, setPatrolLocations] = useState([]);
 
-  // Read the user's division from localStorage once userData is available
+  // Read the user's hierarchy from localStorage once userData is available
   useEffect(() => {
     const div = getUserDivision();
     _setLockedDivision(div);
     setDivisionFilter(div || "");
+    // Auto-lock range, round, beat from user profile
+    setRangeFilter(getUserRange() || "");
+    setRoundFilter(getUserRound() || "");
+    setBeatFilter(getUserBeat() || "");
   }, []);
   
   // Pagination states

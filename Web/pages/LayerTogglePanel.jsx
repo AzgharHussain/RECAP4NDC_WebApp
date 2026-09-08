@@ -11,7 +11,7 @@ import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
 import { debounce, min } from 'lodash';
 import { API_BASE_URL } from "../config";
-import { getUserDivision, matchesDivision } from "../utils/authUtils";
+import { getUserDivision, matchesDivision, matchesUserHierarchyString, getMostSpecificLevel } from "../utils/authUtils";
 import "leaflet.nontiledlayer";
 const Loader = () => {
   return (
@@ -2145,13 +2145,14 @@ const handleGroupCheckbox = useCallback(async (e) => {
 
 const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolSidebar, isInfoToolActive, setIsInfoToolActive   }) => {
   const { language } = useLanguage();
-  // Division lock state — read from localStorage in useEffect to avoid
+  // Hierarchy lock state — read from localStorage in useEffect to avoid
   // stale reads when the component mounts before userData is set (after login).
-  // undefined = not yet resolved, null = no division (PCCF), string = locked division
+  // undefined = not yet resolved, null = no lock (PCCF), string = locked level (most specific)
   const [lockedDivision, setLockedDivision] = useState(undefined);
 
   useEffect(() => {
-    setLockedDivision(getUserDivision());
+    // Use the most specific hierarchy level (beat → round → range → division → circle)
+    setLockedDivision(getMostSpecificLevel());
   }, []);
   const [addedLayers, setAddedLayers] = useState({});
   const [opacity, setOpacity] = useState({});
@@ -2189,12 +2190,11 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         
         const result = await response.json();
         if (result.success && result.data) {
-          // Filter layers by the logged-in user's division if they have one
+          // Filter layers by the logged-in user's hierarchy (beat → round → range → division → circle)
           let layers = result.data;
           if (lockedDivision) {
-            // Fuzzy match: "Dahod SF" matches "dahod", "dahodsf", "dahod_sf", etc.
             layers = result.data.filter(layerName =>
-              matchesDivision(layerName, lockedDivision)
+              matchesUserHierarchyString(layerName)
             );
           }
           setAvailableCoupeLayers(layers);
@@ -2227,10 +2227,10 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         const dynamicLayers = (result.data || [])
           .map((item) => item.coupe_name)
           .filter(Boolean)
-          // Filter by user's division if they have one
+          // Filter by user's hierarchy if they have one
           .filter((tableName) => {
             if (!lockedDivision) return true;
-            return matchesDivision(tableName, lockedDivision);
+            return matchesUserHierarchyString(tableName);
           })
           .map((tableName) => {
             const cleanName = tableName.replace(/^Recap4NDC:/, '');
@@ -2264,12 +2264,12 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
     return layersData.groups.map((group) => {
       if (group.title !== "Coupe Boundaries") return group;
 
-      // Filter static children by division
+      // Filter static children by hierarchy
       let staticChildren = group.children || [];
       if (lockedDivision) {
         staticChildren = staticChildren.filter((child) =>
-          matchesDivision(child.Name || '', lockedDivision) ||
-          matchesDivision(child.Layer || '', lockedDivision)
+          matchesUserHierarchyString(child.Name || '') ||
+          matchesUserHierarchyString(child.Layer || '')
         );
       }
 
