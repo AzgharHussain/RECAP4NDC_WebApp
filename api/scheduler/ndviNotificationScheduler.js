@@ -143,6 +143,13 @@ async function cleanupDefaultNotes(client) {
 // further send attempts for the rest of this scheduler run (they all fail).
 let firebaseCredentialError = false;
 
+// Track which NDVI tables have already had their `pixle_id` column verified
+// by ensurePixleIdColumn.  Once verified, the column never disappears, so we
+// skip the DDL check on subsequent ticks.  This prevents 164 × DDL operations
+// (ALTER TABLE / CREATE INDEX with ACCESS EXCLUSIVE locks) from running every
+// 10 minutes and exhausting the DB connection pool.
+const ensuredPixleIdTables = new Set();
+
 /**
  * Core NDVI notification logic — runs on server startup AND on cron schedule.
  * Sends pending NDVI alerts to all subscribed users.
@@ -201,12 +208,19 @@ async function runNdviNotifications(admin) {
 
       // ------------------------------------------------
       // 3.5️⃣ Ensure the table has a `pixle_id` column.
+      // Only run once per table per process lifetime — the column, once
+      // added, never disappears.  Repeated DDL (ALTER TABLE / CREATE INDEX)
+      // on 164 tables every 10 minutes was exhausting the DB connection pool
+      // and causing ConnectionAcquireTimeoutError in API routes.
       // ------------------------------------------------
-      try {
-        await ensurePixleIdColumn(client, tableName, { isSequelize: true });
-      } catch (ensureErr) {
-        console.error(`❌ ensurePixleId failed for "${tableName}":`, ensureErr.message);
-        // continue anyway — the query below has its own try/catch
+      if (!ensuredPixleIdTables.has(tableName)) {
+        try {
+          await ensurePixleIdColumn(client, tableName, { isSequelize: true });
+          ensuredPixleIdTables.add(tableName);
+        } catch (ensureErr) {
+          console.error(`❌ ensurePixleId failed for "${tableName}":`, ensureErr.message);
+          // Don't add to set — will retry next tick
+        }
       }
 
       // ------------------------------------------------
@@ -398,12 +412,12 @@ module.exports = function startNdviScheduler(admin) {
   }, 30 * 1000); // 30 seconds after startup
 
   // ───────────────────────────────────────────────────────────────
-  // Then run on cron schedule (every 10 minutes)
+  // Then run on cron schedule (every 1 minute)
   // ───────────────────────────────────────────────────────────────
-  cron.schedule("*/10 * * * *", async () => {
+  cron.schedule("* * * * *", async () => {
     console.log('[ndvi-scheduler] Cron tick — running...');
     await runNdviNotifications(admin);
   });
 
-  console.log('[ndvi-scheduler] Scheduler registered. Startup run deferred 30s. Cron: every 10 minutes.');
+  console.log('[ndvi-scheduler] Scheduler registered. Startup run deferred 30s. Cron: every 1 minute.');
 };

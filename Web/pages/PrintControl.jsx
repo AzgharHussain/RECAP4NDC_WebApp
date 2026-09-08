@@ -17,6 +17,7 @@ const PrintControl = ({ mapRef }) => {
     if (!mapContainer) return;
 
     isExportingRef.current = true;
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
 
     // Clone legend
     const legend = document.querySelector(".legend-control");
@@ -79,6 +80,7 @@ const PrintControl = ({ mapRef }) => {
           document.body.removeChild(link);
 
           isExportingRef.current = false;
+          window.dispatchEvent(new Event('global-data-loading-end'));
         })
         .catch((err) => {
           if (tempLegend && mapContainer.contains(tempLegend)) {
@@ -90,6 +92,7 @@ const PrintControl = ({ mapRef }) => {
           console.error("Export failed:", err);
           alert("Failed to export map. See console for details.");
           isExportingRef.current = false;
+          window.dispatchEvent(new Event('global-data-loading-end'));
         });
     }, 1000);
   }, []);

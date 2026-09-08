@@ -24,6 +24,18 @@ const MAX_RETRIES = 2;                // retry twice on network errors / 5xx
 const RETRY_DELAY_BASE = 1000;        // 1s, 2s backoff
 const DEDUP_WINDOW_MS = 2000;         // dedup identical GETs within 2s
 
+function dispatchGlobalLoadingStart() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('global-data-loading-start'));
+  }
+}
+
+function dispatchGlobalLoadingEnd() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('global-data-loading-end'));
+  }
+}
+
 // Auth endpoints that legitimately return 401 — don't auto-logout on these
 const AUTH_ENDPOINTS = [
   '/api/admin',
@@ -51,6 +63,9 @@ function getDedupKey(config) {
 // --- Request interceptor: inject auth token ---
 apiClient.interceptors.request.use(
   (config) => {
+    dispatchGlobalLoadingStart();
+    config.__globalLoadingTracked = true;
+
     // Inject token from localStorage (fallback to cookie)
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     if (token) {
@@ -72,18 +87,25 @@ apiClient.interceptors.request.use(
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    dispatchGlobalLoadingEnd();
+    return Promise.reject(error);
+  }
 );
 
 // --- Response interceptor: retry, dedup cleanup, auto-logout ---
 apiClient.interceptors.response.use(
   (response) => {
+    if (response.config?.__globalLoadingTracked) dispatchGlobalLoadingEnd();
+
     // Clean up dedup map
     const dedupKey = getDedupKey(response.config);
     if (dedupKey) pendingGets.delete(dedupKey);
     return response;
   },
   async (error) => {
+    if (error.config?.__globalLoadingTracked) dispatchGlobalLoadingEnd();
+
     const config = error.config || {};
     const dedupKey = getDedupKey(config);
     if (dedupKey) pendingGets.delete(dedupKey);

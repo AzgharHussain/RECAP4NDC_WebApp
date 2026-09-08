@@ -1790,7 +1790,8 @@ const fetchAllDivisionsData = async (months) => {
 
   // Export to PDF
 // Enhanced Export to PDF function
-const handleExportToPDF = () => {
+const handleExportToPDF = async () => {
+  let exportLoaderStarted = false;
   try {
     // Check if there's data to export
     if (!monthlyData || Object.keys(monthlyData).length === 0) {
@@ -1802,6 +1803,10 @@ const handleExportToPDF = () => {
       alert('Please select a valid month for the report.');
       return;
     }
+
+    exportLoaderStarted = true;
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Get current date for filename and report
     const now = new Date();
@@ -2430,6 +2435,10 @@ const handleExportToPDF = () => {
   } catch (error) {
     console.error('Error generating PDF report:', error);
     alert('Failed to generate PDF report. Please try again.');
+  } finally {
+    if (exportLoaderStarted) {
+      window.dispatchEvent(new Event('global-data-loading-end'));
+    }
   }
 };
 

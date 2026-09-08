@@ -175,8 +175,8 @@ function PatrolMap({ patrol }) {
     >
       <ResizeMapOnShow coords={routeCoords} />
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+        attribution='&copy; <a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by EOX'
+        url="https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
       />
       <Marker position={start} icon={startIcon}>
         <Popup>Start</Popup>
@@ -1566,13 +1566,16 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
   const handleExportConfirm = async () => {
     setIsExportConfirmVisible(false);
     setIsExporting(true);
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
     try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
       await exportTableToExcel();
     } catch (err) {
       console.error("Export error:", err);
       message.error(language === "gu" ? "નિકાસ નિષ્ફળ" : "Export failed");
     } finally {
       setIsExporting(false);
+      window.dispatchEvent(new Event('global-data-loading-end'));
     }
   };
 
@@ -2353,6 +2356,7 @@ const exportTableToExcel = async () => {
                       <h4 style={{ marginBottom: 12, color: '#0066cc', borderTop: '1px solid #e0e0e0', paddingTop: 12 }}>
                         {language === "gu" ? "નોંધ સાથેની છબીઓ" : "Images with Notes"} ({selectedPatrol.images.filter(img => img.note).length})
                       </h4>
+                      <Image.PreviewGroup>
                       <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
                         {selectedPatrol.images.filter(img => img.note).map((image, index) => {
                           const getImageLabel = () => {
@@ -2449,6 +2453,7 @@ const exportTableToExcel = async () => {
                           );
                         })}
                       </Row>
+                      </Image.PreviewGroup>
                     </>
                   )}
 
@@ -2456,6 +2461,7 @@ const exportTableToExcel = async () => {
                   <h4 style={{ marginBottom: 12 }}>
                     {language === "gu" ? "પેટ્રોલ છબીઓ" : "Patrol Images"} ({selectedPatrol.images.length})
                   </h4>
+                  <Image.PreviewGroup>
                   <Row gutter={[8, 8]}>
                     {selectedPatrol.images.map((image, index) => {
                       const getImageLabel = () => {
@@ -2554,6 +2560,7 @@ const exportTableToExcel = async () => {
                       );
                     })}
                   </Row>
+                  </Image.PreviewGroup>
                 </>
               ) : (
                 <div style={{

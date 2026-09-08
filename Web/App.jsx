@@ -1,5 +1,6 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
+import axios from "axios";
 import { LanguageProvider } from "./context/LanguageContext";
 import { AccessibilityProvider, A11yPageWrapper } from "./context/AccessibilityContext";
 import AccessibilityWidget from "./components/AccessibilityWidget";
@@ -38,12 +39,81 @@ const LoadingFallback = () => (
   </div>
 );
 
+const GlobalDataLoadingOverlay = () => {
+  const [activeRequests, setActiveRequests] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState("Loading...");
+
+  useEffect(() => {
+    const beginLoading = (event) => {
+      setLoadingMessage(event?.detail?.message || "Loading...");
+      setActiveRequests((count) => count + 1);
+    };
+    const endLoading = () => setActiveRequests((count) => Math.max(0, count - 1));
+
+    const requestInterceptor = axios.interceptors.request.use(
+      (config) => {
+        beginLoading();
+        config.__globalLoadingTracked = true;
+        return config;
+      },
+      (error) => {
+        endLoading();
+        return Promise.reject(error);
+      }
+    );
+
+    const responseInterceptor = axios.interceptors.response.use(
+      (response) => {
+        if (response.config?.__globalLoadingTracked) endLoading();
+        return response;
+      },
+      (error) => {
+        if (error.config?.__globalLoadingTracked) endLoading();
+        return Promise.reject(error);
+      }
+    );
+
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      beginLoading();
+      try {
+        return await originalFetch(...args);
+      } finally {
+        endLoading();
+      }
+    };
+
+    window.addEventListener('global-data-loading-start', beginLoading);
+    window.addEventListener('global-data-loading-end', endLoading);
+
+    return () => {
+      axios.interceptors.request.eject(requestInterceptor);
+      axios.interceptors.response.eject(responseInterceptor);
+      window.fetch = originalFetch;
+      window.removeEventListener('global-data-loading-start', beginLoading);
+      window.removeEventListener('global-data-loading-end', endLoading);
+    };
+  }, []);
+
+  if (activeRequests === 0) return null;
+
+  return (
+    <div className="global-data-loader-overlay" role="status" aria-live="polite" aria-label="Loading data">
+      <div className="global-data-loader-box">
+        <LoadingSpinner />
+        <div className="global-data-loader-text">{loadingMessage}</div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   return (
     <AccessibilityProvider>
       <LanguageProvider>
         <A11yPageWrapper>
         <ErrorBoundary>
+        <GlobalDataLoadingOverlay />
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
 

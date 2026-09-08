@@ -56,10 +56,10 @@ const customCRS = L.CRS.EPSG4326;
 const basemaps = {
   LightGray: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   DarkGray: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-  Imagery: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-  Oceans: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
+  Imagery: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg',
+  Oceans: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
   Streets: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-  NationalGeo: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
+  NationalGeo: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
   positron:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"
 };
 

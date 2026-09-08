@@ -37,18 +37,37 @@ const client = {
       const safeParams = (Array.isArray(params) ? params : [params]).map(v => v === undefined ? null : v);
       options.bind = safeParams;
     }
-    const result = await sequelize.query(sql, options);
-    let rows;
-    if (queryType === sequelize.QueryTypes.SELECT) {
-      rows = Array.isArray(result) ? result : (result ? [result] : []);
-    } else if (Array.isArray(result[0])) {
-      rows = result[0];
-    } else if (result[0] !== null && result[0] !== undefined) {
-      rows = [result[0]];
-    } else {
-      rows = [];
+    // Retry on ConnectionAcquireTimeoutError — the pool is momentarily
+    // exhausted (e.g. during a scheduler burst).  Wait briefly and retry
+    // instead of failing the API request immediately.
+    const MAX_ACQUIRE_RETRIES = 2;
+    let lastErr;
+    for (let attempt = 0; attempt <= MAX_ACQUIRE_RETRIES; attempt++) {
+      try {
+        const result = await sequelize.query(sql, options);
+        let rows;
+        if (queryType === sequelize.QueryTypes.SELECT) {
+          rows = Array.isArray(result) ? result : (result ? [result] : []);
+        } else if (Array.isArray(result[0])) {
+          rows = result[0];
+        } else if (result[0] !== null && result[0] !== undefined) {
+          rows = [result[0]];
+        } else {
+          rows = [];
+        }
+        return { rows };
+      } catch (err) {
+        lastErr = err;
+        const isAcquireTimeout =
+          err.name === 'SequelizeConnectionAcquireTimeoutError' ||
+          err.message?.includes('Operation timeout') ||
+          err.message?.includes('ConnectionAcquireTimeoutError');
+        if (!isAcquireTimeout || attempt === MAX_ACQUIRE_RETRIES) throw err;
+        // Brief backoff before retrying — 500ms, then 1000ms
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+      }
     }
-    return { rows };
+    throw lastErr;
   },
 
   // Transaction support — mimics pg.Pool.connect()

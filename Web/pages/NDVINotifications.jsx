@@ -272,54 +272,60 @@ const NDVINotifications = () => {
       return;
     }
 
-    const [XLSX, { saveAs }] = await Promise.all([import("xlsx"), import("file-saver")]);
-    const rows = data.map((item, index) => ({
-      "Sr. No.": index + 1,
-      [t.userId]: item.user_id || "-",
-      [t.userName]: item.username || "-",
-      [t.division]: item.division || "-",
-      [t.range]: item.range || "-",
-      [t.round]: item.round || "-",
-      [t.beat]: item.beat || "-",
-      [t.alertVillage]: item.village || item.village_name || "-",
-      [t.month]: item.month || "-",
-      [t.pixelId]: item.pixel_id || "-",
-      [t.status]: item.alert_status || t.pending,
-      [t.actionTaken]: item.action_taken || t.noActionTaken,
-      [t.note]: item.note || "-",
-      [t.hasImage]: item.has_image ? t.yes : t.no,
-      [t.sentAt]: formatSentAt(item.sent_at),
-    }));
-    const summaryRows = monthlySummary.map((item) => ({
-      [t.month]: item.month,
-      [t.division]: item.division,
-      [t.range]: item.range || "-",
-      [t.round]: item.round || "-",
-      [t.beat]: item.beat || "-",
-      [t.village]: item.village || "-",
-      [t.alertsGenerated]: item.alerts_generated,
-      [t.resolved]: item.resolved,
-      [t.pending]: item.pending,
-    }));
-    const filterRows = [
-      { Filter: t.userName, Value: filters.username || "All" },
-      { Filter: t.division,  Value: filters.division  || "All" },
-      { Filter: t.month,     Value: filters.month     || "All" },
-      { Filter: t.status,    Value: filters.status    || "All" },
-      { Filter: t.startDate, Value: filters.dates?.[0]?.format("YYYY-MM-DD") || "All" },
-      { Filter: t.endDate,   Value: filters.dates?.[1]?.format("YYYY-MM-DD") || "All" },
-      { Filter: t.usersReceived,      Value: summary.users_received     || 0 },
-      { Filter: t.totalNotifications, Value: summary.total_notifications || 0 },
-      { Filter: t.resolved,           Value: summary.resolved           || 0 },
-      { Filter: t.pending,            Value: summary.pending            || 0 },
-    ];
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const [XLSX, { saveAs }] = await Promise.all([import("xlsx"), import("file-saver")]);
+      const rows = data.map((item, index) => ({
+        "Sr. No.": index + 1,
+        [t.userId]: item.user_id || "-",
+        [t.userName]: item.username || "-",
+        [t.division]: item.division || "-",
+        [t.range]: item.range || "-",
+        [t.round]: item.round || "-",
+        [t.beat]: item.beat || "-",
+        [t.alertVillage]: item.village || item.village_name || "-",
+        [t.month]: item.month || "-",
+        [t.pixelId]: item.pixel_id || "-",
+        [t.status]: item.alert_status || t.pending,
+        [t.actionTaken]: item.action_taken || t.noActionTaken,
+        [t.note]: item.note || "-",
+        [t.hasImage]: item.has_image ? t.yes : t.no,
+        [t.sentAt]: formatSentAt(item.sent_at),
+      }));
+      const summaryRows = monthlySummary.map((item) => ({
+        [t.month]: item.month,
+        [t.division]: item.division,
+        [t.range]: item.range || "-",
+        [t.round]: item.round || "-",
+        [t.beat]: item.beat || "-",
+        [t.village]: item.village || "-",
+        [t.alertsGenerated]: item.alerts_generated,
+        [t.resolved]: item.resolved,
+        [t.pending]: item.pending,
+      }));
+      const filterRows = [
+        { Filter: t.userName, Value: filters.username || "All" },
+        { Filter: t.division,  Value: filters.division  || "All" },
+        { Filter: t.month,     Value: filters.month     || "All" },
+        { Filter: t.status,    Value: filters.status    || "All" },
+        { Filter: t.startDate, Value: filters.dates?.[0]?.format("YYYY-MM-DD") || "All" },
+        { Filter: t.endDate,   Value: filters.dates?.[1]?.format("YYYY-MM-DD") || "All" },
+        { Filter: t.usersReceived,      Value: summary.users_received     || 0 },
+        { Filter: t.totalNotifications, Value: summary.total_notifications || 0 },
+        { Filter: t.resolved,           Value: summary.resolved           || 0 },
+        { Filter: t.pending,            Value: summary.pending            || 0 },
+      ];
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Notifications");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), "Monthly Summary");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filterRows), "Filters");
-    const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    saveAs(new Blob([buffer], { type: "application/octet-stream" }), `ndvi_notifications_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Notifications");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), "Monthly Summary");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filterRows), "Filters");
+      const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(new Blob([buffer], { type: "application/octet-stream" }), `ndvi_notifications_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`);
+    } finally {
+      window.dispatchEvent(new Event('global-data-loading-end'));
+    }
   };
 
   const showDetails = async (record) => {

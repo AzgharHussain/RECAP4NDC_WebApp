@@ -24,9 +24,9 @@ const sequelize = new Sequelize(
     dialect: 'postgres',
     logging: false,
     pool: {
-      max:     Number(process.env.DB_POOL_MAX     || 50),
+      max:     Number(process.env.DB_POOL_MAX     || 80),
       min:     Number(process.env.DB_POOL_MIN     || 10),
-      acquire: Number(process.env.DB_POOL_ACQUIRE || 30000),
+      acquire: Number(process.env.DB_POOL_ACQUIRE || 60000),
       idle:    Number(process.env.DB_POOL_IDLE    || 10000),
       evict:   Number(process.env.DB_POOL_EVICT   || 1000),
     },

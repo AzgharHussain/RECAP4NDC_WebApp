@@ -151,8 +151,8 @@ function PatrolMap({ patrol }) {
     >
       <ResizeMapOnShow coords={routeCoords} />
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+        attribution='&copy; <a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by EOX'
+        url="https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
       />
       <Marker position={start} icon={startIcon}>
         <Popup>Start</Popup>
@@ -967,55 +967,61 @@ const BeatPatrolCoverage = () => {
   const exportToExcel = async () => {
     if (!coverageData) return;
 
-    const [XLSX, { saveAs }] = await Promise.all([
-      import("xlsx"),
-      import("file-saver"),
-    ]);
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const [XLSX, { saveAs }] = await Promise.all([
+        import("xlsx"),
+        import("file-saver"),
+      ]);
 
-    const summaryData = [{
-      [selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel]:
-        selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
-      "Area (km²)": (Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2),
-      "Patrol Covered Area (km²)": (Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2),
-      "Coverage %": Number(coverageData.coverage_percentage).toFixed(2),
-      "Month": selectedMonth
-    }];
+      const summaryData = [{
+        [selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel]:
+          selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
+        "Area (km²)": (Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2),
+        "Patrol Covered Area (km²)": (Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2),
+        "Coverage %": Number(coverageData.coverage_percentage).toFixed(2),
+        "Month": selectedMonth
+      }];
 
-    const patrolData = patrols.map((patrol, idx) => ({
-      [t.srNo]: idx + 1,
-      [t.patrolType]: patrol.type_name,
-      [t.patrolOfficer]: patrol.patrol_officer_name,
-      [t.division]: patrol.division,
-      [t.range]: patrol.range,
-      [t.beat]: patrol.beat,
-      [t.startDateTime]: formatDateTime(patrol.start_time, language).date,
-      [t.startTimeCol]: formatDateTime(patrol.start_time, language).time,
-      [t.endDateTime]: formatDateTime(patrol.end_time, language).date,
-      [t.endTimeCol]: formatDateTime(patrol.end_time, language).time,
-      [t.startLocation]: patrol.start_location,
-      [t.endLocation]: patrol.end_location,
-      [t.distance]: patrol.distance_kms,
-      [t.staff]: patrol.number_of_staff,
-    }));
+      const patrolData = patrols.map((patrol, idx) => ({
+        [t.srNo]: idx + 1,
+        [t.patrolType]: patrol.type_name,
+        [t.patrolOfficer]: patrol.patrol_officer_name,
+        [t.division]: patrol.division,
+        [t.range]: patrol.range,
+        [t.beat]: patrol.beat,
+        [t.startDateTime]: formatDateTime(patrol.start_time, language).date,
+        [t.startTimeCol]: formatDateTime(patrol.start_time, language).time,
+        [t.endDateTime]: formatDateTime(patrol.end_time, language).date,
+        [t.endTimeCol]: formatDateTime(patrol.end_time, language).time,
+        [t.startLocation]: patrol.start_location,
+        [t.endLocation]: patrol.end_location,
+        [t.distance]: patrol.distance_kms,
+        [t.staff]: patrol.number_of_staff,
+      }));
 
-    const wb = XLSX.utils.book_new();
-    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, summarySheet, "Coverage Summary");
+      const wb = XLSX.utils.book_new();
+      const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summarySheet, "Coverage Summary");
 
-    if (patrolData.length > 0) {
-      const patrolSheet = XLSX.utils.json_to_sheet(patrolData);
-      XLSX.utils.book_append_sheet(wb, patrolSheet, "Patrols");
+      if (patrolData.length > 0) {
+        const patrolSheet = XLSX.utils.json_to_sheet(patrolData);
+        XLSX.utils.book_append_sheet(wb, patrolSheet, "Patrols");
+      }
+
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
+      const fileName = selectionMode === 'beat'
+        ? `${selectedBeat.value}_patrol_coverage_${selectedMonth}.xlsx`
+        : `${selectedBoundary.label}_patrol_coverage_${selectedMonth}.xlsx`;
+      
+      saveAs(
+        new Blob([excelBuffer], { type: "application/octet-stream" }),
+        fileName
+      );
+    } finally {
+      window.dispatchEvent(new Event('global-data-loading-end'));
     }
-
-    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
-    const fileName = selectionMode === 'beat'
-      ? `${selectedBeat.value}_patrol_coverage_${selectedMonth}.xlsx`
-      : `${selectedBoundary.label}_patrol_coverage_${selectedMonth}.xlsx`;
-    
-    saveAs(
-      new Blob([excelBuffer], { type: "application/octet-stream" }),
-      fileName
-    );
   };
 
   const customSelectStyles = {

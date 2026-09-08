@@ -253,33 +253,39 @@ const CoupeObservation = () => {
       return;
     }
 
-    const [XLSX, { saveAs }] = await Promise.all([
-      import("xlsx"),
-      import("file-saver"),
-    ]);
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const [XLSX, { saveAs }] = await Promise.all([
+        import("xlsx"),
+        import("file-saver"),
+      ]);
 
-    // Format the filtered data to match the columns you want in the export
-    const exportData = filteredData.map((item) => ({
-      [text[language].serialNo]: item.p_log_id,
-      [text[language].issueId]: item.p_issue_id,
-      [text[language].officerName]: item.p_officer_name,
-      [text[language].submittedDate]: formatDateTime(item.p_date_time).date,
-      [text[language].submittedTime]: formatDateTime(item.p_date_time).time,
-      [text[language].issueType]: item.p_issue_type,
-      [text[language].observationNotes]: item.p_observation_notes,
-      [text[language].images]: item.p_image_urls.join(", "), // Join image URLs if needed
-    }));
+      // Format the filtered data to match the columns you want in the export
+      const exportData = filteredData.map((item) => ({
+        [text[language].serialNo]: item.p_log_id,
+        [text[language].issueId]: item.p_issue_id,
+        [text[language].officerName]: item.p_officer_name,
+        [text[language].submittedDate]: formatDateTime(item.p_date_time).date,
+        [text[language].submittedTime]: formatDateTime(item.p_date_time).time,
+        [text[language].issueType]: item.p_issue_type,
+        [text[language].observationNotes]: item.p_observation_notes,
+        [text[language].images]: item.p_image_urls.join(", "), // Join image URLs if needed
+      }));
 
-    // Create a worksheet and book, then trigger download
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Coupe Observation Logs");
+      // Create a worksheet and book, then trigger download
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Coupe Observation Logs");
 
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    saveAs(
-      new Blob([wbout], { type: "application/octet-stream" }),
-      "Coupe_Observation_Logs.xlsx"
-    );
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([wbout], { type: "application/octet-stream" }),
+        "Coupe_Observation_Logs.xlsx"
+      );
+    } finally {
+      window.dispatchEvent(new Event('global-data-loading-end'));
+    }
   };
 
   return (
