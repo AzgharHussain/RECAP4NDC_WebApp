@@ -1020,7 +1020,7 @@ app.use('/api', supportRouter);
 app.use('/api', incidentLogsRouter);
 app.use('/api', incidentCategoriesRouter);
 app.use('/api', incidentSeverityRouter);
-app.use('/api', ndviChangesRouter);
+app.use('/api/ndvi-changes', ndviChangesRouter);
 app.use("/api", forestRoutes);
 app.use('/api', auditLogsRouter);
 // Error handling middleware
