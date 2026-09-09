@@ -438,6 +438,13 @@ async function publishToGeoServer(tableName, color) {
   }
 }
 
+const getBoundaryDate = (value) => {
+  if (!value) return new Date().toISOString().slice(0, 10);
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return new Date().toISOString().slice(0, 10);
+  return parsed.toISOString().slice(0, 10);
+};
+
 const createPatrolBoundaryTable = async () => {
   try {
     await sequelize.query(`
@@ -448,8 +455,13 @@ const createPatrolBoundaryTable = async () => {
         workspace VARCHAR(100),
         layer_name VARCHAR(200),
         color VARCHAR(20),
+        boundary_date DATE DEFAULT CURRENT_DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+    await sequelize.query(`
+      ALTER TABLE patrol_boundaries
+      ADD COLUMN IF NOT EXISTS boundary_date DATE DEFAULT CURRENT_DATE
     `);
   } catch (error) {
     console.error("Error creating patrol_boundaries table:", error);
@@ -809,6 +821,7 @@ router.post(
       }
 
       const color = req.body.color || "#ff0000";
+      const boundaryDate = getBoundaryDate(req.body.boundary_date || req.body.date);
       let tableName;
       let importSuccess = false;
 
@@ -1003,12 +1016,13 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       await sequelize.query(
         `
         INSERT INTO patrol_boundaries
-        (table_name, boundary_name, workspace, layer_name, color)
-        VALUES ($1, $2, $3, $4, $5)
+        (table_name, boundary_name, workspace, layer_name, color, boundary_date)
+        VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (table_name) 
         DO UPDATE SET 
           boundary_name = EXCLUDED.boundary_name,
-          color = EXCLUDED.color
+          color = EXCLUDED.color,
+          boundary_date = EXCLUDED.boundary_date
         `,
         {
           bind: [
@@ -1017,6 +1031,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
             WORKSPACE,
             `${WORKSPACE}:${tableName}`,
             color,
+            boundaryDate,
           ],
         },
       );
@@ -1041,6 +1056,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
           workspace: WORKSPACE,
           wms_url: `${GEOSERVER_URL}/${WORKSPACE}/wms`,
           color: color,
+          boundary_date: boundaryDate,
           is_replace: !!existingBoundary,
         },
       });
@@ -1131,6 +1147,7 @@ router.get("/patrol-boundaries", verifyJwt, async (req, res) => {
         layer_name,
         workspace,
         color,
+        boundary_date::text AS boundary_date,
         created_at
       FROM patrol_boundaries
       ORDER BY created_at DESC
@@ -1193,6 +1210,7 @@ router.get("/patrol-boundaries/:id", verifyJwt, async (req, res) => {
         layer_name,
         workspace,
         color,
+        boundary_date::text AS boundary_date,
         created_at
       FROM patrol_boundaries
       WHERE id = $1
@@ -1340,6 +1358,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
     round,
     beat,
     village,
+    boundary_date,
+    date,
   } = req.body;
 
   if (!name || !geom) {
@@ -1350,6 +1370,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
   }
 
   try {
+    const boundaryDate = getBoundaryDate(boundary_date || date);
+
     // Check if boundary name already exists
     const nameCheckResult = await sequelize.query(
       `
@@ -1419,6 +1441,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
                 round VARCHAR(255),
                 beat VARCHAR(255),
                 village VARCHAR(255),
+                boundary_date DATE DEFAULT CURRENT_DATE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `;
@@ -1434,7 +1457,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
                 range, 
                 round, 
                 beat, 
-                village
+                village,
+                boundary_date
             )
             VALUES (
                 ST_GeomFromText(:polygonText, 4326),
@@ -1443,7 +1467,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
                 :range,
                 :round,
                 :beat,
-                :village
+                :village,
+                :boundaryDate
             )
         `;
 
@@ -1456,6 +1481,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
         round: round || null,
         beat: beat || null,
         village: village || null,
+        boundaryDate,
       },
     });
 
@@ -1468,8 +1494,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
     // Save metadata
     await sequelize.query(
       `
-            INSERT INTO patrol_boundaries (table_name, boundary_name, workspace, layer_name, color)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO patrol_boundaries (table_name, boundary_name, workspace, layer_name, color, boundary_date)
+            VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (table_name) DO NOTHING
             `,
       {
@@ -1479,6 +1505,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
           WORKSPACE,
           `${WORKSPACE}:${tableName}`,
           color,
+          boundaryDate,
         ],
       },
     );
@@ -1492,6 +1519,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
         geoserver_layer: `${WORKSPACE}:${tableName}`,
         wms_url: `${GEOSERVER_URL}/${WORKSPACE}/wms`,
         color: color,
+        boundary_date: boundaryDate,
         total_points: parsedCoordinates.length,
         metadata: {
           officer_name: officer_name || null,
@@ -1500,6 +1528,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
           round: round || null,
           beat: beat || null,
           village: village || null,
+          boundary_date: boundaryDate,
         },
       },
     });
