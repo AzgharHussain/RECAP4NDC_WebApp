@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { Button, Card, Col, DatePicker, Descriptions, Image, Modal, Row, Select, Space, Statistic, Table, Tag, Tooltip, message } from "antd";
-import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import React, { useEffect, useState, useRef } from "react";
+import { Button, Card, Col, DatePicker, Descriptions, Image, Input, Modal, Row, Select, Space, Statistic, Table, Tag, Tooltip, message } from "antd";
+import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, InfoCircleOutlined, EditOutlined, TableOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { API_BASE_URL } from "../config";
 import { getAuthHeaders, getUserDivision, matchesDivision, matchesUserHierarchy, matchesUserHierarchyString, getMostSpecificLevel } from "../utils/authUtils";
 import { capitalizeFirst } from "../utils/textFormat";
@@ -167,6 +169,21 @@ const NDVINotifications = () => {
   const [detailImageLoading, setDetailImageLoading] = useState(false);
   // Pagination state — server-driven
   const [pagination, setPagination] = useState({ current: 1, pageSize: 500, total: 0 });
+
+  // ── NDVI Changes modal state ──
+  const [changesModalOpen, setChangesModalOpen] = useState(false);
+  const [changesData, setChangesData] = useState([]);
+  const [changesLoading, setChangesLoading] = useState(false);
+  const [changesUser, setChangesUser] = useState(null);
+  const [selectedPoint, setSelectedPoint] = useState(null);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+
+  // ── Status update modal state ──
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusForm, setStatusForm] = useState({ status: "Pending", note: "" });
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   const fetchReport = async (overrideFilters = filters, page = pagination.current, pageSize = pagination.pageSize) => {
     setLoading(true);
@@ -389,6 +406,110 @@ const NDVINotifications = () => {
     }
   };
 
+  // ── Fetch NDVI changes for a specific user ──
+  const fetchUserChanges = async (user_id) => {
+    setChangesLoading(true);
+    setChangesUser(user_id);
+    setChangesModalOpen(true);
+    setSelectedPoint(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ndvi-changes/user/${user_id}`, {
+        headers: getAuthHeaders(),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "Failed to fetch NDVI changes");
+      setChangesData((json.data || []).map((item, i) => ({ ...item, key: `${item.table_name}-${item.pixel_id}-${i}` })));
+    } catch (err) {
+      console.error(err);
+      message.error(err.message || "Failed to fetch NDVI changes");
+      setChangesData([]);
+    } finally {
+      setChangesLoading(false);
+    }
+  };
+
+  // ── Select a point from the changes table and zoom the map ──
+  const handleSelectPoint = (point) => {
+    setSelectedPoint(point);
+    const lat = parseFloat(point.latitude);
+    const lng = parseFloat(point.longitude);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      message.warning(t.locationUnavailable);
+      return;
+    }
+    // Initialize or update the map
+    setTimeout(() => {
+      if (!mapRef.current) return;
+      if (!mapInstanceRef.current) {
+        mapInstanceRef.current = L.map(mapRef.current, { zoomControl: true }).setView([lat, lng], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(mapInstanceRef.current);
+      } else {
+        mapInstanceRef.current.setView([lat, lng], 15);
+      }
+      // Remove old marker, add new
+      if (markerRef.current) markerRef.current.remove();
+      markerRef.current = L.marker([lat, lng]).addTo(mapInstanceRef.current)
+        .bindPopup(`<b>Pixel ID:</b> ${point.pixel_id}<br><b>NDVI Change:</b> ${point.NDVI_change || '-'}<br><b>Village:</b> ${point.village || '-'}`)
+        .openPopup();
+      // Invalidate size in case modal just opened
+      mapInstanceRef.current.invalidateSize();
+    }, 200);
+  };
+
+  // ── Open status update modal ──
+  const openStatusModal = (point) => {
+    setSelectedPoint(point);
+    setStatusForm({ status: point.status || "Pending", note: point.note || "" });
+    setStatusModalOpen(true);
+  };
+
+  // ── Update point status via API ──
+  const updatePointStatus = async () => {
+    if (!selectedPoint) return;
+    setStatusUpdating(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ndvi-changes/status`, {
+        method: "PUT",
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          table_name: selectedPoint.table_name,
+          pixel_id: selectedPoint.pixel_id,
+          status: statusForm.status,
+          note: statusForm.note,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || json.error || "Failed to update status");
+      message.success("Status updated successfully");
+      // Update the changes table locally
+      setChangesData(prev => prev.map(item =>
+        item.table_name === selectedPoint.table_name && item.pixel_id === selectedPoint.pixel_id
+          ? { ...item, status: statusForm.status, note: statusForm.note }
+          : item
+      ));
+      setStatusModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      message.error(err.message || "Failed to update status");
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  // ── Cleanup map on modal close ──
+  const closeChangesModal = () => {
+    setChangesModalOpen(false);
+    setSelectedPoint(null);
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+      markerRef.current = null;
+    }
+  };
+
   // Generic sorter for string/number values
   const genericSorter = (dataIndex) => (a, b) => {
     const av = a[dataIndex];
@@ -446,11 +567,18 @@ const NDVINotifications = () => {
       title: t.action,
       key: "action",
       fixed: "right",
-      width: 130,
+      width: 200,
       render: (_, record) => (
-        <Button type="link" icon={<EyeOutlined />} onClick={() => showDetails(record)}>
-          {t.viewDetails}
-        </Button>
+        <Space>
+          <Button type="link" icon={<EyeOutlined />} onClick={() => showDetails(record)}>
+            {t.viewDetails}
+          </Button>
+          {record.user_id && (
+            <Button type="link" icon={<TableOutlined />} onClick={() => fetchUserChanges(record.user_id)}>
+              View Changes
+            </Button>
+          )}
+        </Space>
       ),
     },
   ];
@@ -641,6 +769,114 @@ const NDVINotifications = () => {
                 </Button>
               </div>
             )}
+          </div>
+        )}
+      </Modal>
+
+      {/* ── NDVI Changes modal (table + map + status update) ── */}
+      <Modal
+        title={`NDVI Changes — User: ${changesUser || '-'}`}
+        open={changesModalOpen}
+        onCancel={closeChangesModal}
+        footer={null}
+        width={1100}
+      >
+        <Row gutter={[16, 16]}>
+          {/* Changes table */}
+          <Col span={14}>
+            <Table
+              size="small"
+              columns={[
+                { title: "Pixel ID", dataIndex: "pixel_id", key: "pixel_id", width: 80 },
+                { title: "Village", dataIndex: "village", key: "village", width: 100, render: v => v || "-" },
+                { title: "NDVI Change", dataIndex: "NDVI_change", key: "NDVI_change", width: 90, render: v => v != null ? Number(v).toFixed(4) : "-" },
+                { title: "Category", dataIndex: "change_category", key: "change_category", width: 90, render: v => v || "-" },
+                { title: "Status", dataIndex: "status", key: "status", width: 90, render: v => <Tag color={v === "Resolved" ? "success" : v === "Under Review" ? "processing" : "warning"}>{v || "Pending"}</Tag> },
+                {
+                  title: "Action",
+                  key: "action",
+                  width: 120,
+                  render: (_, record) => (
+                    <Space size="small">
+                      <Button size="small" type="link" icon={<EnvironmentOutlined />} onClick={() => handleSelectPoint(record)}>Zoom</Button>
+                      <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openStatusModal(record)}>Update</Button>
+                    </Space>
+                  ),
+                },
+              ]}
+              dataSource={changesData}
+              loading={changesLoading}
+              pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 25, 50] }}
+              scroll={{ x: "max-content" }}
+              rowSelection={{
+                type: "radio",
+                selectedRowKeys: selectedPoint ? [selectedPoint.key] : [],
+                onChange: (_, rows) => rows[0] && handleSelectPoint(rows[0]),
+              }}
+              onRow={(record) => ({
+                onClick: () => handleSelectPoint(record),
+              })}
+            />
+          </Col>
+
+          {/* Mini map */}
+          <Col span={10}>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>
+              {selectedPoint ? `Selected: Pixel ${selectedPoint.pixel_id}` : "Select a point to zoom"}
+            </div>
+            <div ref={mapRef} style={{ width: "100%", height: 350, borderRadius: 8, border: "1px solid #d9d9d9" }} />
+            {selectedPoint && (
+              <Descriptions bordered size="small" column={1} style={{ marginTop: 12 }}>
+                <Descriptions.Item label="Pixel ID">{selectedPoint.pixel_id}</Descriptions.Item>
+                <Descriptions.Item label="Latitude">{selectedPoint.latitude || "-"}</Descriptions.Item>
+                <Descriptions.Item label="Longitude">{selectedPoint.longitude || "-"}</Descriptions.Item>
+                <Descriptions.Item label="NDVI Change">{selectedPoint.NDVI_change != null ? Number(selectedPoint.NDVI_change).toFixed(4) : "-"}</Descriptions.Item>
+                <Descriptions.Item label="Status"><Tag color={selectedPoint.status === "Resolved" ? "success" : "warning"}>{selectedPoint.status || "Pending"}</Tag></Descriptions.Item>
+              </Descriptions>
+            )}
+          </Col>
+        </Row>
+      </Modal>
+
+      {/* ── Status update modal ── */}
+      <Modal
+        title="Update NDVI Point Status"
+        open={statusModalOpen}
+        onCancel={() => setStatusModalOpen(false)}
+        onOk={updatePointStatus}
+        confirmLoading={statusUpdating}
+        okText="Update"
+      >
+        {selectedPoint && (
+          <div>
+            <Descriptions bordered size="small" column={1} style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="Table">{selectedPoint.table_name}</Descriptions.Item>
+              <Descriptions.Item label="Pixel ID">{selectedPoint.pixel_id}</Descriptions.Item>
+              <Descriptions.Item label="Village">{selectedPoint.village || "-"}</Descriptions.Item>
+            </Descriptions>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Status</label>
+              <Select
+                style={{ width: "100%" }}
+                value={statusForm.status}
+                onChange={(v) => setStatusForm(prev => ({ ...prev, status: v }))}
+                options={[
+                  { value: "Pending", label: "Pending" },
+                  { value: "Under Review", label: "Under Review" },
+                  { value: "Resolved", label: "Resolved" },
+                  { value: "False Positive", label: "False Positive" },
+                ]}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Note / Action Taken</label>
+              <Input.TextArea
+                rows={4}
+                value={statusForm.note}
+                onChange={(e) => setStatusForm(prev => ({ ...prev, note: e.target.value }))}
+                placeholder="Enter action taken or notes..."
+              />
+            </div>
           </div>
         )}
       </Modal>

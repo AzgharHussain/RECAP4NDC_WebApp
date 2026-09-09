@@ -372,6 +372,7 @@ const supportRouter = require('./routers/support');
 const incidentLogsRouter = require('./routers/incidentLogs');
 const incidentCategoriesRouter = require('./routers/incidentCategories');
 const incidentSeverityRouter = require('./routers/incidentSeverity');
+const ndviChangesRouter = require('./routers/ndviChanges');
 
 const TEMP_SAVEUSER_TOKEN = process.env.TEMP_SAVEUSER_TOKEN || require('crypto').randomBytes(32).toString('hex');
 const verifyTempToken = (req, res, next) => {
@@ -1019,6 +1020,7 @@ app.use('/api', supportRouter);
 app.use('/api', incidentLogsRouter);
 app.use('/api', incidentCategoriesRouter);
 app.use('/api', incidentSeverityRouter);
+app.use('/api', ndviChangesRouter);
 app.use("/api", forestRoutes);
 app.use('/api', auditLogsRouter);
 // Error handling middleware

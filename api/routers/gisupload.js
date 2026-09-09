@@ -58,9 +58,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // --- Utility: Run shell commands ---
-function runCommand(cmd, env = GDAL_ENV) {
+function runCommand(cmd, env = GDAL_ENV, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
-    exec(cmd, { maxBuffer: 1024 * 1024 * 50, env }, (err, stdout, stderr) => {
+    const child = exec(cmd, { maxBuffer: 1024 * 1024 * 50, env, timeout: timeoutMs }, (err, stdout, stderr) => {
       if (err) {
         if (
           stderr &&
@@ -75,6 +75,11 @@ function runCommand(cmd, env = GDAL_ENV) {
       }
       resolve({ stdout, stderr });
     });
+    // Safety net: kill the process if exec's timeout option doesn't fire
+    const killTimer = setTimeout(() => {
+      try { child.kill('SIGKILL'); } catch (_) {}
+    }, timeoutMs + 5000);
+    child.on('exit', () => clearTimeout(killTimer));
   });
 }
 
@@ -260,6 +265,7 @@ async function publishToGeoServer(tableName, color) {
       headers: {
         Accept: "application/json",
       },
+      timeout: 15000, // 15s per request — prevents 504 when GeoServer is slow/down
     });
 
     // First, check if the layer already exists
@@ -560,7 +566,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
 
         try {
-          await runCommand(ogrCmd);
+          await runCommand(ogrCmd, GDAL_ENV, 120000);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for KML:", ogrError.stderr);
@@ -573,7 +579,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -overwrite`;
 
           try {
-            await runCommand(altCmd);
+            await runCommand(altCmd, GDAL_ENV, 120000);
             importSuccess = true;
           } catch (altError) {
             console.error("Alternative import also failed:", altError);
@@ -615,7 +621,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
 
         try {
-          await runCommand(ogrCmd);
+          await runCommand(ogrCmd, GDAL_ENV, 120000);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for SHP:", ogrError.stderr);
@@ -628,7 +634,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -overwrite`;
 
           try {
-            await runCommand(altCmd);
+            await runCommand(altCmd, GDAL_ENV, 120000);
             importSuccess = true;
           } catch (altError) {
             console.error("Alternative import also failed:", altError);
@@ -918,7 +924,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
 
         try {
-          await runCommand(ogrCmd);
+          await runCommand(ogrCmd, GDAL_ENV, 120000);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for KML:", ogrError.stderr);
@@ -930,7 +936,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -nln "${tableName}" \
 -overwrite`;
 
-          await runCommand(altCmd);
+          await runCommand(altCmd, GDAL_ENV, 120000);
           importSuccess = true;
         }
       } else {
@@ -970,7 +976,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
 
         try {
-          await runCommand(ogrCmd);
+          await runCommand(ogrCmd, GDAL_ENV, 120000);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for SHP:", ogrError.stderr);
@@ -982,7 +988,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 -nln "${tableName}" \
 -overwrite`;
 
-          await runCommand(altCmd);
+          await runCommand(altCmd, GDAL_ENV, 120000);
           importSuccess = true;
         }
       }
