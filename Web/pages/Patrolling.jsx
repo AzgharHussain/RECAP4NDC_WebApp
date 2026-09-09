@@ -714,10 +714,10 @@ const PatrolIncidentLogs = () => {
     const div = getUserDivision();
     _setLockedDivision(div);
     setDivisionFilter(div || "");
-    // Auto-lock range, round, beat from user profile
-    setRangeFilter(getUserRange() || "");
-    setRoundFilter(getUserRound() || "");
-    setBeatFilter(getUserBeat() || "");
+    // If user has no division, show all divisions/data and do not lock lower hierarchy filters.
+    setRangeFilter(div ? (getUserRange() || "") : "");
+    setRoundFilter(div ? (getUserRound() || "") : "");
+    setBeatFilter(div ? (getUserBeat() || "") : "");
   }, []);
   
   // Pagination states

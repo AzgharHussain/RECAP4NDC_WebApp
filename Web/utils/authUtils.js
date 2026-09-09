@@ -343,11 +343,14 @@ export const DEFAULT_HIERARCHY_FIELD_MAP = {
  * @returns {Array<{level: string, value: string}>} Non-empty levels, beat first.
  */
 export const getUserHierarchy = () => {
+  const division = getUserDivision();
+  if (!division) return [];
+
   const levels = [
     { level: 'beat',     value: getUserBeat() },
     { level: 'round',    value: getUserRound() },
     { level: 'range',    value: getUserRange() },
-    { level: 'division', value: getUserDivision() },
+    { level: 'division', value: division },
     { level: 'circle',   value: getUserCircle() },
   ];
   return levels.filter(l => l.value);

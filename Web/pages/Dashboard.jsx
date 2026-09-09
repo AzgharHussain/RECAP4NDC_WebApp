@@ -167,9 +167,9 @@ export default function Dashboard() {
     const div = getUserDivision();
     _setUserDivision(div);
     setSelectedDivision(div || "all");
-    // Auto-select range if user has one
-    const rng = getUserRange();
-    if (rng) setSelectedRange(rng);
+    // If user has no division, show all divisions/data and do not lock range.
+    const rng = div ? getUserRange() : null;
+    setSelectedRange(rng || "all");
   }, []);
 
   const [forestChangeData, setForestChangeData] = useState([]);
