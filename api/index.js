@@ -525,14 +525,23 @@ try {
   console.error("   Save it as: api/routers/recap4ndc-add07-firebase-adminsdk-fbsvc-a7d6b597e7.json");
 }
 
-startNdviScheduler(admin);
+// Only run schedulers on the first worker in cluster mode to avoid
+// 8× duplicate execution. In single-process mode (no cluster), always run.
+const isPrimaryWorker = !process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0';
 
-// --------------------------------------------------
-// Data Retention Scheduler — auto-deletes patrol rows
-// and NDVI Change tables older than 1 year. Runs daily
-// at 2:00 AM and once on startup.
-// --------------------------------------------------
-startDataRetentionScheduler();
+if (isPrimaryWorker) {
+  console.log('[scheduler] This worker will run cron schedulers (NODE_APP_INSTANCE=' + (process.env.NODE_APP_INSTANCE || 'none') + ')');
+  startNdviScheduler(admin);
+
+  // --------------------------------------------------
+  // Data Retention Scheduler — auto-deletes patrol rows
+  // and NDVI Change tables older than 1 year. Runs daily
+  // at 2:00 AM and once on startup.
+  // --------------------------------------------------
+  startDataRetentionScheduler();
+} else {
+  console.log('[scheduler] Schedulers skipped on worker ' + process.env.NODE_APP_INSTANCE);
+}
 
 // --------------------------------------------------
 // 2. Schema-based Validation (Joi)
