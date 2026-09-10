@@ -422,6 +422,38 @@ const NDVINotifications = () => {
     }
   };
 
+  // ── View point details (note + image) for False Positive status ──
+  const showPointDetails = async (record) => {
+    setPointDetailRecord(record);
+    setPointDetailImage(null);
+    setPointDetailLoading(true);
+    setPointDetailOpen(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ndvi-changes/point/${record.table_name}/${record.pixel_id}`, {
+        headers: getAuthHeaders(),
+      });
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        const data = json.data;
+        setPointDetailRecord((prev) => ({
+          ...prev,
+          note: data.note || prev.note,
+          status: data.status || prev.status,
+          latitude: data.latitude || prev.latitude,
+          longitude: data.longitude || prev.longitude,
+          change_category: data.change_category || prev.change_category,
+        }));
+        if (data.image_data) {
+          setPointDetailImage(`data:image/jpeg;base64,${data.image_data}`);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch point details:", err);
+    } finally {
+      setPointDetailLoading(false);
+    }
+  };
+
   // Generic sorter for string/number values
   const genericSorter = (dataIndex) => (a, b) => {
     const av = a[dataIndex];
@@ -626,11 +658,14 @@ const NDVINotifications = () => {
                 {
                   title: "Action",
                   key: "action",
-                  width: 120,
+                  width: 160,
                   render: (_, record) => (
                     <Space size="small">
                       <Button size="small" type="link" icon={<EnvironmentOutlined />} onClick={() => handleSelectPoint(record)}>Zoom</Button>
                       <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openStatusModal(record)}>Update</Button>
+                      {record.status === "False Positive" && (
+                        <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => showPointDetails(record)}>Details</Button>
+                      )}
                     </Space>
                   ),
                 },
@@ -710,6 +745,63 @@ const NDVINotifications = () => {
                 placeholder="Enter action taken or notes..."
               />
             </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Point details modal (note + image for False Positive) ── */}
+      <Modal
+        title="Point Details — False Positive"
+        open={pointDetailOpen}
+        onCancel={() => setPointDetailOpen(false)}
+        footer={null}
+        width={700}
+      >
+        {pointDetailRecord && (
+          <div>
+            {pointDetailLoading ? (
+              <p style={{ textAlign: "center" }}>Loading...</p>
+            ) : (
+              <>
+                <Descriptions bordered column={2} size="small">
+                  <Descriptions.Item label="Pixel ID">{pointDetailRecord.pixel_id || "-"}</Descriptions.Item>
+                  <Descriptions.Item label="Village">{pointDetailRecord.village || "-"}</Descriptions.Item>
+                  <Descriptions.Item label="NDVI Change">{pointDetailRecord.NDVI_change != null ? Number(pointDetailRecord.NDVI_change).toFixed(4) : "-"}</Descriptions.Item>
+                  <Descriptions.Item label="Category">{pointDetailRecord.change_category || "-"}</Descriptions.Item>
+                  <Descriptions.Item label="Status">
+                    <Tag color="error">{pointDetailRecord.status || "False Positive"}</Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Latitude">{pointDetailRecord.latitude || "-"}</Descriptions.Item>
+                  <Descriptions.Item label="Longitude" span={2}>{pointDetailRecord.longitude || "-"}</Descriptions.Item>
+                  <Descriptions.Item label="Note" span={2}>
+                    {pointDetailRecord.note || "No note available"}
+                  </Descriptions.Item>
+                </Descriptions>
+
+                <div style={{ marginTop: 16, textAlign: "center" }}>
+                  {pointDetailImage ? (
+                    <div>
+                      <img
+                        src={pointDetailImage}
+                        alt="NDVI Point"
+                        style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }}
+                      />
+                      <div style={{ marginTop: 8 }}>
+                        <Button
+                          type="link"
+                          icon={<EyeOutlined />}
+                          onClick={() => window.open(pointDetailImage, "_blank")}
+                        >
+                          View Full Image
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p>No image available</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </Modal>
