@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Button, Card, Col, DatePicker, Descriptions, Image, Input, Modal, Row, Select, Space, Statistic, Table, Tag, Tooltip, message } from "antd";
-import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, InfoCircleOutlined, EditOutlined, TableOutlined } from "@ant-design/icons";
+import { Button, Card, Col, DatePicker, Descriptions, Input, Modal, Row, Select, Space, Statistic, Table, Tag, message } from "antd";
+import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, EditOutlined, TableOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { API_BASE_URL } from "../config";
-import { getAuthHeaders, getUserDivision, matchesDivision, matchesUserHierarchy, matchesUserHierarchyString, getMostSpecificLevel } from "../utils/authUtils";
+import { getAuthHeaders, matchesUserHierarchy, matchesUserHierarchyString, getMostSpecificLevel } from "../utils/authUtils";
 import { capitalizeFirst } from "../utils/textFormat";
 import { useLanguage } from "../context/LanguageContext";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
@@ -14,7 +14,7 @@ import gisfylogo from "../assets/Gisfylogo.png";
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-const emptyOptions = { usernames: [], villages: [], coupes: [], tables: [], divisions: [], months: [], statuses: ["Pending", "Resolved"] };
+const emptyOptions = { usernames: [], villages: [], coupes: [], divisions: [], months: [] };
 
 // Convert any timestamp to IST (UTC+5:30) and display as DD-MM-YYYY HH:mm:ss
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
@@ -41,51 +41,35 @@ const TEXTS = {
     pageTitle: "NDVI Notifications",
     usersReceived: "Users Received",
     totalNotifications: "Total Notifications",
-    resolved: "Resolved",
-    pending: "Pending",
+    totalChanges: "Total Changes",
     // Filter placeholders
     userId: "User ID",
     userName: "User Name",
     division: "Division",
     month: "Month",
-    status: "Status",
     filter: "Filter",
     clear: "Clear",
     // Table columns
-    subscribedVillage: "Subscribed Village",
-    subscribedVillageHint: "The village the user subscribed to receive NDVI alerts for",
     range: "Range",
     round: "Round",
     beat: "Beat",
-    alertVillage: "Alert Village",
-    alertVillageHint: "The village where the NDVI vegetation change was detected",
-    pixelId: "Pixel ID",
-    actionTaken: "Action Taken",
-    noActionTaken: "No action taken",
+    village: "Village",
+    notificationDate: "Notification Date",
+    slot: "Slot",
+    changeCount: "Changes Count",
     sentAt: "Sent At (IST)",
     action: "Action",
-    viewDetails: "View Details",
+    viewChanges: "View Changes",
     // Section titles
-    monthlySummary: "Monthly Division-wise NDVI Alert Summary",
+    monthlySummary: "Monthly Division-wise NDVI Notification Summary",
     notificationData: "Notification Data",
     export: "Export",
-    alertsGenerated: "Alerts Generated",
-    village: "Village",
+    alertsGenerated: "Changes Detected",
+    notificationsSent: "Notifications Sent",
     // Modal
     notificationDetails: "Notification Details",
-    loadingImage: "Loading image...",
-    imageNotAvailable: "Image not available",
-    hasImage: "Has Image",
-    yes: "Yes",
-    no: "No",
-    note: "Note",
-    noNote: "No note available",
-    latitude: "Latitude",
-    longitude: "Longitude",
-    viewOnMaps: "View Location on Google Maps",
-    locationUnavailable: "Location coordinates not available",
+    coupeName: "Coupe Name",
     noData: "No notification data available to export",
-    ndviTable: "NDVI Table",
     startDate: "Start Date",
     endDate: "End Date",
   },
@@ -93,51 +77,35 @@ const TEXTS = {
     pageTitle: "NDVI સૂચનાઓ",
     usersReceived: "વપરાશકર્તાઓ પ્રાપ્ત",
     totalNotifications: "કુલ સૂચનાઓ",
-    resolved: "નિવારિત",
-    pending: "બાકી",
+    totalChanges: "કુલ ફેરફાર",
     // Filter placeholders
     userId: "વપરાશકર્તા ID",
     userName: "વપરાશકર્તા નામ",
     division: "વિભાગ",
     month: "મહિનો",
-    status: "સ્થિતિ",
     filter: "ફિલ્ટર",
     clear: "સાફ કરો",
     // Table columns
-    subscribedVillage: "સભ્ય ગ્રામ",
-    subscribedVillageHint: "વપરાશકર્તાએ NDVI ચેતવણી માટે સભ્યતા લીધેલું ગામ",
     range: "રેન્જ",
     round: "રાઉન્ડ",
     beat: "બીટ",
-    alertVillage: "ચેતવણી ગ્રામ",
-    alertVillageHint: "NDVI વનસ્પતિ પરિવર્તન જોવામાં આવેલું ગામ",
-    pixelId: "પિક્સેલ ID",
-    actionTaken: "લેવાયેલ પગલું",
-    noActionTaken: "કોઈ પગલું નહીં",
+    village: "ગ્રામ",
+    notificationDate: "સૂચના તારીખ",
+    slot: "સ્લોટ",
+    changeCount: "ફેરફાર સંખ્યા",
     sentAt: "મોકલ્યો (IST)",
     action: "ક્રિયા",
-    viewDetails: "વિગતો જુઓ",
+    viewChanges: "ફેરફાર જુઓ",
     // Section titles
-    monthlySummary: "માસિક વિભાગ-વાર NDVI ચેતવણી સારાંશ",
+    monthlySummary: "માસિક વિભાગ-વાર NDVI સૂચના સારાંશ",
     notificationData: "સૂચના ડેટા",
     export: "નિકાસ",
-    alertsGenerated: "ઉત્પન્ન ચેતવણીઓ",
-    village: "ગ્રામ",
+    alertsGenerated: "જોવામાં આવેલ ફેરફાર",
+    notificationsSent: "મોકલાયેલ સૂચનાઓ",
     // Modal
     notificationDetails: "સૂચના વિગતો",
-    loadingImage: "છબી લોડ થઈ રહી છે...",
-    imageNotAvailable: "છબી ઉપલબ્ધ નથી",
-    hasImage: "છબી છે",
-    yes: "હા",
-    no: "ના",
-    note: "નોંધ",
-    noNote: "કોઈ નોંધ નથી",
-    latitude: "અક્ષાંશ",
-    longitude: "રેખાંશ",
-    viewOnMaps: "Google Maps પર સ્થાન જુઓ",
-    locationUnavailable: "સ્થાન કોઓર્ડિનેટ્સ ઉપલબ્ધ નથી",
+    coupeName: "ક્યુપ નામ",
     noData: "નિકાસ માટે કોઈ સૂચના ડેટા ઉપલબ્ધ નથી",
-    ndviTable: "NDVI કોષ્ટક",
     startDate: "શરૂઆત તારીખ",
     endDate: "સમાપ્તિ તારીખ",
   },
@@ -156,17 +124,15 @@ const NDVINotifications = () => {
   const [data, setData] = useState([]);
   const [monthlySummary, setMonthlySummary] = useState([]);
   const [options, setOptions] = useState(emptyOptions);
-  const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
+  const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, total_changes: 0 });
   // table_name kept in state for API calls but no longer shown as a UI filter
   const [filters, setFilters] = useState({
-    username: null, table_name: null,
+    username: null,
     division: null,
-    month: null, status: null, dates: null
+    month: null, dates: null
   });
   const [detailRecord, setDetailRecord] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [detailImageUrl, setDetailImageUrl] = useState(null);
-  const [detailImageLoading, setDetailImageLoading] = useState(false);
   // Pagination state — server-driven
   const [pagination, setPagination] = useState({ current: 1, pageSize: 500, total: 0 });
 
@@ -175,6 +141,7 @@ const NDVINotifications = () => {
   const [changesData, setChangesData] = useState([]);
   const [changesLoading, setChangesLoading] = useState(false);
   const [changesUser, setChangesUser] = useState(null);
+  const [changesUserName, setChangesUserName] = useState(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -185,11 +152,17 @@ const NDVINotifications = () => {
   const [statusForm, setStatusForm] = useState({ status: "Pending", note: "" });
   const [statusUpdating, setStatusUpdating] = useState(false);
 
+  // ── Point details modal state (note + image for False Positive) ──
+  const [pointDetailOpen, setPointDetailOpen] = useState(false);
+  const [pointDetailRecord, setPointDetailRecord] = useState(null);
+  const [pointDetailLoading, setPointDetailLoading] = useState(false);
+  const [pointDetailImage, setPointDetailImage] = useState(null);
+
   const fetchReport = async (overrideFilters = filters, page = pagination.current, pageSize = pagination.pageSize) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      ["username", "table_name", "division", "month", "status"].forEach((key) => {
+      ["username", "division", "month"].forEach((key) => {
         if (overrideFilters[key]) params.append(key, overrideFilters[key]);
       });
       if (overrideFilters.dates?.[0]) params.append("start_date", overrideFilters.dates[0].format("YYYY-MM-DD"));
@@ -206,7 +179,7 @@ const NDVINotifications = () => {
       if (lockedDivision) {
         rows = rows.filter(item =>
           matchesUserHierarchy(item) ||
-          matchesUserHierarchyString(item.table_name || '')
+          matchesUserHierarchyString(item.coupe_name || '')
         );
       }
       setData(rows);
@@ -215,7 +188,7 @@ const NDVINotifications = () => {
         monthlyRows = monthlyRows.filter(item => matchesUserHierarchy(item));
       }
       setMonthlySummary(monthlyRows);
-      setSummary(json.summary || { total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
+      setSummary(json.summary || { total_notifications: 0, users_received: 0, total_changes: 0 });
       setOptions({ ...emptyOptions, ...(json.options || {}) });
       if (json.pagination) {
         setPagination(prev => ({
@@ -230,7 +203,7 @@ const NDVINotifications = () => {
       message.error(err.message || "Failed to fetch NDVI notifications");
       setData([]);
       setMonthlySummary([]);
-      setSummary({ total_notifications: 0, users_received: 0, resolved: 0, pending: 0 });
+      setSummary({ total_notifications: 0, users_received: 0, total_changes: 0 });
     } finally {
       setLoading(false);
     }
@@ -260,7 +233,7 @@ const NDVINotifications = () => {
 
   const clearFilters = () => {
     // Keep the locked division when clearing filters
-    const cleared = { username: null, table_name: null, division: lockedDivision || null, month: null, status: null, dates: null };
+    const cleared = { username: null, division: lockedDivision || null, month: null, dates: null };
     setFilters(cleared);
     setPagination(prev => ({ ...prev, current: 1 }));
     fetchReport(cleared, 1, pagination.pageSize);
@@ -301,13 +274,10 @@ const NDVINotifications = () => {
         [t.range]: item.range || "-",
         [t.round]: item.round || "-",
         [t.beat]: item.beat || "-",
-        [t.alertVillage]: item.village || item.village_name || "-",
-        [t.month]: item.month || "-",
-        [t.pixelId]: item.pixel_id || "-",
-        [t.status]: item.alert_status || t.pending,
-        [t.actionTaken]: item.action_taken || t.noActionTaken,
-        [t.note]: item.note || "-",
-        [t.hasImage]: item.has_image ? t.yes : t.no,
+        [t.village]: item.village || item.village_name || "-",
+        [t.notificationDate]: item.notification_date || "-",
+        [t.slot]: item.slot_label || "-",
+        [t.changeCount]: item.change_count || 0,
         [t.sentAt]: formatSentAt(item.sent_at),
       }));
       const summaryRows = monthlySummary.map((item) => ({
@@ -318,20 +288,17 @@ const NDVINotifications = () => {
         [t.beat]: item.beat || "-",
         [t.village]: item.village || "-",
         [t.alertsGenerated]: item.alerts_generated,
-        [t.resolved]: item.resolved,
-        [t.pending]: item.pending,
+        [t.notificationsSent]: item.notifications_sent,
       }));
       const filterRows = [
         { Filter: t.userName, Value: filters.username || "All" },
         { Filter: t.division,  Value: filters.division  || "All" },
         { Filter: t.month,     Value: filters.month     || "All" },
-        { Filter: t.status,    Value: filters.status    || "All" },
         { Filter: t.startDate, Value: filters.dates?.[0]?.format("YYYY-MM-DD") || "All" },
         { Filter: t.endDate,   Value: filters.dates?.[1]?.format("YYYY-MM-DD") || "All" },
         { Filter: t.usersReceived,      Value: summary.users_received     || 0 },
         { Filter: t.totalNotifications, Value: summary.total_notifications || 0 },
-        { Filter: t.resolved,           Value: summary.resolved           || 0 },
-        { Filter: t.pending,            Value: summary.pending            || 0 },
+        { Filter: t.totalChanges,       Value: summary.total_changes       || 0 },
       ];
 
       const wb = XLSX.utils.book_new();
@@ -345,71 +312,16 @@ const NDVINotifications = () => {
     }
   };
 
-  const showDetails = async (record) => {
+  const showDetails = (record) => {
     setDetailRecord(record);
     setDetailModalOpen(true);
-    setDetailImageUrl(null);
-    setDetailImageLoading(false);
-    // Always attempt to fetch the image and note if we have table_name and pixel_id,
-    // even if has_image is false (the flag may be stale).
-    if (record.table_name && record.pixel_id) {
-      setDetailImageLoading(true);
-      try {
-        const params = new URLSearchParams({
-          NdvicoupeName: record.table_name,
-          id: String(record.pixel_id),
-        });
-        const url = `${API_BASE_URL}/api/ndvi-change?${params}`;
-        const res = await fetch(url, {
-          method: "GET",
-          headers: { ...getAuthHeaders() },
-        });
-        if (!res.ok) {
-          console.error("NDVI image fetch failed:", res.status, res.statusText, "URL:", url);
-          const errText = await res.text().catch(() => "");
-          console.error("NDVI image fetch error body:", errText);
-        } else {
-          const json = await res.json();
-          if (json.success && json.data && json.data[0]) {
-            const data = json.data[0];
-            // Update image
-            if (data.image_data) {
-              setDetailImageUrl(`data:${data.image_type || "image/jpeg"};base64,${data.image_data}`);
-            } else {
-              console.warn("NDVI record found but image_data is null. Table:", record.table_name, "Pixel ID:", record.pixel_id);
-            }
-            // Update note and other fields from the source table
-            setDetailRecord((prev) => ({
-              ...prev,
-              note: data.note || prev.note,
-              latitude: data.latitude || prev.latitude,
-              longitude: data.longitude || prev.longitude,
-              status: data.status !== undefined ? data.status : prev.status,
-            }));
-          } else {
-            console.warn("NDVI image fetch returned no data. Response:", JSON.stringify(json).substring(0, 200));
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch image:", err);
-      } finally {
-        setDetailImageLoading(false);
-      }
-    }
-  };
-
-  const openInGoogleMaps = (lat, lng) => {
-    if (lat && lng) {
-      window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
-    } else {
-      message.warning(t.locationUnavailable);
-    }
   };
 
   // ── Fetch NDVI changes for a specific user ──
-  const fetchUserChanges = async (user_id) => {
+  const fetchUserChanges = async (user_id, userName = null) => {
     setChangesLoading(true);
     setChangesUser(user_id);
+    setChangesUserName(userName);
     setChangesModalOpen(true);
     setSelectedPoint(null);
     try {
@@ -528,33 +440,15 @@ const NDVINotifications = () => {
     { title: t.range,             dataIndex: "range",        key: "range",        sorter: genericSorter("range"),        render: (v) => v || "-" },
     { title: t.round,             dataIndex: "round",        key: "round",        sorter: genericSorter("round"),        render: (v) => v || "-" },
     { title: t.beat,              dataIndex: "beat",         key: "beat",         sorter: genericSorter("beat"),         render: (v) => v || "-" },
-    { title: t.alertVillage,      dataIndex: "village",      key: "village",      sorter: genericSorter("village"),      render: (v, record) => v || record.village_name || "-",
-      titleRender: () => (
-        <span>{t.alertVillage} <Tooltip title={t.alertVillageHint}><InfoCircleOutlined style={{ color: '#999', fontSize: 12 }} /></Tooltip></span>
-      ) },
-    { title: t.month,             dataIndex: "month",        key: "month",        sorter: genericSorter("month"),        render: (v) => v || "-" },
-    { title: t.pixelId,           dataIndex: "pixel_id",     key: "pixel_id",     sorter: genericSorter("pixel_id") },
+    { title: t.village,           dataIndex: "village",      key: "village",      sorter: genericSorter("village"),      render: (v) => v || "-" },
+    { title: t.notificationDate,  dataIndex: "notification_date", key: "notification_date", sorter: genericSorter("notification_date"), render: (v) => v || "-" },
+    { title: t.slot,              dataIndex: "slot_label",   key: "slot_label",   sorter: genericSorter("slot_label"),   render: (v) => v || "-" },
     {
-      title: t.status,
-      dataIndex: "alert_status",
-      key: "alert_status",
-      sorter: genericSorter("alert_status"),
-      render: (v) => <Tag color={v === "Resolved" ? "success" : "warning"}>{v || t.pending}</Tag>,
-    },
-    { title: t.actionTaken, dataIndex: "action_taken", key: "action_taken", sorter: genericSorter("action_taken"), render: (v) => v || t.noActionTaken },
-    {
-      title: t.hasImage,
-      dataIndex: "has_image",
-      key: "has_image",
-      sorter: genericSorter("has_image"),
-      render: (hasImage, record) =>
-        hasImage ? (
-          <Button type="link" style={{ padding: 0 }} onClick={() => showDetails(record)}>
-            {t.yes}
-          </Button>
-        ) : (
-          <Tag>{t.no}</Tag>
-        ),
+      title: t.changeCount,
+      dataIndex: "change_count",
+      key: "change_count",
+      sorter: genericSorter("change_count"),
+      render: (v) => <Tag color="blue">{v || 0}</Tag>,
     },
     {
       title: t.sentAt,
@@ -574,8 +468,8 @@ const NDVINotifications = () => {
             {t.viewDetails}
           </Button>
           {record.user_id && (
-            <Button type="link" icon={<TableOutlined />} onClick={() => fetchUserChanges(record.user_id)}>
-              View Changes
+            <Button type="link" icon={<TableOutlined />} onClick={() => fetchUserChanges(record.user_id, record.username)}>
+              {t.viewChanges}
             </Button>
           )}
         </Space>
@@ -591,8 +485,7 @@ const NDVINotifications = () => {
     { title: t.beat,           dataIndex: "beat",             key: "beat",             sorter: genericSorter("beat"),             render: (v) => v || "-" },
     { title: t.village,        dataIndex: "village",          key: "village",          sorter: genericSorter("village"),          render: (v) => v || "-" },
     { title: t.alertsGenerated, dataIndex: "alerts_generated", key: "alerts_generated", sorter: genericSorter("alerts_generated") },
-    { title: t.resolved,       dataIndex: "resolved",         key: "resolved",         sorter: genericSorter("resolved"),         render: (v) => <Tag color="success">{v}</Tag> },
-    { title: t.pending,        dataIndex: "pending",          key: "pending",          sorter: genericSorter("pending"),          render: (v) => <Tag color="warning">{v}</Tag> },
+    { title: t.notificationsSent, dataIndex: "notifications_sent", key: "notifications_sent", sorter: genericSorter("notifications_sent"), render: (v) => <Tag color="blue">{v}</Tag> },
   ];
 
   return (
@@ -601,20 +494,18 @@ const NDVINotifications = () => {
 
       {/* ── Stat cards ── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={12} lg={6}><Card><Statistic title={t.usersReceived}      value={summary.users_received     || 0} /></Card></Col>
-        <Col xs={24} md={12} lg={6}><Card><Statistic title={t.totalNotifications} value={summary.total_notifications || 0} /></Card></Col>
-        <Col xs={24} md={12} lg={6}><Card><Statistic title={t.resolved}           value={summary.resolved           || 0} valueStyle={{ color: "#3f8600" }} /></Card></Col>
-        <Col xs={24} md={12} lg={6}><Card><Statistic title={t.pending}            value={summary.pending            || 0} valueStyle={{ color: "#faad14" }} /></Card></Col>
+        <Col xs={24} md={12} lg={8}><Card><Statistic title={t.usersReceived}      value={summary.users_received     || 0} /></Card></Col>
+        <Col xs={24} md={12} lg={8}><Card><Statistic title={t.totalNotifications} value={summary.total_notifications || 0} /></Card></Col>
+        <Col xs={24} md={12} lg={8}><Card><Statistic title={t.totalChanges}       value={summary.total_changes       || 0} valueStyle={{ color: "#3f8600" }} /></Card></Col>
       </Row>
 
       {/* ── Filters (NDVI Table filter removed) ── */}
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
-          {renderSelect("username", t.userName, options.usernames, 5)}
-          {renderSelect("division", t.division, options.divisions, 5, !!lockedDivision)}
-          {renderSelect("month",    t.month,    options.months,    4)}
-          {renderSelect("status",   t.status,   options.statuses,  4)}
-          <Col xs={24} md={8} lg={4}>
+          {renderSelect("username", t.userName, options.usernames, 6)}
+          {renderSelect("division", t.division, options.divisions, 6, !!lockedDivision)}
+          {renderSelect("month",    t.month,    options.months,    6)}
+          <Col xs={24} md={8} lg={6}>
             <RangePicker
               style={{ width: "100%" }}
               value={filters.dates}
@@ -675,33 +566,6 @@ const NDVINotifications = () => {
       >
         {detailRecord && (
           <div>
-            {/* Image section — always attempt to show if we have a URL */}
-            <div style={{ marginBottom: 16, textAlign: "center" }}>
-              {detailImageLoading ? (
-                <p>{t.loadingImage}</p>
-              ) : detailImageUrl ? (
-                <div>
-                  <Image
-                    src={detailImageUrl}
-                    alt="NDVI Alert"
-                    style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8 }}
-                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                  />
-                  <div style={{ marginTop: 8 }}>
-                    <Button
-                      type="link"
-                      icon={<EyeOutlined />}
-                      onClick={() => window.open(detailImageUrl, "_blank")}
-                    >
-                      View Full Image
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <p>{t.imageNotAvailable}</p>
-              )}
-            </div>
-
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label={t.userId}>{detailRecord.user_id || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.userName}>{detailRecord.username || "-"}</Descriptions.Item>
@@ -709,63 +573,30 @@ const NDVINotifications = () => {
               <Descriptions.Item label={t.range}>{detailRecord.range || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.round}>{detailRecord.round || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.beat}>{detailRecord.beat || "-"}</Descriptions.Item>
-              <Descriptions.Item label={<span>{t.alertVillage} <Tooltip title={t.alertVillageHint}><InfoCircleOutlined style={{ color: '#999', fontSize: 12 }} /></Tooltip></span>}>{detailRecord.village || detailRecord.village_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.village}>{detailRecord.village || detailRecord.village_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.coupeName}>{detailRecord.coupe_name || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.notificationDate}>{detailRecord.notification_date || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.slot}>{detailRecord.slot_label || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.changeCount}>
+                <Tag color="blue">{detailRecord.change_count || 0}</Tag>
+              </Descriptions.Item>
               <Descriptions.Item label={t.month}>{detailRecord.month || "-"}</Descriptions.Item>
-              <Descriptions.Item label={t.pixelId}>{detailRecord.pixel_id || "-"}</Descriptions.Item>
-              <Descriptions.Item label={t.ndviTable}>{detailRecord.table_name || "-"}</Descriptions.Item>
-              <Descriptions.Item label={t.status}>
-                <Tag color={detailRecord.alert_status === "Resolved" ? "success" : "warning"}>
-                  {detailRecord.alert_status || t.pending}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label={t.hasImage}>
-                <Tag color={detailRecord.has_image ? "blue" : "default"}>
-                  {detailRecord.has_image ? t.yes : t.no}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label={t.actionTaken} span={2}>
-                {detailRecord.action_taken || t.noActionTaken}
-              </Descriptions.Item>
-              <Descriptions.Item label={t.note} span={2}>
-                {detailRecord.note || t.noNote}
-              </Descriptions.Item>
               <Descriptions.Item label={t.sentAt} span={2}>
                 {formatSentAt(detailRecord.sent_at)}
               </Descriptions.Item>
-              <Descriptions.Item label={t.latitude}>
-                {detailRecord.latitude ? (
-                  <Button
-                    type="link"
-                    icon={<EnvironmentOutlined />}
-                    onClick={() => openInGoogleMaps(detailRecord.latitude, detailRecord.longitude)}
-                    style={{ padding: 0 }}
-                  >
-                    {Number(detailRecord.latitude).toFixed(6)}
-                  </Button>
-                ) : "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label={t.longitude}>
-                {detailRecord.longitude ? (
-                  <Button
-                    type="link"
-                    icon={<EnvironmentOutlined />}
-                    onClick={() => openInGoogleMaps(detailRecord.latitude, detailRecord.longitude)}
-                    style={{ padding: 0 }}
-                  >
-                    {Number(detailRecord.longitude).toFixed(6)}
-                  </Button>
-                ) : "-"}
-              </Descriptions.Item>
             </Descriptions>
 
-            {detailRecord.latitude && detailRecord.longitude && (
+            {detailRecord.user_id && (
               <div style={{ marginTop: 16, textAlign: "center" }}>
                 <Button
                   type="primary"
-                  icon={<EnvironmentOutlined />}
-                  onClick={() => openInGoogleMaps(detailRecord.latitude, detailRecord.longitude)}
+                  icon={<TableOutlined />}
+                  onClick={() => {
+                    setDetailModalOpen(false);
+                    fetchUserChanges(detailRecord.user_id, detailRecord.username);
+                  }}
                 >
-                  {t.viewOnMaps}
+                  {t.viewChanges}
                 </Button>
               </div>
             )}
@@ -775,7 +606,7 @@ const NDVINotifications = () => {
 
       {/* ── NDVI Changes modal (table + map + status update) ── */}
       <Modal
-        title={`NDVI Changes — User: ${changesUser || '-'}`}
+        title={`NDVI Changes — ${changesUserName || changesUser || '-'}`}
         open={changesModalOpen}
         onCancel={closeChangesModal}
         footer={null}
@@ -821,9 +652,11 @@ const NDVINotifications = () => {
 
           {/* Mini map */}
           <Col span={10}>
+            {selectedPoint && (
             <div style={{ marginBottom: 8, fontWeight: 500 }}>
-              {selectedPoint ? `Selected: Pixel ${selectedPoint.pixel_id}` : "Select a point to zoom"}
+              {`Selected: Pixel ${selectedPoint.pixel_id}`}
             </div>
+            )}
             <div ref={mapRef} style={{ width: "100%", height: 350, borderRadius: 8, border: "1px solid #d9d9d9" }} />
             {selectedPoint && (
               <Descriptions bordered size="small" column={1} style={{ marginTop: 12 }}>

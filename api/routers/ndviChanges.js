@@ -280,13 +280,19 @@ router.put("/status", verifyJwt, async (req, res) => {
  * Query params:
  *   table_name   — the NDVI Change table name (e.g. "2024-01-01_Coupe_NDVI_Change")
  *   village_name — the village name to filter by
- *   limit        — optional row cap (default 500, max 5000)
+ *   page         — optional page number (default 1)
+ *   pageSize     — optional page size (default 500, max 5000)
+ *   limit        — optional row cap (legacy alias for pageSize, default 500, max 5000)
  */
 router.get("/village", verifyJwt, async (req, res) => {
   try {
     const table_name = (req.query.table_name || "").trim();
     const village_name = (req.query.village_name || "").trim();
-    const rowLimit = Math.min(Math.max(parseInt(req.query.limit) || 500, 1), 5000);
+
+    // Server-side pagination — pageSize takes precedence over legacy `limit`
+    const pageSize = Math.min(Math.max(parseInt(req.query.pageSize || req.query.limit) || 500, 1), 5000);
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const offset = (page - 1) * pageSize;
 
     if (!table_name || !village_name) {
       return res.status(400).json({
@@ -327,29 +333,59 @@ router.get("/village", verifyJwt, async (req, res) => {
     const selectCols = [
       `${idCol}::text AS pixel_id`,
       colSet.has('NDVI_change') ? '"NDVI_change"' : 'NULL::float AS "NDVI_change"',
+      colSet.has('change_category') ? '"change_category"' : 'NULL::text AS change_category',
       colSet.has('longitude') ? '"longitude"' : 'NULL::text AS longitude',
       colSet.has('latitude') ? '"latitude"' : 'NULL::text AS latitude',
+      colSet.has('note') ? '"note"' : 'NULL::text AS note',
       colSet.has('status') ? '"status"' : 'NULL::text AS status',
+      colSet.has('division') ? '"division"' : 'NULL::text AS division',
+      colSet.has('range') ? '"range"' : 'NULL::text AS "range"',
+      colSet.has('round') ? '"round"' : 'NULL::text AS round',
+      colSet.has('beat') ? '"beat"' : 'NULL::text AS beat',
     ].join(', ');
 
-    const records = await sequelize.query(
-      `SELECT ${selectCols}
-       FROM public."${table_name}"
-       WHERE ${colSet.has('village') ? '"village" = :villageName' : '1=1'}
-       ORDER BY "NDVI_change" DESC
-       LIMIT :limit`,
-      {
-        replacements: { villageName: village_name, limit: rowLimit },
-        type: sequelize.QueryTypes.SELECT,
-      }
-    );
+    const villageWhere = colSet.has('village') ? '"village" = :villageName' : '1=1';
+
+    // Run the paginated data query and the count query in parallel
+    const [records, countRows] = await Promise.all([
+      sequelize.query(
+        `SELECT ${selectCols}
+         FROM public."${table_name}"
+         WHERE ${villageWhere}
+         ORDER BY "NDVI_change" DESC
+         LIMIT :pageSize OFFSET :offset`,
+        {
+          replacements: { villageName: village_name, pageSize, offset },
+          type: sequelize.QueryTypes.SELECT,
+        }
+      ),
+      sequelize.query(
+        `SELECT COUNT(*)::int AS total
+         FROM public."${table_name}"
+         WHERE ${villageWhere}`,
+        {
+          replacements: { villageName: village_name },
+          type: sequelize.QueryTypes.SELECT,
+        }
+      ),
+    ]);
+
+    const total = countRows[0]?.total || 0;
 
     res.json({
       success: true,
       data: records,
       table_name,
       village_name,
-      total: records.length,
+      total,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+        hasNextPage: page < Math.ceil(total / pageSize),
+        hasPreviousPage: page > 1,
+      },
     });
   } catch (err) {
     console.error("[ndvi-changes] Error fetching village changes:", err);

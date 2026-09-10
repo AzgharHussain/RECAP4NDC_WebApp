@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
 const admin = require("firebase-admin");
-const { DATE } = require('sequelize');
 const { sequelize } = require('../config/r_quire');
 const router = express.Router();
 const upload = multer();
@@ -9,7 +8,6 @@ const { verifyJwt } = require("../middlewares/verifyJwt");
 const blacklistedTokens = require("../middlewares/tokenBlacklist");
 const { logFromRequest } = require("../utils/auditLogger");
 const { ensurePixleIdColumn } = require("../utils/ensurePixleId");
-const MongoImage = require("../models/Image");
 
 // ─────────────────────────────────────────────────────────
 // Use a thin adapter that delegates to Sequelize so ALL queries share the
@@ -735,44 +733,7 @@ router.post('/logout',verifyJwt ,async (req, res) => {
 //    The scheduler also runs once on server startup.
 // ----------------------------------------------------
 
-const getDivisionFromNdviTableName = (tableName) => {
-  if (!tableName) return '-';
-  return tableName
-    .replace(/_coupe_NDVI_Change$/i, '')
-    .replace(/^\d{4}[-_]\d{2}[-_]\d{2}[-_]/, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-};
-
-const getMonthFromNdviTableName = (tableName) => {
-  const match = String(tableName || '').match(/^(\d{4})[-_](\d{2})[-_]\d{2}/);
-  return match ? `${match[1]}-${match[2]}` : '-';
-};
-
-const getDateFromNdviTableName = (tableName) => {
-  const match = String(tableName || '').match(/^(\d{4})[-_](\d{2})[-_](\d{2})/);
-  return match ? `${match[1]}-${match[2]}-${match[3]}T00:00:00.000Z` : null;
-};
-
 const DEFAULT_NOTE_TEXT = 'NDVI decrease less than -0.3';
-
-const isRealNote = (note) => {
-  if (!note) return false;
-  // Normalize: lowercase, trim, collapse multiple spaces
-  const normalized = String(note).toLowerCase().replace(/\s+/g, ' ').trim();
-  if (!normalized) return false;
-  // Ignore the default auto-generated note
-  if (normalized === DEFAULT_NOTE_TEXT.toLowerCase()) return false;
-  return true;
-};
-
-const buildNdviActionText = (record) => {
-  const actions = [];
-  if (record?.status === true || record?.status === 'true') actions.push('Status updated');
-  if (isRealNote(record?.note)) actions.push('Note added');
-  if (record?.image_data) actions.push('Image uploaded');
-  return actions.length ? actions.join(', ') : 'No action taken';
-};
 
 /**
  * Cleans up the default auto-generated note "NDVI decrease less than -0.3"
@@ -780,21 +741,6 @@ const buildNdviActionText = (record) => {
  * Also cleans up any note column in ndvi_notification_log if it exists.
  * Runs once per server startup.
  */
-// In-memory column cache: tableName -> Map<columnName, dataType>
-// Populated lazily and never evicted (tables don't change schema at runtime).
-const _columnInfoCache = new Map();
-
-async function getTableColumns(tableName) {
-  if (_columnInfoCache.has(tableName)) return _columnInfoCache.get(tableName);
-  const columnInfo = await client.query(
-    `SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`,
-    [tableName]
-  );
-  const map = new Map(columnInfo.rows.map(r => [r.column_name, r.data_type]));
-  _columnInfoCache.set(tableName, map);
-  return map;
-}
-
 let defaultNoteCleanupDone = false;
 async function cleanupDefaultNotes() {
   if (defaultNoteCleanupDone) return;
@@ -855,15 +801,20 @@ async function cleanupDefaultNotes() {
   }
 }
 
+// ----------------------------------------------------
+// 9. NDVI Notification Report (daily summary model)
+//    Queries ndvi_daily_notification_log (the new daily
+//    summary table written by the scheduler 3x/day) and
+//    joins it with ndvi_notification_users and
+//    government_department_users for display.
+// ----------------------------------------------------
+const SLOT_LABELS = { 1: 'Morning (08:00)', 2: 'Afternoon (13:00)', 3: 'Evening (18:00)' };
+
 router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
   try {
-    // NOTE: cleanupDefaultNotes() and table setup run once at module startup — NOT here.
-    // DDL / bulk UPDATEs in request handlers block the connection pool.
-
-    const reportGeneratedAt = new Date().toISOString();
     const {
-      user_id, username, village_name, coupe_name, table_name,
-      status, month, division, start_date, end_date,
+      user_id, username, village_name, coupe_name,
+      month, division, start_date, end_date,
       page: pageParam, pageSize: pageSizeParam
     } = req.query;
 
@@ -880,15 +831,14 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       conditions.push(sql.replace('?', `$${values.length}`));
     };
 
-    if (user_id) addCondition('l.user_id = ?', user_id);
+    if (user_id) addCondition('d.user_id = ?', user_id);
     if (username) addCondition('g.username = ?', username);
     if (village_name) addCondition('u.village_name = ?', village_name);
     if (coupe_name) addCondition('u.coupe_name = ?', coupe_name);
-    if (table_name) addCondition('l.table_name = ?', table_name);
-    if (month) addCondition('l.table_name LIKE ?', `${month}-%`);
-    if (division) addCondition('l.table_name ILIKE ?', `%${division.replace(/\s+/g, '_')}%`);
-    if (start_date) addCondition('l.sent_at::date >= ?', start_date);
-    if (end_date) addCondition('l.sent_at::date <= ?', end_date);
+    if (division) addCondition('u.division ILIKE ?', `%${division}%`);
+    if (month) addCondition("TO_CHAR(d.notification_date, 'YYYY-MM') = ?", month);
+    if (start_date) addCondition('d.notification_date >= ?', start_date);
+    if (end_date) addCondition('d.notification_date <= ?', end_date);
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -897,33 +847,36 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     const offsetIdx = values.length + 2;
     const reportQuery = `
       SELECT
-        l.id,
-        l.user_id,
+        d.id,
+        d.user_id,
         g.username,
         u.village_name,
+        u.coupe_name,
         u.division,
         u.range,
         u.round,
         u.beat,
-        l.table_name,
-        l.pixel_id,
-        COALESCE(l.sent_at, CURRENT_TIMESTAMP) AS sent_at,
-        COALESCE(l.sent_at, CURRENT_TIMESTAMP)::text AS sent_at_raw,
-        TO_CHAR(COALESCE(l.sent_at, CURRENT_TIMESTAMP), 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted
-      FROM public.ndvi_notification_log l
-      LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
-      LEFT JOIN public.government_department_users g ON g.user_id::text = l.user_id
+        d.notification_date,
+        d.notification_slot,
+        d.change_count,
+        d.sent_at,
+        TO_CHAR(d.sent_at, 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted
+      FROM public.ndvi_daily_notification_log d
+      LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
+      LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id
       ${whereClause}
-      ORDER BY l.sent_at DESC NULLS LAST, l.id DESC
+      ORDER BY d.sent_at DESC NULLS LAST, d.id DESC
       LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `;
 
     const countQuery = `
       SELECT
         COUNT(*)::int AS total_notifications,
-        COUNT(DISTINCT l.user_id)::int AS users_received
-      FROM public.ndvi_notification_log l
-      LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
+        COUNT(DISTINCT d.user_id)::int AS users_received,
+        COALESCE(SUM(d.change_count), 0)::int AS total_changes
+      FROM public.ndvi_daily_notification_log d
+      LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
+      LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id
       ${whereClause}
     `;
 
@@ -932,220 +885,59 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT g.username ORDER BY g.username), NULL) AS usernames,
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.village_name ORDER BY u.village_name), NULL) AS villages,
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.coupe_name ORDER BY u.coupe_name), NULL) AS coupes,
-        ARRAY_REMOVE(ARRAY_AGG(DISTINCT l.table_name ORDER BY l.table_name), NULL) AS tables
-      FROM public.ndvi_notification_log l
-      LEFT JOIN public.ndvi_notification_users u ON u.user_id = l.user_id
-      LEFT JOIN public.government_department_users g ON g.user_id::text = l.user_id
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.division ORDER BY u.division), NULL) AS divisions
+      FROM public.ndvi_daily_notification_log d
+      LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
+      LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id
     `;
 
-    const [report, counts, options] = await Promise.all([
+    const monthOptionsQuery = `
+      SELECT DISTINCT TO_CHAR(notification_date, 'YYYY-MM') AS month
+      FROM public.ndvi_daily_notification_log
+      ORDER BY month DESC
+    `;
+
+    const [report, counts, options, monthRows] = await Promise.all([
       client.query(reportQuery, [...values, pageSize, offset]),
       client.query(countQuery, values),
       client.query(optionsQuery),
+      client.query(monthOptionsQuery),
     ]);
 
-    const tableRecords = new Map();
-    const tableNames = [...new Set(report.rows.map(row => row.table_name).filter(Boolean))];
+    // Annotate rows with readable slot labels and month
+    const annotatedRows = report.rows.map((row) => ({
+      ...row,
+      notification_date: row.notification_date ? new Date(row.notification_date).toISOString().slice(0, 10) : null,
+      slot_label: SLOT_LABELS[row.notification_slot] || `Slot ${row.notification_slot}`,
+      month: row.notification_date ? String(row.notification_date).slice(0, 7) : '-',
+      village: row.village_name || '-',
+    }));
 
-    if (tableNames.length > 0) {
-      // ── OPTIMIZATION: Single bulk MongoDB query for ALL tables ──────────────
-      // Build the full set of record IDs across all tables for a single $in query
-      const allPixelIdsForMongo = [...new Set(
-        report.rows
-          .map(r => String(r.pixel_id))
-          .filter(Boolean)
-          .flatMap(id => {
-            const n = Number(id);
-            return !Number.isNaN(n) ? [id, n] : [id];
-          })
-      )];
-
-      // Single MongoDB query for all tables/IDs at once
-      const allMongoImages = await MongoImage.find({
-        sourceType: 'ndvi',
-        coupeName: { $in: tableNames },
-        recordId: { $in: allPixelIdsForMongo }
-      }).lean();
-
-      // Index mongo images by (coupeName, recordId) for O(1) lookup
-      const mongoImageIndex = new Map();
-      for (const img of allMongoImages) {
-        const key = `${img.coupeName}::${String(img.recordId)}`;
-        mongoImageIndex.set(key, true);
-      }
-
-      // ── OPTIMIZATION: Use cached column info — one introspection per table ever ──
-      // Fetch column info for all uncached tables in parallel
-      const uncachedTables = tableNames.filter(t => !_columnInfoCache.has(t));
-      if (uncachedTables.length > 0) {
-        // Single query to get columns for all uncached tables at once
-        const bulkColInfo = await client.query(`
-          SELECT table_name, column_name, data_type
-          FROM information_schema.columns
-          WHERE table_schema = 'public'
-            AND table_name = ANY($1::text[])
-          ORDER BY table_name, ordinal_position
-        `, [uncachedTables]);
-
-        // Populate cache for each uncached table
-        for (const t of uncachedTables) {
-          _columnInfoCache.set(t, new Map());
-        }
-        for (const row of bulkColInfo.rows) {
-          _columnInfoCache.get(row.table_name).set(row.column_name, row.data_type);
-        }
-      }
-
-      // Process each source table — column info is now from cache (no DB round-trip)
-      // Run source table data queries in parallel for maximum throughput
-      await Promise.all(tableNames.map(async (sourceTable) => {
-        try {
-          const pixelIds = [...new Set(report.rows
-            .filter(row => row.table_name === sourceTable)
-            .map(row => String(row.pixel_id))
-            .filter(Boolean))];
-
-          if (pixelIds.length === 0) {
-            tableRecords.set(sourceTable, new Map());
-            return;
-          }
-
-          // Get column info from cache (populated above)
-          const sourceColumns = _columnInfoCache.get(sourceTable) || new Map();
-
-          // Build SELECT clause dynamically
-          const colOrNull = (name) => sourceColumns.has(name) ? `"${name}"` : 'NULL::text';
-          const selectParts = [
-            colOrNull('village') + ' AS village',
-            sourceColumns.has('note') ? `CASE WHEN btrim("note") = 'NDVI decrease less than -0.3' THEN NULL ELSE "note" END AS note` : 'NULL::text AS note',
-            sourceColumns.has('status') ? '"status" AS status' : 'NULL::text AS status',
-            sourceColumns.has('latitude') ? '"latitude" AS latitude' : 'NULL::text AS latitude',
-            sourceColumns.has('longitude') ? '"longitude" AS longitude' : 'NULL::text AS longitude',
-            colOrNull('division') + ' AS src_division',
-            colOrNull('range') + ' AS src_range',
-            colOrNull('round') + ' AS src_round',
-            colOrNull('beat') + ' AS src_beat',
-          ];
-
-          // Determine the ID column: prefer pixle_id, fall back to id
-          const hasPxCol = sourceColumns.has('pixle_id');
-          const hasIdCol = sourceColumns.has('id');
-          let idCast;
-          if (hasPxCol) {
-            idCast = '"pixle_id"::text';
-          } else if (hasIdCol) {
-            idCast = '"id"::text';
-          } else {
-            tableRecords.set(sourceTable, new Map());
-            return;
-          }
-
-          const placeholders = pixelIds.map((_, i) => `$${i + 1}`).join(', ');
-          let sourceRows = await client.query(`
-            SELECT
-              ${idCast} AS pixel_id,
-              ${selectParts.join(',\n              ')}
-            FROM public."${sourceTable}"
-            WHERE ${idCast} IN (${placeholders})
-          `, pixelIds);
-
-          // Fallback: try numeric cast for integer pixle_id columns
-          if (sourceRows.rows.length === 0 && hasPxCol) {
-            const numericIds = pixelIds.map(Number).filter(n => !Number.isNaN(n));
-            if (numericIds.length > 0) {
-              const numPlaceholders = numericIds.map((_, i) => `$${i + 1}`).join(', ');
-              try {
-                sourceRows = await client.query(`
-                  SELECT
-                    "pixle_id"::text AS pixel_id,
-                    ${selectParts.join(',\n                    ')}
-                  FROM public."${sourceTable}"
-                  WHERE "pixle_id" IN (${numPlaceholders})
-                `, numericIds);
-              } catch (_) { /* column type may not support numeric comparison */ }
-            }
-          }
-
-          // Use mongo index built above — O(1) lookup per row
-          const recordMap = new Map(sourceRows.rows.map(row => [String(row.pixel_id), {
-            ...row,
-            image_data: mongoImageIndex.has(`${sourceTable}::${String(row.pixel_id)}`)
-          }]));
-          tableRecords.set(sourceTable, recordMap);
-        } catch (err) {
-          console.warn(`Failed to read NDVI source table ${sourceTable}: ${err.message}`);
-          tableRecords.set(sourceTable, new Map());
-        }
-      }));
-    }
-
-    let annotatedRows = report.rows.map((row) => {
-      const sourceRecord = tableRecords.get(row.table_name)?.get(String(row.pixel_id));
-      if (!sourceRecord) {
-      }
-      // Only "Resolved" when there is a real note AND an image
-      const hasRealNote = isRealNote(sourceRecord?.note);
-      const hasImage = !!sourceRecord?.image_data;
-      const alertStatus = (hasRealNote && hasImage) ? 'Resolved' : 'Pending';
-      // If Pending, force "No action taken" regardless of status field
-      const actionTaken = alertStatus === 'Pending' ? 'No action taken' : buildNdviActionText(sourceRecord);
-      const sentAtFallback = row.sent_at || row.sent_at_raw || getDateFromNdviTableName(row.table_name) || reportGeneratedAt;
-      return {
-        ...row,
-        sent_at: sentAtFallback,
-        sent_at_raw: row.sent_at_raw || String(sentAtFallback),
-        sent_at_formatted: row.sent_at_formatted || new Date(sentAtFallback).toLocaleString('en-GB', { hour12: false }),
-        report_generated_at: reportGeneratedAt,
-        month: getMonthFromNdviTableName(row.table_name),
-        // division/range/round/beat: prefer values from the NDVI change table
-        // (matched by pixel_id), fall back to ndvi_notification_users values,
-        // then to table-name extraction / '-'.
-        division: sourceRecord?.src_division || row.division || getDivisionFromNdviTableName(row.table_name),
-        range:    sourceRecord?.src_range    || row.range    || '-',
-        round:    sourceRecord?.src_round    || row.round    || '-',
-        beat:     sourceRecord?.src_beat     || row.beat     || '-',
-        village: sourceRecord?.village || row.village_name || '-',
-        alert_status: alertStatus,
-        action_taken: actionTaken,
-        note: isRealNote(sourceRecord?.note) ? sourceRecord.note : null,
-        has_image: !!sourceRecord?.image_data,
-        latitude: sourceRecord?.latitude || null,
-        longitude: sourceRecord?.longitude || null,
-      };
-    });
-
-    if (status) {
-      annotatedRows = annotatedRows.filter(row => row.alert_status === status);
-    }
-
+    // Monthly division-wise summary
     const monthlyDivisionMap = new Map();
     annotatedRows.forEach((row) => {
-      const key = `${row.month}__${row.division}__${row.range}__${row.round}__${row.beat}__${row.village}`;
+      const key = `${row.month}__${row.division || '-'}__${row.range || '-'}__${row.round || '-'}__${row.beat || '-'}__${row.village}`;
       if (!monthlyDivisionMap.has(key)) {
         monthlyDivisionMap.set(key, {
           month: row.month,
-          division: row.division,
-          range: row.range,
-          round: row.round,
-          beat: row.beat,
+          division: row.division || '-',
+          range: row.range || '-',
+          round: row.round || '-',
+          beat: row.beat || '-',
           village: row.village,
           alerts_generated: 0,
-          resolved: 0,
-          pending: 0
+          notifications_sent: 0,
         });
       }
       const item = monthlyDivisionMap.get(key);
-      item.alerts_generated += 1;
-      if (row.alert_status === 'Resolved') item.resolved += 1;
-      else item.pending += 1;
+      item.alerts_generated += row.change_count || 0;
+      item.notifications_sent += 1;
     });
 
     const optionRows = options.rows[0] || {};
-    const tableOptions = optionRows.tables || [];
-    const divisionOptions = [...new Set(tableOptions.map(getDivisionFromNdviTableName))].filter(Boolean).sort();
-    const monthOptions = [...new Set(tableOptions.map(getMonthFromNdviTableName))].filter(Boolean).sort().reverse();
+    const monthOptions = monthRows.rows.map(r => r.month).filter(Boolean);
 
-    const totalCount = counts.rows[0] || { total_notifications: 0, users_received: 0 };
+    const totalCount = counts.rows[0] || { total_notifications: 0, users_received: 0, total_changes: 0 };
 
     res.json({
       success: true,
@@ -1157,21 +949,17 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         totalPages: Math.ceil(totalCount.total_notifications / pageSize),
       },
       summary: {
-        ...totalCount,
-        // Note: resolved/pending counts below reflect the current page only.
-        // Full counts require a separate query — kept simple for performance.
-        resolved: annotatedRows.filter(row => row.alert_status === 'Resolved').length,
-        pending: annotatedRows.filter(row => row.alert_status === 'Pending').length,
+        total_notifications: totalCount.total_notifications,
+        users_received: totalCount.users_received,
+        total_changes: totalCount.total_changes,
       },
       monthlyDivisionSummary: Array.from(monthlyDivisionMap.values()).sort((a, b) => b.month.localeCompare(a.month) || a.division.localeCompare(b.division)),
       options: {
         usernames: optionRows.usernames || [],
         villages: optionRows.villages || [],
         coupes: optionRows.coupes || [],
-        tables: tableOptions,
-        divisions: divisionOptions,
+        divisions: optionRows.divisions || [],
         months: monthOptions,
-        statuses: ['Pending', 'Resolved'],
       },
     });
   } catch (err) {
