@@ -35,6 +35,18 @@ const formatSentAt = (value) => {
   return result || "-";
 };
 
+// Normalize status from NDVI change tables.
+// The `status` column in NDVI Change tables is a boolean:
+//   true  → "Resolved" (action taken)
+//   false → "Pending"
+// String values ("Pending", "Resolved", "Under Review", "False Positive") pass through.
+const normalizeStatus = (v) => {
+  if (v === true) return "Resolved";
+  if (v === false) return "Pending";
+  if (v == null || v === "") return "Pending";
+  return String(v);
+};
+
 // ── Language strings ──────────────────────────────────────────────────────────
 const TEXTS = {
   en: {
@@ -146,6 +158,7 @@ const NDVINotifications = () => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
+  const wmsLayerRef = useRef(null);
 
   // ── Status update modal state ──
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -345,27 +358,48 @@ const NDVINotifications = () => {
     setSelectedPoint(point);
     const lat = parseFloat(point.latitude);
     const lng = parseFloat(point.longitude);
-    if (Number.isNaN(lat) || Number.isNaN(lng)) {
-      message.warning(t.locationUnavailable);
-      return;
-    }
+
     // Initialize or update the map
     setTimeout(() => {
       if (!mapRef.current) return;
       if (!mapInstanceRef.current) {
-        mapInstanceRef.current = L.map(mapRef.current, { zoomControl: true }).setView([lat, lng], 15);
+        mapInstanceRef.current = L.map(mapRef.current, { zoomControl: true }).setView(
+          Number.isNaN(lat) || Number.isNaN(lng) ? [23.0, 72.0] : [lat, lng],
+          13
+        );
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 19,
         }).addTo(mapInstanceRef.current);
-      } else {
+      } else if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
         mapInstanceRef.current.setView([lat, lng], 15);
       }
-      // Remove old marker, add new
+
+      // ── Add GeoServer WMS layer for this NDVI Change table ──
+      // Remove any previous WMS layer
+      if (wmsLayerRef.current) {
+        mapInstanceRef.current.removeLayer(wmsLayerRef.current);
+        wmsLayerRef.current = null;
+      }
+      if (point.table_name) {
+        const wmsLayerName = `Recap4NDC:${point.table_name}`;
+        wmsLayerRef.current = L.tileLayer.wms("/geoserver/wms", {
+          layers: wmsLayerName,
+          format: "image/png",
+          transparent: true,
+          version: "1.1.0",
+          tileSize: 512,
+          zIndex: 1000,
+        }).addTo(mapInstanceRef.current);
+      }
+
+      // Add/update marker if coordinates are valid
       if (markerRef.current) markerRef.current.remove();
-      markerRef.current = L.marker([lat, lng]).addTo(mapInstanceRef.current)
-        .bindPopup(`<b>Pixel ID:</b> ${point.pixel_id}<br><b>NDVI Change:</b> ${point.NDVI_change || '-'}<br><b>Village:</b> ${point.village || '-'}`)
-        .openPopup();
+      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        markerRef.current = L.marker([lat, lng]).addTo(mapInstanceRef.current)
+          .bindPopup(`<b>Pixel ID:</b> ${point.pixel_id}<br><b>NDVI Change:</b> ${point.NDVI_change || '-'}<br><b>Village:</b> ${point.village || '-'}`)
+          .openPopup();
+      }
       // Invalidate size in case modal just opened
       mapInstanceRef.current.invalidateSize();
     }, 200);
@@ -374,7 +408,7 @@ const NDVINotifications = () => {
   // ── Open status update modal ──
   const openStatusModal = (point) => {
     setSelectedPoint(point);
-    setStatusForm({ status: point.status || "Pending", note: point.note || "" });
+    setStatusForm({ status: normalizeStatus(point.status), note: point.note || "" });
     setStatusModalOpen(true);
   };
 
@@ -419,6 +453,7 @@ const NDVINotifications = () => {
       mapInstanceRef.current.remove();
       mapInstanceRef.current = null;
       markerRef.current = null;
+      wmsLayerRef.current = null;
     }
   };
 
@@ -654,7 +689,7 @@ const NDVINotifications = () => {
                 { title: "Village", dataIndex: "village", key: "village", width: 100, render: v => v || "-" },
                 { title: "NDVI Change", dataIndex: "NDVI_change", key: "NDVI_change", width: 90, render: v => v != null ? Number(v).toFixed(4) : "-" },
                 { title: "Category", dataIndex: "change_category", key: "change_category", width: 90, render: v => v || "-" },
-                { title: "Status", dataIndex: "status", key: "status", width: 90, render: v => <Tag color={v === "Resolved" ? "success" : v === "Under Review" ? "processing" : "warning"}>{v || "Pending"}</Tag> },
+                { title: "Status", dataIndex: "status", key: "status", width: 90, render: (v) => { const s = normalizeStatus(v); return <Tag color={s === "Resolved" ? "success" : s === "Under Review" ? "processing" : s === "False Positive" ? "error" : "warning"}>{s}</Tag>; } },
                 {
                   title: "Action",
                   key: "action",
@@ -663,7 +698,7 @@ const NDVINotifications = () => {
                     <Space size="small">
                       <Button size="small" type="link" icon={<EnvironmentOutlined />} onClick={() => handleSelectPoint(record)}>Zoom</Button>
                       <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openStatusModal(record)}>Update</Button>
-                      {record.status === "False Positive" && (
+                      {normalizeStatus(record.status) === "False Positive" && (
                         <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => showPointDetails(record)}>Details</Button>
                       )}
                     </Space>
@@ -699,7 +734,7 @@ const NDVINotifications = () => {
                 <Descriptions.Item label="Latitude">{selectedPoint.latitude || "-"}</Descriptions.Item>
                 <Descriptions.Item label="Longitude">{selectedPoint.longitude || "-"}</Descriptions.Item>
                 <Descriptions.Item label="NDVI Change">{selectedPoint.NDVI_change != null ? Number(selectedPoint.NDVI_change).toFixed(4) : "-"}</Descriptions.Item>
-                <Descriptions.Item label="Status"><Tag color={selectedPoint.status === "Resolved" ? "success" : "warning"}>{selectedPoint.status || "Pending"}</Tag></Descriptions.Item>
+                <Descriptions.Item label="Status"><Tag color={normalizeStatus(selectedPoint.status) === "Resolved" ? "success" : "warning"}>{normalizeStatus(selectedPoint.status)}</Tag></Descriptions.Item>
               </Descriptions>
             )}
           </Col>
@@ -769,7 +804,7 @@ const NDVINotifications = () => {
                   <Descriptions.Item label="NDVI Change">{pointDetailRecord.NDVI_change != null ? Number(pointDetailRecord.NDVI_change).toFixed(4) : "-"}</Descriptions.Item>
                   <Descriptions.Item label="Category">{pointDetailRecord.change_category || "-"}</Descriptions.Item>
                   <Descriptions.Item label="Status">
-                    <Tag color="error">{pointDetailRecord.status || "False Positive"}</Tag>
+                    <Tag color="error">{normalizeStatus(pointDetailRecord.status)}</Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Latitude">{pointDetailRecord.latitude || "-"}</Descriptions.Item>
                   <Descriptions.Item label="Longitude" span={2}>{pointDetailRecord.longitude || "-"}</Descriptions.Item>

@@ -856,10 +856,10 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         u.range,
         u.round,
         u.beat,
-        d.notification_date,
+        d.notification_date::text AS notification_date,
         d.notification_slot,
         d.change_count,
-        d.sent_at,
+        d.sent_at::text AS sent_at,
         TO_CHAR(d.sent_at, 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted
       FROM public.ndvi_daily_notification_log d
       LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
@@ -905,13 +905,19 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     ]);
 
     // Annotate rows with readable slot labels and month
-    const annotatedRows = report.rows.map((row) => ({
-      ...row,
-      notification_date: row.notification_date ? new Date(row.notification_date).toISOString().slice(0, 10) : null,
-      slot_label: SLOT_LABELS[row.notification_slot] || `Slot ${row.notification_slot}`,
-      month: row.notification_date ? String(row.notification_date).slice(0, 7) : '-',
-      village: row.village_name || '-',
-    }));
+    // Dates are already cast to text in SQL, so they come as strings like "2026-09-10"
+    const annotatedRows = report.rows.map((row) => {
+      const dateStr = row.notification_date || '';
+      // Extract YYYY-MM from the date string (handles both "2026-09-10" and "2026-09-10T00:00:00.000Z")
+      const monthStr = dateStr ? dateStr.slice(0, 7) : '-';
+      return {
+        ...row,
+        notification_date: dateStr ? dateStr.slice(0, 10) : null,
+        slot_label: SLOT_LABELS[row.notification_slot] || `Slot ${row.notification_slot}`,
+        month: monthStr,
+        village: row.village_name || '-',
+      };
+    });
 
     // Monthly division-wise summary
     const monthlyDivisionMap = new Map();
