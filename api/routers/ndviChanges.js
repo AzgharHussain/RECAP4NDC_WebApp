@@ -13,8 +13,10 @@ const { verifyJwt } = require("../middlewares/verifyJwt");
  *  - GET  /api/ndvi-changes/tables → list all NDVI Change tables
  */
 
-// Whitelist valid characters for table names to prevent SQL injection
-const isValidTableName = (name) => /^[a-zA-Z0-9_]+$/.test(name);
+// Whitelist valid characters for table names to prevent SQL injection.
+// NDVI Change table names look like "2024-08-01_Coupe_NDVI_Change" so
+// hyphens must be allowed.
+const isValidTableName = (name) => /^[a-zA-Z0-9_-]+$/.test(name);
 
 /**
  * GET /api/ndvi-changes/user/:user_id
@@ -325,27 +327,19 @@ router.get("/village", verifyJwt, async (req, res) => {
     const selectCols = [
       `${idCol}::text AS pixel_id`,
       colSet.has('NDVI_change') ? '"NDVI_change"' : 'NULL::float AS "NDVI_change"',
-      colSet.has('change_category') ? '"change_category"' : 'NULL::text AS change_category',
       colSet.has('longitude') ? '"longitude"' : 'NULL::text AS longitude',
       colSet.has('latitude') ? '"latitude"' : 'NULL::text AS latitude',
-      colSet.has('village') ? '"village"' : ':villageName AS village',
-      colSet.has('note') ? '"note"' : 'NULL::text AS note',
       colSet.has('status') ? '"status"' : 'NULL::text AS status',
-      colSet.has('division') ? '"division"' : 'NULL::text AS division',
-      colSet.has('range') ? '"range"' : 'NULL::text AS "range"',
-      colSet.has('round') ? '"round"' : 'NULL::text AS round',
-      colSet.has('beat') ? '"beat"' : 'NULL::text AS beat',
-      colSet.has('image_data') ? '"image_data"' : 'NULL::text AS image_data',
     ].join(', ');
 
     const records = await sequelize.query(
-      `SELECT ${selectCols}, :tableName AS table_name
+      `SELECT ${selectCols}
        FROM public."${table_name}"
        WHERE ${colSet.has('village') ? '"village" = :villageName' : '1=1'}
        ORDER BY "NDVI_change" DESC
        LIMIT :limit`,
       {
-        replacements: { villageName: village_name, tableName: table_name, limit: rowLimit },
+        replacements: { villageName: village_name, limit: rowLimit },
         type: sequelize.QueryTypes.SELECT,
       }
     );

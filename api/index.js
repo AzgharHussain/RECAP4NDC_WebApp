@@ -1024,6 +1024,20 @@ app.use('/api/ndvi-changes', ndviChangesRouter);
 app.use("/api", forestRoutes);
 app.use('/api', auditLogsRouter);
 // Error handling middleware
+// Catch JSON parse errors (empty/malformed body with Content-Type: application/json)
+// and return a clean 400 instead of crashing with a 500.
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.warn('[json-parse] Malformed or empty JSON body on', req.method, req.originalUrl);
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid or empty JSON body',
+      message: 'Request body is not valid JSON. Send a JSON object or use multipart/form-data.',
+    });
+  }
+  next(err);
+});
+
 app.use((err, req, res, next) => {
   console.error('Server error:', err.stack);
   res.status(500).json({

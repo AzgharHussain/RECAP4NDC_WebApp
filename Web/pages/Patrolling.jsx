@@ -868,6 +868,8 @@ const fetchDashboardData = useCallback(async () => {
       const queryParams = new URLSearchParams({
         page: '1',
         limit: '10000',
+        include_images: 'false',
+        include_geom: 'false',
         ...filters
       });
 
@@ -1638,6 +1640,7 @@ const fetchExportPatrolData = async () => {
   const params = new URLSearchParams({
     page: "1",
     limit: String(Math.max(totalItems || filteredData.length || 0, 1)),
+    include_geom: "false",
     ...filters
   });
 

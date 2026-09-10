@@ -137,6 +137,69 @@ const client = {
   },
 };
 
+// ─────────────────────────────────────────────────────────
+// List-endpoint helpers.
+// `geom` is a large text column (full GPS track) and image_data is base64 —
+// both dominate response size. Callers can opt out with
+//   ?include_geom=false            (omit geom column)
+//   ?include_images=false|meta     (skip Mongo lookup / omit base64 payload)
+// ─────────────────────────────────────────────────────────
+let patrolColumnsCache = null;
+
+async function getPatrolSelectColumns(includeGeom) {
+  if (!patrolColumnsCache) {
+    const { rows } = await client.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'patrols'
+       ORDER BY ordinal_position`
+    );
+    patrolColumnsCache = rows.map(r => r.column_name);
+  }
+  if (includeGeom) return 'p.*';
+  return patrolColumnsCache.filter(c => c !== 'geom').map(c => `p."${c}"`).join(', ');
+}
+
+function parseBoolFlag(value, defaultValue) {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  const v = String(value).toLowerCase();
+  return !(v === 'false' || v === '0' || v === 'no' || v === 'none');
+}
+
+function parseImagesMode(value) {
+  if (value === undefined || value === null || value === '') return 'full';
+  const v = String(value).toLowerCase();
+  if (v === 'false' || v === '0' || v === 'no' || v === 'none') return 'none';
+  if (v === 'meta' || v === 'metadata') return 'meta';
+  return 'full';
+}
+
+async function fetchPatrolImagesMap(patrolIds, mode = 'full') {
+  if (mode === 'none' || !patrolIds.length) return {};
+  const projection = mode === 'meta' ? { imageData: 0 } : undefined;
+  const mongoImages = await MongoImage
+    .find({ sourceType: 'patrol', patrolId: { $in: patrolIds } }, projection)
+    .lean();
+  return mongoImages.reduce((acc, img) => {
+    if (!acc[img.patrolId]) acc[img.patrolId] = [];
+    acc[img.patrolId].push({
+      image_id: img.imageId,
+      image_data: mode === 'full' ? (img.imageData || null) : undefined,
+      image_type: img.imageType,
+      image_category: img.imageCategory,
+      note: img.note || null,
+    });
+    return acc;
+  }, {});
+}
+
+const PATROL_TYPE_JOIN = `LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
+        ON p.patrolling_type_id = pt.type_id`;
+
+// The patrolling_types join is only needed in COUNT(*) when a filter references pt.*
+function countJoinFor(whereClause) {
+  return whereClause.includes('pt.') ? PATROL_TYPE_JOIN : '';
+}
+
 // Multer memory storage
 const storage = multer.memoryStorage();
 
@@ -249,6 +312,7 @@ async function ensurePatrolLocationColumns(dbClient = client) {
     CREATE INDEX IF NOT EXISTS idx_patrols_patrol_code
     ON public.patrols (patrol_code);
   `);
+  patrolColumnsCache = null;
 }
 
 ensurePatrolLocationColumns().catch((err) => {
@@ -573,16 +637,20 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
 
 router.get('/patrol-info-all', verifyJwt, async (req, res) => {
   try {
+    // Dashboard aggregate feed — the full GPS track (geom) is excluded unless
+    // explicitly requested, since it dominates payload size for a full-table scan.
+    const includeGeom = parseBoolFlag(req.query.include_geom, false);
+    const columns = await getPatrolSelectColumns(includeGeom);
+
     // NOTE: dedupe patrolling_types via subquery to prevent row multiplication
     const query = `
       SELECT
-        p.*,
+        ${columns},
         pt.type_name,
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
-        ON p.patrolling_type_id = pt.type_id
+      ${PATROL_TYPE_JOIN}
       ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC;
     `;
 
@@ -620,21 +688,7 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
     const result = await client.query({ text: query, timeout: 30000 });
 
     const patrolIds = result.rows.map(p => p.patrol_id);
-    let imagesMap = {};
-    if (patrolIds.length > 0) {
-      const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: { $in: patrolIds } }).lean();
-      imagesMap = mongoImages.reduce((acc, img) => {
-        if (!acc[img.patrolId]) acc[img.patrolId] = [];
-        acc[img.patrolId].push({
-          image_id: img.imageId,
-          image_data: img.imageData,
-          image_type: img.imageType,
-          image_category: img.imageCategory,
-          note: img.note || null,
-        });
-        return acc;
-      }, {});
-    }
+    const imagesMap = await fetchPatrolImagesMap(patrolIds, parseImagesMode(req.query.include_images));
 
     const formattedData = result.rows.map(patrol => ({
 
@@ -785,19 +839,22 @@ if (end_date) {
       ? 'WHERE ' + conditions.join(' AND ')
       : '';
 
+    const includeGeom = parseBoolFlag(req.query.include_geom, true);
+    const imagesMode = parseImagesMode(req.query.include_images);
+    const columns = await getPatrolSelectColumns(includeGeom);
+
     // Main query with pagination and filters (no image JOIN)
     // NOTE: patrolling_types may have duplicate type_id rows, which would
     // multiply patrol rows via a plain LEFT JOIN. We dedupe via a subquery
     // so each patrol appears exactly once.
     const query = `
       SELECT
-        p.*,
+        ${columns},
         pt.type_name,
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
-        ON p.patrolling_type_id = pt.type_id
+      ${PATROL_TYPE_JOIN}
       ${whereClause}
       ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
@@ -810,8 +867,7 @@ if (end_date) {
     const countQuery = `
       SELECT COUNT(*) as total_count
       FROM patrols p
-      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
-        ON p.patrolling_type_id = pt.type_id
+      ${countJoinFor(whereClause)}
       ${whereClause};
     `;
 
@@ -827,21 +883,7 @@ if (end_date) {
 
     // Fetch images from MongoDB for the patrols on this page
     const patrolIds = result.rows.map(p => p.patrol_id);
-    let imagesMap = {};
-    if (patrolIds.length > 0) {
-      const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: { $in: patrolIds } }).lean();
-      imagesMap = mongoImages.reduce((acc, img) => {
-        if (!acc[img.patrolId]) acc[img.patrolId] = [];
-        acc[img.patrolId].push({
-          image_id: img.imageId,
-          image_data: img.imageData,
-          image_type: img.imageType,
-          image_category: img.imageCategory,
-          note: img.note || null,
-        });
-        return acc;
-      }, {});
-    }
+    const imagesMap = await fetchPatrolImagesMap(patrolIds, imagesMode);
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
@@ -1004,14 +1046,18 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
     // MAIN QUERY
     // -----------------------------
 
+    const includeGeom = parseBoolFlag(req.query.include_geom, true);
+    const imagesMode = parseImagesMode(req.query.include_images);
+    const columns = await getPatrolSelectColumns(includeGeom);
+
     const query = `
       SELECT
-        p.*,
+        ${columns},
         pt.type_name,
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt ON p.patrolling_type_id = pt.type_id
+      ${PATROL_TYPE_JOIN}
       ${whereClause}
       ORDER BY p.start_time DESC NULLS LAST
       LIMIT $${limitIndex} OFFSET $${offsetIndex};
@@ -1022,9 +1068,9 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
     // -----------------------------
 
     const countQuery = `
-      SELECT COUNT(DISTINCT p.patrol_id) AS total_count
+      SELECT COUNT(*) AS total_count
       FROM patrols p
-      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt ON p.patrolling_type_id = pt.type_id
+      ${countJoinFor(whereClause)}
       ${whereClause};
     `;
 
@@ -1048,21 +1094,7 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
 
     // Fetch images from MongoDB for the patrols on this page
     const patrolIds = result.rows.map(p => p.patrol_id);
-    let imagesMap = {};
-    if (patrolIds.length > 0) {
-      const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: { $in: patrolIds } }).lean();
-      imagesMap = mongoImages.reduce((acc, img) => {
-        if (!acc[img.patrolId]) acc[img.patrolId] = [];
-        acc[img.patrolId].push({
-          image_id: img.imageId,
-          image_data: img.imageData,
-          image_type: img.imageType,
-          image_category: img.imageCategory,
-          note: img.note || null,
-        });
-        return acc;
-      }, {});
-    }
+    const imagesMap = await fetchPatrolImagesMap(patrolIds, imagesMode);
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
@@ -1202,17 +1234,20 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
 
     const whereClause = 'WHERE ' + conditions.join(' AND ');
 
+    const includeGeom = parseBoolFlag(req.query.include_geom, true);
+    const imagesMode = parseImagesMode(req.query.include_images);
+    const columns = await getPatrolSelectColumns(includeGeom);
+
     // Main query with pagination
     // NOTE: dedupe patrolling_types via subquery to prevent row multiplication
     const query = `
       SELECT
-        p.*,
+        ${columns},
         pt.type_name,
         p.start_time::text AS start_time_raw,
         p.end_time::text AS end_time_raw
       FROM patrols p
-      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
-        ON p.patrolling_type_id = pt.type_id
+      ${PATROL_TYPE_JOIN}
       ${whereClause}
       ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
@@ -1224,8 +1259,7 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
     const countQuery = `
       SELECT COUNT(*) as total_count
       FROM patrols p
-      LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt
-        ON p.patrolling_type_id = pt.type_id
+      ${countJoinFor(whereClause)}
       ${whereClause};
     `;
 
@@ -1240,21 +1274,7 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
 
     // Fetch images from MongoDB for the patrols on this page
     const patrolIds = result.rows.map(p => p.patrol_id);
-    let imagesMap = {};
-    if (patrolIds.length > 0) {
-      const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: { $in: patrolIds } }).lean();
-      imagesMap = mongoImages.reduce((acc, img) => {
-        if (!acc[img.patrolId]) acc[img.patrolId] = [];
-        acc[img.patrolId].push({
-          image_id: img.imageId,
-          image_data: img.imageData,
-          image_type: img.imageType,
-          image_category: img.imageCategory,
-          note: img.note || null,
-        });
-        return acc;
-      }, {});
-    }
+    const imagesMap = await fetchPatrolImagesMap(patrolIds, imagesMode);
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
@@ -1325,6 +1345,31 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch patrol' });
+  }
+});
+
+// Fetch a single patrol image (base64) — pairs with ?include_images=meta on list endpoints
+router.get('/patrol-images/:image_id', verifyJwt, async (req, res) => {
+  try {
+    const imageId = parseInt(req.params.image_id, 10);
+    if (!Number.isInteger(imageId)) return res.status(400).json({ error: 'Invalid image_id' });
+
+    const img = await MongoImage.findOne({ sourceType: 'patrol', imageId }).lean();
+    if (!img) return res.status(404).json({ error: 'Patrol image not found' });
+
+    res.json({
+      data: {
+        image_id: img.imageId,
+        patrol_id: img.patrolId,
+        image_data: img.imageData || null,
+        image_type: img.imageType,
+        image_category: img.imageCategory,
+        note: img.note || null,
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patrol image' });
   }
 });
 

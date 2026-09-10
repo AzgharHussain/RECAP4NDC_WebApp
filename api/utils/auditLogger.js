@@ -34,6 +34,10 @@ function logAudit(params) {
 }
 
 function logFromRequest(req, params) {
+  // Mark the request so the global audit middleware knows a richer entry has
+  // already been written and it shouldn't log a second generic one.
+  if (req) req.auditLogged = true;
+
   const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || null;
   const userAgent = req.headers['user-agent'] || null;
   const userId = req.user?.userId || req.user?.user_id || req.body?.user_id || null;
