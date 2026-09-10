@@ -80,6 +80,17 @@ async function ensureNotificationLogTable(client) {
       )
     `);
 
+    // Add village_name and coupe_name columns for fallback lookups when
+    // a user's subscription has been removed from ndvi_notification_users.
+    await queryWithRetry(client, `
+      ALTER TABLE public.ndvi_daily_notification_log
+      ADD COLUMN IF NOT EXISTS village_name TEXT
+    `);
+    await queryWithRetry(client, `
+      ALTER TABLE public.ndvi_daily_notification_log
+      ADD COLUMN IF NOT EXISTS coupe_name TEXT
+    `);
+
     // Ensure pixel_id is TEXT
     const colType = await queryWithRetry(client, `
       SELECT data_type
@@ -320,11 +331,11 @@ async function runNdviNotifications(admin) {
         // Log the daily notification
         await queryWithRetry(client, `
           INSERT INTO public.ndvi_daily_notification_log
-          (user_id, notification_date, notification_slot, change_count, sent_at)
-          VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+          (user_id, notification_date, notification_slot, change_count, sent_at, village_name, coupe_name)
+          VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5, $6)
           ON CONFLICT (user_id, notification_date, notification_slot) DO NOTHING
         `, {
-          bind: [user_id, date, slot, totalChanges],
+          bind: [user_id, date, slot, totalChanges, village_name, coupe_name],
           type: sequelize.QueryTypes.INSERT
         });
 

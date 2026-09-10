@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Button, Card, Col, DatePicker, Descriptions, Input, Modal, Row, Select, Space, Statistic, Table, Tag, message } from "antd";
+import { Button, Card, Col, DatePicker, Descriptions, Input, Modal, Row, Select, Space, Statistic, Table, Tag, Tooltip, message } from "antd";
 import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, EditOutlined, TableOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import L from "leaflet";
@@ -73,6 +73,7 @@ const TEXTS = {
     sentAt: "Sent At (IST)",
     action: "Action",
     viewChanges: "View Changes",
+    noSubscriptionTooltip: "No subscription data — village/coupe mapping unavailable",
     // Section titles
     monthlySummary: "Monthly Division-wise NDVI Notification Summary",
     notificationData: "Notification Data",
@@ -109,6 +110,7 @@ const TEXTS = {
     sentAt: "મોકલ્યો (IST)",
     action: "ક્રિયા",
     viewChanges: "ફેરફાર જુઓ",
+    noSubscriptionTooltip: "સબ્સ્ક્રિપ્શન ડેટા નથી — ગામ/કૂપ મેપિંગ અનુપલબ્ધ",
     // Section titles
     monthlySummary: "માસિક વિભાગ-વાર NDVI સૂચના સારાંશ",
     notificationData: "સૂચના ડેટા",
@@ -535,11 +537,17 @@ const NDVINotifications = () => {
           <Button type="link" icon={<EyeOutlined />} onClick={() => showDetails(record)}>
             {t.viewDetails}
           </Button>
-          {record.user_id && (
+          {record.user_id && record.village_name ? (
             <Button type="link" icon={<TableOutlined />} onClick={() => fetchUserChanges(record.user_id, record.username)}>
               {t.viewChanges}
             </Button>
-          )}
+          ) : record.user_id ? (
+            <Tooltip title={t.noSubscriptionTooltip}>
+              <Button type="link" icon={<TableOutlined />} disabled>
+                {t.viewChanges}
+              </Button>
+            </Tooltip>
+          ) : null}
         </Space>
       ),
     },
@@ -654,7 +662,7 @@ const NDVINotifications = () => {
               </Descriptions.Item>
             </Descriptions>
 
-            {detailRecord.user_id && (
+            {detailRecord.user_id && detailRecord.village_name && (
               <div style={{ marginTop: 16, textAlign: "center" }}>
                 <Button
                   type="primary"
@@ -666,6 +674,15 @@ const NDVINotifications = () => {
                 >
                   {t.viewChanges}
                 </Button>
+              </div>
+            )}
+            {detailRecord.user_id && !detailRecord.village_name && (
+              <div style={{ marginTop: 16, textAlign: "center" }}>
+                <Tooltip title={t.noSubscriptionTooltip}>
+                  <Button type="primary" icon={<TableOutlined />} disabled>
+                    {t.viewChanges}
+                  </Button>
+                </Tooltip>
               </div>
             )}
           </div>

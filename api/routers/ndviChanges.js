@@ -35,11 +35,35 @@ router.get("/user/:user_id", verifyJwt, async (req, res) => {
       { replacements: { user_id }, type: sequelize.QueryTypes.SELECT }
     );
 
-    if (!users.length) {
-      return res.status(404).json({ success: false, message: "User subscription not found" });
-    }
+    let village_name, coupe_name;
 
-    const { village_name, coupe_name } = users[0];
+    if (users.length) {
+      ({ village_name, coupe_name } = users[0]);
+    } else {
+      // Fallback: look up village_name/coupe_name from the daily notification
+      // log. This handles users whose subscription was deleted by the old
+      // logout endpoint before the fix was deployed.
+      const logRows = await sequelize.query(
+        `SELECT village_name, coupe_name
+         FROM public.ndvi_daily_notification_log
+         WHERE user_id = :user_id
+           AND village_name IS NOT NULL
+           AND coupe_name IS NOT NULL
+         ORDER BY sent_at DESC
+         LIMIT 1`,
+        { replacements: { user_id }, type: sequelize.QueryTypes.SELECT }
+      );
+
+      if (logRows.length) {
+        ({ village_name, coupe_name } = logRows[0]);
+        console.log(`[ndvi-changes] Subscription missing for user ${user_id}, using fallback from daily log: village=${village_name}, coupe=${coupe_name}`);
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: "User subscription not found and no fallback village/coupe data available in notification logs."
+        });
+      }
+    }
 
     // Find all NDVI Change tables matching this coupe
     const tables = await sequelize.query(

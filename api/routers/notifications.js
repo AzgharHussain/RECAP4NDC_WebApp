@@ -682,8 +682,14 @@ router.post('/logout',verifyJwt ,async (req, res) => {
     
     const { user_id } = req.body;
 
+    // Don't DELETE the subscription row — that destroys the village/coupe
+    // mapping needed to view historical NDVI changes from the notification
+    // report. Instead, NULL out the firebase_token so the user stops
+    // receiving push notifications but their subscription metadata is
+    // preserved for historical data access.
     const query = `
-      DELETE FROM ndvi_notification_users
+      UPDATE ndvi_notification_users
+      SET firebase_token = NULL
       WHERE user_id = $1
       RETURNING *;
     `;
@@ -833,8 +839,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
 
     if (user_id) addCondition('d.user_id = ?', user_id);
     if (username) addCondition('g.username = ?', username);
-    if (village_name) addCondition('u.village_name = ?', village_name);
-    if (coupe_name) addCondition('u.coupe_name = ?', coupe_name);
+    if (village_name) addCondition('COALESCE(u.village_name, d.village_name) = ?', village_name);
+    if (coupe_name) addCondition('COALESCE(u.coupe_name, d.coupe_name) = ?', coupe_name);
     if (division) addCondition('u.division ILIKE ?', `%${division}%`);
     if (month) addCondition("TO_CHAR(d.notification_date, 'YYYY-MM') = ?", month);
     if (start_date) addCondition('d.notification_date >= ?', start_date);
@@ -850,8 +856,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         d.id,
         d.user_id,
         g.username,
-        u.village_name,
-        u.coupe_name,
+        COALESCE(u.village_name, d.village_name) AS village_name,
+        COALESCE(u.coupe_name, d.coupe_name) AS coupe_name,
         u.division,
         u.range,
         u.round,
@@ -883,8 +889,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     const optionsQuery = `
       SELECT
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT g.username ORDER BY g.username), NULL) AS usernames,
-        ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.village_name ORDER BY u.village_name), NULL) AS villages,
-        ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.coupe_name ORDER BY u.coupe_name), NULL) AS coupes,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT COALESCE(u.village_name, d.village_name) ORDER BY COALESCE(u.village_name, d.village_name)), NULL) AS villages,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT COALESCE(u.coupe_name, d.coupe_name) ORDER BY COALESCE(u.coupe_name, d.coupe_name)), NULL) AS coupes,
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.division ORDER BY u.division), NULL) AS divisions
       FROM public.ndvi_daily_notification_log d
       LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
