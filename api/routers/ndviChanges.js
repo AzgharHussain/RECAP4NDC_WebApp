@@ -268,6 +268,102 @@ router.put("/status", verifyJwt, async (req, res) => {
 });
 
 /**
+ * GET /api/ndvi-changes/village
+ * Returns all NDVI change records for a specific village from a specific
+ * NDVI Change table. Designed to be called when a user taps a push
+ * notification — the notification carries `table_name` and `village_name`
+ * in its data payload, and the client calls this endpoint to fetch the
+ * village's records.
+ *
+ * Query params:
+ *   table_name   — the NDVI Change table name (e.g. "2024-01-01_Coupe_NDVI_Change")
+ *   village_name — the village name to filter by
+ *   limit        — optional row cap (default 500, max 5000)
+ */
+router.get("/village", verifyJwt, async (req, res) => {
+  try {
+    const table_name = (req.query.table_name || "").trim();
+    const village_name = (req.query.village_name || "").trim();
+    const rowLimit = Math.min(Math.max(parseInt(req.query.limit) || 500, 1), 5000);
+
+    if (!table_name || !village_name) {
+      return res.status(400).json({
+        success: false,
+        message: "table_name and village_name query parameters are required",
+      });
+    }
+
+    if (!isValidTableName(table_name)) {
+      return res.status(400).json({ success: false, message: "Invalid table name" });
+    }
+
+    // Verify the table actually exists
+    const tableExists = await sequelize.query(
+      `SELECT 1 FROM information_schema.tables
+       WHERE table_schema = 'public' AND table_name = :tableName
+       LIMIT 1`,
+      { replacements: { tableName: table_name }, type: sequelize.QueryTypes.SELECT }
+    );
+
+    if (!tableExists.length) {
+      return res.status(404).json({ success: false, message: "NDVI table not found" });
+    }
+
+    // Check which columns exist on this table
+    const cols = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = :tableName`,
+      { replacements: { tableName: table_name }, type: sequelize.QueryTypes.SELECT }
+    );
+    const colSet = new Set(cols.map(c => c.column_name));
+
+    const idCol = colSet.has('pixle_id') ? '"pixle_id"' : (colSet.has('id') ? '"id"' : null);
+    if (!idCol) {
+      return res.status(400).json({ success: false, message: "No valid ID column found on table" });
+    }
+
+    const selectCols = [
+      `${idCol}::text AS pixel_id`,
+      colSet.has('NDVI_change') ? '"NDVI_change"' : 'NULL::float AS "NDVI_change"',
+      colSet.has('change_category') ? '"change_category"' : 'NULL::text AS change_category',
+      colSet.has('longitude') ? '"longitude"' : 'NULL::text AS longitude',
+      colSet.has('latitude') ? '"latitude"' : 'NULL::text AS latitude',
+      colSet.has('village') ? '"village"' : ':villageName AS village',
+      colSet.has('note') ? '"note"' : 'NULL::text AS note',
+      colSet.has('status') ? '"status"' : 'NULL::text AS status',
+      colSet.has('division') ? '"division"' : 'NULL::text AS division',
+      colSet.has('range') ? '"range"' : 'NULL::text AS "range"',
+      colSet.has('round') ? '"round"' : 'NULL::text AS round',
+      colSet.has('beat') ? '"beat"' : 'NULL::text AS beat',
+      colSet.has('image_data') ? '"image_data"' : 'NULL::text AS image_data',
+    ].join(', ');
+
+    const records = await sequelize.query(
+      `SELECT ${selectCols}, :tableName AS table_name
+       FROM public."${table_name}"
+       WHERE ${colSet.has('village') ? '"village" = :villageName' : '1=1'}
+       ORDER BY "NDVI_change" DESC
+       LIMIT :limit`,
+      {
+        replacements: { villageName: village_name, tableName: table_name, limit: rowLimit },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    res.json({
+      success: true,
+      data: records,
+      table_name,
+      village_name,
+      total: records.length,
+    });
+  } catch (err) {
+    console.error("[ndvi-changes] Error fetching village changes:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/ndvi-changes/tables
  * Lists all NDVI Change table names.
  */

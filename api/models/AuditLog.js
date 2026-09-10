@@ -31,6 +31,7 @@ const auditLogSchema = new mongoose.Schema(
         'NOTIFICATION_UPDATE',
         'NOTIFICATION_UNSUBSCRIBE',
         'PENDING_NOTIFICATIONS_SEND',
+        'SEND_NOTIFICATION',
         'ADMIN_ACTION',
         'API_ACCESS',
         'API_ERROR',

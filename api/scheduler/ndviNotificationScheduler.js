@@ -237,7 +237,11 @@ async function runNdviNotifications(admin) {
 
       // Collect all NDVI changes for this user's village/coupe from last month
       let totalChanges = 0;
-      const changeDetails = [];
+      // Track the first (primary) table that had changes for this village.
+      // Sent at the top level of the notification data payload so the client
+      // can call the village-records API directly when the user taps the
+      // notification, without having to parse a bulky `changes` JSON array.
+      let primaryTableName = '';
 
       for (const table of tables) {
         const tableName = table.table_name;
@@ -277,18 +281,7 @@ async function runNdviNotifications(admin) {
 
           if (records.length > 0) {
             totalChanges += records.length;
-            // Store top 5 changes for the notification data payload
-            for (const rec of records.slice(0, 5)) {
-              changeDetails.push({
-                table_name: tableName,
-                pixel_id: String(rec.pixle_id),
-                ndvi_change: String(rec.NDVI_change || ''),
-                change_category: String(rec.change_category || ''),
-                latitude: String(rec.latitude || ''),
-                longitude: String(rec.longitude || ''),
-                village: String(rec.village || village_name)
-              });
-            }
+            if (!primaryTableName) primaryTableName = tableName;
           }
         } catch (queryErr) {
           console.error(`[ndvi-scheduler] Query failed for table "${tableName}":`, queryErr.message);
@@ -313,10 +306,10 @@ async function runNdviNotifications(admin) {
           user_id,
           village_name,
           coupe_name,
+          table_name: primaryTableName,
           total_changes: String(totalChanges),
           notification_date: date,
-          notification_slot: String(slot),
-          changes: JSON.stringify(changeDetails)
+          notification_slot: String(slot)
         }
       };
 

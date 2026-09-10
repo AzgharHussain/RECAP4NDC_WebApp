@@ -274,19 +274,9 @@ function Login() {
       createSession(userData, false);
       localStorage.setItem("authToken", "forest_authenticated");
 
-      // Fire-and-forget: trigger pending notifications from previous month
-      // The backend also does this automatically on login, but this is a
-      // backup in case the automatic trigger didn't find a firebase token yet.
-      try {
-        const storedToken = localStorage.getItem("token");
-        if (storedToken) {
-          axios.post(
-            `${API_BASE_URL}/api/send-pending-notifications`,
-            { user_id: userId },
-            { headers: { Authorization: `Bearer ${storedToken}` }, timeout: 5000 }
-          ).catch(() => { /* ignore — non-critical */ });
-        }
-      } catch { /* ignore */ }
+      // Per-pixel pending notifications on login REMOVED.
+      // Notifications are now sent only as a daily summary (3x/day) by the
+      // NDVI scheduler, which also runs once on server startup.
 
       if (validateSession()) navigate("/geo");
       else throw new Error("SESSION_CREATION_FAILED");

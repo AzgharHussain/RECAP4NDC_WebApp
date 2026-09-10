@@ -247,6 +247,8 @@ async function sendNotification(firebaseToken, record) {
       longitude: String(longitude || ""),
       degraded_forest_Layer_N,
       coupe_name,
+      table_name: degraded_forest_Layer,
+      village_name: String(record.village_name || record.village || ""),
       date
     }
   };
@@ -477,6 +479,198 @@ router.post("/test-fcm", verifyJwt,upload.none(), async (req, res) => {
   }
 });
 
+
+// ----------------------------------------------------
+// 7b. Send NDVI summary notification on demand
+//     POST /api/send-notification
+//     Body: { user_id, firebase_token }
+//     Looks up the user's village_name + coupe_name, finds the last
+//     month's NDVI Change table(s) for that coupe, counts the village's
+//     changes, and sends ONE summary notification with table_name and
+//     village_name in the background data payload. When the user taps
+//     the notification, the client calls GET /api/ndvi-changes/village
+//     with those two values to fetch the village's records.
+// ----------------------------------------------------
+router.post("/send-notification", verifyJwt, upload.none(), async (req, res) => {
+  try {
+    // Coerce to string safely — client may send JSON where user_id is a number
+    // or send multipart form data. Handles both without throwing.
+    const user_id = (req.body.user_id != null ? String(req.body.user_id) : "").trim();
+    const firebase_token = (req.body.firebase_token != null ? String(req.body.firebase_token) : "").trim();
+
+    if (!user_id || !firebase_token) {
+      return res.status(400).json({
+        success: false,
+        message: "user_id and firebase_token are required",
+      });
+    }
+
+    // 1) Look up the user's subscription (village_name, coupe_name)
+    const userRows = await client.query(
+      `SELECT user_id, firebase_token, village_name, coupe_name
+       FROM public.ndvi_notification_users
+       WHERE user_id = $1`,
+      [user_id]
+    );
+
+    if (userRows.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User subscription not found. Subscribe first via /send-notifications.",
+      });
+    }
+
+    const user = userRows.rows[0];
+    const village_name = user.village_name;
+    const coupe_name = user.coupe_name;
+
+    if (!village_name || !coupe_name) {
+      return res.status(400).json({
+        success: false,
+        message: "User has no village_name or coupe_name set in subscription",
+      });
+    }
+
+    // 2) Find NDVI Change tables matching this coupe
+    const tables = await client.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_name LIKE '%_NDVI_Change'
+        AND UPPER(table_name) LIKE UPPER($1)
+      ORDER BY table_name DESC
+    `, [`%_${coupe_name}_NDVI_Change%`]);
+
+    if (tables.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: "No NDVI Change tables found for this coupe",
+        sent: 0,
+      });
+    }
+
+    // 3) Count changes for this village across matching tables and
+    //    pick the first (most recent) table that has changes as the
+    //    primary table_name for the notification payload.
+    let totalChanges = 0;
+    let primaryTableName = '';
+
+    for (const t of tables.rows) {
+      const tableName = t.table_name;
+
+      try {
+        await ensurePixleIdColumn(client, tableName);
+      } catch (ensureErr) {
+        console.error(`[send-notification] ensurePixleId failed for "${tableName}":`, ensureErr.message);
+        continue;
+      }
+
+      let records;
+      try {
+        records = await client.query(`
+          SELECT pixle_id
+          FROM public."${tableName}"
+          WHERE village = $1
+        `, [village_name]);
+      } catch (qErr) {
+        console.error(`[send-notification] Query failed for table "${tableName}":`, qErr.message);
+        continue;
+      }
+
+      if (records.rows.length > 0) {
+        totalChanges += records.rows.length;
+        if (!primaryTableName) primaryTableName = tableName;
+      }
+    }
+
+    if (totalChanges === 0) {
+      return res.json({
+        success: true,
+        message: "No NDVI changes found for this village",
+        sent: 0,
+      });
+    }
+
+    // 4) Send ONE summary notification with table_name + village_name in background
+    const message = {
+      token: firebase_token,
+      notification: {
+        title: `NDVI Alert 🌿 — ${totalChanges} change(s) detected`,
+        body: `${totalChanges} vegetation change(s) detected in ${village_name}. Tap to view details.`
+      },
+      data: {
+        type: 'ndvi_summary',
+        user_id,
+        village_name,
+        coupe_name,
+        table_name: primaryTableName,
+        total_changes: String(totalChanges),
+      },
+    };
+
+    try {
+      const response = await admin.messaging().send(message);
+
+      logFromRequest(req, {
+        action: 'SEND_NOTIFICATION',
+        status: 'SUCCESS',
+        statusCode: 200,
+        userId: user_id,
+        resourceType: 'notification',
+        details: { village_name, coupe_name, table_name: primaryTableName, total_changes: totalChanges },
+      });
+
+      return res.json({
+        success: true,
+        message: `Notification sent: ${totalChanges} change(s) in ${village_name}`,
+        messageId: response,
+        sent: 1,
+        table_name: primaryTableName,
+        village_name,
+        total_changes: totalChanges,
+      });
+    } catch (sendErr) {
+      console.error('[send-notification] Firebase send error:', sendErr.message);
+
+      // Clear invalid token
+      const isInvalidToken =
+        sendErr.code === 'messaging/registration-token-not-registered' ||
+        sendErr.code === 'messaging/invalid-registration-token' ||
+        (sendErr.message && sendErr.message.includes('Requested entity was not found'));
+
+      if (isInvalidToken) {
+        try {
+          await client.query(
+            `UPDATE public.ndvi_notification_users SET firebase_token = NULL WHERE user_id = $1`,
+            [user_id]
+          );
+        } catch (e) { /* ignore */ }
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send notification',
+        error: sendErr.message,
+      });
+    }
+  } catch (err) {
+    console.error('send-notification error:', err);
+
+    logFromRequest(req, {
+      action: 'SEND_NOTIFICATION',
+      status: 'ERROR',
+      statusCode: 500,
+      userId: req.body?.user_id || null,
+      errorMessage: err.message,
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: 'An internal error occurred. Please try again later.',
+    });
+  }
+});
+
 router.post('/logout',verifyJwt ,async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -534,289 +728,12 @@ router.post('/logout',verifyJwt ,async (req, res) => {
 
 
 // ----------------------------------------------------
-// 8. Send pending notifications from PREVIOUS month(s)
-//    Called when a user logs in during the current month.
-//    Finds NDVI tables from the previous month, checks which
-//    notifications the user hasn't received yet, and sends them.
+// 8. Per-pixel pending notifications REMOVED.
+//    Notifications are now sent only as a daily summary (3x/day)
+//    by the NDVI scheduler, which includes the last month's
+//    table_name and village_name in the notification data payload.
+//    The scheduler also runs once on server startup.
 // ----------------------------------------------------
-
-/**
- * Calculates the previous month's date prefix (YYYY-MM-01).
- * @param {Date} refDate - reference date (defaults to now)
- * @returns {{prevMonthStart: string, prevMonthLabel: string, prevMonthDate: string}}
- */
-function getPreviousMonthInfo(refDate = new Date()) {
-  const prevMonth = new Date(refDate.getFullYear(), refDate.getMonth() - 1, 1);
-  const yyyy = prevMonth.getFullYear();
-  const mm = String(prevMonth.getMonth() + 1).padStart(2, '0');
-  const dateStr = `${yyyy}-${mm}-01`;
-  const label = prevMonth.toLocaleString('default', { month: 'long' }).toUpperCase();
-  return { prevMonthStart: dateStr, prevMonthLabel: label, prevMonthDate: dateStr };
-}
-
-/**
- * Sends all pending NDVI notifications from the previous month to a user.
- * A "pending" notification is one that exists in a previous-month NDVI table
- * but has no entry in ndvi_notification_log for this (user_id, table_name, pixel_id).
- *
- * @param {string} userId - the user's ID (username)
- * @param {string} firebaseToken - FCM token to send to
- * @returns {Promise<{sent: number, skipped: number, errors: number}>}
- */
-async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) {
-  const result = { sent: 0, skipped: 0, errors: 0, details: [] };
-
-  if (!userId || !firebaseToken) {
-    console.warn('[pending-notifications] Missing userId or firebaseToken');
-    return result;
-  }
-
-  try {
-    // 1) Get the user's subscription (village_name, coupe_name)
-    const userRows = await client.query(
-      `SELECT user_id, firebase_token, village_name, coupe_name
-       FROM public.ndvi_notification_users
-       WHERE user_id = $1`,
-      [userId]
-    );
-
-    if (userRows.rows.length === 0) {
-      return result;
-    }
-
-    const user = userRows.rows[0];
-
-    // Use the latest firebase_token passed in (may be newer than stored)
-    const token = firebaseToken || user.firebase_token;
-    if (!token) {
-      return result;
-    }
-
-    const { prevMonthStart, prevMonthLabel } = getPreviousMonthInfo();
-
-    // 2) Find NDVI tables from the previous month
-    //    Table naming pattern: YYYY-MM-DD_<coupe>_NDVI_Change
-    const tables = await client.query(`
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-        AND table_name LIKE '${prevMonthStart}%_NDVI_Change'
-    `);
-
-    if (tables.rows.length === 0) {
-      return result;
-    }
-
-
-    // 3) For each table, find pending notifications for this user
-    for (const t of tables.rows) {
-      const tableName = t.table_name;
-
-      // Match the user's coupe name
-      if (user.coupe_name && !tableName.toUpperCase().includes(`_${user.coupe_name.toUpperCase()}_NDVI_CHANGE`)) {
-        continue;
-      }
-
-      // Ensure the table has a `pixle_id` column before we SELECT it.
-      // Auto-created NDVI tables may lack it; we add + populate unique values
-      // (not a primary key) when missing. Idempotent & cheap.
-      try {
-        await ensurePixleIdColumn(client, tableName);
-      } catch (ensureErr) {
-        console.error(`[pending-notifications] ensurePixleId failed for "${tableName}":`, ensureErr.message);
-        result.errors++;
-        continue;
-      }
-
-      // Get NDVI change records for the user's village
-      let records;
-      try {
-        records = await client.query(`
-          SELECT
-            pixle_id,
-            "NDVI_change",
-            change_category,
-            longitude,
-            latitude,
-            village
-          FROM public."${tableName}"
-          WHERE village = $1
-          ORDER BY "NDVI_change" DESC
-          LIMIT 10
-        `, [user.village_name]);
-      } catch (qErr) {
-        console.error(`[pending-notifications] Query failed for table "${tableName}":`, qErr.message);
-        result.errors++;
-        continue;
-      }
-
-      if (records.rows.length === 0) continue;
-
-      for (const record of records.rows) {
-        const pixelId = String(record.pixle_id);
-        // Check if already sent
-        const alreadySent = await client.query(`
-          SELECT 1
-          FROM public.ndvi_notification_log
-          WHERE user_id = $1
-            AND table_name = $2
-            AND pixel_id = $3
-          LIMIT 1
-        `, [userId, tableName, pixelId]);
-
-        if (alreadySent.rows.length > 0) {
-          result.skipped++;
-          continue;
-        }
-
-        // Build notification message
-        let title = `NDVI Alert for ${prevMonthLabel}`;
-        let body = `Vegetation change detected in ${user.village_name}`;
-
-        switch (record.change_category) {
-          case 'significant_decrease':
-            title = `ðŸš¨ Significant Vegetation Decrease â€” ${prevMonthLabel}`;
-            body = `NDVI dropped significantly in ${user.village_name}`;
-            break;
-          case 'moderate_decrease':
-            title = `âš ï¸ Moderate Vegetation Decrease â€” ${prevMonthLabel}`;
-            body = `NDVI decreased in ${user.village_name}`;
-            break;
-          case 'significant_increase':
-            title = `ðŸŒ± Significant Vegetation Improvement â€” ${prevMonthLabel}`;
-            body = `NDVI improved significantly in ${user.village_name}`;
-            break;
-          case 'moderate_increase':
-            title = `ðŸ“ˆ Moderate Vegetation Improvement â€” ${prevMonthLabel}`;
-            body = `NDVI improved in ${user.village_name}`;
-            break;
-        }
-
-        const message = {
-          token,
-          notification: { title, body },
-          data: {
-            pixle_id: String(pixelId),
-            village_name: String(user.village_name || ''),
-            coupe_name: String(user.coupe_name || ''),
-            latitude: String(record.latitude || ''),
-            longitude: String(record.longitude || ''),
-            ndvi_change: String(record.NDVI_change || ''),
-            change_category: String(record.change_category || ''),
-            table_name: tableName,
-            month: prevMonthStart,
-          },
-        };
-
-        try {
-          await admin.messaging().send(message);
-
-          // Log it
-          await client.query(`
-            INSERT INTO public.ndvi_notification_log (user_id, table_name, pixel_id, sent_at)
-            VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-            ON CONFLICT DO NOTHING
-          `, [userId, tableName, pixelId]);
-
-          result.sent++;
-          result.details.push({ table: tableName, pixel_id: pixelId, category: record.change_category });
-        } catch (sendErr) {
-          console.error(`[pending-notifications] âŒ Firebase send error:`, sendErr.message);
-          result.errors++;
-
-          // Clear invalid token
-          const isInvalidToken =
-            sendErr.code === 'messaging/registration-token-not-registered' ||
-            sendErr.code === 'messaging/invalid-registration-token' ||
-            (sendErr.message && sendErr.message.includes('Requested entity was not found'));
-
-          if (isInvalidToken) {
-            try {
-              await client.query(
-                `UPDATE public.ndvi_notification_users SET firebase_token = NULL WHERE user_id = $1`,
-                [userId]
-              );
-            } catch (e) { /* ignore */ }
-            break; // no point continuing with an invalid token
-          }
-        }
-      }
-    }
-
-    return result;
-  } catch (err) {
-    console.error('[pending-notifications] Error:', err.message);
-    result.errors++;
-    return result;
-  }
-}
-
-// Endpoint: manually trigger pending notifications for a user
-// POST /api/send-pending-notifications
-// Body: { user_id, firebase_token }
-router.post('/send-pending-notifications', verifyJwt, upload.none(), async (req, res) => {
-  try {
-    const user_id = (req.body.user_id || '').trim();
-    const firebase_token = (req.body.firebase_token || '').trim();
-
-    if (!user_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'user_id is required',
-      });
-    }
-
-    // If no firebase_token in request, try to get it from stored subscription
-    let token = firebase_token;
-    if (!token) {
-      const stored = await client.query(
-        'SELECT firebase_token FROM public.ndvi_notification_users WHERE user_id = $1',
-        [user_id]
-      );
-      if (stored.rows.length > 0) {
-        token = stored.rows[0].firebase_token;
-      }
-    }
-
-    if (!token) {
-      return res.json({
-        success: true,
-        message: 'No firebase token available â€” user not subscribed or token cleared',
-        sent: 0,
-      });
-    }
-
-    const result = await sendPendingNotificationsFromPreviousMonth(user_id, token);
-
-    logFromRequest(req, {
-      action: 'PENDING_NOTIFICATIONS_SEND',
-      status: 'SUCCESS',
-      statusCode: 200,
-      userId: user_id,
-      resourceType: 'notification',
-      details: { sent: result.sent, skipped: result.skipped, errors: result.errors },
-    });
-
-    return res.json({
-      success: true,
-      message: `Sent ${result.sent} pending notification(s) from previous month`,
-      ...result,
-    });
-  } catch (err) {
-    console.error('send-pending-notifications error:', err);
-    logFromRequest(req, {
-      action: 'PENDING_NOTIFICATIONS_SEND',
-      status: 'ERROR',
-      statusCode: 500,
-      userId: req.body?.user_id || null,
-      errorMessage: err.message,
-    });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to send pending notifications',
-    });
-  }
-});
 
 const getDivisionFromNdviTableName = (tableName) => {
   if (!tableName) return '-';
@@ -1262,9 +1179,6 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch NDVI notification report' });
   }
 });
-
-// Export the function so it can be called from forestLogin.js
-router.sendPendingNotificationsFromPreviousMonth = sendPendingNotificationsFromPreviousMonth;
 
 module.exports = router;
 

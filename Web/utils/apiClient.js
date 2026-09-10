@@ -41,7 +41,6 @@ const AUTH_ENDPOINTS = [
   '/api/admin',
   '/api/forest-login',
   '/api/saveuser',
-  '/api/send-pending-notifications',
 ];
 
 // --- Create axios instance ---

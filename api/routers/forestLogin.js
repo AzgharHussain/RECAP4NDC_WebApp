@@ -7,21 +7,6 @@ const { logFromRequest } = require('../utils/auditLogger');
 const { sequelize } = require('../config/database');
 const bcrypt = require('bcrypt');
 
-// Lazy-load notifications router to avoid circular dependency at startup.
-// This lets us trigger pending notifications on login.
-let sendPendingNotificationsFromPreviousMonth = null;
-function getPendingNotificationsFn() {
-  if (!sendPendingNotificationsFromPreviousMonth) {
-    try {
-      const notificationsRouter = require('./notifications');
-      sendPendingNotificationsFromPreviousMonth = notificationsRouter.sendPendingNotificationsFromPreviousMonth;
-    } catch (e) {
-      console.warn('Could not load sendPendingNotificationsFromPreviousMonth:', e.message);
-    }
-  }
-  return sendPendingNotificationsFromPreviousMonth;
-}
-
 const SECRET_KEY = process.env.JWT_SECRET;
 
 router.post('/forest-login', async (req, res) => {
@@ -209,32 +194,9 @@ router.post('/forest-login', async (req, res) => {
       });
     }
 
-    // === Fire-and-forget: send pending notifications from previous month ===
-    // Runs AFTER the response is sent so it doesn't slow down login.
-    // The user must be subscribed (have a firebase_token in ndvi_notification_users).
-    // If not subscribed yet, this is a no-op.
-    const loginUsername = username.trim();
-    setImmediate(async () => {
-      try {
-        const fn = getPendingNotificationsFn();
-        if (!fn) return;
-
-        // Use the shared sequelize connection — NOT a new pg.Pool (which leaks connections)
-        const [subRows] = await sequelize.query(
-          'SELECT firebase_token FROM public.ndvi_notification_users WHERE user_id = $1 AND firebase_token IS NOT NULL',
-          { bind: [loginUsername] }
-        );
-
-        if (subRows.length === 0) {
-          return;
-        }
-
-        const fbToken = subRows[0].firebase_token;
-        const result = await fn(loginUsername, fbToken);
-      } catch (e) {
-        console.error('[login-notifications] Error:', e.message);
-      }
-    });
+    // Per-pixel pending notifications on login REMOVED.
+    // Notifications are now sent only as a daily summary (3x/day) by the
+    // NDVI scheduler, which also runs once on server startup.
 
     return res.json({
       success: true,
@@ -327,22 +289,7 @@ router.post('/forest-login', async (req, res) => {
             details: { name: userData.NAME }
           });
 
-          // Fire-and-forget: send pending notifications from previous month
-          setImmediate(async () => {
-            try {
-              const fn = getPendingNotificationsFn();
-              if (!fn) return;
-              // Use shared sequelize connection — no new pg.Pool
-              const [subRows] = await sequelize.query(
-                'SELECT firebase_token FROM public.ndvi_notification_users WHERE user_id = $1 AND firebase_token IS NOT NULL',
-                { bind: [trimmedUsername] }
-              );
-              if (subRows.length === 0) return;
-              const result = await fn(trimmedUsername, subRows[0].firebase_token);
-            } catch (e) {
-              console.error('[login-notifications] Fallback error:', e.message);
-            }
-          });
+          // Per-pixel pending notifications on login REMOVED.
 
           return res.json({
             success: true,
