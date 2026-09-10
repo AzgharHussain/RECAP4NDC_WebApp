@@ -73,6 +73,7 @@ async function ensureIncidentLogsTable() {
       incident_date       DATE NOT NULL,
       incident_time       TIME NOT NULL,
       description         TEXT,
+      incident_code        VARCHAR(100) UNIQUE,
       created_at          TIMESTAMP DEFAULT NOW(),
       updated_at          TIMESTAMP DEFAULT NOW()
     );
@@ -88,7 +89,8 @@ async function ensureIncidentLogsTable() {
       ADD COLUMN IF NOT EXISTS round VARCHAR(255),
       ADD COLUMN IF NOT EXISTS beat VARCHAR(255),
       ADD COLUMN IF NOT EXISTS village VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS severity_id INTEGER;
+      ADD COLUMN IF NOT EXISTS severity_id INTEGER,
+      ADD COLUMN IF NOT EXISTS incident_code VARCHAR(100) UNIQUE;
   `);
 
   // Index for fast lookup by user_id
@@ -102,10 +104,98 @@ async function ensureIncidentLogsTable() {
     CREATE INDEX IF NOT EXISTS idx_incident_logs_category_id
     ON public.incident_logs (incident_category_id);
   `);
+
+  // Index for fast lookup by incident_code
+  await client.query(`
+    CREATE INDEX IF NOT EXISTS idx_incident_logs_code
+    ON public.incident_logs (incident_code);
+  `);
 }
 
 ensureIncidentLogsTable().catch((err) => {
   console.error('Failed to ensure incident_logs table:', err.message);
+});
+
+// ─────────────────────────────────────────────────────────
+// Generate a human-readable incident_code:
+//   INC-<DIVISION>-<USERNAME>-<YYYYMMDD>-<HHMM>-<INCIDENT_ID>
+// Mirrors the patrol_code format (PAT-...) so incident and patrol
+// codes share a consistent, URL-safe naming scheme.
+// ─────────────────────────────────────────────────────────
+function sanitizeCodePart(value, maxLen = 15) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, maxLen) || 'unknown';
+}
+
+function generateIncidentCode(division, username, incidentDate, incidentTime, incidentId) {
+  // Build a Date from incident_date + incident_time
+  let d;
+  if (incidentDate && incidentTime) {
+    d = new Date(`${incidentDate} ${incidentTime}`);
+  } else if (incidentDate) {
+    d = new Date(incidentDate);
+  } else {
+    d = new Date();
+  }
+  if (Number.isNaN(d.getTime())) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  const date = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+  const time = `${pad(d.getHours())}${pad(d.getMinutes())}`;
+  const div = sanitizeCodePart(division, 5).toUpperCase();
+  const usr = sanitizeCodePart(username, 15);
+  return `INC-${div}-${usr}-${date}-${time}-${incidentId}`;
+}
+
+// ─────────────────────────────────────────────────────────
+// Backfill incident_code for existing records that have NULL.
+// Runs on server start. Looks up username from government_department_users.
+// ─────────────────────────────────────────────────────────
+async function backfillIncidentCodes() {
+  const missing = await client.query(`
+    SELECT il.incident_id, il.division, il.incident_date, il.incident_time, il.user_id, gdu.username
+    FROM public.incident_logs il
+    LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
+    WHERE il.incident_code IS NULL
+    ORDER BY il.incident_id ASC;
+  `);
+
+  if (missing.rows.length === 0) {
+    console.log('[incident_code backfill] All incidents already have codes. Nothing to do.');
+    return;
+  }
+
+  console.log(`[incident_code backfill] Generating codes for ${missing.rows.length} incident(s)...`);
+
+  let updated = 0;
+  for (const row of missing.rows) {
+    try {
+      const code = generateIncidentCode(
+        row.division,
+        row.username,
+        row.incident_date,
+        row.incident_time,
+        row.incident_id
+      );
+      if (code) {
+        await client.query(
+          'UPDATE public.incident_logs SET incident_code = $1 WHERE incident_id = $2 AND incident_code IS NULL',
+          [code, row.incident_id]
+        );
+        updated++;
+      }
+    } catch (err) {
+      console.warn(`[incident_code backfill] Skipped incident_id ${row.incident_id}: ${err.message}`);
+    }
+  }
+
+  console.log(`[incident_code backfill] Updated ${updated} of ${missing.rows.length} incident(s).`);
+}
+
+// Run backfill on module load (server start)
+backfillIncidentCodes().catch((err) => {
+  console.error('[incident_code backfill] Failed:', err.message);
 });
 
 // ─────────────────────────────────────────────────────────
@@ -161,7 +251,7 @@ router.post('/incident-logs', verifyJwt, upload.single('incident_image'), async 
   try {
     // Check if user exists
     const userCheck = await client.query(
-      'SELECT user_id FROM public.government_department_users WHERE user_id = $1',
+      'SELECT user_id, username FROM public.government_department_users WHERE user_id = $1',
       [user_id]
     );
     if (userCheck.rows.length === 0) {
@@ -203,6 +293,23 @@ router.post('/incident-logs', verifyJwt, upload.single('incident_image'), async 
     ]);
 
     const incident_id = result.rows[0].incident_id;
+
+    // Generate and persist a human-readable incident_code
+    // Format: INC-<DIVISION>-<USERNAME>-<YYYYMMDD>-<HHMM>-<INCIDENT_ID>
+    const incident_code = generateIncidentCode(
+      cleanDivision,
+      userCheck.rows[0].username || req.user?.username,
+      incident_date,
+      incident_time,
+      incident_id
+    );
+    if (incident_code) {
+      await client.query(
+        'UPDATE public.incident_logs SET incident_code = $1 WHERE incident_id = $2',
+        [incident_code, incident_id]
+      );
+      result.rows[0].incident_code = incident_code;
+    }
 
     // Store image in MongoDB if uploaded
     if (req.file) {
@@ -277,6 +384,7 @@ router.get('/incident-logs', verifyJwt, async (req, res) => {
         il.incident_date::text AS incident_date,
         il.incident_time::text AS incident_time,
         il.description,
+        il.incident_code,
         il.created_at,
         il.updated_at,
         gdu.username
@@ -353,6 +461,7 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
         il.incident_date::text AS incident_date,
         il.incident_time::text AS incident_time,
         il.description,
+        il.incident_code,
         il.created_at,
         il.updated_at,
         gdu.username
@@ -429,6 +538,7 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
         il.incident_date::text AS incident_date,
         il.incident_time::text AS incident_time,
         il.description,
+        il.incident_code,
         il.created_at,
         il.updated_at,
         gdu.username
@@ -573,7 +683,7 @@ router.put('/incident-logs/:incident_id', verifyJwt, upload.single('incident_ima
       UPDATE public.incident_logs
       SET ${setClauses.join(', ')}
       WHERE incident_id = $${paramIndex}
-      RETURNING incident_id, user_id, incident_type, incident_date::text AS incident_date, incident_time::text AS incident_time, description, updated_at;
+      RETURNING incident_id, user_id, incident_type, incident_date::text AS incident_date, incident_time::text AS incident_time, description, incident_code, updated_at;
     `;
     const result = await client.query(updateQuery, params);
 
@@ -679,3 +789,4 @@ router.delete('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
 
 module.exports = router;
 module.exports.ensureIncidentLogsTable = ensureIncidentLogsTable;
+module.exports.backfillIncidentCodes = backfillIncidentCodes;

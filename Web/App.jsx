@@ -30,7 +30,6 @@ const BeatPatrolCoverage = lazy(() => import("./pages/BeatPatrolCoverage"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const UploadPatrolBoundary = lazy(() => import("./pages/UploadPatrolBoundary"));
 const IncidentLogs = lazy(() => import("./pages/IncidentLogs"));
-const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 
 
@@ -121,7 +120,6 @@ export default function App() {
           {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Homepage />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/support" element={<SupportPage />} />
 
           {/* Protected User Routes */}

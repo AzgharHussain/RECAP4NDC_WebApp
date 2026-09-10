@@ -453,7 +453,7 @@ const Homepage = () => {
           <a href="/support" className="footer-support-link">
             {language === 'gu' ? 'સપોર્ટ' : 'Support'}
           </a>
-          <a href="/privacy-policy" className="footer-support-link">
+          <a href="/privacy-policy.html" className="footer-support-link">
             {language === 'gu' ? 'ગોપનીયતા નીતિ' : 'Privacy Policy'}
           </a>
         </div>

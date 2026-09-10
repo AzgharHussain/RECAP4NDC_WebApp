@@ -497,7 +497,7 @@ function Login() {
 
             {/* Privacy Notice */}
             <div className="login-links">
-              <NavLink to="/privacy-policy">{text[language].privacyTerms}</NavLink>
+              <a href="/privacy-policy.html">{text[language].privacyTerms}</a>
             </div>
 
           </div>{/* end .login-card */}
