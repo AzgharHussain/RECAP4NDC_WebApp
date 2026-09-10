@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, useMap,ScaleControl ,WMSTileLayer  } from "rea
 import {FaInfoCircle} from 'react-icons/fa';
 import L, { icon } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "../utils/leafletFix";
 import "leaflet-easyprint";
 import PrintControl from "./PrintControl";
 import axios from 'axios';

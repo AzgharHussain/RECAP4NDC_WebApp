@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
+import "../utils/leafletFix";
 
 const SearchControlWithInput = () => {
   const map = useMap();

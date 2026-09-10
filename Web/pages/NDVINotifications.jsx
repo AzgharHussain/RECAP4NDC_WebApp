@@ -4,6 +4,7 @@ import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, Sea
 import dayjs from "dayjs";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "../utils/leafletFix";
 import { API_BASE_URL } from "../config";
 import { getAuthHeaders, matchesUserHierarchy, matchesUserHierarchyString, getMostSpecificLevel } from "../utils/authUtils";
 import { capitalizeFirst } from "../utils/textFormat";
