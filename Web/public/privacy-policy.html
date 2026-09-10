@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - FMPS</title>
+    <meta name="robots" content="index, follow">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.7;
+            color: #1a1a1a;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        h1 { font-size: 1.8rem; margin-bottom: 8px; color: #1b5e20; }
+        h2 { font-size: 1.25rem; margin-top: 28px; margin-bottom: 10px; color: #2e7d32; border-bottom: 2px solid #e8f5e9; padding-bottom: 4px; }
+        h3 { font-size: 1.05rem; margin-top: 18px; margin-bottom: 6px; color: #388e3c; }
+        p { margin-bottom: 12px; }
+        ul { margin-bottom: 12px; padding-left: 24px; }
+        li { margin-bottom: 6px; }
+        .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #1b5e20; }
+        .header h1 { font-size: 2rem; }
+        .updated { color: #666; font-size: 0.9rem; margin-top: 4px; }
+        .contact-box { background: #e8f5e9; padding: 16px 20px; border-radius: 6px; margin-top: 20px; }
+        .contact-box h2 { border: none; margin-top: 0; }
+        strong { color: #1b5e20; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+        th { background: #e8f5e9; }
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+            h2 { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>Privacy Policy</h1>
+        <p class="updated">Last Updated: 10 September 2026</p>
+    </div>
+
+    <h2>FMPS &mdash; Forest Monitoring and Patrolling System</h2>
+    <p>
+        FMPS (Forest Monitoring and Patrolling System) is a mobile and web application
+        developed for the <strong>Gujarat Forest Department</strong> to monitor forest
+        areas, track patrolling activities, detect NDVI (Normalized Difference
+        Vegetation Index) changes, and report forest incidents.
+    </p>
+    <p>
+        This Privacy Policy describes how the data collected through the FMPS
+        application is handled. By using the FMPS application, you consent to the
+        practices described in this policy.
+    </p>
+
+    <h2>1. Developer / Organization Information</h2>
+    <table>
+        <tr><th>Organization</th><td>Gujarat Forest Department</td></tr>
+        <tr><th>Project</th><td>FMPS (Forest Monitoring and Patrolling System)</td></tr>
+        <tr><th>Developer</th><td>Gisfy Infotech Pvt. Ltd.</td></tr>
+        <tr><th>Contact Email</th><td>gujfdp@gmail.com</td></tr>
+    </table>
+
+    <h2>2. Information We Collect</h2>
+
+    <h3>2.1 Account &amp; User Information</h3>
+    <ul>
+        <li><strong>Username and User ID</strong> &mdash; assigned by the Forest Department for authentication.</li>
+        <li><strong>Password</strong> &mdash; stored as a securely hashed value; plain-text passwords are never stored.</li>
+        <li><strong>Role / Designation</strong> &mdash; e.g., Forest Guard, Range Forest Officer, Divisional Forest Officer.</li>
+        <li><strong>Government Department affiliation</strong> &mdash; Division, Range, Beat, Round information.</li>
+    </ul>
+
+    <h3>2.2 Location &amp; Patrol Data</h3>
+    <ul>
+        <li><strong>GPS track data</strong> &mdash; start and end coordinates, route path (geometry), and total distance travelled during each patrol.</li>
+        <li><strong>Start and end timestamps</strong> of each patrolling session.</li>
+        <li><strong>Patrol metadata</strong> &mdash; officer name, division, range, beat, round, patrolling type, number of staff, patrolling location (inside/outside forest).</li>
+        <li><strong>Current location</strong> &mdash; district and village when patrolling outside forest areas.</li>
+    </ul>
+
+    <h3>2.3 Images</h3>
+    <ul>
+        <li><strong>Patrol images</strong> &mdash; photographs captured during patrolling, with optional notes.</li>
+        <li><strong>Incident images</strong> &mdash; photographs of forest incidents (fire, encroachment, illegal felling, wildlife sighting, etc.) with category and severity classification.</li>
+        <li><strong>NDVI change images</strong> &mdash; satellite-derived imagery showing vegetation change detected at specific pixel locations.</li>
+    </ul>
+
+    <h3>2.4 NDVI / Satellite Data</h3>
+    <ul>
+        <li><strong>NDVI change records</strong> &mdash; pixel ID, NDVI change value, longitude, latitude, status, village, division, range, beat, and round for each detected change.</li>
+        <li><strong>Coupe / plantation boundary data</strong> &mdash; geographic boundaries uploaded as shapefiles or KML files.</li>
+    </ul>
+
+    <h3>2.5 Incident Reports</h3>
+    <ul>
+        <li><strong>Incident category and sub-category</strong> &mdash; e.g., Forest Fire, Encroachment, Illegal Felling, Wildlife.</li>
+        <li><strong>Incident severity</strong> &mdash; Low, Medium, High, Critical.</li>
+        <li><strong>Incident location</strong> &mdash; GPS coordinates, division, range, beat.</li>
+        <li><strong>Incident description and images</strong>.</li>
+    </ul>
+
+    <h3>2.6 Push Notification Data</h3>
+    <ul>
+        <li><strong>Firebase Cloud Messaging (FCM) token</strong> &mdash; used to send push notifications about NDVI changes and alerts.</li>
+        <li><strong>Notification preferences</strong> &mdash; user-selected tables, ranges, and areas of interest.</li>
+        <li><strong>Notification log</strong> &mdash; record of notifications sent, delivery status, and timestamps.</li>
+    </ul>
+
+    <h3>2.7 Device &amp; Technical Information</h3>
+    <ul>
+        <li><strong>IP address</strong> &mdash; logged for audit and security purposes.</li>
+        <li><strong>User-Agent string</strong> &mdash; browser or app version information.</li>
+        <li><strong>Device location</strong> &mdash; GPS coordinates submitted by the mobile app when reporting incidents or patrols.</li>
+    </ul>
+
+    <h3>2.8 Audit Logs</h3>
+    <ul>
+        <li><strong>Login/logout events</strong>, password changes, record creation/update/deletion, file uploads, boundary management, and notification subscription changes.</li>
+        <li>Audit logs are retained for a period of <strong>2 years</strong> for system events and <strong>37 days</strong> for transactional logs, in accordance with the data retention policy.</li>
+    </ul>
+
+    <h2>3. How We Use the Information</h2>
+    <ul>
+        <li>To authenticate users and manage access control based on roles.</li>
+        <li>To record and monitor forest patrolling activities and ensure coverage of designated areas.</li>
+        <li>To detect and respond to NDVI changes indicating potential deforestation or vegetation loss.</li>
+        <li>To report, classify, and track forest incidents for timely response.</li>
+        <li>To send push notifications to forest officers about detected changes and alerts.</li>
+        <li>To generate reports and analytics for forest management decision-making.</li>
+        <li>To maintain audit trails for accountability and security.</li>
+    </ul>
+
+    <h2>4. Data Storage &amp; Security</h2>
+    <ul>
+        <li><strong>PostgreSQL database</strong> &mdash; stores patrol records, NDVI change data, incident reports, user accounts, and boundary metadata. Hosted on secure government cloud infrastructure (SDC).</li>
+        <li><strong>MongoDB</strong> &mdash; stores patrol and incident images (as base64-encoded data), image metadata, and notification logs.</li>
+        <li><strong>GeoServer</strong> &mdash; serves geospatial boundary layers for visualization on the web dashboard.</li>
+        <li><strong>Encryption</strong> &mdash; all communication between the mobile app, web dashboard, and backend APIs uses HTTPS/TLS encryption.</li>
+        <li><strong>Authentication</strong> &mdash; JWT (JSON Web Token) based authentication with token expiration. Passwords are hashed using bcrypt.</li>
+        <li><strong>Access control</strong> &mdash; role-based access control (RBAC) ensures users can only access data relevant to their designation and jurisdiction.</li>
+        <li><strong>Input validation &amp; sanitization</strong> &mdash; all user inputs are validated and sanitized to prevent SQL injection, XSS, and other attacks.</li>
+        <li><strong>Rate limiting</strong> &mdash; API endpoints are protected by rate limiting to prevent abuse.</li>
+    </ul>
+
+    <h2>5. Data Sharing &amp; Disclosure</h2>
+    <ul>
+        <li>Data collected through FMPS is <strong>not sold or shared with any third party</strong> for commercial purposes.</li>
+        <li>Data is accessible only to <strong>authorized Gujarat Forest Department personnel</strong> based on their role and jurisdiction.</li>
+        <li>Aggregate, anonymized data may be used for <strong>government reporting, research, and policy planning</strong>.</li>
+        <li>Data may be disclosed to law enforcement or government authorities if required by law.</li>
+    </ul>
+
+    <h2>6. Data Retention</h2>
+    <ul>
+        <li><strong>Patrol records, incident reports, and NDVI change data</strong> &mdash; retained indefinitely as government records, unless otherwise directed by the Forest Department.</li>
+        <li><strong>Audit logs</strong> &mdash; system event logs retained for 2 years; transactional logs retained for 37 days.</li>
+        <li><strong>Notification logs</strong> &mdash; retained for operational reference and audit purposes.</li>
+        <li><strong>Images</strong> &mdash; retained as long as the associated patrol or incident record exists.</li>
+    </ul>
+
+    <h2>7. User Rights</h2>
+    <ul>
+        <li><strong>Access</strong> &mdash; Users can view their own patrol records, incident reports, and profile information through the app.</li>
+        <li><strong>Correction</strong> &mdash; Users can update incident notes and image notes. Profile changes are managed by department administrators.</li>
+        <li><strong>Notification control</strong> &mdash; Users can subscribe to or unsubscribe from NDVI change notifications at any time.</li>
+        <li><strong>Account deactivation</strong> &mdash; Managed by the Forest Department administration. Users should contact their supervising officer or the department email to request account changes.</li>
+    </ul>
+
+    <h2>8. Children's Privacy</h2>
+    <p>
+        FMPS is a government departmental application used by authorized forest
+        department personnel only. It is not directed at children and does not
+        knowingly collect data from children.
+    </p>
+
+    <h2>9. Third-Party Services</h2>
+    <ul>
+        <li><strong>Firebase Cloud Messaging (Google)</strong> &mdash; used for push notifications. Firebase may process the FCM token and notification delivery data subject to <a href="https://firebase.google.com/support/privacy" target="_blank">Google's Privacy Policy</a>.</li>
+        <li><strong>GeoServer (Open Source)</strong> &mdash; hosted on the department's own infrastructure for serving geospatial data.</li>
+        <li><strong>Leaflet / OpenStreetMap tiles</strong> &mdash; used for map visualization in the web dashboard. Map tile requests may be processed by the tile provider.</li>
+    </ul>
+
+    <h2>10. Changes to This Privacy Policy</h2>
+    <p>
+        This Privacy Policy may be updated from time to time to reflect changes in
+        the application's functionality or legal requirements. The "Last Updated"
+        date at the top of this page indicates when the policy was last revised.
+        Continued use of the FMPS application after changes constitutes acceptance
+        of the updated policy.
+    </p>
+
+    <h2>11. Contact Us</h2>
+    <div class="contact-box">
+        <p>
+            <strong>Gujarat Forest Department</strong><br>
+            Project: FMPS (Forest Monitoring and Patrolling System)<br>
+            Email: <a href="mailto:gujfdp@gmail.com">gujfdp@gmail.com</a><br>
+            Developer: Gisfy Infotech Pvt. Ltd.
+        </p>
+        <p>
+            For any questions, concerns, or requests regarding this Privacy Policy
+            or the data collected through the FMPS application, please contact the
+            email address above.
+        </p>
+    </div>
+
+</div>
+</body>
+</html>
