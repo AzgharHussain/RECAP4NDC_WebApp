@@ -267,43 +267,12 @@ app.use((req, res, next) => {
     next();
 });
 
-// Response sanitization — optimized for high concurrency.
-// Only sanitizes string values (escapes HTML entities) to prevent XSS.
-// Uses Content-Length header to skip large responses instead of JSON.stringify.
-const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-const HTML_ESCAPE_RE = /[&<>"']/g;
-const SANITIZE_SKIP_SIZE = 1024 * 1024; // 1MB
-
-app.use((req, res, next) => {
-  const originalJson = res.json;
-  res.json = function(data) {
-    // Fast path: skip sanitization for large responses (geo/spatial data)
-    // Use approximate size check without full serialization
-    if (data && typeof data === 'object') {
-      const dataStr = data && data.data;
-      // If data.data is an array with many items, skip sanitization for performance
-      if (Array.isArray(dataStr) && dataStr.length > 500) {
-        return originalJson.call(this, data);
-      }
-    }
-
-    function sanitizeOutput(obj) {
-      if (typeof obj === 'string') {
-        return obj.replace(HTML_ESCAPE_RE, (m) => HTML_ESCAPE_MAP[m]);
-      } else if (Array.isArray(obj)) {
-        for (let i = 0; i < obj.length; i++) obj[i] = sanitizeOutput(obj[i]);
-        return obj;
-      } else if (obj && typeof obj === 'object') {
-        for (const key in obj) obj[key] = sanitizeOutput(obj[key]);
-        return obj;
-      }
-      return obj;
-    }
-
-    return originalJson.call(this, sanitizeOutput(data));
-  };
-  next();
-});
+// NOTE: Global response sanitization removed for performance.
+// Per-field sanitization via clean() (xss) in route handlers handles XSS
+// where needed. The global middleware was double-sanitizing every response
+// (recursive walk + HTML entity escaping on ALL string fields), which
+// blocked the event loop and corrupted JSON data values (e.g. O'Brien).
+// Input-side validation (validateAlphaNumSpaceUnderscore, Joi) remains.
 
 // ==================== FILE STORAGE ==================== //
 const patrolImageDir = path.join(__dirname, '..', 'Patrolimage');

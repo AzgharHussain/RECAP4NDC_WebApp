@@ -1,15 +1,64 @@
 const AuditLog = require('../models/AuditLog');
+const Counter = require('../config/mongo').mongoose.model('AuditLogCounter');
 
 const TWO_YEARS_MS = 2 * 365 * 24 * 60 * 60 * 1000;
 const THIRTY_SEVEN_DAYS_MS = 37 * 24 * 60 * 60 * 1000;
 
-async function writeLog(entry) {
+// ── Batching buffer ──────────────────────────────────────────────
+// Instead of writing one AuditLog.create() per audit event (2 MongoDB
+// round trips each: counter increment + insert), we buffer entries and
+// flush them in batches. This dramatically reduces MongoDB load under
+// high write traffic.
+
+const FLUSH_INTERVAL_MS = 5000;   // flush every 5 seconds
+const FLUSH_BATCH_SIZE = 100;     // or when 100 entries accumulate, whichever is first
+
+let buffer = [];
+let flushTimer = null;
+
+async function flushBuffer() {
+  if (buffer.length === 0) return;
+  const batch = buffer;
+  buffer = [];
+
   try {
-    await AuditLog.create(entry);
+    // Pre-allocate a contiguous block of logIds in a single counter round trip
+    const count = batch.length;
+    const counter = await Counter.findOneAndUpdate(
+      { _id: 'auditLog' },
+      { $inc: { seq: count } },
+      { upsert: true, new: true }
+    );
+    const baseId = counter.seq - count; // first ID in this batch
+
+    // Assign sequential logIds
+    for (let i = 0; i < batch.length; i++) {
+      batch[i].logId = baseId + i + 1;
+    }
+
+    await AuditLog.insertMany(batch, { ordered: false });
   } catch (err) {
-    console.error('AuditLog write error:', err.message);
+    console.error('AuditLog batch write error:', err.message);
+    // Re-buffer entries that failed (best-effort, avoid infinite growth)
+    if (buffer.length < 500) {
+      buffer = batch.concat(buffer);
+    }
   }
 }
+
+function scheduleFlush() {
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    flushBuffer().catch(() => {});
+  }, FLUSH_INTERVAL_MS);
+  flushTimer.unref(); // don't keep process alive just for flushing
+}
+
+// Flush on graceful shutdown so no entries are lost
+process.on('SIGTERM', () => {
+  flushBuffer().catch(() => {});
+});
 
 function logAudit(params) {
   const entry = {
@@ -30,7 +79,14 @@ function logAudit(params) {
     retentionCategory: params.retentionCategory || 'SYSTEM_EVENT',
   };
 
-  writeLog(entry).catch(() => {});
+  buffer.push(entry);
+
+  // Flush immediately if batch is full, otherwise schedule a timed flush
+  if (buffer.length >= FLUSH_BATCH_SIZE) {
+    flushBuffer().catch(() => {});
+  } else {
+    scheduleFlush();
+  }
 }
 
 function logFromRequest(req, params) {
@@ -54,4 +110,4 @@ function logFromRequest(req, params) {
   });
 }
 
-module.exports = { logAudit, logFromRequest, TWO_YEARS_MS, THIRTY_SEVEN_DAYS_MS };
+module.exports = { logAudit, logFromRequest, TWO_YEARS_MS, THIRTY_SEVEN_DAYS_MS, flushBuffer };

@@ -24,8 +24,8 @@ const sequelize = new Sequelize(
     dialect: 'postgres',
     logging: false,
     pool: {
-      max:     Number(process.env.DB_POOL_MAX     || 80),
-      min:     Number(process.env.DB_POOL_MIN     || 10),
+      max:     Number(process.env.DB_POOL_MAX     || 10),
+      min:     Number(process.env.DB_POOL_MIN     || 2),
       acquire: Number(process.env.DB_POOL_ACQUIRE || 60000),
       idle:    Number(process.env.DB_POOL_IDLE    || 10000),
       evict:   Number(process.env.DB_POOL_EVICT   || 1000),
@@ -57,7 +57,9 @@ const sequelize = new Sequelize(
     // Query timeout: abort any query that takes longer than 30 seconds.
     // This prevents slow spatial/geo queries from blocking the event loop.
     queryTimeout: 30000,
-    benchmark: !isProduction,
+    // Disable query benchmark logging always — it adds I/O overhead
+    // to every single query. Use DEBUG_DB_BENCHMARK=true to enable.
+    benchmark: String(process.env.DEBUG_DB_BENCHMARK || '').toLowerCase() === 'true',
   }
 );
 

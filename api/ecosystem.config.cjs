@@ -54,9 +54,12 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: 5002,
-      // DB pool sized for 1M users with cluster mode
-      DB_POOL_MAX: 100,        // per worker — with 8 workers = 800 total
-      DB_POOL_MIN: 10,
+      // DB pool sized for cluster mode — must stay under PostgreSQL's
+      // max_connections (default 100). With instances:'max' (one per CPU
+      // core), 10 per worker × 8 cores = 80 total, leaving headroom.
+      // Increase PostgreSQL max_connections if you need more.
+      DB_POOL_MAX: 10,         // per worker — with 8 workers = 80 total
+      DB_POOL_MIN: 2,
     },
     env_dev: {
       NODE_ENV: 'development',
