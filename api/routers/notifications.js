@@ -1083,6 +1083,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         changeStats = perTable.flat().map(r => {
           const m = /^(\d{4}-\d{2})-\d{2}_(.+)_NDVI_Change$/i.exec(r.table_name);
           return {
+            dataMonth: m ? m[1] : null,
             notifMonth: m ? monthAdd(m[1], 1) : null,
             village: r.village, division: r.division, range: r.range, round: r.round, beat: r.beat,
             resolved: r.resolved || 0, not_resolved: r.not_resolved || 0,
@@ -1093,15 +1094,36 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       console.warn('[ndvi-report] resolved stats aggregation failed:', statsErr.message);
     }
 
-    // Keep the counts in the same scope as the report filters
-    const statInScope = (row) => {
-      if (month && row.notifMonth !== month) return false;
-      if (division && !normDim(row.division).includes(normDim(division))) return false;
-      if (start_date && row.notifMonth && row.notifMonth < String(start_date).slice(0, 7)) return false;
-      if (end_date && row.notifMonth && row.notifMonth > String(end_date).slice(0, 7)) return false;
-      return true;
-    };
-    const scopedStats = changeStats.filter(statInScope);
+    // Scope the counts to what was actually notified: the distinct
+    // (change_month, village) pairs in the filtered notification log.
+    // Total Changes is a sum of change_count over those rows, so the
+    // resolved totals must cover the same change points, not every row
+    // in every NDVI Change table.
+    let scopedStats = [];
+    try {
+      const scopeRows = await client.query(
+        `SELECT DISTINCT
+           COALESCE(u.village_name, d.village_name) AS village_name,
+           ${hasChangeMonth ? 'd.change_month' : 'NULL::text AS change_month'},
+           TO_CHAR(d.notification_date, 'YYYY-MM-DD') AS notification_date
+         FROM public.ndvi_daily_notification_log d
+         LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
+         LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id
+         ${whereClause}`,
+        values
+      );
+      const scopeSet = new Set();
+      scopeRows.rows.forEach(r => {
+        const cm = r.change_month || previousMonthFromDate((r.notification_date || '').slice(0, 10));
+        if (cm && r.village_name) scopeSet.add(`${cm}||${normDim(r.village_name)}`);
+      });
+      scopedStats = changeStats.filter(s =>
+        s.dataMonth && !emptyDim(s.village) &&
+        scopeSet.has(`${s.dataMonth}||${normDim(s.village)}`)
+      );
+    } catch (scopeErr) {
+      console.warn('[ndvi-report] resolved stats scoping failed:', scopeErr.message);
+    }
     const resolvedTotal = scopedStats.reduce((s, r) => s + r.resolved, 0);
     const notResolvedTotal = scopedStats.reduce((s, r) => s + r.not_resolved, 0);
 
