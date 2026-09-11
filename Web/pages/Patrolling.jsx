@@ -111,6 +111,21 @@ const getPatrolDateTimeParts = (datetime) => {
   };
 };
 
+// Display patrol code without the leading "PAT-" prefix
+const formatPatrolId = (code, id) => {
+  if (code) return String(code).replace(/^PAT-/i, '');
+  return id != null && id !== '' ? String(id) : '-';
+};
+
+// Resolve base64 image data into a usable src — handles both raw base64
+// and already-prefixed "data:..." / "http..." strings.
+const resolveImgSrc = (img) => {
+  if (!img?.image_data) return '';
+  const s = String(img.image_data).trim();
+  if (s.startsWith('data:') || s.startsWith('http')) return s;
+  return `data:${img.image_type || 'image/jpeg'};base64,${s}`;
+};
+
 const getPatrolDateForFilter = (datetime) => {
   const parts = getPatrolDateTimeParts(datetime);
   if (!parts) return null;
@@ -750,6 +765,11 @@ const PatrolIncidentLogs = () => {
   const [coupeFilter, setCoupeFilter] = useState("");
   
   const filterTimeoutRef = useRef(null);
+  // Keep latest pageSize in a ref so pagination changes don't invalidate
+  // memoized callbacks — otherwise the debounced search effect refires and
+  // races/resets the page the user clicked (shows "no data" on page 2+).
+  const pageSizeRef = useRef(pageSize);
+  pageSizeRef.current = pageSize;
 
   // In your buildFilters function in PatrolIncidentLogs.js
 const buildFilters = useCallback(() => {
@@ -826,8 +846,9 @@ const fetchDashboardData = useCallback(async () => {
     if (!token) return;
     
     if (!hasActiveFilters) {
-      // Fetch all patrol data without filters
-      const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
+      // Fetch all patrol data without filters — skip geom and images to
+      // keep the dashboard payload small (analysis only needs metadata).
+      const response = await fetch(`${API_BASE_URL}/api/patrol-info-all?include_images=false&include_geom=false`, {
         method: "GET",
         headers: getAuthHeaders({ "Content-Type": "application/json" }),
       });
@@ -987,7 +1008,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       // Update pagination counts based on filtered data
       if (data.pagination) {
         setTotalItems(formattedData.length);
-        setTotalPages(Math.ceil(formattedData.length / pageSize));
+        setTotalPages(Math.ceil(formattedData.length / pageSizeRef.current));
       }
     } else {
       // Use original pagination from backend for date ranges
@@ -1014,7 +1035,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     setPaginationLoading(false);
     setIsFiltering(false);
   }
-}, [buildFilters, startFilter, endFilter, pageSize]); // IMPORTANT: Add startFilter and endFilter to dependencies
+}, [buildFilters, startFilter, endFilter]); // IMPORTANT: Add startFilter and endFilter to dependencies
 
   // Combined fetch function that updates both table and dashboard
   const fetchAllData = useCallback(async (page = 1, limit = 5) => {
@@ -1027,8 +1048,8 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
   // Handle search with debounce
   const handleSearch = useCallback(() => {
     setCurrentPage(1);
-    fetchAllData(1, pageSize);
-  }, [fetchAllData, pageSize]);
+    fetchAllData(1, pageSizeRef.current);
+  }, [fetchAllData]);
 
   // Debounced search effect
   useEffect(() => {
@@ -1106,15 +1127,24 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     fetchPatrolData(page, newPageSize);
   };
 
-  // Extract unique patrol locations from data
+  // Load ALL distinct patrol locations once (Inside/Outside Forest etc.) —
+  // not just the ones on the current table page.
   useEffect(() => {
-    const locations = [...new Set(
-      patrolData
-        .map(item => item.patrolling_location)
-        .filter(Boolean)
-    )].sort();
-    setPatrolLocations(locations);
-  }, [patrolData]);
+    axios.get(`${API_BASE_URL}/api/patrolling-locations`)
+      .then((res) => {
+        const data = res.data;
+        if (Array.isArray(data?.data)) setPatrolLocations(data.data);
+        else if (Array.isArray(data)) setPatrolLocations(data);
+      })
+      .catch((err) => {
+        console.error("Error fetching patrol locations:", err);
+        // Fallback: build from loaded page data
+        const locations = [...new Set(
+          patrolData.map(item => item.patrolling_location).filter(Boolean)
+        )].sort();
+        setPatrolLocations(locations);
+      });
+  }, []);
 
   // Initial load
   useEffect(() => {
@@ -1343,7 +1373,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     }];
 
     const patrolsData = coveragePatrols.map((patrol) => ({
-      "Patrol ID": patrol.patrol_code || (patrol.patrol_id ? `PAT-${patrol.patrol_id}` : "-"),
+      "Patrol ID": formatPatrolId(patrol.patrol_code, patrol.patrol_id),
       "Start Time": formatDateTime(patrol.start_time),
       "End Time": formatDateTime(patrol.end_time),
       "Duration": formatDuration(patrol.start_time, patrol.end_time),
@@ -1423,7 +1453,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       key: "patrol_code",
       align: "center",
       width: 180,
-      render: (value, record) => value || (record.patrol_id ? `PAT-${record.patrol_id}` : "-"),
+      render: (value, record) => formatPatrolId(value, record.patrol_id),
     },
     {
       title: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type",
@@ -2116,7 +2146,7 @@ const exportTableToExcel = async () => {
       (item.images || []).forEach((img, imgIndex) => {
         imageSheet.addRow([
           `${itemIndex + 1}.${imgIndex + 1}`,
-          item.patrol_code || (item.patrol_id ? `PAT-${item.patrol_id}` : "-"),
+          formatPatrolId(item.patrol_code, item.patrol_id),
           item.patrol_officer_name || "-",
           img.image_category || `Image ${imgIndex + 1}`,
           img.note || "-",
@@ -2148,7 +2178,7 @@ const exportTableToExcel = async () => {
 
     appendObjectSheet('Covering Patrols', coveragePatrols.map((patrol, idx) => ({
       [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
-      [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_code || (patrol.patrol_id ? `PAT-${patrol.patrol_id}` : "-"),
+      [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: formatPatrolId(patrol.patrol_code, patrol.patrol_id),
       [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "-",
       [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExportCoverage(patrol.start_time),
       [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExportCoverage(patrol.start_time),
@@ -2471,7 +2501,7 @@ const exportTableToExcel = async () => {
                               }}>
                                 <div className="patrol-thumb" onClick={() => openImageViewer(index)}>
                                   <Image
-                                    src={`data:${image.image_type};base64,${image.image_data}`}
+                                    src={resolveImgSrc(image)}
                                     alt={getImageLabel()}
                                     preview={false}
                                     style={{
@@ -2566,7 +2596,7 @@ const exportTableToExcel = async () => {
                           }}>
                             <div className="patrol-thumb" onClick={() => openImageViewer(index)}>
                               <Image
-                                src={`data:${image.image_type};base64,${image.image_data}`}
+                                src={resolveImgSrc(image)}
                                 alt={getImageLabel()}
                                 preview={false}
                                 style={{
@@ -2665,7 +2695,13 @@ const exportTableToExcel = async () => {
               padding: '12px 64px'
             }}>
               <img
-                src={`data:${viewerImage.image_type};base64,${viewerImage.image_data}`}
+                src={(() => {
+                  const d = viewerImage.image_data;
+                  if (!d) return '';
+                  const s = String(d).trim();
+                  if (s.startsWith('data:') || s.startsWith('http')) return s;
+                  return `data:${viewerImage.image_type || 'image/jpeg'};base64,${s}`;
+                })()}
                 alt={getPatrolImageLabel(viewerImage, imageViewer.index)}
                 style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }}
               />

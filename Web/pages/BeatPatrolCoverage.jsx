@@ -15,7 +15,7 @@ import {
   CloseCircleOutlined,
   TableOutlined,
 } from "@ant-design/icons";
-import { Table, Tag, Image as AntImage, Modal, Button, Input, message, Row, Col, Pagination } from "antd";
+import { Table, Tag, Image as AntImage, Modal, Button, Input, DatePicker, message, Row, Col, Pagination } from "antd";
 import axios from "axios";
 import "./RouterMap.css";
 import "./BeatPatrolCoverage.css";
@@ -381,6 +381,7 @@ const BeatPatrolCoverage = () => {
   const [beats, setBeats] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
   const [boundarySearch, setBoundarySearch] = useState("");
+  const [boundaryDateRange, setBoundaryDateRange] = useState(null);
   
   const [loading, setLoading] = useState({
     divisions: false,
@@ -660,22 +661,27 @@ const BeatPatrolCoverage = () => {
   const boundaryRows = boundaries
     .map((b) => b.data || {})
     .filter((b) => {
-      if (!boundarySearch.trim()) return true;
-      const q = boundarySearch.trim().toLowerCase();
-      return [b.name, b.table_name, b.layer_name, b.workspace]
-        .some((v) => String(v || "").toLowerCase().includes(q));
+      if (boundarySearch.trim()) {
+        const q = boundarySearch.trim().toLowerCase();
+        const hit = [b.name, b.table_name, b.layer_name, b.workspace]
+          .some((v) => String(v || "").toLowerCase().includes(q));
+        if (!hit) return false;
+      }
+      if (boundaryDateRange && boundaryDateRange[0] && boundaryDateRange[1]) {
+        const start = boundaryDateRange[0].format("YYYY-MM-DD");
+        const end = boundaryDateRange[1].format("YYYY-MM-DD");
+        const d = String(b.boundary_date || "").slice(0, 10);
+        if (!d || d < start || d > end) return false;
+      }
+      return true;
     });
-
-  const workspaceFilters = [...new Set(
-    boundaries.map((b) => b.data?.workspace).filter(Boolean)
-  )].map((w) => ({ text: w, value: w }));
 
   const boundaryColumns = [
     {
       title: t.srNo,
       key: "sr",
       align: "center",
-      width: 70,
+      width: 90,
       render: (_, __, index) => index + 1,
     },
     {
@@ -686,58 +692,11 @@ const BeatPatrolCoverage = () => {
       render: (v) => v || "-",
     },
     {
-      title: t.tableName,
-      dataIndex: "table_name",
-      key: "table_name",
-      sorter: (a, b) => String(a.table_name || "").localeCompare(String(b.table_name || "")),
-      render: (v) => v || "-",
-    },
-    {
-      title: t.layerName,
-      dataIndex: "layer_name",
-      key: "layer_name",
-      sorter: (a, b) => String(a.layer_name || "").localeCompare(String(b.layer_name || "")),
-      render: (v) => v || "-",
-    },
-    {
-      title: t.workspace,
-      dataIndex: "workspace",
-      key: "workspace",
-      filters: workspaceFilters,
-      onFilter: (value, record) => record.workspace === value,
-      render: (v) => v || "-",
-    },
-    {
-      title: t.color,
-      dataIndex: "color",
-      key: "color",
-      align: "center",
-      width: 100,
-      render: (v) =>
-        v ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 14, height: 14, borderRadius: 3, background: v, border: "1px solid #ccc", display: "inline-block" }} />
-            {v}
-          </span>
-        ) : "-",
-    },
-    {
       title: t.boundaryDate,
       dataIndex: "boundary_date",
       key: "boundary_date",
       sorter: (a, b) => String(a.boundary_date || "").localeCompare(String(b.boundary_date || "")),
       render: (v) => v || "-",
-    },
-    {
-      title: t.createdOn,
-      dataIndex: "created_at",
-      key: "created_at",
-      sorter: (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0),
-      render: (v) => {
-        if (!v) return "-";
-        const f = formatDateTime(v, language);
-        return `${f.date} ${f.time}`;
-      },
     },
   ];
 
@@ -1598,42 +1557,6 @@ const BeatPatrolCoverage = () => {
           
         </div>
 
-        {/* Plantation Boundaries List */}
-        <div className="coverage-table-card" style={{ marginBottom: 24 }}>
-          <div className="coverage-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div className="coverage-section-icon"><TableOutlined /></div>
-              <h3>{t.boundaryList} ({boundaryRows.length})</h3>
-            </div>
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder={t.searchBoundary}
-              value={boundarySearch}
-              onChange={(e) => setBoundarySearch(e.target.value)}
-              style={{ maxWidth: 300 }}
-            />
-          </div>
-          <Table
-            className="transparent-table coverage-modern-table"
-            columns={boundaryColumns}
-            dataSource={boundaryRows}
-            loading={loading.boundaries}
-            rowKey={(r) => r.id || r.table_name}
-            bordered
-            scroll={{ x: "max-content" }}
-            pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
-            locale={{
-              emptyText: (
-                <div style={{ textAlign: "center", padding: "50px 0" }}>
-                  <img src={noDataImage} alt="No Data" style={{ width: 60, marginBottom: 16 }} />
-                  <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>{t.noBoundaries}</div>
-                </div>
-              ),
-            }}
-          />
-        </div>
-
         {/* Patrols Table */}
         {isLoadingPatrols ? (
           <div style={{ textAlign: "center", padding: "60px" }}>
@@ -1715,6 +1638,49 @@ const BeatPatrolCoverage = () => {
             </button>
           </div>
         )}
+
+        {/* Plantation Boundaries List */}
+        <div className="coverage-table-card" style={{ marginBottom: 24 }}>
+          <div className="coverage-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="coverage-section-icon"><TableOutlined /></div>
+              <h3>{t.boundaryList} ({boundaryRows.length})</h3>
+            </div>
+            <DatePicker.RangePicker
+              allowClear
+              value={boundaryDateRange}
+              onChange={(dates) => setBoundaryDateRange(dates)}
+              placeholder={[t.startDateTime, t.endDateTime]}
+              style={{ maxWidth: 280 }}
+            />
+            <Input
+              allowClear
+              prefix={<SearchOutlined />}
+              placeholder={t.searchBoundary}
+              value={boundarySearch}
+              onChange={(e) => setBoundarySearch(e.target.value)}
+              style={{ maxWidth: 300 }}
+            />
+          </div>
+          <Table
+            className="transparent-table coverage-modern-table"
+            columns={boundaryColumns}
+            dataSource={boundaryRows}
+            loading={loading.boundaries}
+            rowKey={(r) => r.id || r.table_name}
+            bordered
+            scroll={{ x: "max-content" }}
+            pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
+            locale={{
+              emptyText: (
+                <div style={{ textAlign: "center", padding: "50px 0" }}>
+                  <img src={noDataImage} alt="No Data" style={{ width: 60, marginBottom: 16 }} />
+                  <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>{t.noBoundaries}</div>
+                </div>
+              ),
+            }}
+          />
+        </div>
       </div>
 
       {/* Footer */}

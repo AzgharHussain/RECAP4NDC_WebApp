@@ -766,19 +766,20 @@ router.get('/patrol-info-page', verifyJwt, async (req, res) => {
         paramIndex++;
       }
     };
-// Validate officer_name
+// Validate officer_name — also used to search patrol IDs (e.g.
+// "CHHOT-admin-20260911-1110-2142"), so digits/underscores are allowed.
 if (officer_name) {
-  const namePattern = /^[a-zA-Z\s.-]{1,100}$/;
+  const namePattern = /^[a-zA-Z0-9\s.\-_]{1,100}$/;
 
   if (!namePattern.test(officer_name)) {
     return res.status(400).json({
-      error: "Invalid officer_name. Only letters, spaces, dot and hyphen allowed."
+      error: "Invalid officer_name. Only letters, digits, spaces, dot, hyphen and underscore allowed."
     });
   }
 }
     // Add filters with appropriate operators
     if (officer_name) {
-      conditions.push(`p.patrol_officer_name ILIKE $${paramIndex}`);
+      conditions.push(`(p.patrol_officer_name ILIKE $${paramIndex} OR p.patrol_code ILIKE $${paramIndex})`);
       values.push(`%${officer_name}%`);
       paramIndex++;
     }
@@ -805,25 +806,25 @@ if (end_date) {
     }
 
     if (division) {
-      conditions.push(`p.division = $${paramIndex}`);
+      conditions.push(`LOWER(REGEXP_REPLACE(p.division, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
       values.push(division);
       paramIndex++;
     }
 
     if (range) {
-      conditions.push(`p.range = $${paramIndex}`);
+      conditions.push(`LOWER(REGEXP_REPLACE(p.range, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
       values.push(range);
       paramIndex++;
     }
 
     if (round) {
-      conditions.push(`p.round = $${paramIndex}`);
+      conditions.push(`LOWER(REGEXP_REPLACE(p.round, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
       values.push(round);
       paramIndex++;
     }
 
     if (beat) {
-      conditions.push(`p.beat = $${paramIndex}`);
+      conditions.push(`LOWER(REGEXP_REPLACE(p.beat, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
       values.push(beat);
       paramIndex++;
     }
@@ -956,7 +957,7 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
     }
 
     if (officer_name) {
-      whereConditions.push(`p.patrol_officer_name ILIKE $${paramIndex}`);
+      whereConditions.push(`(p.patrol_officer_name ILIKE $${paramIndex} OR p.patrol_code ILIKE $${paramIndex})`);
       queryParams.push(`%${officer_name}%`);
       paramIndex++;
     }
@@ -973,25 +974,25 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
       paramIndex++;
     } else {
       if (division) {
-        whereConditions.push(`p.division = $${paramIndex}`);
+        whereConditions.push(`LOWER(REGEXP_REPLACE(p.division, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
         queryParams.push(division);
         paramIndex++;
       }
 
       if (range) {
-        whereConditions.push(`p.range = $${paramIndex}`);
+        whereConditions.push(`LOWER(REGEXP_REPLACE(p.range, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
         queryParams.push(range);
         paramIndex++;
       }
 
       if (beat) {
-        whereConditions.push(`p.beat = $${paramIndex}`);
+        whereConditions.push(`LOWER(REGEXP_REPLACE(p.beat, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
         queryParams.push(beat);
         paramIndex++;
       }
 
       if (round) {
-        whereConditions.push(`p.round = $${paramIndex}`);
+        whereConditions.push(`LOWER(REGEXP_REPLACE(p.round, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
         queryParams.push(round);
         paramIndex++;
       }
@@ -1203,25 +1204,25 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
     }
 
     if (division) {
-      conditions.push(`p.division = $${paramIndex}`);
+      conditions.push(`LOWER(REGEXP_REPLACE(p.division, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
       values.push(division);
       paramIndex++;
     }
 
     if (range) {
-      conditions.push(`p.range = $${paramIndex}`);
+      conditions.push(`LOWER(REGEXP_REPLACE(p.range, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
       values.push(range);
       paramIndex++;
     }
 
     if (round) {
-      conditions.push(`p.round = $${paramIndex}`);
+      conditions.push(`LOWER(REGEXP_REPLACE(p.round, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
       values.push(round);
       paramIndex++;
     }
 
     if (beat) {
-      conditions.push(`p.beat = $${paramIndex}`);
+      conditions.push(`LOWER(REGEXP_REPLACE(p.beat, '[\\s\\-_]+', '', 'g')) = LOWER(REGEXP_REPLACE($${paramIndex}, '[\\s\\-_]+', '', 'g'))`);
       values.push(beat);
       paramIndex++;
     }
@@ -1488,6 +1489,29 @@ router.get('/patrolling-division', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch patrolling division' });
+  }
+});
+
+// Distinct patrol locations (e.g. "Inside Forest" / "Outside Forest") —
+// used to populate the Patrol Location filter dropdown with ALL locations,
+// not just the ones present on the current table page.
+router.get('/patrolling-locations', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT DISTINCT TRIM(patrolling_location) AS location
+      FROM patrols
+      WHERE patrolling_location IS NOT NULL
+        AND TRIM(patrolling_location) != ''
+        AND UPPER(TRIM(patrolling_location)) NOT IN ('N/A', 'NA', 'NULL', 'NONE', '-')
+      ORDER BY location;
+    `);
+    res.json({
+      message: 'All patrolling locations fetched successfully',
+      data: result.rows.map(r => r.location)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patrolling locations' });
   }
 });
 

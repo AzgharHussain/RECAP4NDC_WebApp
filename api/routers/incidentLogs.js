@@ -263,14 +263,17 @@ router.post('/incident-logs', verifyJwt, upload.single('incident_image'), async 
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    // Sanitize text fields
+    // Sanitize text fields. Fall back to the logged-in user's hierarchy
+    // (from JWT) when the client omits division/range/round/beat — older
+    // incident forms didn't send these, so backfill from the user's own
+    // level so reports can show the hierarchy for every incident.
     const cleanType = clean(incident_type);
     const cleanSubcategory = incident_subcategory ? clean(incident_subcategory) : null;
     const cleanDesc = description ? clean(description) : null;
-    const cleanDivision = division ? clean(division) : null;
-    const cleanRange = range_name ? clean(range_name) : null;
-    const cleanRound = round ? clean(round) : null;
-    const cleanBeat = beat ? clean(beat) : null;
+    const cleanDivision = division ? clean(division) : (req.user?.division ? clean(req.user.division) : null);
+    const cleanRange = range_name ? clean(range_name) : (req.user?.range ? clean(req.user.range) : null);
+    const cleanRound = round ? clean(round) : (req.user?.round ? clean(req.user.round) : null);
+    const cleanBeat = beat ? clean(beat) : (req.user?.beat ? clean(req.user.beat) : null);
     const cleanVillage = village ? clean(village) : null;
     const sevId = severity_id ? Number(severity_id) : null;
     const categoryId = incident_category_id ? Number(incident_category_id) : null;
@@ -397,7 +400,9 @@ router.get('/incident-logs', verifyJwt, async (req, res) => {
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
       LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
-      ORDER BY il.created_at DESC;
+      ORDER BY
+        COALESCE(sev.display_order, 9999) ASC,
+        il.created_at DESC;
     `;
     const result = await client.query(query);
 

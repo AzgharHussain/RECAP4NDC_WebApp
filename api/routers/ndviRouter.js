@@ -772,21 +772,26 @@ router.get('/ndvi-available-months', verifyJwt, async (req, res) => {
             bharuch_sub_division: 'bharuchsubdivision'
         };
         const coupeName = normalizedDivision ? (overrides[normalizedDivision] || normalizedDivision) : null;
+        // Division key with all separators removed — matched against a
+        // fully-normalized table name so "dahod_sf" / "dahod-sf" / "dahodsf"
+        // table names all match the same division.
+        const coupeKey = coupeName ? coupeName.replace(/[^a-z0-9]/g, '') : null;
 
+        // Match ANY date-prefixed NDVI change table — both
+        // "..._coupe_NDVI_Change" and "..._view_ndvi_change" (any case,
+        // hyphen or underscore separators) so newer years (e.g. 2026) are
+        // included even when their table naming differs.
         const getTablesQuery = `
             SELECT tablename
             FROM pg_tables
             WHERE schemaname = 'public'
-              AND tablename LIKE '%\\_coupe\\_NDVI\\_Change' ESCAPE '\\'
-              ${coupeName ? "AND (tablename LIKE :underscorePattern OR tablename LIKE :hyphenPattern)" : ""}
+              AND tablename ~* '^\\d{4}[-_]\\d{2}[-_]\\d{2}[-_].*ndvi[-_]change$'
+              ${coupeKey ? "AND REGEXP_REPLACE(LOWER(tablename), '[^a-z0-9]', '', 'g') LIKE :coupePattern" : ""}
             ORDER BY tablename DESC;
         `;
 
         const [results] = await sequelize.query(getTablesQuery, {
-            replacements: coupeName ? {
-                underscorePattern: `%_${coupeName}_coupe_NDVI_Change`,
-                hyphenPattern: `%-${coupeName}_coupe_NDVI_Change`
-            } : {}
+            replacements: coupeKey ? { coupePattern: `%${coupeKey}%` } : {}
         });
 
         const months = [...new Set((results || []).map(row => {

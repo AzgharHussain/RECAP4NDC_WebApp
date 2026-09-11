@@ -23,7 +23,7 @@ const IncidentLogs = () => {
   const [selectedImages, setSelectedImages] = useState([]);
   const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // start true — avoids "No data" flash before first fetch
 
   const { language } = useLanguage();
 

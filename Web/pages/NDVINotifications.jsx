@@ -168,7 +168,7 @@ const NDVINotifications = () => {
   // userData is set in localStorage (right after login).
   const [lockedDivision, setLockedDivision] = useState(null);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // start true — avoids "No data" flash before first fetch
   const [data, setData] = useState([]);
   const [monthlySummary, setMonthlySummary] = useState([]);
   const [options, setOptions] = useState(emptyOptions);
@@ -497,20 +497,21 @@ const NDVINotifications = () => {
   };
 
   const columns = [
-    { title: t.userId,            dataIndex: "user_id",      key: "user_id",      sorter: genericSorter("user_id") },
-    { title: t.userName,          dataIndex: "username",     key: "username",     sorter: genericSorter("username"),     render: (v) => v || "-" },
-    { title: t.division,          dataIndex: "division",     key: "division",     sorter: genericSorter("division"),     render: (v) => v || "-" },
-    { title: t.range,             dataIndex: "range",        key: "range",        sorter: genericSorter("range"),        render: (v) => v || "-" },
-    { title: t.round,             dataIndex: "round",        key: "round",        sorter: genericSorter("round"),        render: (v) => v || "-" },
-    { title: t.beat,              dataIndex: "beat",         key: "beat",         sorter: genericSorter("beat"),         render: (v) => v || "-" },
-    { title: t.village,           dataIndex: "village",      key: "village",      sorter: genericSorter("village"),      render: (v) => v || "-" },
-    { title: t.notificationDate,  dataIndex: "notification_date", key: "notification_date", sorter: genericSorter("notification_date"), render: (v) => v || "-" },
-    { title: t.dataMonth,         dataIndex: "change_month_label", key: "change_month_label", sorter: genericSorter("change_month"), render: (v) => v && v !== "-" ? <Tag color="purple">{v}</Tag> : "-" },
-    { title: t.slot,              dataIndex: "slot_label",   key: "slot_label",   sorter: genericSorter("slot_label"),   render: (v) => v || "-" },
+    { title: t.userId,            dataIndex: "user_id",      key: "user_id",      width: 90,  sorter: genericSorter("user_id") },
+    { title: t.userName,          dataIndex: "username",     key: "username",     width: 140, sorter: genericSorter("username"),     ellipsis: true, render: (v) => v || "-" },
+    { title: t.division,          dataIndex: "division",     key: "division",     width: 140, sorter: genericSorter("division"),     ellipsis: true, render: (v) => v || "-" },
+    { title: t.range,             dataIndex: "range",        key: "range",        width: 120, sorter: genericSorter("range"),        ellipsis: true, render: (v) => v || "-" },
+    { title: t.round,             dataIndex: "round",        key: "round",        width: 120, sorter: genericSorter("round"),        ellipsis: true, render: (v) => v || "-" },
+    { title: t.beat,              dataIndex: "beat",         key: "beat",         width: 120, sorter: genericSorter("beat"),         ellipsis: true, render: (v) => v || "-" },
+    { title: t.village,           dataIndex: "village",      key: "village",      width: 130, sorter: genericSorter("village"),      ellipsis: true, render: (v) => v || "-" },
+    { title: t.notificationDate,  dataIndex: "notification_date", key: "notification_date", width: 120, sorter: genericSorter("notification_date"), render: (v) => v || "-" },
+    { title: t.dataMonth,         dataIndex: "change_month_label", key: "change_month_label", width: 130, sorter: genericSorter("change_month"), render: (v) => v && v !== "-" ? <Tag color="purple">{v}</Tag> : "-" },
+    { title: t.slot,              dataIndex: "slot_label",   key: "slot_label",   width: 110, sorter: genericSorter("slot_label"),   render: (v) => v || "-" },
     {
       title: t.changeCount,
       dataIndex: "change_count",
       key: "change_count",
+      width: 110,
       sorter: genericSorter("change_count"),
       render: (v) => <Tag color="blue">{v || 0}</Tag>,
     },
@@ -518,6 +519,7 @@ const NDVINotifications = () => {
       title: t.sentAt,
       dataIndex: "sent_at",
       key: "sent_at",
+      width: 160,
       sorter: genericSorter("sent_at"),
       render: (v) => formatSentAt(v),
     },
@@ -548,16 +550,16 @@ const NDVINotifications = () => {
   ];
 
   const monthlyColumns = [
-    { title: t.month,          dataIndex: "month",            key: "month",            sorter: genericSorter("month") },
-    { title: t.division,       dataIndex: "division",         key: "division",         sorter: genericSorter("division") },
-    { title: t.range,          dataIndex: "range",            key: "range",            sorter: genericSorter("range"),            render: (v) => v || "-" },
-    { title: t.round,          dataIndex: "round",            key: "round",            sorter: genericSorter("round"),            render: (v) => v || "-" },
-    { title: t.beat,           dataIndex: "beat",             key: "beat",             sorter: genericSorter("beat"),             render: (v) => v || "-" },
-    { title: t.village,        dataIndex: "village",          key: "village",          sorter: genericSorter("village"),          render: (v) => v || "-" },
-    { title: t.alertsGenerated, dataIndex: "alerts_generated", key: "alerts_generated", sorter: genericSorter("alerts_generated") },
-    { title: t.notificationsSent, dataIndex: "notifications_sent", key: "notifications_sent", sorter: genericSorter("notifications_sent"), render: (v) => <Tag color="blue">{v}</Tag> },
-    { title: t.resolved,    dataIndex: "resolved",     key: "resolved",     sorter: genericSorter("resolved"),     render: (v) => <Tag color="success">{v || 0}</Tag> },
-    { title: t.notResolved, dataIndex: "not_resolved", key: "not_resolved", sorter: genericSorter("not_resolved"), render: (v) => <Tag color="error">{v || 0}</Tag> },
+    { title: t.month,          dataIndex: "month",            key: "month",            width: 110, sorter: genericSorter("month") },
+    { title: t.division,       dataIndex: "division",         key: "division",         width: 140, sorter: genericSorter("division"),  ellipsis: true, render: (v) => v || "-" },
+    { title: t.range,          dataIndex: "range",            key: "range",            width: 120, sorter: genericSorter("range"),     ellipsis: true, render: (v) => v || "-" },
+    { title: t.round,          dataIndex: "round",            key: "round",            width: 120, sorter: genericSorter("round"),     ellipsis: true, render: (v) => v || "-" },
+    { title: t.beat,           dataIndex: "beat",             key: "beat",             width: 120, sorter: genericSorter("beat"),      ellipsis: true, render: (v) => v || "-" },
+    { title: t.village,        dataIndex: "village",          key: "village",          width: 130, sorter: genericSorter("village"),    ellipsis: true, render: (v) => v || "-" },
+    { title: t.alertsGenerated, dataIndex: "alerts_generated", key: "alerts_generated", width: 130, sorter: genericSorter("alerts_generated") },
+    { title: t.notificationsSent, dataIndex: "notifications_sent", key: "notifications_sent", width: 140, sorter: genericSorter("notifications_sent"), render: (v) => <Tag color="blue">{v}</Tag> },
+    { title: t.resolved,    dataIndex: "resolved",     key: "resolved",     width: 110, sorter: genericSorter("resolved"),     render: (v) => <Tag color="success">{v || 0}</Tag> },
+    { title: t.notResolved, dataIndex: "not_resolved", key: "not_resolved", width: 130, sorter: genericSorter("not_resolved"), render: (v) => <Tag color="error">{v || 0}</Tag> },
   ];
 
   return (

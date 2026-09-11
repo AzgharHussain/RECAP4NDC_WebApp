@@ -94,7 +94,7 @@ import {
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { useLanguage } from "../context/LanguageContext"; // Add this import
-import { getUserDivision, matchesDivision, getMostSpecificLevel } from '../utils/authUtils';
+import { getUserDivision, getUserRange, getUserRound, getUserBeat, matchesDivision } from '../utils/authUtils';
 import "./NDVIDashboard.css";
 
 // Register ChartJS components
@@ -159,7 +159,11 @@ const dashboardText = {
     
     // Data Table Section
     detailedDataTable: "1. Detailed Data Table",
-    searchPlaceholder: "Search by ID, status, coordinates, notes, division...",
+    searchPlaceholder: "Search by coordinates, notes, division...",
+    searchById: "Search by ID",
+    allStatuses: "All Statuses",
+    degradation: "Degradation",
+    afforestation: "Afforestation",
     showDivisionColumn: "Show Division Column",
     onlyWithNotes: "Only with Notes",
     onlyWithImages: "Only with Images",
@@ -174,7 +178,7 @@ const dashboardText = {
     ndviChange: "NDVI Change",
     category: "Category",
     location: "Location",
-    areaKm: "Area (km²)",
+    areaKm: "Area (ha)",
     hasNote: "Has Note",
     hasImage: "Has Image",
     actions: "Actions",
@@ -223,10 +227,11 @@ const dashboardText = {
     // Image Preview Modal
     imagePreview: "Image Preview",
     noImageAvailable: "No Image Available",
+    download: "Download",
     close: "Close",
     
     // Footer
-    footerNote: "Note: All area measurements are in square kilometers (km²). Afforested area is calculated as (Total Coupe Area - Degraded Area from NDVI analysis).",
+    footerNote: "Note: All area measurements are in hectares (ha). Afforested area is calculated as (Total Coupe Area - Degraded Area from NDVI analysis).",
     
     // Month Select
     selectMonth: "Select Month",
@@ -292,7 +297,11 @@ loadingNDVIChange: "મહિના મુજબ NDVI ફેરફારનો �
     
     // Data Table Section
     detailedDataTable: "૧. વિગતવાર ડેટા ટેબલ",
-    searchPlaceholder: "ID, સ્થિતિ, સ્થાન, નોંધો, વિભાગ દ્વારા શોધો...",
+    searchPlaceholder: "સ્થાન, નોંધો, વિભાગ દ્વારા શોધો...",
+    searchById: "ID દ્વારા શોધો",
+    allStatuses: "બધી સ્થિતિઓ",
+    degradation: "અવનતિ",
+    afforestation: "વનસર્જન",
     showDivisionColumn: "વિభாக காலம் காண்பி",
     onlyWithNotes: "ફક્ત નોંધો સાથે",
 onlyWithImages: "ફક્ત છબીઓ સાથે",
@@ -356,6 +365,7 @@ clearFilters: "ફિલ્ટર દૂર કરો",
     // Image Preview Modal
     imagePreview: "છબી પૂર્વાવલોકન",
     noImageAvailable: "કોઈ છબી ઉપલબ્ધ નથી",
+    download: "ડાઉનલોડ",
     close: "બંધ કરો",
     
     // Footer
@@ -382,6 +392,14 @@ clearFilters: "ફિલ્ટર દૂર કરો",
   }
 };
 
+// Base64 image data may arrive with or without a data: prefix — normalize.
+const resolveImageSrc = (data) => {
+  if (!data) return null;
+  const s = String(data).trim();
+  if (s.startsWith('data:') || s.startsWith('http')) return s;
+  return `data:image/jpeg;base64,${s}`;
+};
+
 const DEFAULT_NDVI_NOTE_PATTERN = /^NDVI decrease less than -0\.3\s*$/i;
 const normalizeNote = (note) => {
   const value = typeof note === 'string' ? note.trim() : '';
@@ -402,20 +420,103 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
   const [beat, setBeat] = useState("");
   const { language } = useLanguage(); // Add this
 
-  // Check if the logged-in user has a hierarchy level to lock
-  // Use state + useEffect to avoid stale reads when component mounts before
-  // userData is set in localStorage (right after login).
-  // undefined = not yet resolved, null = no lock (PCCF), string = locked level (most specific)
-  const [lockedDivision, setLockedDivision] = useState(undefined);
+  // The logged-in user's own hierarchy — lock each dropdown to the level
+  // they hold (division → range → round → beat).
+  // undefined = not yet resolved; fields null = no lock at that level.
+  const [userHierarchy, setUserHierarchy] = useState(undefined);
 
   useEffect(() => {
-    // Use the most specific level the user has (beat → round → range → division → circle)
-    setLockedDivision(getMostSpecificLevel());
+    const div = getUserDivision();
+    setUserHierarchy({
+      division: div,
+      range: div ? getUserRange() : null,
+      round: div ? getUserRound() : null,
+      beat: div ? getUserBeat() : null,
+    });
   }, []);
+
+  const lockedDivision = userHierarchy?.division || null;
+  const lockedRange = userHierarchy?.range || null;
+  const lockedRound = userHierarchy?.round || null;
+  const lockedBeat = userHierarchy?.beat || null;
 
   /* ------------------ Load Divisions from coupe_dropdown_master ------------------ */
   useEffect(() => {
-    if (lockedDivision === undefined) return; // Wait until division is resolved
+    if (userHierarchy === undefined) return; // Wait until resolved
+
+    const postOptions = async (url, body) => {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API_BASE_URL}${url}`,
+        body,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return res.data;
+    };
+
+    // Auto-select division → range → round → beat using the user's own
+    // hierarchy values (fuzzy-matched against the real dropdown options).
+    const applyUserHierarchy = async (divisionOptions) => {
+      const { division: uDiv, range: uRange, round: uRound, beat: uBeat } = userHierarchy;
+      if (!uDiv) return;
+
+      const divOpt = divisionOptions.find(d => matchesDivision(d.division, uDiv));
+      const divVal = divOpt ? divOpt.division : uDiv;
+      setDivision(divVal);
+
+      let rangeVal = null, roundVal = null, beatVal = null, coupeName = null;
+      try {
+        const rangeRows = await postOptions('/api/coupe-ranges', { division: divVal });
+        setRanges(Array.isArray(rangeRows) ? rangeRows : []);
+        if (uRange && Array.isArray(rangeRows)) {
+          rangeVal = (rangeRows.find(r => matchesDivision(r.range, uRange)) || {}).range || null;
+          if (rangeVal) setRange(rangeVal);
+        }
+
+        if (rangeVal) {
+          const roundRows = await postOptions('/api/coupe-rounds', { division: divVal, range: rangeVal });
+          setRounds(Array.isArray(roundRows) ? roundRows : []);
+          if (uRound && Array.isArray(roundRows)) {
+            roundVal = (roundRows.find(r => matchesDivision(r.round, uRound)) || {}).round || null;
+            if (roundVal) setRound(roundVal);
+          }
+        }
+
+        if (roundVal) {
+          const beatRows = await postOptions('/api/coupe-beats', { division: divVal, range: rangeVal, round: roundVal });
+          setBeats(Array.isArray(beatRows) ? beatRows : []);
+          if (uBeat && Array.isArray(beatRows)) {
+            beatVal = (beatRows.find(b => matchesDivision(b.beat, uBeat)) || {}).beat || null;
+            if (beatVal) setBeat(beatVal);
+          }
+        }
+
+        if (beatVal) {
+          try {
+            const res = await postOptions('/api/get-coupe-by-beat', {
+              division: divVal, range: rangeVal, round: roundVal, beat: beatVal
+            });
+            if (res && res.coupe_name) coupeName = res.coupe_name;
+          } catch { /* coupe lookup optional */ }
+        }
+      } catch (err) {
+        console.error("Error auto-selecting user hierarchy:", err);
+      }
+
+      onHierarchyChange({
+        division: divVal,
+        range: rangeVal,
+        round: roundVal,
+        beat: beatVal,
+        ...(coupeName ? { coupe_name: coupeName } : {}),
+        isAllDivisions: false,
+      });
+    };
 
     const fetchDivisions = async () => {
       try {
@@ -429,24 +530,18 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
             },
           }
         );
-        setDivisions(res.data[0] || []);
+        const allDivisions = res.data[0] || [];
+        setDivisions(allDivisions);
 
-        // Auto-select the user's division if they have one
-        // Use fuzzy matching to find the closest division option
-        if (lockedDivision) {
-          const allDivisions = res.data[0] || [];
-          const matched = allDivisions.find(d =>
-            matchesDivision(d.division, lockedDivision)
-          );
-          await selectDivision(matched ? matched.division : lockedDivision);
-        }
+        // Auto-cascade the user's hierarchy (division → beat)
+        await applyUserHierarchy(allDivisions);
       } catch (error) {
         console.error("Error fetching divisions:", error);
       }
     };
 
     fetchDivisions();
-  }, [lockedDivision]);
+  }, [userHierarchy]);
 
   /* ------------------ Load Ranges based on selected Division ------------------ */
   const selectDivision = async (selectedDivision) => {
@@ -645,7 +740,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           value={range}
           onChange={handleRangeChange}
           label={t.range}
-          disabled={!division || division === 'all'}
+          disabled={!division || division === 'all' || !!lockedRange}
         >
           <MenuItem value="">Select Range</MenuItem>
           {ranges.map((r, index) => (
@@ -663,7 +758,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           value={round}
           onChange={handleRoundChange}
           label={t.round}
-          disabled={!range || division === 'all'}
+          disabled={!range || division === 'all' || !!lockedRound}
         >
           <MenuItem value="">Select Round</MenuItem>
           {rounds.map((r, index) => (
@@ -681,7 +776,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           value={beat}
           onChange={handleBeatChange}
           label={t.beat}
-          disabled={!round || division === 'all'}
+          disabled={!round || division === 'all' || !!lockedBeat}
         >
           <MenuItem value="">Select Beat</MenuItem>
           {beats.map((b, index) => (
@@ -715,6 +810,8 @@ const NDVIChangeDashboard = () => {
   const [summaryStats, setSummaryStats] = useState(null);
   const [chartType, setChartType] = useState('bar');
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchId, setSearchId] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showOnlyWithNotes, setShowOnlyWithNotes] = useState(false);
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'pixle_id', direction: 'asc' });
@@ -929,18 +1026,19 @@ const NDVIChangeDashboard = () => {
 
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
-        const areaValue = parseFloat(area);
-        const finalArea = areaValue > 0 ? areaValue : 100;
+        // API returns square km — convert to hectares (1 sq km = 100 ha)
+        const areaValue = parseFloat(area) * 100;
+        const finalArea = areaValue > 0 ? areaValue : 10000;
         setTotalArea(finalArea);
         return finalArea;
       } else {
-        setTotalArea(100);
-        return 100;
+        setTotalArea(10000);
+        return 10000;
       }
     } catch (err) {
       console.error('Error fetching area:', err);
-      setTotalArea(100);
-      return 100;
+      setTotalArea(10000);
+      return 10000;
     } finally {
       setLoadingArea(false);
     }
@@ -964,7 +1062,7 @@ const NDVIChangeDashboard = () => {
       
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
-        return parseFloat(area);
+        return parseFloat(area) * 100; // ha → hectares
       }
       return 0;
     } catch (err) {
@@ -985,7 +1083,7 @@ const NDVIChangeDashboard = () => {
 
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
-        return parseFloat(area) > 0 ? parseFloat(area) : 0;
+        return parseFloat(area) * 100; // ha → hectares
       }
       return 0;
     } catch (err) {
@@ -1074,7 +1172,7 @@ const fetchAllDivisionsData = async (months) => {
                 );
                 
                 const degradedAreaValue = degradedAreaResponse.data.success 
-                  ? parseFloat(degradedAreaResponse.data.data[0]?.total_area_sq_km || 0)
+                  ? parseFloat(degradedAreaResponse.data.data[0]?.total_area_sq_km || 0) * 100
                   : 0;
                 
                 const afforestedAreaValue = Math.max(0, divisionTotalArea - degradedAreaValue);
@@ -1430,14 +1528,14 @@ const fetchAllDivisionsData = async (months) => {
 
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
-        const areaValue = parseFloat(area);
-        setTotalArea(areaValue > 0 ? areaValue : 100);
+        const areaValue = parseFloat(area) * 100; // ha → hectares
+        setTotalArea(areaValue > 0 ? areaValue : 10000);
       } else {
-        setTotalArea(100);
+        setTotalArea(10000);
       }
     } catch (err) {
       console.error('Error fetching area:', err);
-      setTotalArea(100);
+      setTotalArea(10000);
     } finally {
       setLoadingArea(false);
     }
@@ -1520,7 +1618,7 @@ const fetchAllDivisionsData = async (months) => {
   const filteredData = React.useMemo(() => {
     let filtered = currentTableData.filter(item => {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch = !searchLower ||
         (item.pixle_id?.toString().toLowerCase().includes(searchLower)) ||
         (item.status?.toString().toLowerCase().includes(searchLower)) ||
         (item.note?.toLowerCase().includes(searchLower)) ||
@@ -1529,10 +1627,20 @@ const fetchAllDivisionsData = async (months) => {
         (item.change_category?.toLowerCase().includes(searchLower)) ||
         (item.division?.toLowerCase().includes(searchLower));
 
+      // Dedicated "Search by ID" input — matches the pixel/record ID only
+      const idLower = searchId.toLowerCase();
+      const matchesId = !idLower ||
+        (item.pixle_id?.toString().toLowerCase().includes(idLower));
+
+      // Dedicated status filter — matches change_category / status
+      const itemStatus = (item.change_category || (item.status ? 'Afforestation' : 'Degradation'));
+      const matchesStatus = !statusFilter ||
+        itemStatus.toLowerCase() === statusFilter.toLowerCase();
+
       const matchesNotes = !showOnlyWithNotes || item.has_note;
       const matchesImages = !showOnlyWithImages || item.has_image;
 
-      return matchesSearch && matchesNotes && matchesImages;
+      return matchesSearch && matchesId && matchesStatus && matchesNotes && matchesImages;
     });
 
     return [...filtered].sort((a, b) => {
@@ -1545,7 +1653,7 @@ const fetchAllDivisionsData = async (months) => {
       if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [currentTableData, searchTerm, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
+  }, [currentTableData, searchTerm, searchId, statusFilter, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
 
   // Paginated data
   const paginatedData = React.useMemo(() => {
@@ -1557,7 +1665,7 @@ const fetchAllDivisionsData = async (months) => {
   // Reset to first page when filters change
   React.useEffect(() => {
     setPage(0);
-  }, [searchTerm, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
+  }, [searchTerm, searchId, statusFilter, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
 
   // Handle page change
   const handleChangePage = (event, newPage) => {
@@ -1684,7 +1792,7 @@ const fetchAllDivisionsData = async (months) => {
           label: function(context) {
             let label = context.dataset.label || '';
             if (label) label += ': ';
-            label += context.parsed.y.toFixed(2) + ' km²';
+            label += context.parsed.y.toFixed(2) + ' ha';
             return label;
           }
         }
@@ -1695,12 +1803,12 @@ const fetchAllDivisionsData = async (months) => {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Area (km²)',
+          text: 'Area (ha)',
           font: { weight: 'bold' }
         },
         ticks: {
           callback: function(value) {
-            return value.toFixed(1) + ' km²';
+            return value.toFixed(1) + ' ha';
           }
         }
       },
@@ -1741,7 +1849,7 @@ const fetchAllDivisionsData = async (months) => {
           label: function(context) {
             const label = context.label || '';
             const value = context.raw || 0;
-            return `${label}: ${value.toFixed(2)} km²`;
+            return `${label}: ${value.toFixed(2)} ha`;
           }
         }
       }
@@ -2213,14 +2321,14 @@ const handleExportToPDF = async () => {
                   <div style="text-align: center;">
                     <div style="font-size: 14px; opacity: 0.9;">${t.totalArea}</div>
                     <div style="font-size: 36px; font-weight: 700;">${totalArea.toFixed(2)}</div>
-                    <div style="font-size: 14px; opacity: 0.9;">km²</div>
+                    <div style="font-size: 14px; opacity: 0.9;">ha</div>
                   </div>
                   <div style="text-align: center;">
                     <div style="font-size: 14px; opacity: 0.9;">Net Change (Latest)</div>
                     <div style="font-size: 36px; font-weight: 700; color: ${summaryStats.afforestedArea > summaryStats.degradedArea ? '#86efac' : '#fca5a5'};">
                       ${(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)}
                     </div>
-                    <div style="font-size: 14px; opacity: 0.9;">km²</div>
+                    <div style="font-size: 14px; opacity: 0.9;">ha</div>
                   </div>
                   <div style="text-align: center;">
                     <div style="font-size: 14px; opacity: 0.9;">Total Records</div>
@@ -2237,12 +2345,12 @@ const handleExportToPDF = async () => {
               <div class="stats-grid">
                 <div class="stat-card degraded">
                   <div class="stat-label">${t.degraded}</div>
-                  <div class="stat-value">${summaryStats.degradedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
+                  <div class="stat-value">${summaryStats.degradedArea.toFixed(2)}<span class="stat-unit">ha</span></div>
                 </div>
                 
                 <div class="stat-card afforested">
                   <div class="stat-label">${t.afforested}</div>
-                  <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
+                  <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)}<span class="stat-unit">ha</span></div>
                 </div>
                 
                 
@@ -2250,7 +2358,7 @@ const handleExportToPDF = async () => {
               <div class="stats-grid">
 <div class="stat-card total">
                   <div class="stat-label">${t.totalArea}</div>
-                  <div class="stat-value">${totalArea.toFixed(2)}<span class="stat-unit">km²</span></div>
+                  <div class="stat-value">${totalArea.toFixed(2)}<span class="stat-unit">ha</span></div>
                 </div>
                 
                 <div class="stat-card total">
@@ -2272,7 +2380,7 @@ const handleExportToPDF = async () => {
                     <div style="margin-bottom: 15px;">
                       <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <span style="color: #ef4444; font-size: 13px;">${t.degraded}</span>
-                        <span style="font-weight: 600;">${stats.degradedArea.toFixed(2)} km²</span>
+                        <span style="font-weight: 600;">${stats.degradedArea.toFixed(2)} ha</span>
                       </div>
                       <div class="progress-bar">
                         <div class="progress-fill degraded" style="width: ${stats.degradedPercentage}%;"></div>
@@ -2280,7 +2388,7 @@ const handleExportToPDF = async () => {
                       
                       <div style="display: flex; justify-content: space-between; margin: 10px 0 5px;">
                         <span style="color: #22c55e; font-size: 13px;">${t.afforested}</span>
-                        <span style="font-weight: 600;">${stats.afforestedArea.toFixed(2)} km²</span>
+                        <span style="font-weight: 600;">${stats.afforestedArea.toFixed(2)} ha</span>
                       </div>
                       <div class="progress-bar">
                         <div class="progress-fill" style="width: ${stats.afforestedPercentage}%;"></div>
@@ -2304,16 +2412,16 @@ const handleExportToPDF = async () => {
                   <div class="month-title">${month}</div>
                   <div class="month-stat">
                     <span>${t.degraded}:</span>
-                    <span style="color: #ef4444; font-weight: 600;">${data.stats.degradedArea.toFixed(2)} km²</span>
+                    <span style="color: #ef4444; font-weight: 600;">${data.stats.degradedArea.toFixed(2)} ha</span>
                   </div>
                   <div class="month-stat">
                     <span>${t.afforested}:</span>
-                    <span style="color: #22c55e; font-weight: 600;">${data.stats.afforestedArea.toFixed(2)} km²</span>
+                    <span style="color: #22c55e; font-weight: 600;">${data.stats.afforestedArea.toFixed(2)} ha</span>
                   </div>
                   <div class="month-stat">
                     <span>${t.netChange}:</span>
                     <span style="color: ${data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444'}; font-weight: 600;">
-                      ${(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
+                      ${(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} ha
                     </span>
                   </div>
                   <div class="month-stat">
@@ -2369,11 +2477,11 @@ const handleExportToPDF = async () => {
               <thead>
                 <tr>
                   <th>Month</th>
-                  <th>${t.degraded} (km²)</th>
-                  <th>${t.afforested} (km²)</th>
+                  <th>${t.degraded} (ha)</th>
+                  <th>${t.afforested} (ha)</th>
                   <th>${t.degraded} %</th>
                   <th>${t.afforested} %</th>
-                  <th>${t.netChange} (km²)</th>
+                  <th>${t.netChange} (ha)</th>
                   <th>${t.records_count}</th>
                 </tr>
               </thead>
@@ -2687,7 +2795,7 @@ const handleExportToPDF = async () => {
                         {t.totalArea}
                       </Typography>
                       <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                        {totalArea.toFixed(2)} km²
+                        {totalArea.toFixed(2)} ha
                       </Typography>
                     </Box>
                   </Grid>
@@ -2699,7 +2807,7 @@ const handleExportToPDF = async () => {
                             {t.afforestedArea} {t.latest}
                           </Typography>
                           <Typography variant="h5" sx={{ fontWeight: 800, color: '#22c55e' }}>
-                            {summaryStats.afforestedArea.toFixed(2)} km²
+                            {summaryStats.afforestedArea.toFixed(2)} ha
                           </Typography>
                         </Box>
                       </Grid>
@@ -2709,7 +2817,7 @@ const handleExportToPDF = async () => {
                             {t.degradedArea} {t.latest}
                           </Typography>
                           <Typography variant="h5" sx={{ fontWeight: 800, color: '#ef4444' }}>
-                            {summaryStats.degradedArea.toFixed(2)} km²
+                            {summaryStats.degradedArea.toFixed(2)} ha
                           </Typography>
                         </Box>
                       </Grid>
@@ -2737,7 +2845,7 @@ const handleExportToPDF = async () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#14532d' }}>
                       {totalArea.toFixed(2)}
                       <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
-                        km²
+                        ha
                       </Typography>
                     </Typography>
                   </Box>
@@ -2757,7 +2865,7 @@ const handleExportToPDF = async () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#ef4444' }}>
                       {summaryStats.degradedArea.toFixed(2)}
                       <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
-                        km²
+                        ha
                       </Typography>
                     </Typography>
                     
@@ -2779,7 +2887,7 @@ const handleExportToPDF = async () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#22c55e' }}>
                       {summaryStats.afforestedArea.toFixed(2)}
                       <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
-                        km²
+                        ha
                       </Typography>
                     </Typography>
                     
@@ -2848,10 +2956,10 @@ const handleExportToPDF = async () => {
                       </Typography>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
-                          {t.degradedArea}: {stats.degradedArea.toFixed(2)} km²
+                          {t.degradedArea}: {stats.degradedArea.toFixed(2)} ha
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 , paddingLeft: '20px' }}>
-                          {t.afforestedArea}: {stats.afforestedArea.toFixed(2)} km²
+                          {t.afforestedArea}: {stats.afforestedArea.toFixed(2)} ha
                         </Typography>
                       </Box>
                       {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -2903,7 +3011,35 @@ const handleExportToPDF = async () => {
               <Card sx={{ mb: 3, borderRadius: 2, bgcolor: 'transparent' }}>
                 <CardContent>
                   <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} md={3}>
+                      <TextField
+                        fullWidth
+                        placeholder={t.searchById}
+                        value={searchId}
+                        onChange={(e) => setSearchId(e.target.value)}
+                        variant="outlined"
+                        size="small"
+                        InputProps={{
+                          startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
+                          sx: { borderRadius: 2 }
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <FormControl fullWidth size="small">
+                        <Select
+                          displayEmpty
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          sx={{ borderRadius: 2 }}
+                        >
+                          <MenuItem value="">{t.allStatuses}</MenuItem>
+                          <MenuItem value="Degradation">{t.degradation}</MenuItem>
+                          <MenuItem value="Afforestation">{t.afforestation}</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
                       <TextField
                         fullWidth
                         placeholder={t.searchPlaceholder}
@@ -2917,7 +3053,7 @@ const handleExportToPDF = async () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} md={3}>
 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
   <FormGroup row>
     {selectedDivision === 'all' && (
@@ -2965,6 +3101,8 @@ const handleExportToPDF = async () => {
     startIcon={<FilterList />}
     onClick={() => {
       setSearchTerm('');
+      setSearchId('');
+      setStatusFilter('');
       setShowOnlyWithNotes(false);
       setShowOnlyWithImages(false);
       setShowDivisionColumn(false);
@@ -3018,7 +3156,18 @@ const handleExportToPDF = async () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {paginatedData.length === 0 ? (
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <CircularProgress size={36} />
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                                {t.loadingData}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ) : paginatedData.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
                             <Box sx={{ textAlign: 'center' }}>
@@ -3027,7 +3176,7 @@ const handleExportToPDF = async () => {
                                 {t.noRecordsFound}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                {searchTerm || showOnlyWithNotes || showOnlyWithImages 
+                                {searchTerm || searchId || statusFilter || showOnlyWithNotes || showOnlyWithImages
                                   ? t.adjustFilters
                                   : t.noDataAvailable}
                               </Typography>
@@ -3226,15 +3375,15 @@ const handleExportToPDF = async () => {
                           <>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                               <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
-                                {t.degradedAreaValue}: {data.stats.degradedArea?.toFixed(2)} km²
+                                {t.degradedAreaValue}: {data.stats.degradedArea?.toFixed(2)} ha
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600, paddingLeft: '20px' }}>
-                                {t.afforestedAreaValue}: {data.stats.afforestedArea?.toFixed(2)} km²
+                                {t.afforestedAreaValue}: {data.stats.afforestedArea?.toFixed(2)} ha
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                               <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
-                                {t.netChange}: {(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
+                                {t.netChange}: {(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} ha
                               </Typography>
                               <Typography variant="caption" sx={{ 
                                 color: data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444',
@@ -3310,7 +3459,7 @@ const handleExportToPDF = async () => {
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>{t.areaKm}:</strong> {selectedRecord.area_sq_km?.toFixed(6) || '-'} km²
+                          <strong>{t.areaKm}:</strong> {selectedRecord.area_sq_km?.toFixed(6) || '-'} ha
                         </Typography>
                       </Grid>
                     </Grid>
@@ -3395,9 +3544,27 @@ const handleExportToPDF = async () => {
                           <ListItemText
                             primary={t.imageAvailable}
                             secondary={
-                              <Typography color="primary" sx={{ cursor: 'pointer' }} onClick={() => setImageModalOpen(true)}>
-                                {t.clickToView}
-                              </Typography>
+                              <>
+                                <Box
+                                  component="img"
+                                  src={resolveImageSrc(selectedRecord.image_data)}
+                                  alt={`NDVI - ${selectedRecord.pixle_id || 'image'}`}
+                                  onClick={() => setImageModalOpen(true)}
+                                  sx={{
+                                    mt: 1,
+                                    width: 140,
+                                    height: 100,
+                                    objectFit: 'cover',
+                                    borderRadius: 1,
+                                    border: '1px solid #e2e8f0',
+                                    cursor: 'pointer',
+                                    display: 'block'
+                                  }}
+                                />
+                                <Typography color="primary" sx={{ cursor: 'pointer', mt: 0.5 }} onClick={() => setImageModalOpen(true)}>
+                                  {t.clickToView}
+                                </Typography>
+                              </>
                             }
                           />
                         </ListItem>
@@ -3429,7 +3596,7 @@ const handleExportToPDF = async () => {
             <Box display="flex" justifyContent="center" sx={{ minHeight: '60vh' }}>
               <Box
                 component="img"
-                src={`data:image/jpeg;base64,${selectedRecord.image_data}`}
+                src={resolveImageSrc(selectedRecord.image_data)}
                 alt={`NDVI Image - Pixel ${selectedRecord.pixle_id}`}
                 sx={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
               />
@@ -3442,6 +3609,18 @@ const handleExportToPDF = async () => {
           )}
         </DialogContent>
         <DialogActions>
+          {selectedRecord?.image_data && (
+            <Button
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = resolveImageSrc(selectedRecord.image_data);
+                link.download = `ndvi_${selectedRecord.pixle_id || 'image'}.jpg`;
+                link.click();
+              }}
+            >
+              {t.download}
+            </Button>
+          )}
           <Button onClick={() => setImageModalOpen(false)}>{t.close}</Button>
         </DialogActions>
       </Dialog>

@@ -13,6 +13,30 @@ import { debounce, min } from 'lodash';
 import { API_BASE_URL } from "../config";
 import { getUserDivision, matchesDivision, matchesUserHierarchyString, getMostSpecificLevel } from "../utils/authUtils";
 import "leaflet.nontiledlayer";
+
+// Zoom to bounds and resolve when the zoom animation finishes — with a hard
+// timeout so callers awaiting this can never hang (loader stuck forever) when
+// 'zoomend' doesn't fire (already at bounds, animation skipped, etc.)
+const zoomToBounds = (map, bounds) => new Promise((resolve) => {
+  if (!map || !bounds) return resolve();
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timer);
+    map.off('zoomend', onZoomEnd);
+    resolve();
+  };
+  const onZoomEnd = () => setTimeout(finish, 300);
+  const timer = setTimeout(finish, 6000);
+  map.on('zoomend', onZoomEnd);
+  try {
+    map.fitBounds(bounds, { padding: [50, 50], animate: true, duration: 1 });
+  } catch {
+    finish();
+  }
+});
+
 const Loader = () => {
   return (
     <div className="map-loader">
@@ -2057,25 +2081,10 @@ const handleGroupCheckbox = useCallback(async (e) => {
             const sw = L.latLng(bounds.minY, bounds.minX);
             const ne = L.latLng(bounds.maxY, bounds.maxX);
             const layerBounds = L.latLngBounds(sw, ne);
-            
-            // Create a promise that resolves when zoom animation completes
-            await new Promise((resolve) => {
-              const onZoomEnd = () => {
-                mapRef.current.off('zoomend', onZoomEnd);
-                // Add a small delay to ensure everything is rendered
-                setTimeout(resolve, 300);
-              };
-              
-              mapRef.current.on('zoomend', onZoomEnd);
-              
-              // Start the initial fitBounds animation
-              mapRef.current.fitBounds(layerBounds, {
-                padding: [50, 50],
-                animate: true,
-                duration: 1
-              });
-            });
-            
+
+            // Resolves when zoom animation completes (6s hard cap inside)
+            await zoomToBounds(mapRef.current, layerBounds);
+
           }
         } catch (error) {
           console.error('Error zooming to layer:', error);
@@ -2967,23 +2976,8 @@ const toggleLayer = useCallback(
             const ne = L.latLng(bounds.maxY, bounds.maxX);
             const layerBounds = L.latLngBounds(sw, ne);
 
-            // Create a promise that resolves when zoom animation completes
-            await new Promise((resolve) => {
-              const onZoomEnd = () => {
-                mapRef.current.off('zoomend', onZoomEnd);
-                // Add a small delay to ensure everything is rendered
-                setTimeout(resolve, 300);
-              };
-
-              mapRef.current.on('zoomend', onZoomEnd);
-
-              // Start the initial fitBounds animation
-              mapRef.current.fitBounds(layerBounds, {
-                padding: [50, 50],
-                animate: true,
-                duration: 1
-              });
-            });
+            // Resolves when zoom animation completes (6s hard cap inside)
+            await zoomToBounds(mapRef.current, layerBounds);
 
           }
         } catch (error) {
@@ -3101,23 +3095,8 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
             const ne = L.latLng(bounds.maxY, bounds.maxX);
             const layerBounds = L.latLngBounds(sw, ne);
 
-            // Create a promise that resolves when zoom animation completes
-            await new Promise((resolve) => {
-              const onZoomEnd = () => {
-                mapRef.current.off('zoomend', onZoomEnd);
-                // Add a small delay to ensure everything is rendered
-                setTimeout(resolve, 300);
-              };
-
-              mapRef.current.on('zoomend', onZoomEnd);
-
-              // Start the initial fitBounds animation
-              mapRef.current.fitBounds(layerBounds, {
-                padding: [50, 50],
-                animate: true,
-                duration: 1
-              });
-            });
+            // Resolves when zoom animation completes (6s hard cap inside)
+            await zoomToBounds(mapRef.current, layerBounds);
 
           }
         } catch (error) {

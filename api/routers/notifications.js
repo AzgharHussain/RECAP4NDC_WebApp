@@ -874,6 +874,35 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     if (village_name) addCondition('COALESCE(u.village_name, d.village_name) = ?', village_name);
     if (coupe_name) addCondition('COALESCE(u.coupe_name, d.coupe_name) = ?', coupe_name);
     if (division) addCondition('u.division ILIKE ?', `%${division}%`);
+
+    // Hierarchy-scoped visibility: restrict rows to the requesting user's
+    // own level(s) from the JWT (beat → round → range → division → circle).
+    // A row matches if ANY of the user's levels match — mirrors the
+    // frontend's fallback filter. Coupe/village names encode the division,
+    // so they're matched too for rows where the subscription columns are
+    // still NULL (pre-hierarchy subscriptions).
+    const nonEmpty = (v) => { const s = String(v ?? '').trim(); return s && s !== '-'; };
+    const hierLevels = [
+      ['beat', req.user?.beat],
+      ['round', req.user?.round],
+      ['range', req.user?.range],
+      ['division', req.user?.division],
+    ].filter(([, v]) => nonEmpty(v));
+
+    if (hierLevels.length > 0) {
+      const hierParts = [];
+      for (const [field, value] of hierLevels) {
+        values.push(`%${value}%`);
+        hierParts.push(`u.${field} ILIKE $${values.length}`);
+      }
+      const divVal = hierLevels.find(([f]) => f === 'division')?.[1];
+      if (divVal) {
+        values.push(`%${divVal}%`);
+        hierParts.push(`COALESCE(u.coupe_name, d.coupe_name) ILIKE $${values.length}`);
+      }
+      conditions.push(`(${hierParts.join(' OR ')})`);
+    }
+
     if (month) addCondition("TO_CHAR(d.notification_date, 'YYYY-MM') = ?", month);
     if (start_date) addCondition('d.notification_date >= ?', start_date);
     if (end_date) addCondition('d.notification_date <= ?', end_date);

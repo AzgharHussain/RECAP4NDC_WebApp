@@ -184,6 +184,33 @@ router.post('/forest-login', async (req, res) => {
       // Continue without token — frontend will handle via saveuser fallback
     }
 
+    // Keep the NDVI notification subscription's hierarchy in sync with the
+    // login data so reports can show division/range/round/beat — including
+    // for subscriptions created before those columns existed.
+    if (dbUser && dbUser.user_id != null) {
+      try {
+        await sequelize.query(
+          `UPDATE public.ndvi_notification_users
+           SET division = NULLIF(NULLIF($1, ''), '-'),
+               range    = NULLIF(NULLIF($2, ''), '-'),
+               round    = NULLIF(NULLIF($3, ''), '-'),
+               beat     = NULLIF(NULLIF($4, ''), '-')
+           WHERE user_id = $5`,
+          {
+            bind: [
+              userData.DivisionName || '',
+              userData.RangeName || '',
+              userData.RoundName || '',
+              userData.BeatName || '',
+              String(dbUser.user_id)
+            ]
+          }
+        );
+      } catch (syncErr) {
+        console.error('ndvi_notification_users hierarchy sync failed:', syncErr.message);
+      }
+    }
+
     // Set token as HTTP-only cookie (backup auth mechanism)
     if (token) {
       res.cookie('authToken', token, {

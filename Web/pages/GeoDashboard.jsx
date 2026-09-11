@@ -375,6 +375,12 @@ const handleFilter = ({ fromDate, toDate }) => {
             pendingLayers.delete(L.stamp(layer));
             checkAllLoaded();
           });
+          // If tiles error out (GeoServer down / 404 / CORS), 'load' never
+          // fires — treat the layer as done so the loader can't get stuck.
+          layer.on('tileerror', () => {
+            pendingLayers.delete(L.stamp(layer));
+            checkAllLoaded();
+          });
           layer.on('loading', () => {
             pendingLayers.add(L.stamp(layer));
           });

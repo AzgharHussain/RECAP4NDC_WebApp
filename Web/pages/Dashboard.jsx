@@ -235,12 +235,18 @@ export default function Dashboard() {
   };
 
   // Fetch patrols once (no date filters anymore). Filtering will be applied on client side.
+  // Use include_images=false to skip base64 image payloads — Dashboard only
+  // needs patrol metadata for charts/tables, so this avoids transferring
+  // large blobs that dominate page load time.
   useEffect(() => {
     const fetchPatrols = async () => {
       setPatrolDataLoading(true);
       setTableLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/patrol-info`);
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_BASE_URL}/api/patrol-info-all?include_images=false&include_geom=false`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const json = await res.json();
         const data = json?.data || json || [];
         setRawPatrolsData(data);
