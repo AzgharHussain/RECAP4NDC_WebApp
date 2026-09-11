@@ -1032,21 +1032,26 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
 
     let changeStats = [];
     try {
+      // NOTE: qualify with alias `t` — a bare `SELECT table_name FROM
+      // information_schema.tables` makes the pg driver fall back to
+      // array-rows, so r.table_name comes back undefined.
       const tableRows = await sequelize.query(
-        `SELECT table_name FROM information_schema.tables
-         WHERE table_schema = 'public' AND table_name LIKE '%\\_NDVI\\_Change' ESCAPE '\\'`,
+        `SELECT t.table_name FROM information_schema.tables t
+         WHERE t.table_schema = 'public' AND t.table_name LIKE '%\\_NDVI\\_Change' ESCAPE '\\'`,
         { type: sequelize.QueryTypes.SELECT }
       );
-      const tableNames = tableRows.map(r => r.table_name);
+      const tableNames = tableRows.map(r => r.table_name ?? r[0]).filter(Boolean);
       if (tableNames.length) {
         const colRows = await sequelize.query(
-          `SELECT table_name, column_name FROM information_schema.columns
-           WHERE table_schema = 'public' AND table_name IN (:tableNames)`,
+          `SELECT c.table_name, c.column_name FROM information_schema.columns c
+           WHERE c.table_schema = 'public' AND c.table_name IN (:tableNames)`,
           { replacements: { tableNames }, type: sequelize.QueryTypes.SELECT }
         );
         const colsByTable = {};
         colRows.forEach(r => {
-          (colsByTable[r.table_name] = colsByTable[r.table_name] || new Set()).add(r.column_name);
+          const tn = r.table_name ?? r[0];
+          const cn = r.column_name ?? r[1];
+          (colsByTable[tn] = colsByTable[tn] || new Set()).add(cn);
         });
 
         const dimCol = (cols, name) => (cols.has(name) ? `"${name}"` : `NULL::text`);
