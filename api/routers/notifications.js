@@ -1013,6 +1013,100 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       };
     });
 
+    // ── Resolved / not-resolved counts from the NDVI Change tables ────────
+    // A change point counts as "resolved" when it has a note OR an image.
+    // Table names look like "2026-08-01_<coupe>_NDVI_Change" — the date
+    // prefix is the DATA month; its notification goes out the next month,
+    // so a table is attributed to notification month = dataMonth + 1.
+    const normDim = (v) => String(v ?? '').trim().toLowerCase();
+    const emptyDim = (v) => { const n = normDim(v); return n === '' || n === '-'; };
+    const monthAdd = (ym, n) => {
+      const [y, m] = ym.split('-').map(Number);
+      const d = new Date(y, m - 1 + n, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    };
+
+    let changeStats = [];
+    try {
+      const tableRows = await sequelize.query(
+        `SELECT table_name FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name LIKE '%\\_NDVI\\_Change' ESCAPE '\\'`,
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      const tableNames = tableRows.map(r => r.table_name);
+      if (tableNames.length) {
+        const colRows = await sequelize.query(
+          `SELECT table_name, column_name FROM information_schema.columns
+           WHERE table_schema = 'public' AND table_name = ANY(:tableNames)`,
+          { replacements: { tableNames }, type: sequelize.QueryTypes.SELECT }
+        );
+        const colsByTable = {};
+        colRows.forEach(r => {
+          (colsByTable[r.table_name] = colsByTable[r.table_name] || new Set()).add(r.column_name);
+        });
+
+        const dimCol = (cols, name) => (cols.has(name) ? `"${name}"` : `NULL::text`);
+        const perTable = await Promise.all(tableNames.map(async (tn) => {
+          const cols = colsByTable[tn] || new Set();
+          const noteExpr = cols.has('note') ? `NULLIF(btrim("note"::text), '') IS NOT NULL` : 'FALSE';
+          const imgExpr = cols.has('image_data') ? `NULLIF(btrim("image_data"::text), '') IS NOT NULL` : 'FALSE';
+          const resolvedExpr = `(${noteExpr}) OR (${imgExpr})`;
+          try {
+            const rows = await sequelize.query(
+              `SELECT
+                 ${dimCol(cols, 'village')} AS village,
+                 ${dimCol(cols, 'division')} AS division,
+                 ${dimCol(cols, 'range')} AS range,
+                 ${dimCol(cols, 'round')} AS round,
+                 ${dimCol(cols, 'beat')} AS beat,
+                 COUNT(*) FILTER (WHERE ${resolvedExpr})::int AS resolved,
+                 COUNT(*) FILTER (WHERE NOT (${resolvedExpr}))::int AS not_resolved
+               FROM public."${tn}"
+               GROUP BY 1, 2, 3, 4, 5`,
+              { type: sequelize.QueryTypes.SELECT }
+            );
+            return rows.map(r => ({ ...r, table_name: tn }));
+          } catch (tblErr) {
+            console.warn(`[ndvi-report] resolved stats failed for ${tn}:`, tblErr.message);
+            return [];
+          }
+        }));
+        changeStats = perTable.flat().map(r => {
+          const m = /^(\d{4}-\d{2})-\d{2}_(.+)_NDVI_Change$/i.exec(r.table_name);
+          return {
+            notifMonth: m ? monthAdd(m[1], 1) : null,
+            village: r.village, division: r.division, range: r.range, round: r.round, beat: r.beat,
+            resolved: r.resolved || 0, not_resolved: r.not_resolved || 0,
+          };
+        });
+      }
+    } catch (statsErr) {
+      console.warn('[ndvi-report] resolved stats aggregation failed:', statsErr.message);
+    }
+
+    // Keep the counts in the same scope as the report filters
+    const statInScope = (row) => {
+      if (month && row.notifMonth !== month) return false;
+      if (division && !normDim(row.division).includes(normDim(division))) return false;
+      if (start_date && row.notifMonth && row.notifMonth < String(start_date).slice(0, 7)) return false;
+      if (end_date && row.notifMonth && row.notifMonth > String(end_date).slice(0, 7)) return false;
+      return true;
+    };
+    const scopedStats = changeStats.filter(statInScope);
+    const resolvedTotal = scopedStats.reduce((s, r) => s + r.resolved, 0);
+    const notResolvedTotal = scopedStats.reduce((s, r) => s + r.not_resolved, 0);
+
+    // Attribute a change-table stat row to a monthly-summary item.
+    // Village is the strongest link (change tables are village-scoped);
+    // rows without a village fall back to matching all available dims.
+    const statMatchesItem = (item, row) => {
+      if (row.notifMonth !== item.month) return false;
+      if (!emptyDim(row.village)) return normDim(row.village) === normDim(item.village);
+      const dims = ['division', 'range', 'round', 'beat'];
+      if (dims.every(d => emptyDim(row[d]))) return false; // unattributable
+      return dims.every(d => emptyDim(row[d]) || normDim(row[d]) === normDim(item[d]));
+    };
+
     // Monthly division-wise summary
     const monthlyDivisionMap = new Map();
     annotatedRows.forEach((row) => {
@@ -1027,11 +1121,23 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
           village: row.village,
           alerts_generated: 0,
           notifications_sent: 0,
+          resolved: 0,
+          not_resolved: 0,
         });
       }
       const item = monthlyDivisionMap.get(key);
       item.alerts_generated += row.change_count || 0;
       item.notifications_sent += 1;
+    });
+
+    // Attach resolved / not-resolved counts to each summary row
+    monthlyDivisionMap.forEach((item) => {
+      for (const s of scopedStats) {
+        if (statMatchesItem(item, s)) {
+          item.resolved += s.resolved;
+          item.not_resolved += s.not_resolved;
+        }
+      }
     });
 
     const optionRows = options.rows[0] || {};
@@ -1052,6 +1158,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         total_notifications: totalCount.total_notifications,
         users_received: totalCount.users_received,
         total_changes: totalCount.total_changes,
+        resolved: resolvedTotal,
+        not_resolved: notResolvedTotal,
       },
       monthlyDivisionSummary: Array.from(monthlyDivisionMap.values()).sort((a, b) => b.month.localeCompare(a.month) || a.division.localeCompare(b.division)),
       options: {

@@ -231,7 +231,7 @@ const IncidentLogs = () => {
       ]);
 
       const exportData = filteredData.map((item) => ({
-        [text[language].incidentId]: item.incident_id,
+        [text[language].incidentId]: item.incident_code || item.incident_id,
         [text[language].username]: item.username || "-",
         [text[language].incidentType]: item.incident_type || "-",
         [text[language].category]: item.category_name || "-",
@@ -284,11 +284,12 @@ const IncidentLogs = () => {
   const columns = [
     {
       title: text[language].incidentId,
-      dataIndex: "incident_id",
-      key: "incident_id",
-      sorter: (a, b) => a.incident_id - b.incident_id,
+      dataIndex: "incident_code",
+      key: "incident_code",
+      sorter: (a, b) => String(a.incident_code || a.incident_id || "").localeCompare(String(b.incident_code || b.incident_id || "")),
       align: "center",
-      width: 90,
+      width: 220,
+      render: (val, record) => val || record.incident_id || "-",
     },
     {
       title: text[language].username,
@@ -612,7 +613,7 @@ const IncidentLogs = () => {
           <div>
             <Descriptions bordered column={1} size="small">
               <Descriptions.Item label={text[language].incidentId}>
-                {selectedIncident.incident_id || "-"}
+                {selectedIncident.incident_code || selectedIncident.incident_id || "-"}
               </Descriptions.Item>
               <Descriptions.Item label={text[language].username}>
                 {selectedIncident.username || "-"}

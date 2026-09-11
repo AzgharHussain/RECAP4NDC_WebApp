@@ -89,6 +89,8 @@ const TEXTS = {
     // NDVI Changes status labels
     noActionTaken: "No Action Taken",
     actionTaken: "Action Taken",
+    resolved: "Resolved",
+    notResolved: "Not Resolved",
   },
   gu: {
     pageTitle: "NDVI સૂચનાઓ",
@@ -130,6 +132,8 @@ const TEXTS = {
     // NDVI Changes status labels
     noActionTaken: "કોઈ ક્રિયા લેવાયેલ નથી",
     actionTaken: "ક્રિયા લેવાયેલ",
+    resolved: "ઉકેલાયેલ",
+    notResolved: "ઉકેલાયેલ નથી",
   },
 };
 
@@ -147,6 +151,18 @@ const NDVINotifications = () => {
   // Tag color for a normalized status.
   const statusColor = (normalized) => (normalized === "Action Taken" ? "success" : "warning");
 
+  // A change point is "resolved" when it carries a note or an image.
+  // `has_image` comes from the list APIs; `image_data`/loaded image from point details.
+  const isResolved = (rec, hasImage) =>
+    Boolean(
+      (rec?.note != null && String(rec.note).trim() !== '') ||
+      rec?.has_image || rec?.image_data || hasImage
+    );
+
+  const resolvedTag = (resolved) => (
+    <Tag color={resolved ? "success" : "error"}>{resolved ? t.resolved : t.notResolved}</Tag>
+  );
+
   // Check if the logged-in user has a division to lock
   // Use state + useEffect to avoid stale reads when component mounts before
   // userData is set in localStorage (right after login).
@@ -156,7 +172,7 @@ const NDVINotifications = () => {
   const [data, setData] = useState([]);
   const [monthlySummary, setMonthlySummary] = useState([]);
   const [options, setOptions] = useState(emptyOptions);
-  const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, total_changes: 0 });
+  const [summary, setSummary] = useState({ total_notifications: 0, users_received: 0, total_changes: 0, resolved: 0, not_resolved: 0 });
   // table_name kept in state for API calls but no longer shown as a UI filter
   const [filters, setFilters] = useState({
     username: null,
@@ -216,7 +232,7 @@ const NDVINotifications = () => {
         monthlyRows = monthlyRows.filter(item => matchesUserHierarchy(item));
       }
       setMonthlySummary(monthlyRows);
-      setSummary(json.summary || { total_notifications: 0, users_received: 0, total_changes: 0 });
+      setSummary(json.summary || { total_notifications: 0, users_received: 0, total_changes: 0, resolved: 0, not_resolved: 0 });
       setOptions({ ...emptyOptions, ...(json.options || {}) });
       if (json.pagination) {
         setPagination(prev => ({
@@ -231,7 +247,7 @@ const NDVINotifications = () => {
       message.error(err.message || "Failed to fetch NDVI notifications");
       setData([]);
       setMonthlySummary([]);
-      setSummary({ total_notifications: 0, users_received: 0, total_changes: 0 });
+      setSummary({ total_notifications: 0, users_received: 0, total_changes: 0, resolved: 0, not_resolved: 0 });
     } finally {
       setLoading(false);
     }
@@ -318,6 +334,8 @@ const NDVINotifications = () => {
         [t.village]: item.village || "-",
         [t.alertsGenerated]: item.alerts_generated,
         [t.notificationsSent]: item.notifications_sent,
+        [t.resolved]: item.resolved || 0,
+        [t.notResolved]: item.not_resolved || 0,
       }));
       const filterRows = [
         { Filter: t.userName, Value: filters.username || "All" },
@@ -328,6 +346,8 @@ const NDVINotifications = () => {
         { Filter: t.usersReceived,      Value: summary.users_received     || 0 },
         { Filter: t.totalNotifications, Value: summary.total_notifications || 0 },
         { Filter: t.totalChanges,       Value: summary.total_changes       || 0 },
+        { Filter: t.resolved,           Value: summary.resolved            || 0 },
+        { Filter: t.notResolved,        Value: summary.not_resolved        || 0 },
       ];
 
       const wb = XLSX.utils.book_new();
@@ -536,6 +556,8 @@ const NDVINotifications = () => {
     { title: t.village,        dataIndex: "village",          key: "village",          sorter: genericSorter("village"),          render: (v) => v || "-" },
     { title: t.alertsGenerated, dataIndex: "alerts_generated", key: "alerts_generated", sorter: genericSorter("alerts_generated") },
     { title: t.notificationsSent, dataIndex: "notifications_sent", key: "notifications_sent", sorter: genericSorter("notifications_sent"), render: (v) => <Tag color="blue">{v}</Tag> },
+    { title: t.resolved,    dataIndex: "resolved",     key: "resolved",     sorter: genericSorter("resolved"),     render: (v) => <Tag color="success">{v || 0}</Tag> },
+    { title: t.notResolved, dataIndex: "not_resolved", key: "not_resolved", sorter: genericSorter("not_resolved"), render: (v) => <Tag color="error">{v || 0}</Tag> },
   ];
 
   return (
@@ -544,9 +566,11 @@ const NDVINotifications = () => {
 
       {/* ── Stat cards ── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={12} lg={8}><Card><Statistic title={t.usersReceived}      value={summary.users_received     || 0} /></Card></Col>
-        <Col xs={24} md={12} lg={8}><Card><Statistic title={t.totalNotifications} value={summary.total_notifications || 0} /></Card></Col>
-        <Col xs={24} md={12} lg={8}><Card><Statistic title={t.totalChanges}       value={summary.total_changes       || 0} valueStyle={{ color: "#3f8600" }} /></Card></Col>
+        <Col xs={24} sm={12} lg={8}><Card><Statistic title={t.usersReceived}      value={summary.users_received     || 0} /></Card></Col>
+        <Col xs={24} sm={12} lg={8}><Card><Statistic title={t.totalNotifications} value={summary.total_notifications || 0} /></Card></Col>
+        <Col xs={24} sm={12} lg={8}><Card><Statistic title={t.totalChanges}       value={summary.total_changes       || 0} valueStyle={{ color: "#3f8600" }} /></Card></Col>
+        <Col xs={24} sm={12} lg={8}><Card><Statistic title={t.resolved}           value={summary.resolved            || 0} valueStyle={{ color: "#3f8600" }} /></Card></Col>
+        <Col xs={24} sm={12} lg={8}><Card><Statistic title={t.notResolved}        value={summary.not_resolved        || 0} valueStyle={{ color: "#cf1322" }} /></Card></Col>
       </Row>
 
       {/* ── Filters (NDVI Table filter removed) ── */}
@@ -682,7 +706,7 @@ const NDVINotifications = () => {
                 { title: "Village", dataIndex: "village", key: "village", width: 100, render: v => v || "-" },
                 { title: "NDVI Change", dataIndex: "NDVI_change", key: "NDVI_change", width: 90, render: v => v != null ? Number(v).toFixed(4) : "-" },
                 { title: "Category", dataIndex: "change_category", key: "change_category", width: 90, render: v => v || "-" },
-                { title: "Status", dataIndex: "status", key: "status", width: 120, render: (v) => { const s = normalizeStatus(v); return <Tag color={statusColor(s)}>{statusLabel(s)}</Tag>; } },
+                { title: "Status", dataIndex: "status", key: "status", width: 120, render: (_, record) => resolvedTag(isResolved(record)) },
                 {
                   title: "Action",
                   key: "action",
@@ -724,7 +748,7 @@ const NDVINotifications = () => {
                 <Descriptions.Item label="Latitude">{selectedPoint.latitude || "-"}</Descriptions.Item>
                 <Descriptions.Item label="Longitude">{selectedPoint.longitude || "-"}</Descriptions.Item>
                 <Descriptions.Item label="NDVI Change">{selectedPoint.NDVI_change != null ? Number(selectedPoint.NDVI_change).toFixed(4) : "-"}</Descriptions.Item>
-                <Descriptions.Item label="Status"><Tag color={statusColor(normalizeStatus(selectedPoint.status))}>{statusLabel(normalizeStatus(selectedPoint.status))}</Tag></Descriptions.Item>
+                <Descriptions.Item label="Status">{resolvedTag(isResolved(selectedPoint))}</Descriptions.Item>
               </Descriptions>
             )}
           </Col>
@@ -751,7 +775,7 @@ const NDVINotifications = () => {
                   <Descriptions.Item label="NDVI Change">{pointDetailRecord.NDVI_change != null ? Number(pointDetailRecord.NDVI_change).toFixed(4) : "-"}</Descriptions.Item>
                   <Descriptions.Item label="Category">{pointDetailRecord.change_category || "-"}</Descriptions.Item>
                   <Descriptions.Item label="Status">
-                    <Tag color={statusColor(normalizeStatus(pointDetailRecord.status))}>{statusLabel(normalizeStatus(pointDetailRecord.status))}</Tag>
+                    {resolvedTag(isResolved(pointDetailRecord, !!pointDetailImage))}
                   </Descriptions.Item>
                   <Descriptions.Item label="Latitude">{pointDetailRecord.latitude || "-"}</Descriptions.Item>
                   <Descriptions.Item label="Longitude" span={2}>{pointDetailRecord.longitude || "-"}</Descriptions.Item>

@@ -13,8 +13,9 @@ import {
   ZoomOutOutlined,
   UndoOutlined,
   CloseCircleOutlined,
+  TableOutlined,
 } from "@ant-design/icons";
-import { Table, Tag, Image as AntImage, Modal, Button, message, Row, Col, Pagination } from "antd";
+import { Table, Tag, Image as AntImage, Modal, Button, Input, message, Row, Col, Pagination } from "antd";
 import axios from "axios";
 import "./RouterMap.css";
 import "./BeatPatrolCoverage.css";
@@ -258,7 +259,15 @@ const BeatPatrolCoverage = () => {
       noImagesFound: "No images found",
       details: "Details",
       route: "Route",
-      photos: "Photos"
+      photos: "Photos",
+      boundaryList: "Plantation Boundaries",
+      searchBoundary: "Search by name, layer, table...",
+      tableName: "Table Name",
+      layerName: "Layer Name",
+      workspace: "Workspace",
+      color: "Color",
+      boundaryDate: "Boundary Date",
+      createdOn: "Created On"
     },
     gu: {
       title: "પેટ્રોલ કવરેજ વિશ્લેષણ",
@@ -339,7 +348,15 @@ const BeatPatrolCoverage = () => {
       noImagesFound: "કોઈ છબીઓ મળી નથી",
       details: "વિગતો",
       route: "રસ્તો",
-      photos: "ફોટા"
+      photos: "ફોટા",
+      boundaryList: "પ્લાન્ટેશન બાઉન્ડ્રીઓ",
+      searchBoundary: "નામ, લેયર, ટેબલ દ્વારા શોધો...",
+      tableName: "ટેબલ નામ",
+      layerName: "લેયર નામ",
+      workspace: "વર્કસ્પેસ",
+      color: "રંગ",
+      boundaryDate: "બાઉન્ડ્રી તારીખ",
+      createdOn: "બનાવેલ તારીખ"
     }
   };
 
@@ -363,6 +380,7 @@ const BeatPatrolCoverage = () => {
   const [ranges, setRanges] = useState([]);
   const [beats, setBeats] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
+  const [boundarySearch, setBoundarySearch] = useState("");
   
   const [loading, setLoading] = useState({
     divisions: false,
@@ -637,6 +655,91 @@ const BeatPatrolCoverage = () => {
     const endIndex = startIndex + pageSize;
     return patrols.slice(startIndex, endIndex);
   };
+
+  // ── Plantation boundaries list (searchable / filterable / sortable) ──
+  const boundaryRows = boundaries
+    .map((b) => b.data || {})
+    .filter((b) => {
+      if (!boundarySearch.trim()) return true;
+      const q = boundarySearch.trim().toLowerCase();
+      return [b.name, b.table_name, b.layer_name, b.workspace]
+        .some((v) => String(v || "").toLowerCase().includes(q));
+    });
+
+  const workspaceFilters = [...new Set(
+    boundaries.map((b) => b.data?.workspace).filter(Boolean)
+  )].map((w) => ({ text: w, value: w }));
+
+  const boundaryColumns = [
+    {
+      title: t.srNo,
+      key: "sr",
+      align: "center",
+      width: 70,
+      render: (_, __, index) => index + 1,
+    },
+    {
+      title: t.boundary,
+      dataIndex: "name",
+      key: "name",
+      sorter: (a, b) => String(a.name || "").localeCompare(String(b.name || "")),
+      render: (v) => v || "-",
+    },
+    {
+      title: t.tableName,
+      dataIndex: "table_name",
+      key: "table_name",
+      sorter: (a, b) => String(a.table_name || "").localeCompare(String(b.table_name || "")),
+      render: (v) => v || "-",
+    },
+    {
+      title: t.layerName,
+      dataIndex: "layer_name",
+      key: "layer_name",
+      sorter: (a, b) => String(a.layer_name || "").localeCompare(String(b.layer_name || "")),
+      render: (v) => v || "-",
+    },
+    {
+      title: t.workspace,
+      dataIndex: "workspace",
+      key: "workspace",
+      filters: workspaceFilters,
+      onFilter: (value, record) => record.workspace === value,
+      render: (v) => v || "-",
+    },
+    {
+      title: t.color,
+      dataIndex: "color",
+      key: "color",
+      align: "center",
+      width: 100,
+      render: (v) =>
+        v ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 14, height: 14, borderRadius: 3, background: v, border: "1px solid #ccc", display: "inline-block" }} />
+            {v}
+          </span>
+        ) : "-",
+    },
+    {
+      title: t.boundaryDate,
+      dataIndex: "boundary_date",
+      key: "boundary_date",
+      sorter: (a, b) => String(a.boundary_date || "").localeCompare(String(b.boundary_date || "")),
+      render: (v) => v || "-",
+    },
+    {
+      title: t.createdOn,
+      dataIndex: "created_at",
+      key: "created_at",
+      sorter: (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0),
+      render: (v) => {
+        if (!v) return "-";
+        const f = formatDateTime(v, language);
+        return `${f.date} ${f.time}`;
+      },
+    },
+  ];
 
   // Fetch boundaries
   const fetchPatrolBoundaries = async () => {
@@ -1493,6 +1596,42 @@ const BeatPatrolCoverage = () => {
             
           </div>
           
+        </div>
+
+        {/* Plantation Boundaries List */}
+        <div className="coverage-table-card" style={{ marginBottom: 24 }}>
+          <div className="coverage-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="coverage-section-icon"><TableOutlined /></div>
+              <h3>{t.boundaryList} ({boundaryRows.length})</h3>
+            </div>
+            <Input
+              allowClear
+              prefix={<SearchOutlined />}
+              placeholder={t.searchBoundary}
+              value={boundarySearch}
+              onChange={(e) => setBoundarySearch(e.target.value)}
+              style={{ maxWidth: 300 }}
+            />
+          </div>
+          <Table
+            className="transparent-table coverage-modern-table"
+            columns={boundaryColumns}
+            dataSource={boundaryRows}
+            loading={loading.boundaries}
+            rowKey={(r) => r.id || r.table_name}
+            bordered
+            scroll={{ x: "max-content" }}
+            pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
+            locale={{
+              emptyText: (
+                <div style={{ textAlign: "center", padding: "50px 0" }}>
+                  <img src={noDataImage} alt="No Data" style={{ width: 60, marginBottom: 16 }} />
+                  <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>{t.noBoundaries}</div>
+                </div>
+              ),
+            }}
+          />
         </div>
 
         {/* Patrols Table */}
