@@ -21,7 +21,9 @@ const initTable = async () => {
     }
 };
 
-initTable(); // Auto-run table creation
+// Auto-run table creation — primary worker only, so all cluster workers
+// don't race the same DDL at startup and exhaust the connection pool.
+if (require('../utils/isPrimaryWorker')) initTable();
 
 // ================================
 // GET ALL USER LOCATIONS

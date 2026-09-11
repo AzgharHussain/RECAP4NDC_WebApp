@@ -82,10 +82,12 @@ async function ensureIncidentSeverityTables() {
   }
 }
 
-// Run on module load
-ensureIncidentSeverityTables().catch((err) => {
-  console.error('Failed to ensure incident_severity_levels table:', err.message);
-});
+// Run on module load — primary worker only, so cluster workers don't race.
+if (require('../utils/isPrimaryWorker')) {
+  ensureIncidentSeverityTables().catch((err) => {
+    console.error('Failed to ensure incident_severity_levels table:', err.message);
+  });
+}
 
 // ─────────────────────────────────────────────────────────
 // GET /api/incident-severity

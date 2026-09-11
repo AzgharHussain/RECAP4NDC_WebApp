@@ -16,8 +16,8 @@ const SUPPORT_RATE_LIMIT = require('express-rate-limit')({
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ISSUE_TYPES = ['login', 'mobile_app', 'web_app', 'ndvi', 'patrolling', 'coupe', 'data_sync', 'other'];
 
-// ── Auto-create support_tickets table on module load ─────────────────────────
-(async () => {
+// ── Auto-create support_tickets table on module load (primary worker only) ──
+if (require('../utils/isPrimaryWorker')) (async () => {
   try {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS support_tickets (

@@ -1602,6 +1602,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
   }
 });
 
-createPatrolBoundaryTable();
+// Primary worker only — avoid every cluster worker racing the same DDL.
+if (require('../utils/isPrimaryWorker')) createPatrolBoundaryTable();
 
 module.exports = router;

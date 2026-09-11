@@ -276,7 +276,30 @@ async function createMaterializedViews() {
 }
 
 async function refreshMaterializedViews() {
-  await query('SELECT public.refresh_recap4ndc_materialized_views()', 'refresh materialized views');
+  // Issue REFRESH directly instead of `SELECT public.refresh_recap4ndc_materialized_views()`.
+  // A SELECT wrapping a volatile function can be routed to a read-only replica by
+  // read/write-splitting proxies (e.g. pgpool), failing with "cannot execute
+  // REFRESH MATERIALIZED VIEW in a read-only transaction". Utility statements
+  // route to the primary. CONCURRENTLY is used because each MV has a unique
+  // index, so readers aren't blocked; fall back to a plain refresh if it fails.
+  const views = ['mv_patrol_stats', 'mv_patrol_hierarchy', 'mv_ndvi_change_tables'];
+  for (const view of views) {
+    const exists = await scalar(
+      `SELECT 1 FROM pg_matviews WHERE schemaname = 'public' AND matviewname = :view`,
+      { view }
+    );
+    if (!exists) continue;
+    const concurrent = await query(
+      `REFRESH MATERIALIZED VIEW CONCURRENTLY public.${quoteIdent(view)}`,
+      `refresh ${view} (concurrent)`
+    );
+    if (!concurrent) {
+      await query(`REFRESH MATERIALIZED VIEW public.${quoteIdent(view)}`, `refresh ${view}`);
+    }
+  }
+  // Run the delete directly rather than SELECT-ing the plpgsql function —
+  // a SELECT can be routed to a read-only replica by splitting proxies.
+  await query('DELETE FROM public.query_cache WHERE expires_at < NOW()', 'cleanup query cache');
 }
 
 async function analyzeTables() {

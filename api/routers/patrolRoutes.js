@@ -315,9 +315,13 @@ async function ensurePatrolLocationColumns(dbClient = client) {
   patrolColumnsCache = null;
 }
 
-ensurePatrolLocationColumns().catch((err) => {
-  console.error('Failed to ensure patrol location columns:', err.message);
-});
+// Primary worker only — this ALTER TABLE takes an exclusive lock on
+// patrols; every cluster worker running it at once blocks the pool.
+if (require('../utils/isPrimaryWorker')) {
+  ensurePatrolLocationColumns().catch((err) => {
+    console.error('Failed to ensure patrol location columns:', err.message);
+  });
+}
 
 // ─────────────────────────────────────────────────────────
 // Generate a human-readable patrol_code:
@@ -392,10 +396,12 @@ async function backfillPatrolCodes() {
   console.log(`[patrol_code backfill] Updated ${updated} of ${missing.rows.length} patrol(s).`);
 }
 
-// Run backfill on module load (server start)
-backfillPatrolCodes().catch((err) => {
-  console.error('[patrol_code backfill] Failed:', err.message);
-});
+// Run backfill on module load (server start) — primary worker only.
+if (require('../utils/isPrimaryWorker')) {
+  backfillPatrolCodes().catch((err) => {
+    console.error('[patrol_code backfill] Failed:', err.message);
+  });
+}
 
 // POST route for patrol with multiple images and optional notes
 router.post('/patrol-post', verifyJwt, upload.any(), async (req, res) => {

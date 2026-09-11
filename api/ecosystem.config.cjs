@@ -22,7 +22,9 @@
 module.exports = {
   apps: [{
     name: 'recap4ndc-api',
-    script: 'cluster.js',
+    // Point PM2 at index.js directly — under PM2 cluster mode each instance
+    // is already a cluster worker, so cluster.js is a redundant passthrough.
+    script: 'index.js',
 
     // Instances: 'max' uses all CPU cores.
     // For 1M users, PM2 handles clustering directly (no need for cluster.js

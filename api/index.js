@@ -527,7 +527,7 @@ try {
 
 // Only run schedulers on the first worker in cluster mode to avoid
 // 8× duplicate execution. In single-process mode (no cluster), always run.
-const isPrimaryWorker = !process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0';
+const isPrimaryWorker = require('./utils/isPrimaryWorker');
 
 if (isPrimaryWorker) {
   console.log('[scheduler] This worker will run cron schedulers (NODE_APP_INSTANCE=' + (process.env.NODE_APP_INSTANCE || 'none') + ')');
@@ -1044,70 +1044,82 @@ const server = app.listen(PORT, "0.0.0.0" , async () => {
   console.log(`✅ Backend server listening on http://0.0.0.0:${PORT}`);
   try {
     await sequelize.authenticate();
-    // Seed incident categories lookup tables after DB is confirmed ready
-    try {
-      await incidentCategoriesRouter.ensureIncidentCategoryTables();
-      console.log('✅ Incident categories tables ensured & seeded');
-    } catch (e) {
-      console.error('❌ Incident categories seed failed:', e.message);
-    }
-    // Seed incident severity levels lookup table
-    try {
-      await incidentSeverityRouter.ensureIncidentSeverityTables();
-      console.log('✅ Incident severity levels ensured & seeded');
-    } catch (e) {
-      console.error('❌ Incident severity levels seed failed:', e.message);
-    }
-    // Ensure incident_logs table exists after DB is confirmed ready
-    try {
-      await incidentLogsRouter.ensureIncidentLogsTable();
-      console.log('✅ Incident logs table ensured');
-    } catch (e) {
-      console.error('❌ Incident logs table ensure failed:', e.message);
-    }
-    // Backfill patrol_code for existing patrols with NULL codes
-    try {
-      await patrolRoutes.backfillPatrolCodes();
-      console.log('✅ Patrol codes backfilled');
-    } catch (e) {
-      console.error('❌ Patrol code backfill failed:', e.message);
+    // One-time schema setup/backfills run ONLY on the primary worker.
+    // Running them in every cluster worker makes 8 workers race the same
+    // DDL (CREATE INDEX IF NOT EXISTS, REFRESH, etc.) → catalog lock
+    // contention, "Unknown constraint error" and pool acquire timeouts.
+    if (isPrimaryWorker) {
+      // Seed incident categories lookup tables after DB is confirmed ready
+      try {
+        await incidentCategoriesRouter.ensureIncidentCategoryTables();
+        console.log('✅ Incident categories tables ensured & seeded');
+      } catch (e) {
+        console.error('❌ Incident categories seed failed:', e.message);
+      }
+      // Seed incident severity levels lookup table
+      try {
+        await incidentSeverityRouter.ensureIncidentSeverityTables();
+        console.log('✅ Incident severity levels ensured & seeded');
+      } catch (e) {
+        console.error('❌ Incident severity levels seed failed:', e.message);
+      }
+      // Ensure incident_logs table exists after DB is confirmed ready
+      try {
+        await incidentLogsRouter.ensureIncidentLogsTable();
+        console.log('✅ Incident logs table ensured');
+      } catch (e) {
+        console.error('❌ Incident logs table ensure failed:', e.message);
+      }
+      // Backfill patrol_code for existing patrols with NULL codes
+      try {
+        await patrolRoutes.backfillPatrolCodes();
+        console.log('✅ Patrol codes backfilled');
+      } catch (e) {
+        console.error('❌ Patrol code backfill failed:', e.message);
+      }
     }
   } catch (err) {
     console.error('❌ Database connection failed:', err.message);
   }
 
-  // Connect to MongoDB
+  // Connect to MongoDB (every worker needs its own connection)
   try {
     await connectMongo();
     console.log('✅ MongoDB connected successfully');
-    const MongoImage = require('./models/Image');
-    await MongoImage.ensurePatrolNotesField();
-    console.log('✅ Patrol image notes field ensured');
+    if (isPrimaryWorker) {
+      const MongoImage = require('./models/Image');
+      await MongoImage.ensurePatrolNotesField();
+      console.log('✅ Patrol image notes field ensured');
+    }
   } catch (err) {
     console.error('❌ MongoDB connection/notes field check failed:', err.message);
   }
 
-  // Add database indexes (async — don't block startup)
-  try {
-    const addIndexes = require('./scripts/addIndexes');
-    addIndexes().catch(e => console.warn('⚠️ Index creation warning:', e.message));
-  } catch (e) {
-    console.warn('⚠️ Could not load addIndexes:', e.message);
+  // Add database indexes (async — don't block startup; primary worker only)
+  if (isPrimaryWorker) {
+    try {
+      const addIndexes = require('./scripts/addIndexes');
+      addIndexes().catch(e => console.warn('⚠️ Index creation warning:', e.message));
+    } catch (e) {
+      console.warn('⚠️ Could not load addIndexes:', e.message);
+    }
   }
 
-  // Seed AuditLog counter with current max logId
-  try {
-    const AuditLog = require('./models/AuditLog');
-    const Counter = require('mongoose').model('AuditLogCounter');
-    const lastDoc = await AuditLog.findOne({}, {}, { sort: { logId: -1 } });
-    const currentMax = lastDoc && lastDoc.logId ? lastDoc.logId : 0;
-    await Counter.findByIdAndUpdate(
-      { _id: 'auditLog' },
-      { $max: { seq: currentMax } },
-      { upsert: true, setDefaultsOnInsert: true }
-    );
-  } catch (err) {
-    console.error('⚠️ AuditLog counter seed failed:', err.message);
+  // Seed AuditLog counter with current max logId (primary worker only)
+  if (isPrimaryWorker) {
+    try {
+      const AuditLog = require('./models/AuditLog');
+      const Counter = require('mongoose').model('AuditLogCounter');
+      const lastDoc = await AuditLog.findOne({}, {}, { sort: { logId: -1 } });
+      const currentMax = lastDoc && lastDoc.logId ? lastDoc.logId : 0;
+      await Counter.findByIdAndUpdate(
+        { _id: 'auditLog' },
+        { $max: { seq: currentMax } },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+    } catch (err) {
+      console.error('⚠️ AuditLog counter seed failed:', err.message);
+    }
   }
 
 

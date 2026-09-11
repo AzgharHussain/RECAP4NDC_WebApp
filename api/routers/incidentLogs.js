@@ -112,9 +112,12 @@ async function ensureIncidentLogsTable() {
   `);
 }
 
-ensureIncidentLogsTable().catch((err) => {
-  console.error('Failed to ensure incident_logs table:', err.message);
-});
+// Primary worker only — avoid every cluster worker racing the same DDL.
+if (require('../utils/isPrimaryWorker')) {
+  ensureIncidentLogsTable().catch((err) => {
+    console.error('Failed to ensure incident_logs table:', err.message);
+  });
+}
 
 // ─────────────────────────────────────────────────────────
 // Generate a human-readable incident_code:
@@ -193,10 +196,12 @@ async function backfillIncidentCodes() {
   console.log(`[incident_code backfill] Updated ${updated} of ${missing.rows.length} incident(s).`);
 }
 
-// Run backfill on module load (server start)
-backfillIncidentCodes().catch((err) => {
-  console.error('[incident_code backfill] Failed:', err.message);
-});
+// Run backfill on module load (server start) — primary worker only.
+if (require('../utils/isPrimaryWorker')) {
+  backfillIncidentCodes().catch((err) => {
+    console.error('[incident_code backfill] Failed:', err.message);
+  });
+}
 
 // ─────────────────────────────────────────────────────────
 // Helper: format timestamp to IST

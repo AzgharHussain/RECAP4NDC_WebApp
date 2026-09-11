@@ -180,9 +180,12 @@ async function ensureIncidentCategoryTables() {
   }
 }
 
-ensureIncidentCategoryTables().catch((err) => {
-  console.error('Failed to ensure incident category tables:', err.message);
-});
+// Primary worker only — avoid every cluster worker racing the same DDL.
+if (require('../utils/isPrimaryWorker')) {
+  ensureIncidentCategoryTables().catch((err) => {
+    console.error('Failed to ensure incident category tables:', err.message);
+  });
+}
 
 // ─────────────────────────────────────────────────────────
 // GET /api/incident-categories

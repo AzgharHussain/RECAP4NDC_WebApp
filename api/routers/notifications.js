@@ -179,14 +179,18 @@ async function createNotificationTables() {
 // createNotificationTables() runs ALTER TABLE, CREATE INDEX, UPDATE — these
 // take exclusive locks and block the pool. Running them at module load time
 // (before app.listen) starves other startup code and hangs the server.
-console.log('[notifications] Module loaded. Table setup deferred 5s to let server bind first.');
-setTimeout(() => {
-  createNotificationTables().catch(err => console.error('[notifications] startup table setup failed:', err.message));
-  // Run default note cleanup after table setup (30s delay for safety)
+// Primary worker only — 8 cluster workers running the same DDL/UPDATE
+// at startup causes lock contention and pool acquire timeouts.
+if (require('../utils/isPrimaryWorker')) {
+  console.log('[notifications] Module loaded. Table setup deferred 5s to let server bind first.');
   setTimeout(() => {
-    cleanupDefaultNotes().catch(err => console.error('[notifications] startup note cleanup failed:', err.message));
-  }, 30000);
-}, 5000);
+    createNotificationTables().catch(err => console.error('[notifications] startup table setup failed:', err.message));
+    // Run default note cleanup after table setup (30s delay for safety)
+    setTimeout(() => {
+      cleanupDefaultNotes().catch(err => console.error('[notifications] startup note cleanup failed:', err.message));
+    }, 30000);
+  }, 5000);
+}
 
 // ----------------------------------------------------
 // 4. Helper: Send Notification using Firebase Admin
