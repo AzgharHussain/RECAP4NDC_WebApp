@@ -829,6 +829,30 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     const page = Math.max(parseInt(pageParam) || 1, 1);
     const offset = (page - 1) * pageSize;
 
+    // Check if change_month column exists on ndvi_daily_notification_log.
+    // The column is added by the scheduler, but it may not exist yet on
+    // databases that haven't run the updated scheduler. If missing, we
+    // try to add it; if that fails (e.g. DB timeout), we query without it.
+    let hasChangeMonth = false;
+    try {
+      const colCheck = await sequelize.query(
+        `SELECT 1 FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'ndvi_daily_notification_log'
+           AND column_name = 'change_month'`,
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      hasChangeMonth = colCheck.length > 0;
+      if (!hasChangeMonth) {
+        await sequelize.query(
+          `ALTER TABLE public.ndvi_daily_notification_log ADD COLUMN IF NOT EXISTS change_month TEXT`
+        );
+        hasChangeMonth = true;
+      }
+    } catch (colErr) {
+      console.warn('[notifications] change_month column check/add failed, querying without it:', colErr.message);
+      hasChangeMonth = false;
+    }
+
     const conditions = [];
     const values = [];
 
@@ -851,6 +875,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     // Build paginated query — use $N+1 and $N+2 for LIMIT/OFFSET after filter params
     const limitIdx = values.length + 1;
     const offsetIdx = values.length + 2;
+    const changeMonthCol = hasChangeMonth ? 'd.change_month' : 'NULL::text AS change_month';
     const reportQuery = `
       SELECT
         d.id,
@@ -862,11 +887,12 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         u.range,
         u.round,
         u.beat,
-        d.notification_date::text AS notification_date,
+        TO_CHAR(d.notification_date, 'YYYY-MM-DD') AS notification_date,
         d.notification_slot,
         d.change_count,
         d.sent_at::text AS sent_at,
-        TO_CHAR(d.sent_at, 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted
+        TO_CHAR(d.sent_at, 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted,
+        ${changeMonthCol}
       FROM public.ndvi_daily_notification_log d
       LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
       LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id
@@ -912,16 +938,74 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
 
     // Annotate rows with readable slot labels and month
     // Dates are already cast to text in SQL, so they come as strings like "2026-09-10"
+    const MONTH_NAMES = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    // Convert "YYYY-MM" (e.g. "2026-08") to "August 2026"
+    const formatMonthLabel = (ym) => {
+      if (!ym || ym === '-') return '-';
+      const [y, m] = ym.split('-');
+      const idx = parseInt(m, 10) - 1;
+      if (idx >= 0 && idx < 12) return `${MONTH_NAMES[idx]} ${y}`;
+      return ym;
+    };
+    // Compute the previous calendar month from a "YYYY-MM-DD" date string.
+    // The scheduler always reports the PREVIOUS month's NDVI data, so for
+    // existing rows where change_month is NULL, we can derive it from the
+    // notification_date (the month before the notification was sent).
+    // Handles multiple date formats: "2026-09-11", "11-SEP-26", "11-Sep-2026", etc.
+    const previousMonthFromDate = (dateStr) => {
+      if (!dateStr) return null;
+      // Try parsing as YYYY-MM-DD (standard PostgreSQL text cast)
+      let match = /^(\d{4})-(\d{2})-\d{2}/.exec(dateStr);
+      if (match) {
+        let year = parseInt(match[1], 10);
+        let month = parseInt(match[2], 10) - 1;
+        if (month < 1) { month = 12; year -= 1; }
+        return `${year}-${String(month).padStart(2, '0')}`;
+      }
+      // Try parsing as DD-MMM-YY or DD-MMM-YYYY (e.g. "11-SEP-26", "11-Sep-2026")
+      const MONTH_MAP = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
+      match = /^\d{1,2}-([A-Za-z]{3})-(\d{2,4})/.exec(dateStr);
+      if (match) {
+        const mIdx = MONTH_MAP[match[1].toUpperCase()];
+        if (mIdx) {
+          let year = parseInt(match[2], 10);
+          if (year < 100) year += 2000;
+          let month = mIdx - 1;
+          if (month < 1) { month = 12; year -= 1; }
+          return `${year}-${String(month).padStart(2, '0')}`;
+        }
+      }
+      // Fallback: use Date object
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        d.setMonth(d.getMonth() - 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      }
+      return null;
+    };
+
     const annotatedRows = report.rows.map((row) => {
       const dateStr = row.notification_date || '';
       // Extract YYYY-MM from the date string (handles both "2026-09-10" and "2026-09-10T00:00:00.000Z")
       const monthStr = dateStr ? dateStr.slice(0, 7) : '-';
+      // change_month is the NDVI data month (YYYY-MM) extracted from the
+      // NDVI Change table name — this is the month the vegetation changes
+      // belong to, NOT the month the notification was sent.
+      // For existing rows where change_month is NULL, derive it from the
+      // notification_date (previous month = the data month the scheduler
+      // would have reported).
+      const changeMonth = row.change_month || previousMonthFromDate(dateStr.slice(0, 10));
       return {
         ...row,
         notification_date: dateStr ? dateStr.slice(0, 10) : null,
         slot_label: SLOT_LABELS[row.notification_slot] || `Slot ${row.notification_slot}`,
         month: monthStr,
         village: row.village_name || '-',
+        change_month: changeMonth,
+        change_month_label: changeMonth ? formatMonthLabel(changeMonth) : '-',
       };
     });
 

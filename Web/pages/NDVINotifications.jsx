@@ -67,6 +67,7 @@ const TEXTS = {
     beat: "Beat",
     village: "Village",
     notificationDate: "Notification Date",
+    dataMonth: "Data Month",
     slot: "Slot",
     changeCount: "Changes Count",
     sentAt: "Sent At (IST)",
@@ -107,6 +108,7 @@ const TEXTS = {
     beat: "બીટ",
     village: "ગ્રામ",
     notificationDate: "સૂચના તારીખ",
+    dataMonth: "ડેટા મહિનો",
     slot: "સ્લોટ",
     changeCount: "ફેરફાર સંખ્યા",
     sentAt: "મોકલ્યો (IST)",
@@ -302,6 +304,7 @@ const NDVINotifications = () => {
         [t.beat]: item.beat || "-",
         [t.village]: item.village || item.village_name || "-",
         [t.notificationDate]: item.notification_date || "-",
+        [t.dataMonth]: item.change_month_label || "-",
         [t.slot]: item.slot_label || "-",
         [t.changeCount]: item.change_count || 0,
         [t.sentAt]: formatSentAt(item.sent_at),
@@ -482,6 +485,7 @@ const NDVINotifications = () => {
     { title: t.beat,              dataIndex: "beat",         key: "beat",         sorter: genericSorter("beat"),         render: (v) => v || "-" },
     { title: t.village,           dataIndex: "village",      key: "village",      sorter: genericSorter("village"),      render: (v) => v || "-" },
     { title: t.notificationDate,  dataIndex: "notification_date", key: "notification_date", sorter: genericSorter("notification_date"), render: (v) => v || "-" },
+    { title: t.dataMonth,         dataIndex: "change_month_label", key: "change_month_label", sorter: genericSorter("change_month"), render: (v) => v && v !== "-" ? <Tag color="purple">{v}</Tag> : "-" },
     { title: t.slot,              dataIndex: "slot_label",   key: "slot_label",   sorter: genericSorter("slot_label"),   render: (v) => v || "-" },
     {
       title: t.changeCount,
@@ -622,6 +626,7 @@ const NDVINotifications = () => {
               <Descriptions.Item label={t.village}>{detailRecord.village || detailRecord.village_name || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.coupeName}>{detailRecord.coupe_name || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.notificationDate}>{detailRecord.notification_date || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t.dataMonth}>{detailRecord.change_month_label && detailRecord.change_month_label !== "-" ? <Tag color="purple">{detailRecord.change_month_label}</Tag> : "-"}</Descriptions.Item>
               <Descriptions.Item label={t.slot}>{detailRecord.slot_label || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.changeCount}>
                 <Tag color="blue">{detailRecord.change_count || 0}</Tag>

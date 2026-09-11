@@ -91,6 +91,14 @@ async function ensureNotificationLogTable(client) {
       ADD COLUMN IF NOT EXISTS coupe_name TEXT
     `);
 
+    // Add change_month column to track which month's NDVI data was sent.
+    // Stored as YYYY-MM (e.g. "2026-08"), extracted from the NDVI Change
+    // table name prefix (e.g. "2026-08-01_Coupe_NDVI_Change").
+    await queryWithRetry(client, `
+      ALTER TABLE public.ndvi_daily_notification_log
+      ADD COLUMN IF NOT EXISTS change_month TEXT
+    `);
+
     // Ensure pixel_id is TEXT
     const colType = await queryWithRetry(client, `
       SELECT data_type
@@ -370,11 +378,11 @@ async function runNdviNotifications(admin) {
         // Log the daily notification
         await queryWithRetry(client, `
           INSERT INTO public.ndvi_daily_notification_log
-          (user_id, notification_date, notification_slot, change_count, sent_at, village_name, coupe_name)
-          VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5, $6)
+          (user_id, notification_date, notification_slot, change_count, sent_at, village_name, coupe_name, change_month)
+          VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5, $6, $7)
           ON CONFLICT (user_id, notification_date, notification_slot) DO NOTHING
         `, {
-          bind: [user_id, date, slot, totalChanges, village_name, coupe_name],
+          bind: [user_id, date, slot, totalChanges, village_name, coupe_name, monthPrefix.slice(0, 7)],
           type: sequelize.QueryTypes.INSERT
         });
 
