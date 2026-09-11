@@ -43,6 +43,9 @@ const sequelize = new Sequelize(
           // TCP keepalive + PostgreSQL session options
           keepAlive: true,
           keepAliveInitialDelayMillis: 300000,
+          // Abort connection attempts that take longer than 10s instead of
+          // hanging for the full OS TCP timeout (which can be minutes).
+          connect_timeout: Number(process.env.DB_CONNECT_TIMEOUT || 10),
           statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT || 30000),
           idle_in_transaction_session_timeout: Number(process.env.DB_IDLE_TX_TIMEOUT || 60000),
           application_name: process.env.DB_APPLICATION_NAME || 'recap4ndc_api',
@@ -50,6 +53,7 @@ const sequelize = new Sequelize(
       : {
           keepAlive: true,
           keepAliveInitialDelayMillis: 300000,
+          connect_timeout: Number(process.env.DB_CONNECT_TIMEOUT || 10),
           statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT || 30000),
           idle_in_transaction_session_timeout: Number(process.env.DB_IDLE_TX_TIMEOUT || 60000),
           application_name: process.env.DB_APPLICATION_NAME || 'recap4ndc_api',

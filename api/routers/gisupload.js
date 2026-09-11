@@ -255,8 +255,20 @@ async function fixPostgreSQLTable(tableName) {
     const { stdout: fidResult } = await runCommand(checkFidCmd, env);
 
     if (!fidResult.trim()) {
-      const createFidCmd = `${PSQL} -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL PRIMARY KEY;"`;
-      await runCommand(createFidCmd, env);
+      // Check if the table already has a primary key — if so, add fid as a
+      // plain SERIAL column (not a primary key) to avoid "multiple primary keys
+      // for table" errors on tables that were created with an explicit PK.
+      const checkPkCmd = `${PSQL} -t -c "SELECT 1 FROM pg_constraint WHERE conrelid = '${lowerTable}'::regclass AND contype = 'p' LIMIT 1;"`;
+      const { stdout: pkResult } = await runCommand(checkPkCmd, env);
+
+      if (pkResult.trim()) {
+        // Table already has a primary key — add fid without PRIMARY KEY
+        const createFidCmd = `${PSQL} -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL;"`;
+        await runCommand(createFidCmd, env);
+      } else {
+        const createFidCmd = `${PSQL} -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL PRIMARY KEY;"`;
+        await runCommand(createFidCmd, env);
+      }
     }
 
     // Create spatial index
@@ -280,6 +292,12 @@ async function fixPostgreSQLTable(tableName) {
 // --- Publish to GeoServer ---
 async function publishToGeoServer(tableName, color) {
   try {
+    // Guard: if GEOSERVER_URL is not configured, fail fast with a clear message
+    // instead of constructing invalid URLs like "undefined/rest/styles?...".
+    if (!GEOSERVER_URL) {
+      throw new Error("GEOSERVER_URL is not set in environment variables — GeoServer publish skipped.");
+    }
+
     const lowerTable = tableName.toLowerCase();
 
     const axiosInstance = axios.create({

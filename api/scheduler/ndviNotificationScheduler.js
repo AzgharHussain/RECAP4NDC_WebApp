@@ -173,11 +173,45 @@ function getCurrentSlot() {
 }
 
 /**
+ * Compute the previous calendar month's date prefix and readable label.
+ * NDVI Change tables are named like "2024-08-01_Coupe_NDVI_Change", where
+ * the leading "YYYY-MM-01" identifies the month the changes belong to.
+ *
+ * Returns { prefix: 'YYYY-MM-01', label: 'Month YYYY' }
+ *   prefix — used to filter table names (e.g. "2026-08-01")
+ *   label  — human-readable month for notification text (e.g. "August 2026")
+ */
+function getPreviousMonth() {
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth(); // 0-indexed
+  // Move to previous month
+  month -= 1;
+  if (month < 0) {
+    month = 11;
+    year -= 1;
+  }
+  const pad = (n) => String(n).padStart(2, '0');
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  return {
+    prefix: `${year}-${pad(month + 1)}-01`,
+    label: `${monthNames[month]} ${year}`,
+  };
+}
+
+/**
  * Core NDVI notification logic — DAILY 3 TIMES, ONE SUMMARY NOTIFICATION PER USER.
  *
  * Instead of sending per-pixel notifications every minute, this sends ONE
- * notification per user per slot (3 times daily) summarizing the last month's
- * NDVI changes for their subscribed village/coupe.
+ * notification per user per slot (3 times daily) summarizing the PREVIOUS
+ * calendar month's NDVI changes for their subscribed village/coupe.
+ *
+ * NDVI Change tables are named like "2026-08-01_Coupe_NDVI_Change", where
+ * the leading date identifies the month. Only tables matching the previous
+ * month are queried, so the notification text is accurate.
  *
  * Schedule: 3 cron jobs at 08:00, 13:00, 18:00 IST
  */
@@ -190,19 +224,22 @@ async function runNdviNotifications(admin) {
     await cleanupDefaultNotes(client);
 
     const { slot, date } = getCurrentSlot();
+    const { prefix: monthPrefix, label: monthLabel } = getPreviousMonth();
 
     // ------------------------------------------------
-    // 1️⃣ Get NDVI tables
+    // 1️⃣ Get NDVI tables — only those for the previous month
+    //    Table names look like "2026-08-01_Coupe_NDVI_Change", so we filter
+    //    by the leading YYYY-MM-01 date prefix.
     // ------------------------------------------------
     const tables = await queryWithRetry(client, `
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema='public'
-      AND table_name LIKE '%_NDVI_Change'
+      AND table_name LIKE '${monthPrefix}%_NDVI_Change'
     `, { type: sequelize.QueryTypes.SELECT });
 
     if (!tables.length) {
-      console.log('[ndvi-scheduler] No NDVI Change tables found.');
+      console.log(`[ndvi-scheduler] No NDVI Change tables found for ${monthLabel} (${monthPrefix}).`);
       return;
     }
 
@@ -220,7 +257,7 @@ async function runNdviNotifications(admin) {
       return;
     }
 
-    console.log(`[ndvi-scheduler] Daily slot ${slot} run — checking ${tables.length} table(s) for ${users.length} user(s)...`);
+    console.log(`[ndvi-scheduler] Daily slot ${slot} run — ${monthLabel}: checking ${tables.length} table(s) for ${users.length} user(s)...`);
 
     // ------------------------------------------------
     // 3️⃣ For each user, collect last month's changes and send ONE summary notification
@@ -310,7 +347,7 @@ async function runNdviNotifications(admin) {
         token: firebase_token,
         notification: {
           title: `NDVI Alert 🌿 — ${totalChanges} change(s) detected`,
-          body: `${totalChanges} vegetation change(s) detected in ${village_name} in the last month. Tap to view details.`
+          body: `${totalChanges} vegetation change(s) detected in ${village_name} for ${monthLabel}. Tap to view details.`
         },
         data: {
           type: 'ndvi_summary',
@@ -320,7 +357,9 @@ async function runNdviNotifications(admin) {
           table_name: primaryTableName,
           total_changes: String(totalChanges),
           notification_date: date,
-          notification_slot: String(slot)
+          notification_slot: String(slot),
+          change_month: monthPrefix,
+          change_month_label: monthLabel
         }
       };
 
@@ -339,7 +378,7 @@ async function runNdviNotifications(admin) {
           type: sequelize.QueryTypes.INSERT
         });
 
-        console.log(`[ndvi-scheduler] Sent summary notification to user ${user_id}: ${totalChanges} changes in ${village_name}`);
+        console.log(`[ndvi-scheduler] Sent summary notification to user ${user_id}: ${totalChanges} changes in ${village_name} for ${monthLabel}`);
 
       } catch (err) {
         const isCredentialError = err.message && (
@@ -379,7 +418,7 @@ async function runNdviNotifications(admin) {
       }
     }
 
-    console.log(`[ndvi-scheduler] Daily slot ${slot} run completed. ${notificationsSent} notification(s) sent.`);
+    console.log(`[ndvi-scheduler] Daily slot ${slot} run completed (${monthLabel}). ${notificationsSent} notification(s) sent.`);
   } catch (err) {
     console.error("[ndvi-scheduler] Scheduler error:", err);
   }
@@ -400,7 +439,7 @@ module.exports = function startNdviScheduler(admin) {
 
   // ───────────────────────────────────────────────────────────────
   // Daily 3 times: 08:00, 13:00, 18:00 (server local time)
-  // One summary notification per user with last month's changes.
+  // One summary notification per user with the previous month's changes.
   // ───────────────────────────────────────────────────────────────
   cron.schedule("0 8 * * *", async () => {
     console.log('[ndvi-scheduler] Cron tick (08:00) — running daily summary...');

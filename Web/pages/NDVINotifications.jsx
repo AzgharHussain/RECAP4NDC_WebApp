@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Button, Card, Col, DatePicker, Descriptions, Input, Modal, Row, Select, Space, Statistic, Table, Tag, Tooltip, message } from "antd";
-import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, EditOutlined, TableOutlined } from "@ant-design/icons";
+import { Button, Card, Col, DatePicker, Descriptions, Modal, Row, Select, Space, Statistic, Table, Tag, Tooltip, message } from "antd";
+import { DownloadOutlined, EyeOutlined, EnvironmentOutlined, ReloadOutlined, SearchOutlined, TableOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -38,13 +38,12 @@ const formatSentAt = (value) => {
 
 // Normalize status from NDVI change tables.
 // The `status` column in NDVI Change tables is a boolean:
-//   true  → "Resolved" (action taken)
-//   false → "Pending"
-// String values ("Pending", "Resolved", "Under Review", "False Positive") pass through.
+//   true  → "No Action Taken"
+//   false → "Action Taken"
 const normalizeStatus = (v) => {
-  if (v === true) return "Resolved";
-  if (v === false) return "Pending";
-  if (v == null || v === "") return "Pending";
+  if (v === true) return "No Action Taken";
+  if (v === false) return "Action Taken";
+  if (v == null || v === "") return "No Action Taken";
   return String(v);
 };
 
@@ -86,6 +85,9 @@ const TEXTS = {
     noData: "No notification data available to export",
     startDate: "Start Date",
     endDate: "End Date",
+    // NDVI Changes status labels
+    noActionTaken: "No Action Taken",
+    actionTaken: "Action Taken",
   },
   gu: {
     pageTitle: "NDVI સૂચનાઓ",
@@ -123,12 +125,25 @@ const TEXTS = {
     noData: "નિકાસ માટે કોઈ સૂચના ડેટા ઉપલબ્ધ નથી",
     startDate: "શરૂઆત તારીખ",
     endDate: "સમાપ્તિ તારીખ",
+    // NDVI Changes status labels
+    noActionTaken: "કોઈ ક્રિયા લેવાયેલ નથી",
+    actionTaken: "ક્રિયા લેવાયેલ",
   },
 };
 
 const NDVINotifications = () => {
   const { language } = useLanguage();
   const t = TEXTS[language] || TEXTS.en;
+
+  // Translate a normalized status string to the active language.
+  const statusLabel = (normalized) => {
+    if (normalized === "No Action Taken") return t.noActionTaken;
+    if (normalized === "Action Taken") return t.actionTaken;
+    return normalized;
+  };
+
+  // Tag color for a normalized status.
+  const statusColor = (normalized) => (normalized === "Action Taken" ? "success" : "warning");
 
   // Check if the logged-in user has a division to lock
   // Use state + useEffect to avoid stale reads when component mounts before
@@ -163,12 +178,7 @@ const NDVINotifications = () => {
   const markerRef = useRef(null);
   const wmsLayerRef = useRef(null);
 
-  // ── Status update modal state ──
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [statusForm, setStatusForm] = useState({ status: "Pending", note: "" });
-  const [statusUpdating, setStatusUpdating] = useState(false);
-
-  // ── Point details modal state (note + image for False Positive) ──
+  // ── Point details modal state (note + image) ──
   const [pointDetailOpen, setPointDetailOpen] = useState(false);
   const [pointDetailRecord, setPointDetailRecord] = useState(null);
   const [pointDetailLoading, setPointDetailLoading] = useState(false);
@@ -406,46 +416,6 @@ const NDVINotifications = () => {
       // Invalidate size in case modal just opened
       mapInstanceRef.current.invalidateSize();
     }, 200);
-  };
-
-  // ── Open status update modal ──
-  const openStatusModal = (point) => {
-    setSelectedPoint(point);
-    setStatusForm({ status: normalizeStatus(point.status), note: point.note || "" });
-    setStatusModalOpen(true);
-  };
-
-  // ── Update point status via API ──
-  const updatePointStatus = async () => {
-    if (!selectedPoint) return;
-    setStatusUpdating(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/ndvi-changes/status`, {
-        method: "PUT",
-        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          table_name: selectedPoint.table_name,
-          pixel_id: selectedPoint.pixel_id,
-          status: statusForm.status,
-          note: statusForm.note,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || json.error || "Failed to update status");
-      message.success("Status updated successfully");
-      // Update the changes table locally
-      setChangesData(prev => prev.map(item =>
-        item.table_name === selectedPoint.table_name && item.pixel_id === selectedPoint.pixel_id
-          ? { ...item, status: statusForm.status, note: statusForm.note }
-          : item
-      ));
-      setStatusModalOpen(false);
-    } catch (err) {
-      console.error(err);
-      message.error(err.message || "Failed to update status");
-    } finally {
-      setStatusUpdating(false);
-    }
   };
 
   // ── Cleanup map on modal close ──
@@ -707,7 +677,7 @@ const NDVINotifications = () => {
                 { title: "Village", dataIndex: "village", key: "village", width: 100, render: v => v || "-" },
                 { title: "NDVI Change", dataIndex: "NDVI_change", key: "NDVI_change", width: 90, render: v => v != null ? Number(v).toFixed(4) : "-" },
                 { title: "Category", dataIndex: "change_category", key: "change_category", width: 90, render: v => v || "-" },
-                { title: "Status", dataIndex: "status", key: "status", width: 90, render: (v) => { const s = normalizeStatus(v); return <Tag color={s === "Resolved" ? "success" : s === "Under Review" ? "processing" : s === "False Positive" ? "error" : "warning"}>{s}</Tag>; } },
+                { title: "Status", dataIndex: "status", key: "status", width: 120, render: (v) => { const s = normalizeStatus(v); return <Tag color={statusColor(s)}>{statusLabel(s)}</Tag>; } },
                 {
                   title: "Action",
                   key: "action",
@@ -715,10 +685,7 @@ const NDVINotifications = () => {
                   render: (_, record) => (
                     <Space size="small">
                       <Button size="small" type="link" icon={<EnvironmentOutlined />} onClick={() => handleSelectPoint(record)}>Zoom</Button>
-                      <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openStatusModal(record)}>Update</Button>
-                      {normalizeStatus(record.status) === "False Positive" && (
-                        <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => showPointDetails(record)}>Details</Button>
-                      )}
+                      <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => showPointDetails(record)}>Details</Button>
                     </Space>
                   ),
                 },
@@ -752,59 +719,16 @@ const NDVINotifications = () => {
                 <Descriptions.Item label="Latitude">{selectedPoint.latitude || "-"}</Descriptions.Item>
                 <Descriptions.Item label="Longitude">{selectedPoint.longitude || "-"}</Descriptions.Item>
                 <Descriptions.Item label="NDVI Change">{selectedPoint.NDVI_change != null ? Number(selectedPoint.NDVI_change).toFixed(4) : "-"}</Descriptions.Item>
-                <Descriptions.Item label="Status"><Tag color={normalizeStatus(selectedPoint.status) === "Resolved" ? "success" : "warning"}>{normalizeStatus(selectedPoint.status)}</Tag></Descriptions.Item>
+                <Descriptions.Item label="Status"><Tag color={statusColor(normalizeStatus(selectedPoint.status))}>{statusLabel(normalizeStatus(selectedPoint.status))}</Tag></Descriptions.Item>
               </Descriptions>
             )}
           </Col>
         </Row>
       </Modal>
 
-      {/* ── Status update modal ── */}
+      {/* ── Point details modal (note + image) ── */}
       <Modal
-        title="Update NDVI Point Status"
-        open={statusModalOpen}
-        onCancel={() => setStatusModalOpen(false)}
-        onOk={updatePointStatus}
-        confirmLoading={statusUpdating}
-        okText="Update"
-      >
-        {selectedPoint && (
-          <div>
-            <Descriptions bordered size="small" column={1} style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="Table">{selectedPoint.table_name}</Descriptions.Item>
-              <Descriptions.Item label="Pixel ID">{selectedPoint.pixel_id}</Descriptions.Item>
-              <Descriptions.Item label="Village">{selectedPoint.village || "-"}</Descriptions.Item>
-            </Descriptions>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Status</label>
-              <Select
-                style={{ width: "100%" }}
-                value={statusForm.status}
-                onChange={(v) => setStatusForm(prev => ({ ...prev, status: v }))}
-                options={[
-                  { value: "Pending", label: "Pending" },
-                  { value: "Under Review", label: "Under Review" },
-                  { value: "Resolved", label: "Resolved" },
-                  { value: "False Positive", label: "False Positive" },
-                ]}
-              />
-            </div>
-            <div>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Note / Action Taken</label>
-              <Input.TextArea
-                rows={4}
-                value={statusForm.note}
-                onChange={(e) => setStatusForm(prev => ({ ...prev, note: e.target.value }))}
-                placeholder="Enter action taken or notes..."
-              />
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* ── Point details modal (note + image for False Positive) ── */}
-      <Modal
-        title="Point Details — False Positive"
+        title="Point Details"
         open={pointDetailOpen}
         onCancel={() => setPointDetailOpen(false)}
         footer={null}
@@ -822,7 +746,7 @@ const NDVINotifications = () => {
                   <Descriptions.Item label="NDVI Change">{pointDetailRecord.NDVI_change != null ? Number(pointDetailRecord.NDVI_change).toFixed(4) : "-"}</Descriptions.Item>
                   <Descriptions.Item label="Category">{pointDetailRecord.change_category || "-"}</Descriptions.Item>
                   <Descriptions.Item label="Status">
-                    <Tag color="error">{normalizeStatus(pointDetailRecord.status)}</Tag>
+                    <Tag color={statusColor(normalizeStatus(pointDetailRecord.status))}>{statusLabel(normalizeStatus(pointDetailRecord.status))}</Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Latitude">{pointDetailRecord.latitude || "-"}</Descriptions.Item>
                   <Descriptions.Item label="Longitude" span={2}>{pointDetailRecord.longitude || "-"}</Descriptions.Item>
