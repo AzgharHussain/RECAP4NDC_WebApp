@@ -407,7 +407,11 @@ async function runNdviNotifications(admin) {
         const isInvalidToken =
           err.code === "messaging/registration-token-not-registered" ||
           err.code === "messaging/invalid-registration-token" ||
-          (err.message && err.message.includes("Requested entity was not found"));
+          (err.errorInfo && err.errorInfo.code === "messaging/registration-token-not-registered") ||
+          (err.message && (
+            err.message.includes("Requested entity was not found") ||
+            err.message.includes("NotRegistered")
+          ));
 
         if (isInvalidToken) {
           try {

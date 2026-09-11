@@ -638,7 +638,11 @@ router.post("/send-notification", verifyJwt, upload.none(), async (req, res) => 
       const isInvalidToken =
         sendErr.code === 'messaging/registration-token-not-registered' ||
         sendErr.code === 'messaging/invalid-registration-token' ||
-        (sendErr.message && sendErr.message.includes('Requested entity was not found'));
+        (sendErr.errorInfo && sendErr.errorInfo.code === 'messaging/registration-token-not-registered') ||
+        (sendErr.message && (
+          sendErr.message.includes('Requested entity was not found') ||
+          sendErr.message.includes('NotRegistered')
+        ));
 
       if (isInvalidToken) {
         try {
@@ -1037,7 +1041,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       if (tableNames.length) {
         const colRows = await sequelize.query(
           `SELECT table_name, column_name FROM information_schema.columns
-           WHERE table_schema = 'public' AND table_name = ANY(:tableNames)`,
+           WHERE table_schema = 'public' AND table_name IN (:tableNames)`,
           { replacements: { tableNames }, type: sequelize.QueryTypes.SELECT }
         );
         const colsByTable = {};
