@@ -5,7 +5,8 @@ import {
   Space, Spin, Alert, message 
 } from "antd";
 import {
-  SearchOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, DownloadOutlined
+  SearchOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, DownloadOutlined,
+  LeftOutlined, RightOutlined
 } from "@ant-design/icons";
 import { FaCalendarCheck, FaRoute, FaUsers, FaSun, FaMoon, FaShieldAlt, FaUserTie, FaTrophy, FaMapMarkedAlt } from "react-icons/fa";
 import "./PatrolIncidentLogs.css";
@@ -687,6 +688,8 @@ const PatrolIncidentLogs = () => {
   const [dashboardData, setDashboardData] = useState([]);
   const [selectedPatrol, setSelectedPatrol] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  // Image viewer: { open, index } — index into selectedPatrol.images
+  const [imageViewer, setImageViewer] = useState({ open: false, index: 0 });
   const [isExportConfirmVisible, setIsExportConfirmVisible] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -1562,6 +1565,59 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     document.body.removeChild(link);
   };
 
+  // ── Image viewer with Prev/Next navigation ──────────────────────────
+  const patrolImages = selectedPatrol?.images || [];
+  const viewerImage = patrolImages[imageViewer.index] || null;
+
+  const openImageViewer = (index) => setImageViewer({ open: true, index });
+  const closeImageViewer = () => setImageViewer((v) => ({ ...v, open: false }));
+  const showPrevImage = () =>
+    setImageViewer((v) => ({ ...v, index: Math.max(0, v.index - 1) }));
+  const showNextImage = () =>
+    setImageViewer((v) => ({ ...v, index: Math.min(patrolImages.length - 1, v.index + 1) }));
+
+  // Arrow keys / Escape while the viewer is open
+  useEffect(() => {
+    if (!imageViewer.open) return;
+    const onKey = (e) => {
+      if (e.key === 'ArrowLeft') {
+        setImageViewer((v) => ({ ...v, index: Math.max(0, v.index - 1) }));
+      } else if (e.key === 'ArrowRight') {
+        setImageViewer((v) => ({
+          ...v,
+          index: Math.min((selectedPatrol?.images?.length || 1) - 1, v.index + 1),
+        }));
+      } else if (e.key === 'Escape') {
+        setImageViewer((v) => ({ ...v, open: false }));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [imageViewer.open, selectedPatrol]);
+
+  const getPatrolImageLabel = (image, index) => {
+    if (language === "gu") {
+      switch (image.image_category) {
+        case 'start_image': return 'શરૂઆતની છબી';
+        case 'end_image': return 'અંતિમ છબી';
+        default:
+          if (image.image_category && image.image_category.startsWith('image_')) {
+            return `છબી ${image.image_category.replace('image_', '')}`;
+          }
+          return `છબી ${index + 1}`;
+      }
+    }
+    switch (image.image_category) {
+      case 'start_image': return 'Start Image';
+      case 'end_image': return 'End Image';
+      default:
+        if (image.image_category && image.image_category.startsWith('image_')) {
+          return `Image ${image.image_category.replace('image_', '')}`;
+        }
+        return `Image ${index + 1}`;
+    }
+  };
+
   const getExportFilterSummary = () => [
     `${language === "gu" ? "અધિકારીનું નામ" : "Officer Name"}: ${searchText || "All"}`,
     `${language === "gu" ? "વિભાગ" : "Division"}: ${divisionFilter || "All"}`,
@@ -2346,7 +2402,10 @@ const exportTableToExcel = async () => {
       
       <Modal
         open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={() => {
+          setIsModalVisible(false);
+          setImageViewer({ open: false, index: 0 });
+        }}
         footer={null}
         width={800}
         title={
@@ -2372,9 +2431,9 @@ const exportTableToExcel = async () => {
                       <h4 style={{ marginBottom: 12, color: '#0066cc', borderTop: '1px solid #e0e0e0', paddingTop: 12 }}>
                         {language === "gu" ? "નોંધ સાથેની છબીઓ" : "Images with Notes"} ({selectedPatrol.images.filter(img => img.note).length})
                       </h4>
-                      <Image.PreviewGroup>
                       <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
-                        {selectedPatrol.images.filter(img => img.note).map((image, index) => {
+                        {selectedPatrol.images.map((image, index) => {
+                          if (!image.note) return null;
                           const getImageLabel = () => {
                             if (language === "gu") {
                               switch(image.image_category) {
@@ -2410,30 +2469,23 @@ const exportTableToExcel = async () => {
                                 height: '100%',
                                 background: '#f0f6ff'
                               }}>
-                                <Image
-                                  src={`data:${image.image_type};base64,${image.image_data}`}
-                                  alt={getImageLabel()}
-                                  style={{
-                                    width: 170,
-                                    height: 150,
-                                    objectFit: 'cover',
-                                    borderRadius: 2
-                                  }}
-                                  preview={{
-                                    mask: (
-                                      <div style={{
-                                        color: '#fff',
-                                        fontSize: 12,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        height: '100%'
-                                      }}>
-                                        {language === "gu" ? "જૂઓ" : "View"}
-                                      </div>
-                                    )
-                                  }}
-                                />
+                                <div className="patrol-thumb" onClick={() => openImageViewer(index)}>
+                                  <Image
+                                    src={`data:${image.image_type};base64,${image.image_data}`}
+                                    alt={getImageLabel()}
+                                    preview={false}
+                                    style={{
+                                      width: 170,
+                                      height: 150,
+                                      objectFit: 'cover',
+                                      borderRadius: 2,
+                                      display: 'block'
+                                    }}
+                                  />
+                                  <div className="patrol-thumb__mask">
+                                    {language === "gu" ? "જૂઓ" : "View"}
+                                  </div>
+                                </div>
                                 <div style={{
                                   fontSize: 10,
                                   color: '#666',
@@ -2469,7 +2521,6 @@ const exportTableToExcel = async () => {
                           );
                         })}
                       </Row>
-                      </Image.PreviewGroup>
                     </>
                   )}
 
@@ -2477,7 +2528,6 @@ const exportTableToExcel = async () => {
                   <h4 style={{ marginBottom: 12 }}>
                     {language === "gu" ? "પેટ્રોલ છબીઓ" : "Patrol Images"} ({selectedPatrol.images.length})
                   </h4>
-                  <Image.PreviewGroup>
                   <Row gutter={[8, 8]}>
                     {selectedPatrol.images.map((image, index) => {
                       const getImageLabel = () => {
@@ -2514,30 +2564,23 @@ const exportTableToExcel = async () => {
                             padding: 4,
                             height: '100%'
                           }}>
-                            <Image
-                              src={`data:${image.image_type};base64,${image.image_data}`}
-                              alt={getImageLabel()}
-                              style={{
-                                width: 170,
-                                height: 150,
-                                objectFit: 'cover',
-                                borderRadius: 2
-                              }}
-                              preview={{
-                                mask: (
-                                  <div style={{
-                                    color: '#fff',
-                                    fontSize: 12,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%'
-                                  }}>
-                                    {language === "gu" ? "જૂઓ" : "View"}
-                                  </div>
-                                )
-                              }}
-                            />
+                            <div className="patrol-thumb" onClick={() => openImageViewer(index)}>
+                              <Image
+                                src={`data:${image.image_type};base64,${image.image_data}`}
+                                alt={getImageLabel()}
+                                preview={false}
+                                style={{
+                                  width: 170,
+                                  height: 150,
+                                  objectFit: 'cover',
+                                  borderRadius: 2,
+                                  display: 'block'
+                                }}
+                              />
+                              <div className="patrol-thumb__mask">
+                                {language === "gu" ? "જૂઓ" : "View"}
+                              </div>
+                            </div>
                             <div style={{
                               fontSize: 10,
                               color: '#666',
@@ -2576,7 +2619,6 @@ const exportTableToExcel = async () => {
                       );
                     })}
                   </Row>
-                  </Image.PreviewGroup>
                 </>
               ) : (
                 <div style={{
@@ -2596,6 +2638,78 @@ const exportTableToExcel = async () => {
               <PatrolMap patrol={selectedPatrol} />
             </div>
           </>
+        )}
+      </Modal>
+
+      {/* ── Image viewer with Previous / Next navigation ── */}
+      <Modal
+        open={imageViewer.open && patrolImages.length > 0}
+        onCancel={closeImageViewer}
+        footer={null}
+        centered
+        width={760}
+        zIndex={2000}
+        title={
+          viewerImage
+            ? `${getPatrolImageLabel(viewerImage, imageViewer.index)} (${imageViewer.index + 1} / ${patrolImages.length})`
+            : ''
+        }
+      >
+        {viewerImage && (
+          <div>
+            <div style={{
+              position: 'relative',
+              textAlign: 'center',
+              background: '#111',
+              borderRadius: 4,
+              padding: '12px 64px'
+            }}>
+              <img
+                src={`data:${viewerImage.image_type};base64,${viewerImage.image_data}`}
+                alt={getPatrolImageLabel(viewerImage, imageViewer.index)}
+                style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }}
+              />
+              <Button
+                shape="circle"
+                size="large"
+                icon={<LeftOutlined />}
+                disabled={imageViewer.index === 0}
+                onClick={showPrevImage}
+                style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }}
+              />
+              <Button
+                shape="circle"
+                size="large"
+                icon={<RightOutlined />}
+                disabled={imageViewer.index >= patrolImages.length - 1}
+                onClick={showNextImage}
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}
+              />
+            </div>
+
+            {viewerImage.note && (
+              <div style={{
+                marginTop: 12,
+                padding: '8px 12px',
+                background: '#e6f0ff',
+                borderRadius: 4,
+                color: '#0066cc',
+                fontWeight: 600,
+                wordBreak: 'break-word'
+              }}>
+                {language === "gu" ? "નોંધ" : "Note"}: {viewerImage.note}
+              </div>
+            )}
+
+            <div style={{ marginTop: 12, textAlign: 'right' }}>
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={() => downloadBase64Image(viewerImage, `patrol_${selectedPatrol?.patrol_id || 'image'}_${viewerImage.image_category || imageViewer.index + 1}`)}
+              >
+                {language === "gu" ? "ડાઉનલોડ" : "Download"}
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
       

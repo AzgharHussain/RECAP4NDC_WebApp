@@ -2,6 +2,33 @@ body {
   font-family: arial !important;
 }
 
+/* Clickable patrol image thumbnail — shows a "View" mask on hover */
+.patrol-thumb {
+  position: relative;
+  cursor: pointer;
+}
+
+.patrol-thumb__mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.patrol-thumb:hover .patrol-thumb__mask {
+  opacity: 1;
+}
+
 /* If you need to override other Ant Design text elements */
 .ant-col,
 .ant-typography,

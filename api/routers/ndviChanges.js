@@ -118,6 +118,7 @@ router.get("/user/:user_id", verifyJwt, async (req, res) => {
           `SELECT ${selectCols}, :tableName AS table_name
            FROM public."${table_name}"
            WHERE ${colSet.has('village') ? '"village" = :villageName' : '1=1'}
+             ${colSet.has('NDVI_change') ? 'AND "NDVI_change" <= -0.4' : ''}
            ORDER BY "NDVI_change" DESC
            LIMIT :limit`,
           {
@@ -368,7 +369,10 @@ router.get("/village", verifyJwt, async (req, res) => {
       colSet.has('beat') ? '"beat"' : 'NULL::text AS beat',
     ].join(', ');
 
-    const villageWhere = colSet.has('village') ? '"village" = :villageName' : '1=1';
+    // Only send real degradation points — NDVI_change of -0.4 or lower
+    // (-0.4, -0.5, -0.6 ...). -0.3, -0.2 etc. are excluded.
+    const villageWhere = (colSet.has('village') ? '"village" = :villageName' : '1=1')
+      + (colSet.has('NDVI_change') ? ' AND "NDVI_change" <= -0.4' : '');
 
     // Run the paginated data query and the count query in parallel
     const [records, countRows] = await Promise.all([
