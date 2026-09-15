@@ -16,7 +16,7 @@
  * For file uploads (large payloads), use apiClient.post(url, body, { timeout: 120000 })
  */
 import axios from 'axios';
-import { autoLogout } from './authUtils';
+import { autoLogout } from './authUtils.js';
 
 // --- Configuration ---
 const DEFAULT_TIMEOUT = 30000;       // 30s for normal API calls
@@ -54,9 +54,10 @@ const apiClient = axios.create({
 const pendingGets = new Map(); // key: url+params → promise
 
 function getDedupKey(config) {
-  if (config.method !== 'get') return null;
+  if (config.method !== 'get' || config.signal) return null;
   const params = config.params ? JSON.stringify(config.params) : '';
-  return `${config.url}?${params}`;
+  const identity = config.headers?.Authorization || localStorage.getItem('token') || '';
+  return `${identity}|${config.url}?${params}`;
 }
 
 // --- Request interceptor: inject auth token ---
@@ -72,17 +73,8 @@ apiClient.interceptors.request.use(
     }
 
     // Dedup identical GET requests that are in-flight
-    const dedupKey = getDedupKey(config);
-    if (dedupKey && config._dedup !== false) {
-      const existing = pendingGets.get(dedupKey);
-      if (existing) {
-        // Return the existing promise — caller shares the same response
-        return existing.then(
-          (response) => ({ ...response, config }),
-          (error) => Promise.reject({ ...error, config })
-        );
-      }
-    }
+    // Return the existing promise — caller shares the same response
+    config.__dedupKey = getDedupKey(config);
 
     return config;
   },
@@ -113,7 +105,7 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
     const url = config.url || '';
     const isAuthEndpoint = AUTH_ENDPOINTS.some((ep) => url.includes(ep));
-    if ((status === 401 || status === 403) && !isAuthEndpoint) {
+    if (status === 401 && !isAuthEndpoint) {
       console.warn(`apiClient: received ${status} from ${url}. Auto-logging out.`);
       autoLogout();
       return Promise.reject(error);
@@ -125,7 +117,7 @@ apiClient.interceptors.response.use(
     const isTimeout = error.code === 'ECONNABORTED';
 
     // Don't retry: timeouts (could overload a struggling server), 4xx errors, auth endpoints
-    if (isTimeout || (!isNetworkError && !isServerError) || isAuthEndpoint) {
+    if (axios.isCancel(error) || config.signal?.aborted || !['get', 'head'].includes(config.method) || isTimeout || (!isNetworkError && !isServerError) || isAuthEndpoint) {
       return Promise.reject(error);
     }
 
@@ -150,7 +142,7 @@ apiClient.interceptors.response.use(
 // Override get() to support dedup at the promise level
 const originalGet = apiClient.get.bind(apiClient);
 apiClient.get = function (url, config = {}) {
-  const dedupKey = getDedupKey({ method: 'get', url, params: config.params });
+  const dedupKey = getDedupKey({ ...config, method: 'get', url });
   if (dedupKey && config._dedup !== false) {
     const existing = pendingGets.get(dedupKey);
     if (existing) {
@@ -163,6 +155,23 @@ apiClient.get = function (url, config = {}) {
     return promise;
   }
   return originalGet(url, config);
+};
+
+export const fetchWithTimeout = async (url, options = {}) => {
+  const { signal, timeout = DEFAULT_TIMEOUT, ...init } = options;
+  const controller = new AbortController();
+  const abort = () => controller.abort(signal?.reason);
+  if (signal?.aborted) abort();
+  else signal?.addEventListener('abort', abort, { once: true });
+  const timer = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), timeout);
+  try {
+    const response = await window.fetch(url, { ...init, signal: controller.signal });
+    if (response.status === 401) autoLogout();
+    return response;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
+  }
 };
 
 export default apiClient;

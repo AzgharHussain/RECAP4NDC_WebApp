@@ -658,6 +658,8 @@ const BeatPatrolCoverage = () => {
   };
 
   // ── Plantation boundaries list (searchable / filterable / sortable) ──
+  // When a month is selected, boundaries are filtered to that month (YYYY-MM).
+  // The optional date range still works as an advanced filter.
   const boundaryRows = boundaries
     .map((b) => b.data || {})
     .filter((b) => {
@@ -666,6 +668,11 @@ const BeatPatrolCoverage = () => {
         const hit = [b.name, b.table_name, b.layer_name, b.workspace]
           .some((v) => String(v || "").toLowerCase().includes(q));
         if (!hit) return false;
+      }
+      // Filter by selectedMonth (YYYY-MM) — matches boundary_date's YYYY-MM prefix
+      if (selectedMonth) {
+        const d = String(b.boundary_date || "").slice(0, 7);
+        if (!d || d !== selectedMonth) return false;
       }
       if (boundaryDateRange && boundaryDateRange[0] && boundaryDateRange[1]) {
         const start = boundaryDateRange[0].format("YYYY-MM-DD");

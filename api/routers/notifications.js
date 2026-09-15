@@ -926,7 +926,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         u.beat,
         TO_CHAR(d.notification_date, 'YYYY-MM-DD') AS notification_date,
         d.notification_slot,
-        d.change_count,
+        NULLIF(REGEXP_REPLACE(d.change_count::text, '[^0-9]', '', 'g'), '')::int AS change_count,
         d.sent_at::text AS sent_at,
         TO_CHAR(d.sent_at, 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted,
         ${changeMonthCol}
@@ -942,7 +942,7 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       SELECT
         COUNT(*)::int AS total_notifications,
         COUNT(DISTINCT d.user_id)::int AS users_received,
-        COALESCE(SUM(d.change_count), 0)::int AS total_changes
+        COALESCE(SUM(NULLIF(REGEXP_REPLACE(d.change_count::text, '[^0-9]', '', 'g'), '')::int), 0)::int AS total_changes
       FROM public.ndvi_daily_notification_log d
       LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
       LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id

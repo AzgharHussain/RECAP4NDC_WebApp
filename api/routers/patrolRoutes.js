@@ -7,7 +7,31 @@ const MongoImage = require("../models/Image");
 const { logFromRequest } = require("../utils/auditLogger");
 const { sequelize } = require("../config/r_quire");
 
+const { appendAccessConditions, canAccessRecord, formatPatrolCode, normalizedSql, getUserAreaValues } = require('../utils/accessScope');
+const { cacheMiddleware } = require('../middlewares/apiCache');
 const router = express.Router();
+
+router.use(['/patrol-info-page', '/patrol-info/filter', '/patrol-info-user'], (req, res, next) => {
+  const { start_date, end_date, year } = req.query;
+  const validDate = value => {
+    if (!value) return true;
+    const date = String(value).slice(0, 10);
+    const parsed = new Date(`${date}T00:00:00Z`);
+    return /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
+  };
+  if (!validDate(start_date) || !validDate(end_date) || (start_date && end_date && start_date.slice(0, 10) > end_date.slice(0, 10)) || (year && !/^(19|20)\d{2}$/.test(year))) {
+    return res.status(400).json({ error: 'Invalid date range or year' });
+  }
+  next();
+});
+
+function appendPatrolScope(conditions, values, req) {
+  appendAccessConditions(conditions, values, req.user, { alias: 'p', ownRecords: true });
+  if (req.query.year) {
+    values.push(`${req.query.year}-01-01T00:00:00+05:30`, `${Number(req.query.year) + 1}-01-01T00:00:00+05:30`);
+    conditions.push(`p.start_time::timestamptz >= $${values.length - 1}::timestamptz AND p.start_time::timestamptz < $${values.length}::timestamptz`);
+  }
+}
 
 // ─────────────────────────────────────────────────────────
 // Use a thin adapter that delegates to Sequelize so ALL queries share the
@@ -346,7 +370,7 @@ function generatePatrolCode(division, username, startISO, patrolId) {
   const time = `${pad(d.getHours())}${pad(d.getMinutes())}`;
   const div = sanitizeCodePart(division, 5).toUpperCase();
   const usr = sanitizeCodePart(username, 15);
-  return `PAT-${div}-${usr}-${date}-${time}-${patrolId}`;
+  return `${div}-${usr}-${date}-${time}-${patrolId}`;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -647,6 +671,10 @@ router.get('/patrol-info-all', verifyJwt, async (req, res) => {
     // explicitly requested, since it dominates payload size for a full-table scan.
     const includeGeom = parseBoolFlag(req.query.include_geom, false);
     const columns = await getPatrolSelectColumns(includeGeom);
+    const conditions = [];
+    const values = [];
+    appendPatrolScope(conditions, values, req);
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // NOTE: dedupe patrolling_types via subquery to prevent row multiplication
     const query = `
@@ -657,13 +685,15 @@ router.get('/patrol-info-all', verifyJwt, async (req, res) => {
         p.end_time::text AS end_time_raw
       FROM patrols p
       ${PATROL_TYPE_JOIN}
+      ${whereClause}
       ORDER BY p.start_time DESC NULLS LAST, p.patrol_id DESC;
     `;
 
-    const result = await client.query({ text: query, timeout: 30000 });
+    const result = await client.query({ text: query, values, timeout: 30000 });
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
+      patrol_code: formatPatrolCode(patrol.patrol_code),
       start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
       end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
     }));
@@ -678,6 +708,10 @@ router.get('/patrol-info-all', verifyJwt, async (req, res) => {
 // GET all patrols with images and notes
 router.get('/patrol-info', verifyJwt, async (req, res) => {
   try {
+    const conditions = [];
+    const values = [];
+    appendPatrolScope(conditions, values, req);
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     // Removed unnecessary GROUP BY — LEFT JOIN is 1:1, no duplicates.
     const query = `
       SELECT
@@ -687,11 +721,12 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
         p.end_time::text AS end_time_raw
       FROM patrols p
       LEFT JOIN (SELECT DISTINCT type_id, type_name FROM patrolling_types) pt ON p.patrolling_type_id = pt.type_id
+      ${whereClause}
       ORDER BY p.patrol_id DESC
       LIMIT 5;
     `;
 
-    const result = await client.query({ text: query, timeout: 30000 });
+    const result = await client.query({ text: query, values, timeout: 30000 });
 
     const patrolIds = result.rows.map(p => p.patrol_id);
     const imagesMap = await fetchPatrolImagesMap(patrolIds, parseImagesMode(req.query.include_images));
@@ -699,6 +734,7 @@ router.get('/patrol-info', verifyJwt, async (req, res) => {
     const formattedData = result.rows.map(patrol => ({
 
   ...patrol,
+      patrol_code: formatPatrolCode(patrol.patrol_code),
 
   // 🔹 Sanitize output fields
   patrol_officer_name: clean(patrol.patrol_officer_name),
@@ -756,7 +792,8 @@ router.get('/patrol-info-page', verifyJwt, async (req, res) => {
     // Build WHERE clause dynamically based on filters
     const conditions = [];
     const values = [];
-    let paramIndex = 1;
+    appendPatrolScope(conditions, values, req);
+    let paramIndex = values.length + 1;
 
     // Helper function to add conditions
     const addCondition = (field, operator, value) => {
@@ -787,14 +824,14 @@ if (officer_name) {
    // In your backend, when receiving date filters
 if (start_date) {
   // start_date might be "2026-03-17 00:00:00"
-  conditions.push(`p.start_time >= $${paramIndex}`);
+  conditions.push(`p.start_time::timestamptz >= ($${paramIndex}::date::timestamp AT TIME ZONE 'Asia/Kolkata')`);
   values.push(start_date);
   paramIndex++;
 }
 
 if (end_date) {
   // end_date might be "2026-03-17 23:59:59"
-  conditions.push(`p.end_time <= $${paramIndex}`);
+  conditions.push(`p.start_time::timestamptz < (($${paramIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Asia/Kolkata')`);
   values.push(end_date);
   paramIndex++;
 }
@@ -894,6 +931,7 @@ if (end_date) {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
+      patrol_code: formatPatrolCode(patrol.patrol_code),
       start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
       end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
       images: imagesMap[patrol.patrol_id] || []
@@ -944,7 +982,8 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
 
     const whereConditions = [];
     const queryParams = [];
-    let paramIndex = 1;
+    appendPatrolScope(whereConditions, queryParams, req);
+    let paramIndex = queryParams.length + 1;
 
     // -----------------------------
     // FILTER CONDITIONS
@@ -1005,13 +1044,13 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
     }
 
     if (start_date) {
-      whereConditions.push(`DATE(p.start_time) >= $${paramIndex}`);
+      whereConditions.push(`p.start_time::timestamptz >= ($${paramIndex}::date::timestamp AT TIME ZONE 'Asia/Kolkata')`);
       queryParams.push(start_date);
       paramIndex++;
     }
 
     if (end_date) {
-      whereConditions.push(`DATE(p.end_time) <= $${paramIndex}`);
+      whereConditions.push(`p.start_time::timestamptz < (($${paramIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Asia/Kolkata')`);
       queryParams.push(end_date);
       paramIndex++;
     }
@@ -1105,6 +1144,7 @@ router.get('/patrol-info/filter', verifyJwt, async (req, res) => {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
+      patrol_code: formatPatrolCode(patrol.patrol_code),
       start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
       end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
       images: imagesMap[patrol.patrol_id] || []
@@ -1159,7 +1199,8 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
     // Build WHERE clause dynamically: always filter by user_id, plus any optional filters
     const conditions = [`p.user_id = $1`];
     const values = [user_id];
-    let paramIndex = 2;
+    appendPatrolScope(conditions, values, req);
+    let paramIndex = values.length + 1;
 
     const addCondition = (field, operator, value) => {
       if (value) {
@@ -1186,13 +1227,13 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
     }
 
     if (start_date) {
-      conditions.push(`p.start_time >= $${paramIndex}`);
+      conditions.push(`p.start_time::timestamptz >= ($${paramIndex}::date::timestamp AT TIME ZONE 'Asia/Kolkata')`);
       values.push(start_date);
       paramIndex++;
     }
 
     if (end_date) {
-      conditions.push(`p.end_time <= $${paramIndex}`);
+      conditions.push(`p.start_time::timestamptz < (($${paramIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Asia/Kolkata')`);
       values.push(end_date);
       paramIndex++;
     }
@@ -1285,6 +1326,7 @@ router.get('/patrol-info-user/:user_id', verifyJwt, async (req, res) => {
 
     const formattedData = result.rows.map(patrol => ({
       ...patrol,
+      patrol_code: formatPatrolCode(patrol.patrol_code),
       start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
       end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
       images: imagesMap[patrol.patrol_id] || []
@@ -1330,6 +1372,9 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
       return res.status(404).json({ message: 'Patrol not found' });
 
     const patrol = result.rows[0];
+    if (!canAccessRecord(req.user, patrol, { ownRecords: true })) {
+      return res.status(404).json({ message: 'Patrol not found' });
+    }
 
     const mongoImages = await MongoImage.find({ sourceType: 'patrol', patrolId: parseInt(patrol_id) }).lean();
     const images = mongoImages.map(img => ({
@@ -1342,6 +1387,7 @@ router.get('/patrols/:patrol_id', verifyJwt, async (req, res) => {
 
     const formattedPatrol = {
       ...patrol,
+      patrol_code: formatPatrolCode(patrol.patrol_code),
       start_time: formatPatrolTimestamp(patrol.start_time_raw || patrol.start_time),
       end_time: formatPatrolTimestamp(patrol.end_time_raw || patrol.end_time),
       images
@@ -1363,6 +1409,10 @@ router.get('/patrol-images/:image_id', verifyJwt, async (req, res) => {
 
     const img = await MongoImage.findOne({ sourceType: 'patrol', imageId }).lean();
     if (!img) return res.status(404).json({ error: 'Patrol image not found' });
+    const parent = await client.query('SELECT user_id, division, range, round, beat FROM patrols WHERE patrol_id = $1', [img.patrolId]);
+    if (!canAccessRecord(req.user, parent.rows[0], { ownRecords: true })) {
+      return res.status(404).json({ error: 'Patrol image not found' });
+    }
 
     res.json({
       data: {
@@ -1456,17 +1506,15 @@ router.get('/patrolling-types', verifyJwt, async (req, res) => {
   }
 });
 
-router.get('/patrolling-division', async (req, res) => {
+router.get('/patrolling-division', verifyJwt, async (req, res) => {
   try {
-    const query = `
-      SELECT DISTINCT division
-      FROM patrols
-      WHERE division IS NOT NULL
-        AND TRIM(division) != ''
-        AND UPPER(TRIM(division)) NOT IN ('N/A', 'NA', 'NULL', 'NONE', '-')
-      ORDER BY division;
-    `;
-    const result = await client.query(query);
+    const conditions = [];
+    const values = [];
+    appendAccessConditions(conditions, values, req.user, { ownRecords: true });
+    conditions.push(`division IS NOT NULL AND TRIM(division) != '' AND UPPER(TRIM(division)) NOT IN ('N/A', 'NA', 'NULL', 'NONE', '-')`);
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const query = `SELECT DISTINCT division FROM patrols ${where} ORDER BY division`;
+    const result = await client.query(query, values);
 
     // Deduplicate: merge entries that are the same after removing
     // "Forest Division" suffix (e.g. "Bhavnagar" and "Bhavnagar Forest Division")
@@ -1482,6 +1530,17 @@ router.get('/patrolling-division', async (req, res) => {
     });
 
     const divisions = [...seen.values()].sort();
+    // For scoped users, ensure their assigned division from the JWT is included
+    // even if no patrol records exist for it yet.
+    const userAreas = getUserAreaValues(req.user);
+    if (userAreas && userAreas.division) {
+      const userDiv = userAreas.division;
+      const userDivNorm = userDiv.replace(/\s*Forest\s*Division\s*$/i, '').trim().toLowerCase();
+      if (!seen.has(userDivNorm)) {
+        divisions.push(userDiv);
+        divisions.sort();
+      }
+    }
     res.json({
       message: 'All patrolling division fetched successfully',
       data: divisions.map(d => ({ division: d }))
@@ -1495,16 +1554,14 @@ router.get('/patrolling-division', async (req, res) => {
 // Distinct patrol locations (e.g. "Inside Forest" / "Outside Forest") —
 // used to populate the Patrol Location filter dropdown with ALL locations,
 // not just the ones present on the current table page.
-router.get('/patrolling-locations', async (req, res) => {
+router.get('/patrolling-locations', verifyJwt, async (req, res) => {
   try {
-    const result = await client.query(`
-      SELECT DISTINCT TRIM(patrolling_location) AS location
-      FROM patrols
-      WHERE patrolling_location IS NOT NULL
-        AND TRIM(patrolling_location) != ''
-        AND UPPER(TRIM(patrolling_location)) NOT IN ('N/A', 'NA', 'NULL', 'NONE', '-')
-      ORDER BY location;
-    `);
+    const conditions = [];
+    const values = [];
+    appendAccessConditions(conditions, values, req.user, { ownRecords: true });
+    conditions.push(`patrolling_location IS NOT NULL AND TRIM(patrolling_location) != '' AND UPPER(TRIM(patrolling_location)) NOT IN ('N/A', 'NA', 'NULL', 'NONE', '-')`);
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const result = await client.query(`SELECT DISTINCT TRIM(patrolling_location) AS location FROM patrols ${where} ORDER BY location`, values);
     res.json({
       message: 'All patrolling locations fetched successfully',
       data: result.rows.map(r => r.location)
@@ -1515,13 +1572,14 @@ router.get('/patrolling-locations', async (req, res) => {
   }
 });
 
-router.get('/patrolling-range', async (req, res) => {
+router.get('/patrolling-range', verifyJwt, async (req, res) => {
   try {
-    const query = `
-      SELECT DISTINCT range
-      FROM patrols;
-    `;
-    const result = await client.query(query);
+    const conditions = [];
+    const values = [];
+    appendAccessConditions(conditions, values, req.user, { ownRecords: true });
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const query = `SELECT DISTINCT range FROM patrols ${where} ORDER BY range`;
+    const result = await client.query(query, values);
     res.json({
       message: 'All patrolling ranges fetched successfully',
       data: result.rows
@@ -1532,13 +1590,14 @@ router.get('/patrolling-range', async (req, res) => {
   }
 });
 
-router.get('/patrolling-beat', async (req, res) => {
+router.get('/patrolling-beat', verifyJwt, async (req, res) => {
   try {
-    const query = `
-      SELECT DISTINCT beat
-      FROM patrols;
-    `;
-    const result = await client.query(query);
+    const conditions = [];
+    const values = [];
+    appendAccessConditions(conditions, values, req.user, { ownRecords: true });
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const query = `SELECT DISTINCT beat FROM patrols ${where} ORDER BY beat`;
+    const result = await client.query(query, values);
     res.json({
       message: 'All patrolling beats fetched successfully',
       data: result.rows
@@ -1549,13 +1608,14 @@ router.get('/patrolling-beat', async (req, res) => {
   }
 });
 
-router.get('/patrolling-round', async (req, res) => {
+router.get('/patrolling-round', verifyJwt, async (req, res) => {
   try {
-    const query = `
-      SELECT DISTINCT round
-      FROM patrols;
-    `;
-    const result = await client.query(query);
+    const conditions = [];
+    const values = [];
+    appendAccessConditions(conditions, values, req.user, { ownRecords: true });
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const query = `SELECT DISTINCT round FROM patrols ${where} ORDER BY round`;
+    const result = await client.query(query, values);
     res.json({
       message: 'All patrolling rounds fetched successfully',
       data: result.rows
@@ -1571,19 +1631,19 @@ router.get('/patrolling-range-by-division', verifyJwt, async (req, res) => {
   try {
     const { division } = req.query;
     
-    let query = `
-      SELECT DISTINCT range
-      FROM patrols
-    `;
-    
+    const conditions = [];
     const values = [];
+    appendAccessConditions(conditions, values, req.user, { ownRecords: true });
+    
+    let query = `SELECT DISTINCT range FROM patrols`;
     
     if (division) {
-      query += ` WHERE division = $1`;
-      values.push(division);
+      values.push(String(division).toLowerCase().replace(/[\s_-]+/g, ''));
+      conditions.push(`${normalizedSql('"division"')} = $${values.length}`);
     }
     
-    query += ` ORDER BY range`;
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    query += ` ${where} ORDER BY range`;
     
     const result = await client.query(query, values);
     res.json({
@@ -1601,28 +1661,22 @@ router.get('/patrolling-beat-by-range', verifyJwt, async (req, res) => {
   try {
     const { range, division } = req.query;
     
-    let query = `
-      SELECT DISTINCT beat
-      FROM patrols
-      WHERE 1=1
-    `;
-    
+    const conditions = [];
     const values = [];
-    let paramIndex = 1;
+    appendAccessConditions(conditions, values, req.user, { ownRecords: true });
     
     if (range) {
-      query += ` AND range = $${paramIndex}`;
-      values.push(range);
-      paramIndex++;
+      values.push(String(range).toLowerCase().replace(/[\s_-]+/g, ''));
+      conditions.push(`${normalizedSql('"range"')} = $${values.length}`);
     }
     
     if (division) {
-      query += ` AND division = $${paramIndex}`;
-      values.push(division);
-      paramIndex++;
+      values.push(String(division).toLowerCase().replace(/[\s_-]+/g, ''));
+      conditions.push(`${normalizedSql('"division"')} = $${values.length}`);
     }
     
-    query += ` ORDER BY beat`;
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const query = `SELECT DISTINCT beat FROM patrols ${where} ORDER BY beat`;
     
     const result = await client.query(query, values);
     res.json({
@@ -1636,42 +1690,20 @@ router.get('/patrolling-beat-by-range', verifyJwt, async (req, res) => {
 });
 
 // Alternative: Single endpoint to get all hierarchy data at once
-router.get('/patrolling-hierarchy', async (req, res) => {
+router.get('/patrolling-hierarchy', verifyJwt, cacheMiddleware(60), async (req, res) => {
   try {
-    const { division, range, beat } = req.query;
-    let query = `
-      SELECT DISTINCT division, range, beat, round
-      FROM patrols
-      WHERE 1=1
-    `;
-    const params = [];
-    let paramCount = 1;
-    
-    if (division) {
-      query += ` AND division = $${paramCount}`;
-      params.push(division);
-      paramCount++;
+    const conditions = [];
+    const values = [];
+    appendAccessConditions(conditions, values, req.user, { ownRecords: true });
+    for (const level of ['division', 'range', 'round', 'beat']) {
+      if (req.query[level]) {
+        values.push(String(req.query[level]).toLowerCase().replace(/[\s_-]+/g, ''));
+        conditions.push(`${normalizedSql(`"${level}"`)} = $${values.length}`);
+      }
     }
-    
-    if (range) {
-      query += ` AND range = $${paramCount}`;
-      params.push(range);
-      paramCount++;
-    }
-    
-    if (beat) {
-      query += ` AND beat = $${paramCount}`;
-      params.push(beat);
-      paramCount++;
-    }
-    
-    query += ` ORDER BY division, range, beat, round`;
-    
-    const result = await client.query(query, params);
-    res.json({
-      message: 'Patrolling hierarchy fetched successfully',
-      data: result.rows
-    });
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const result = await client.query(`SELECT DISTINCT division, range, round, beat FROM patrols ${where} ORDER BY division, range, round, beat`, values);
+    res.json({ message: 'Patrolling hierarchy fetched successfully', data: result.rows });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch patrolling hierarchy' });
@@ -1680,11 +1712,12 @@ router.get('/patrolling-hierarchy', async (req, res) => {
 
 router.get('/patrolling-drb', verifyJwt, async (req, res) => {
   try {
-    const query = `
-      SELECT range, beat,division
-      FROM patrols;
-    `;
-    const result = await client.query(query);
+    const conditions = [];
+    const values = [];
+    appendAccessConditions(conditions, values, req.user, { ownRecords: true });
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const query = `SELECT DISTINCT range, beat, division FROM patrols ${where} ORDER BY division, range, beat`;
+    const result = await client.query(query, values);
     res.json({
       message: 'All patrolling districts fetched successfully',
       data: result.rows

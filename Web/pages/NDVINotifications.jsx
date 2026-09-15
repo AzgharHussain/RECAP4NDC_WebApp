@@ -255,15 +255,18 @@ const NDVINotifications = () => {
 
   // Read the user's division from localStorage once userData is available,
   // then update the filters and fetch the report.
+  // Default to a 12-month historical range so notifications match the NDVI dashboard's range.
   useEffect(() => {
     // Use the most specific hierarchy level (beat → round → range → division → circle)
     const div = getMostSpecificLevel();
+    const defaultDates = [dayjs().subtract(11, 'month').startOf('month'), dayjs().endOf('month')];
     setLockedDivision(div);
     if (div) {
-      setFilters(prev => ({ ...prev, division: div }));
-      fetchReport({ ...filters, division: div });
+      setFilters(prev => ({ ...prev, division: div, dates: defaultDates }));
+      fetchReport({ ...filters, division: div, dates: defaultDates });
     } else {
-      fetchReport();
+      setFilters(prev => ({ ...prev, dates: defaultDates }));
+      fetchReport({ ...filters, dates: defaultDates });
     }
   }, []);
 
@@ -276,8 +279,9 @@ const NDVINotifications = () => {
   };
 
   const clearFilters = () => {
-    // Keep the locked division when clearing filters
-    const cleared = { username: null, division: lockedDivision || null, month: null, dates: null };
+    // Keep the locked division and restore the 12-month default date range
+    const defaultDates = [dayjs().subtract(11, 'month').startOf('month'), dayjs().endOf('month')];
+    const cleared = { username: null, division: lockedDivision || null, month: null, dates: defaultDates };
     setFilters(cleared);
     setPagination(prev => ({ ...prev, current: 1 }));
     fetchReport(cleared, 1, pagination.pageSize);
@@ -322,7 +326,7 @@ const NDVINotifications = () => {
         [t.notificationDate]: item.notification_date || "-",
         [t.dataMonth]: item.change_month_label || "-",
         [t.slot]: item.slot_label || "-",
-        [t.changeCount]: item.change_count || 0,
+        [t.changeCount]: parseInt(String(item.change_count || '0').replace(/[^0-9]/g, ''), 10) || 0,
         [t.sentAt]: formatSentAt(item.sent_at),
       }));
       const summaryRows = monthlySummary.map((item) => ({
@@ -513,7 +517,11 @@ const NDVINotifications = () => {
       key: "change_count",
       width: 110,
       sorter: genericSorter("change_count"),
-      render: (v) => <Tag color="blue">{v || 0}</Tag>,
+      render: (v) => {
+        // Sanitize change_count — strip any non-numeric suffix (e.g. "9193V" → 9193)
+        const num = parseInt(String(v ?? '0').replace(/[^0-9]/g, ''), 10);
+        return <Tag color="blue">{isNaN(num) ? 0 : num}</Tag>;
+      },
     },
     {
       title: t.sentAt,
@@ -655,7 +663,7 @@ const NDVINotifications = () => {
               <Descriptions.Item label={t.dataMonth}>{detailRecord.change_month_label && detailRecord.change_month_label !== "-" ? <Tag color="purple">{detailRecord.change_month_label}</Tag> : "-"}</Descriptions.Item>
               <Descriptions.Item label={t.slot}>{detailRecord.slot_label || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.changeCount}>
-                <Tag color="blue">{detailRecord.change_count || 0}</Tag>
+                <Tag color="blue">{parseInt(String(detailRecord.change_count || '0').replace(/[^0-9]/g, ''), 10) || 0}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label={t.month}>{detailRecord.month || "-"}</Descriptions.Item>
               <Descriptions.Item label={t.sentAt} span={2}>

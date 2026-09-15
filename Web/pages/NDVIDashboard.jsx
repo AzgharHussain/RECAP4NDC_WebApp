@@ -993,6 +993,15 @@ const NDVIChangeDashboard = () => {
       return;
     }
     
+    // Enforce range limits: max 3 months for All Divisions, max 12 months otherwise
+    const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                      (endDate.getMonth() - startDate.getMonth());
+    const maxAllowed = selectedDivision === 'all' ? 2 : 11;
+    if (monthsDiff > maxAllowed) {
+      setError(selectedDivision === 'all' ? t.errorAllDivisionsRange : t.errorRangeExceed);
+      return;
+    }
+
     // Clear all previous data
     setMonthlyData({});
     setCurrentTableData([]);
@@ -2631,15 +2640,13 @@ const handleExportToPDF = async () => {
       shouldDisableDate={(date) => !isMonthAvailable(date)}
       shouldDisableMonth={(date) => !isMonthAvailable(date)}
       shouldDisableYear={(date) => !isYearAvailable(date.getFullYear())}
-      minDate={new Date(2020, 0, 1)}
-      maxDate={endDate ? new Date(Math.min(
-        new Date(2030, 11, 31).getTime(),
-        new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 2 : 11), 1).getTime()
-      )) : new Date(2030, 11, 31)}
+      minDate={new Date(2025, 9, 1)}
+      maxDate={endDate || new Date(2030, 11, 31)}
       slotProps={{
         textField: {
           fullWidth: true,
           size: "small",
+          error: false,
           InputProps: {
             startAdornment: <CalendarMonth sx={{ mr: 1, color: 'primary.main' }} />
           }
@@ -2659,11 +2666,8 @@ const handleExportToPDF = async () => {
       shouldDisableDate={(date) => !isMonthAvailable(date)}
       shouldDisableMonth={(date) => !isMonthAvailable(date)}
       shouldDisableYear={(date) => !isYearAvailable(date.getFullYear())}
-      minDate={startDate || new Date(2020, 0, 1)}
-      maxDate={startDate ? new Date(Math.min(
-        new Date(2030, 11, 31).getTime(),
-        new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 2 : 11), 1).getTime()
-      )) : new Date(2030, 11, 31)}
+      minDate={startDate || new Date(2025, 9, 1)}
+      maxDate={new Date(2030, 11, 31)}
       slotProps={{
         textField: {
           fullWidth: true,
@@ -2688,7 +2692,7 @@ const handleExportToPDF = async () => {
       if (!startDate || !endDate) return true;
       const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
                         (endDate.getMonth() - startDate.getMonth());
-      const maxAllowed = selectedDivision === 'all' ? 3 : 12;
+      const maxAllowed = selectedDivision === 'all' ? 2 : 11;
       return monthsDiff > maxAllowed;
     })()}
     sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
@@ -2702,7 +2706,7 @@ const handleExportToPDF = async () => {
   const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
                     (endDate.getMonth() - startDate.getMonth());
   
-  const maxAllowed = selectedDivision === 'all' ? 3 : 12;
+  const maxAllowed = selectedDivision === 'all' ? 2 : 11;
   
   if (monthsDiff > maxAllowed) {
     return (
@@ -3137,6 +3141,12 @@ const handleExportToPDF = async () => {
                             <Sort sx={{ fontSize: 16, ml: 0.5 }} />
                           </Box>
                         </TableCell> */}
+                        <TableCell onClick={() => handleSort('pixle_id')} sx={{ cursor: 'pointer' }}>
+                          <Box display="flex" alignItems="center">
+                            <strong>{t.id || 'ID'}</strong>
+                            <Sort sx={{ fontSize: 16, ml: 0.5 }} />
+                          </Box>
+                        </TableCell>
                         <TableCell><strong>{t.ndviChange}</strong></TableCell>
                         <TableCell><strong>{t.category}</strong></TableCell>
                         <TableCell><strong>{t.location}</strong></TableCell>
@@ -3158,7 +3168,7 @@ const handleExportToPDF = async () => {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
+                          <TableCell colSpan={showDivisionColumn ? 8 : 7} align="center" sx={{ py: 6 }}>
                             <Box sx={{ textAlign: 'center' }}>
                               <CircularProgress size={36} />
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
@@ -3169,7 +3179,7 @@ const handleExportToPDF = async () => {
                         </TableRow>
                       ) : paginatedData.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
+                          <TableCell colSpan={showDivisionColumn ? 8 : 7} align="center" sx={{ py: 6 }}>
                             <Box sx={{ textAlign: 'center' }}>
                               <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                               <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -3201,6 +3211,11 @@ const handleExportToPDF = async () => {
                                 sx={{ fontWeight: 600 }}
                               />
                             </TableCell> */}
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600} color="text.primary">
+                                {row.pixle_id || '-'}
+                              </Typography>
+                            </TableCell>
                             <TableCell>
                               <Chip
   label={row.NDVI_change !== null && row.NDVI_change !== undefined && !isNaN(parseFloat(row.NDVI_change)) 

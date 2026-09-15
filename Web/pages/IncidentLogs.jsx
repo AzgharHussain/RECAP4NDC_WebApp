@@ -194,7 +194,12 @@ const IncidentLogs = () => {
 
     if (dateFilter) {
       const selected = dateFilter.format("YYYY-MM-DD");
-      data = data.filter((item) => item.incident_date === selected);
+      data = data.filter((item) => {
+        if (!item.incident_date) return false;
+        // Compare only the date part (first 10 chars) to handle timestamps
+        const itemDate = String(item.incident_date).slice(0, 10);
+        return itemDate === selected;
+      });
     }
 
     setFilteredData(data);
@@ -421,7 +426,7 @@ const IncidentLogs = () => {
             icon={<EyeOutlined />}
             onClick={() => showModal(images.map((img) => `data:${img.image_type};base64,${img.image_data}`))}
           >
-            {text[language].view} ({count})
+            {text[language].view} {count}
           </Button>
         );
       },
