@@ -44,21 +44,40 @@ const client = {
       const safeParams = (Array.isArray(params) ? params : [params]).map(v => v === undefined ? null : v);
       options.bind = safeParams;
     }
-    const result = await sequelize.query(sql, options);
-    // Normalize to { rows: [...] }
-    // SELECT → result is the array of rows directly (not [rows, metadata])
-    // INSERT/UPDATE/DELETE/RAW → result[0] is the rows array (or metadata)
-    let rows;
-    if (queryType === sequelize.QueryTypes.SELECT) {
-      rows = Array.isArray(result) ? result : (result ? [result] : []);
-    } else if (Array.isArray(result[0])) {
-      rows = result[0];
-    } else if (result[0] !== null && result[0] !== undefined) {
-      rows = [result[0]];
-    } else {
-      rows = [];
+    // Retry on ConnectionAcquireTimeoutError — the pool is momentarily
+    // exhausted (e.g. during a scheduler burst or concurrent report
+    // requests). Wait briefly and retry instead of failing immediately.
+    const MAX_ACQUIRE_RETRIES = 2;
+    let lastErr;
+    for (let attempt = 0; attempt <= MAX_ACQUIRE_RETRIES; attempt++) {
+      try {
+        const result = await sequelize.query(sql, options);
+        // Normalize to { rows: [...] }
+        // SELECT → result is the array of rows directly (not [rows, metadata])
+        // INSERT/UPDATE/DELETE/RAW → result[0] is the rows array (or metadata)
+        let rows;
+        if (queryType === sequelize.QueryTypes.SELECT) {
+          rows = Array.isArray(result) ? result : (result ? [result] : []);
+        } else if (Array.isArray(result[0])) {
+          rows = result[0];
+        } else if (result[0] !== null && result[0] !== undefined) {
+          rows = [result[0]];
+        } else {
+          rows = [];
+        }
+        return { rows };
+      } catch (err) {
+        lastErr = err;
+        const isAcquireTimeout =
+          err.name === 'SequelizeConnectionAcquireTimeoutError' ||
+          err.message?.includes('Operation timeout') ||
+          err.message?.includes('ConnectionAcquireTimeoutError');
+        if (!isAcquireTimeout || attempt === MAX_ACQUIRE_RETRIES) throw err;
+        // Brief backoff before retrying — 500ms, then 1000ms
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+      }
     }
-    return { rows };
+    throw lastErr;
   },
 };
 
@@ -824,6 +843,39 @@ async function cleanupDefaultNotes() {
 // ----------------------------------------------------
 const SLOT_LABELS = { 1: 'Morning (08:00)', 2: 'Afternoon (13:00)', 3: 'Evening (18:00)' };
 
+// Cache whether ndvi_daily_notification_log has a change_month column.
+// Checking information_schema on every request wastes a pool connection and
+// can itself time out when the pool is exhausted (which then cascades).
+// The column is added by the scheduler; once we detect it, cache true.
+let _hasChangeMonthCache = null;
+
+async function checkChangeMonthColumn() {
+  if (_hasChangeMonthCache !== null) return _hasChangeMonthCache;
+  try {
+    const colCheck = await sequelize.query(
+      `SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'ndvi_daily_notification_log'
+         AND column_name = 'change_month'`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    const exists = colCheck.length > 0;
+    if (!exists) {
+      await sequelize.query(
+        `ALTER TABLE public.ndvi_daily_notification_log ADD COLUMN IF NOT EXISTS change_month TEXT`
+      );
+    }
+    _hasChangeMonthCache = true;
+    return true;
+  } catch (colErr) {
+    console.warn('[notifications] change_month column check/add failed, querying without it:', colErr.message);
+    _hasChangeMonthCache = false;
+    return false;
+  }
+}
+
+// Warm the cache at startup (deferred so it doesn't block server bind)
+setTimeout(() => { checkChangeMonthColumn().catch(() => {}); }, 10000);
+
 router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
   try {
     const {
@@ -837,29 +889,8 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
     const page = Math.max(parseInt(pageParam) || 1, 1);
     const offset = (page - 1) * pageSize;
 
-    // Check if change_month column exists on ndvi_daily_notification_log.
-    // The column is added by the scheduler, but it may not exist yet on
-    // databases that haven't run the updated scheduler. If missing, we
-    // try to add it; if that fails (e.g. DB timeout), we query without it.
-    let hasChangeMonth = false;
-    try {
-      const colCheck = await sequelize.query(
-        `SELECT 1 FROM information_schema.columns
-         WHERE table_schema = 'public' AND table_name = 'ndvi_daily_notification_log'
-           AND column_name = 'change_month'`,
-        { type: sequelize.QueryTypes.SELECT }
-      );
-      hasChangeMonth = colCheck.length > 0;
-      if (!hasChangeMonth) {
-        await sequelize.query(
-          `ALTER TABLE public.ndvi_daily_notification_log ADD COLUMN IF NOT EXISTS change_month TEXT`
-        );
-        hasChangeMonth = true;
-      }
-    } catch (colErr) {
-      console.warn('[notifications] change_month column check/add failed, querying without it:', colErr.message);
-      hasChangeMonth = false;
-    }
+    // Use cached column check — avoids a query per request
+    const hasChangeMonth = await checkChangeMonthColumn();
 
     const conditions = [];
     const values = [];
@@ -966,12 +997,13 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
       ORDER BY month DESC
     `;
 
-    const [report, counts, options, monthRows] = await Promise.all([
-      client.query(reportQuery, [...values, pageSize, offset]),
-      client.query(countQuery, values),
-      client.query(optionsQuery),
-      client.query(monthOptionsQuery),
-    ]);
+    // Run queries SEQUENTIALLY (not Promise.all) to limit concurrent
+    // connection usage. Firing 4 queries at once can exhaust the pool
+    // when other requests or the scheduler are also active.
+    const report = await client.query(reportQuery, [...values, pageSize, offset]);
+    const counts = await client.query(countQuery, values);
+    const options = await client.query(optionsQuery);
+    const monthRows = await client.query(monthOptionsQuery);
 
     // Annotate rows with readable slot labels and month
     // Dates are already cast to text in SQL, so they come as strings like "2026-09-10"
@@ -1084,7 +1116,12 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
         });
 
         const dimCol = (cols, name) => (cols.has(name) ? `"${name}"` : `NULL::text`);
-        const perTable = await Promise.all(tableNames.map(async (tn) => {
+        // Run per-table queries SEQUENTIALLY (not Promise.all) to avoid
+        // exhausting the connection pool when there are many NDVI Change
+        // tables. Each query needs its own connection; firing N at once
+        // can starve the pool and cause ConnectionAcquireTimeoutError.
+        const perTable = [];
+        for (const tn of tableNames) {
           const cols = colsByTable[tn] || new Set();
           const noteExpr = cols.has('note') ? `NULLIF(btrim("note"::text), '') IS NOT NULL` : 'FALSE';
           const imgExpr = cols.has('image_data') ? `NULLIF(btrim("image_data"::text), '') IS NOT NULL` : 'FALSE';
@@ -1103,13 +1140,12 @@ router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
                GROUP BY 1, 2, 3, 4, 5`,
               { type: sequelize.QueryTypes.SELECT }
             );
-            return rows.map(r => ({ ...r, table_name: tn }));
+            perTable.push(...rows.map(r => ({ ...r, table_name: tn })));
           } catch (tblErr) {
             console.warn(`[ndvi-report] resolved stats failed for ${tn}:`, tblErr.message);
-            return [];
           }
-        }));
-        changeStats = perTable.flat().map(r => {
+        }
+        changeStats = perTable.map(r => {
           const m = /^(\d{4}-\d{2})-\d{2}_(.+)_NDVI_Change$/i.exec(r.table_name);
           return {
             dataMonth: m ? m[1] : null,

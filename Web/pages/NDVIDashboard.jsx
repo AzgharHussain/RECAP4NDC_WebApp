@@ -175,6 +175,7 @@ const dashboardText = {
     round: "Round",
     beat: "Beat",
     status: "Status",
+    id: "ID",
     ndviChange: "NDVI Change",
     category: "Category",
     location: "Location",
@@ -313,6 +314,7 @@ clearFilters: "ફિલ્ટર દૂર કરો",
     round: "રાઉન્ડ",
     beat: "બીટ",
     status: "સ્થિતિ",
+    id: "ID",
     ndviChange: "NDVI ફેરફાર",
     category: "શ્રેણી",
     location: "સ્થાન",
@@ -2438,6 +2440,7 @@ const handleExportToPDF = async () => {
               <thead>
                 <tr>
                   ${showDivisionColumn ? `<th>${t.division}</th>` : ''}
+                  <th>${t.id}</th>
                   <th>${t.status}</th>
                   <th>${t.ndviChange}</th>
                   <th>${t.category}</th>
@@ -2451,6 +2454,7 @@ const handleExportToPDF = async () => {
                 ${filteredData.slice(0, 20).map(item => `
                   <tr>
                     ${showDivisionColumn ? `<td>${item.division || selectedDivision || '-'}</td>` : ''}
+                    <td>${item.pixle_id || '-'}</td>
                     <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? t.afforested : t.degraded}</span></td>
                    <td>${item.NDVI_change && !isNaN(parseFloat(item.NDVI_change)) ? parseFloat(item.NDVI_change).toFixed(4) : '-'}</td>
                     <td>${item.change_category || (item.status ? t.afforested : t.degraded)}</td>
@@ -3131,6 +3135,12 @@ const handleExportToPDF = async () => {
                             </Box>
                           </TableCell>
                         )}
+                        <TableCell onClick={() => handleSort('pixle_id')} sx={{ cursor: 'pointer' }}>
+                          <Box display="flex" alignItems="center">
+                            <strong>{t.id}</strong>
+                            <Sort sx={{ fontSize: 16, ml: 0.5 }} />
+                          </Box>
+                        </TableCell>
                         {/* <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
                           <Box display="flex" alignItems="center">
                             <strong>Status</strong>
@@ -3158,7 +3168,7 @@ const handleExportToPDF = async () => {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
+                          <TableCell colSpan={showDivisionColumn ? 8 : 7} align="center" sx={{ py: 6 }}>
                             <Box sx={{ textAlign: 'center' }}>
                               <CircularProgress size={36} />
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
@@ -3169,7 +3179,7 @@ const handleExportToPDF = async () => {
                         </TableRow>
                       ) : paginatedData.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
+                          <TableCell colSpan={showDivisionColumn ? 8 : 7} align="center" sx={{ py: 6 }}>
                             <Box sx={{ textAlign: 'center' }}>
                               <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                               <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -3193,6 +3203,11 @@ const handleExportToPDF = async () => {
                                 </Typography>
                               </TableCell>
                             )}
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600}>
+                                {row.pixle_id || '-'}
+                              </Typography>
+                            </TableCell>
                             {/* <TableCell>
                               <Chip
                                 label={row.status ? 'Afforested' : 'Degraded'}
