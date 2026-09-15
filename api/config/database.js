@@ -33,6 +33,26 @@ const sequelize = new Sequelize(
     // Keep idle connections alive so remote DBs / firewalls don't drop them.
     // Without this, idle pooled connections silently die and the next query
     // gets an ECONNRESET.
+    // Transparently retry a query when the underlying connection fails
+    // (ETIMEDOUT / ECONNRESET / connection terminated). The GSDC network
+    // path drops idle TCP sessions intermittently; without this a single
+    // dead pooled connection surfaces as a 500 to the user.
+    retry: {
+      max: Number(process.env.DB_QUERY_RETRY_MAX || 3),
+      match: [
+        /ETIMEDOUT/,
+        /ECONNRESET/,
+        /ECONNREFUSED/,
+        /EHOSTUNREACH/,
+        /EPIPE/,
+        /Connection terminated/i,
+        /server closed the connection unexpectedly/i,
+        /SequelizeConnectionError/,
+        /SequelizeConnectionRefusedError/,
+        /SequelizeHostNotReachableError/,
+        /SequelizeConnectionAcquireTimeoutError/,
+      ],
+    },
     dialectOptions: sslEnabled
       ? {
           ssl: {
@@ -42,7 +62,7 @@ const sequelize = new Sequelize(
           },
           // TCP keepalive + PostgreSQL session options
           keepAlive: true,
-          keepAliveInitialDelayMillis: 300000,
+          keepAliveInitialDelayMillis: Number(process.env.DB_KEEPALIVE_MS || 30000),
           // Abort connection attempts that take longer than 10s instead of
           // hanging for the full OS TCP timeout (which can be minutes).
           connect_timeout: Number(process.env.DB_CONNECT_TIMEOUT || 10),
@@ -52,7 +72,7 @@ const sequelize = new Sequelize(
         }
       : {
           keepAlive: true,
-          keepAliveInitialDelayMillis: 300000,
+          keepAliveInitialDelayMillis: Number(process.env.DB_KEEPALIVE_MS || 30000),
           connect_timeout: Number(process.env.DB_CONNECT_TIMEOUT || 10),
           statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT || 30000),
           idle_in_transaction_session_timeout: Number(process.env.DB_IDLE_TX_TIMEOUT || 60000),
