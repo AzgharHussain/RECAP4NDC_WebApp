@@ -79,7 +79,7 @@ export const getAuthHeaders = (extraHeaders = {}) => {
  * @returns {boolean} True if auto-logout was triggered, false otherwise.
  */
 export const handleUnauthorized = (status) => {
-  if (status === 401) {
+  if (status === 401 || status === 403) {
     console.warn(`Received ${status} response. Auto-logging out.`);
     autoLogout();
     return true;
@@ -92,30 +92,7 @@ export const handleUnauthorized = (status) => {
  * Returns null if the user has no division (PCCF/Circle level users with "-").
  * @returns {string|null} The division name, or null if not applicable.
  */
-export const getUserProfile = () => {
-  try {
-    return JSON.parse(localStorage.getItem('userData') || '{}');
-  } catch {
-    return {};
-  }
-};
-
-export const normalizeHierarchyValue = value => {
-  const text = String(value ?? '').trim().toLowerCase();
-  return ['', '-', 'n/a', 'na', 'null', 'none', 'undefined', 'all'].includes(text)
-    ? '' : text.replace(/[\s_-]+/g, '');
-};
-
-export const hasGlobalAccess = (user = getUserProfile()) => {
-  const roles = [user.role, user.designation, user.nameOfPost, user.NameOfPost, user.cadre, user.CadreName]
-    .map(normalizeHierarchyValue);
-  return roles.some(role => /^(admin|administrator|hoff|hof|pccf|apccf|ccf|cf|circle|circleofficer|circlelevelofficer)$/.test(role)
-    || /^(principalchiefconservator|additionalprincipalchiefconservator|headofforestforce|chiefconservator)/.test(role))
-    || (!normalizeHierarchyValue(user.division) && !!normalizeHierarchyValue(user.circle));
-};
-
 export const getUserDivision = () => {
-  if (hasGlobalAccess()) return null;
   try {
     const userDataStr = localStorage.getItem('userData');
     if (!userDataStr) return null;
@@ -374,8 +351,9 @@ export const getUserHierarchy = () => {
     { level: 'round',    value: getUserRound() },
     { level: 'range',    value: getUserRange() },
     { level: 'division', value: division },
+    { level: 'circle',   value: getUserCircle() },
   ];
-  return levels.filter(l => normalizeHierarchyValue(l.value));
+  return levels.filter(l => l.value);
 };
 
 /**
@@ -394,11 +372,16 @@ export const matchesUserHierarchy = (item, fieldMap = DEFAULT_HIERARCHY_FIELD_MA
   const hierarchy = getUserHierarchy();
   if (hierarchy.length === 0) return true; // No lock — show everything
 
-  return hierarchy.every(({ level, value }) =>
-    (fieldMap[level] || []).some(field =>
-      normalizeHierarchyValue(item?.[field]) === normalizeHierarchyValue(value)
-    )
-  );
+  for (const { level, value } of hierarchy) {
+    const fields = fieldMap[level] || [];
+    for (const field of fields) {
+      const val = item?.[field];
+      if (val != null && String(val).trim() !== '' && fuzzyMatch(String(val), value)) {
+        return true;
+      }
+    }
+  }
+  return false;
 };
 
 /**

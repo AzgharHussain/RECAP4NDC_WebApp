@@ -15,7 +15,7 @@ import dayjs from "dayjs";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
-import axios, { fetchWithTimeout as fetch } from "../utils/apiClient";
+import axios from "axios";
 import { getAuthToken, getAuthHeaders, handleUnauthorized, getUserDivision, getUserRange, getUserRound, getUserBeat, matchesDivision } from "../utils/authUtils";
 import { capitalizeFirst } from "../utils/textFormat";
 

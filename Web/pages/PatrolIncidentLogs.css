@@ -57,10 +57,9 @@ body {
 
 /* === Transparent Table Header === */
 .transparent-table .ant-table-thead > tr > th {
-  background: linear-gradient(135deg, #009245 0%, #006b32 100%) !important;
-  color: white !important;
-  font-weight: 700 !important;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+  background: #009245 !important;
+  color: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
   border: 1.949px solid rgba(0, 0, 0, 0.23);
   box-shadow: -9.048px -9.048px 4.524px -10.556px #fff inset, 
               -9.048px -9.048px 4.524px -10.556px #fff inset, 
@@ -80,37 +79,9 @@ body {
               12.064px 12.064px 6.786px -13.572px #fff inset;
 }
 
-/* Alternating row colors for better readability */
-.transparent-table .ant-table-tbody > tr:nth-child(even) > td {
-  background: rgba(0, 146, 69, 0.04) !important;
-}
-
 /* Hover row effect */
 .transparent-table .ant-table-tbody > tr:hover > td {
-  background: rgba(0, 146, 69, 0.12) !important;
-  transition: background 0.2s ease;
-}
-
-/* Selected row effect */
-.transparent-table .ant-table-tbody > tr.ant-table-row-selected > td {
-  background: rgba(0, 146, 69, 0.18) !important;
-}
-
-/* Modern table for incident logs */
-.patrol-modern-table .ant-table-thead > tr > th {
-  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%) !important;
-  color: #fff !important;
-  font-weight: 700 !important;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.2) !important;
-}
-
-.patrol-modern-table .ant-table-tbody > tr:nth-child(even) > td {
-  background: rgba(21, 101, 192, 0.04) !important;
-}
-
-.patrol-modern-table .ant-table-tbody > tr:hover > td {
-  background: rgba(21, 101, 192, 0.12) !important;
-  transition: background 0.2s ease;
+  background: rgba(0, 0, 0, 0.05) !important;
 }
 .section {
   overflow: auto;
