@@ -305,12 +305,18 @@ async function ensurePatrolLocationColumns(dbClient = client) {
       ADD COLUMN IF NOT EXISTS patrolling_location TEXT,
       ADD COLUMN IF NOT EXISTS current_location_distict TEXT,
       ADD COLUMN IF NOT EXISTS current_location_village TEXT,
-      ADD COLUMN IF NOT EXISTS patrol_code VARCHAR(100) UNIQUE;
+      ADD COLUMN IF NOT EXISTS patrol_code VARCHAR(100) UNIQUE,
+      ADD COLUMN IF NOT EXISTS round VARCHAR(255);
   `);
   // Index for fast lookup by patrol_code
   await dbClient.query(`
     CREATE INDEX IF NOT EXISTS idx_patrols_patrol_code
     ON public.patrols (patrol_code);
+  `);
+  // Index for fast lookup by round (used by access scope filters)
+  await dbClient.query(`
+    CREATE INDEX IF NOT EXISTS idx_patrols_round
+    ON public.patrols (round);
   `);
   patrolColumnsCache = null;
 }
@@ -414,6 +420,7 @@ pat_data.end_location = clean(pat_data.end_location);
 pat_data.beat = clean(pat_data.beat);
 pat_data.range = clean(pat_data.range);
 pat_data.division = clean(pat_data.division);
+pat_data.round = clean(pat_data.round || pat_data.Round || pat_data.round_name);
 pat_data.patrolling_location = clean(pat_data.patrolling_location || pat_data.patrolling_Location || pat_data.patrollingLocation);
 pat_data.current_location_distict = clean(pat_data.current_location_distict || pat_data.current_location_district || pat_data.currentLocationDistrict);
 pat_data.current_location_village = clean(pat_data.current_location_village || pat_data.currentLocationVillage);
@@ -518,11 +525,12 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
           beat,
           range,
           division,
+          round,
           patrolling_location,
           current_location_distict,
           current_location_village
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         RETURNING patrol_id;
       `;
 
@@ -540,6 +548,7 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
         pat_data.beat,
         pat_data.range,
         pat_data.division,
+        pat_data.round,
         pat_data.patrolling_location,
         pat_data.current_location_distict,
         pat_data.current_location_village
@@ -625,6 +634,7 @@ pat_data.current_location_village = clean(pat_data.current_location_village || p
       beat: pat_data.beat,
       range: pat_data.range,
       division: pat_data.division,
+      round: pat_data.round,
       distance_kms: pat_data.distance_kms,
     });
 

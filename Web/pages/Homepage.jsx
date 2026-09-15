@@ -72,7 +72,7 @@ const Homepage = () => {
       headerTitle: "FOREST MONITORING AND PATROLLING SYSTEM",
       heroTag: "Implemented by Gujarat Forest Department",
       heroTitle1: "Forest Monitoring",
-      heroTitle2: "& Patrolling Platform",
+      heroTitle2: "& Patrolling System",
       heroDesc: "The Forest Monitoring and Patrolling System under the RECAP4NDC initiative integrates satellite-derived vegetation indicators, field patrolling data, incident reporting, and working plan spatial boundaries into a unified web-based monitoring environment. The WebGIS dashboard integrates spatial data services and geo-intelligence for operational forest management.",
       launchApp: "Login",
       overviewTitle: "Forest Monitoring",
