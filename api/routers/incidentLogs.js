@@ -121,9 +121,8 @@ if (require('../utils/isPrimaryWorker')) {
 
 // ─────────────────────────────────────────────────────────
 // Generate a human-readable incident_code:
-//   INC-<DIVISION>-<USERNAME>-<YYYYMMDD>-<HHMM>-<INCIDENT_ID>
-// Mirrors the patrol_code format (PAT-...) so incident and patrol
-// codes share a consistent, URL-safe naming scheme.
+//   <DIVISION>-<USERNAME>-<YYYYMMDD>-<HHMM>-<INCIDENT_ID>
+// Same structure as patrol_code but without a type prefix.
 // ─────────────────────────────────────────────────────────
 function sanitizeCodePart(value, maxLen = 15) {
   return String(value || '')
@@ -148,14 +147,30 @@ function generateIncidentCode(division, username, incidentDate, incidentTime, in
   const time = `${pad(d.getHours())}${pad(d.getMinutes())}`;
   const div = sanitizeCodePart(division, 5).toUpperCase();
   const usr = sanitizeCodePart(username, 15);
-  return `INC-${div}-${usr}-${date}-${time}-${incidentId}`;
+  return `${div}-${usr}-${date}-${time}-${incidentId}`;
 }
 
 // ─────────────────────────────────────────────────────────
-// Backfill incident_code for existing records that have NULL.
-// Runs on server start. Looks up username from government_department_users.
+// Backfill incident_code for existing records.
+// Runs on server start:
+//   1. Strips the legacy "INC-" prefix from codes that still have it.
+//   2. Generates codes for rows where incident_code is NULL.
+// Looks up username from government_department_users.
 // ─────────────────────────────────────────────────────────
 async function backfillIncidentCodes() {
+  // 1. Convert legacy INC-prefixed codes to the new prefix-less format.
+  //    The remainder of the code is already unique, so no collisions.
+  const stripped = await client.query(`
+    UPDATE public.incident_logs
+    SET incident_code = substring(incident_code from 5)
+    WHERE incident_code LIKE 'INC-%'
+    RETURNING incident_id;
+  `);
+  if (stripped.rows.length > 0) {
+    console.log(`[incident_code backfill] Removed INC- prefix from ${stripped.rows.length} incident(s).`);
+  }
+
+  // 2. Generate codes for rows that have none.
   const missing = await client.query(`
     SELECT il.incident_id, il.division, il.incident_date, il.incident_time, il.user_id, gdu.username
     FROM public.incident_logs il
@@ -303,7 +318,7 @@ router.post('/incident-logs', verifyJwt, upload.single('incident_image'), async 
     const incident_id = result.rows[0].incident_id;
 
     // Generate and persist a human-readable incident_code
-    // Format: INC-<DIVISION>-<USERNAME>-<YYYYMMDD>-<HHMM>-<INCIDENT_ID>
+    // Format: <DIVISION>-<USERNAME>-<YYYYMMDD>-<HHMM>-<INCIDENT_ID>
     const incident_code = generateIncidentCode(
       cleanDivision,
       userCheck.rows[0].username || req.user?.username,
