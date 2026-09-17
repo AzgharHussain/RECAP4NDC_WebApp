@@ -160,7 +160,6 @@ const dashboardText = {
     // Data Table Section
     detailedDataTable: "1. Detailed Data Table",
     searchPlaceholder: "Search by coordinates, notes, division...",
-    searchById: "Search by ID",
     allStatuses: "All Statuses",
     degradation: "Degradation",
     afforestation: "Afforestation",
@@ -175,7 +174,6 @@ const dashboardText = {
     round: "Round",
     beat: "Beat",
     status: "Status",
-    id: "ID",
     ndviChange: "NDVI Change",
     category: "Category",
     location: "Location",
@@ -299,7 +297,6 @@ loadingNDVIChange: "મહિના મુજબ NDVI ફેરફારનો �
     // Data Table Section
     detailedDataTable: "૧. વિગતવાર ડેટા ટેબલ",
     searchPlaceholder: "સ્થાન, નોંધો, વિભાગ દ્વારા શોધો...",
-    searchById: "ID દ્વારા શોધો",
     allStatuses: "બધી સ્થિતિઓ",
     degradation: "અવનતિ",
     afforestation: "વનસર્જન",
@@ -314,7 +311,6 @@ clearFilters: "ફિલ્ટર દૂર કરો",
     round: "રાઉન્ડ",
     beat: "બીટ",
     status: "સ્થિતિ",
-    id: "ID",
     ndviChange: "NDVI ફેરફાર",
     category: "શ્રેણી",
     location: "સ્થાન",
@@ -812,7 +808,6 @@ const NDVIChangeDashboard = () => {
   const [summaryStats, setSummaryStats] = useState(null);
   const [chartType, setChartType] = useState('bar');
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchId, setSearchId] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showOnlyWithNotes, setShowOnlyWithNotes] = useState(false);
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
@@ -1621,18 +1616,12 @@ const fetchAllDivisionsData = async (months) => {
     let filtered = currentTableData.filter(item => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = !searchLower ||
-        (item.pixle_id?.toString().toLowerCase().includes(searchLower)) ||
         (item.status?.toString().toLowerCase().includes(searchLower)) ||
         (item.note?.toLowerCase().includes(searchLower)) ||
         (item.latitude?.toString().includes(searchLower)) ||
         (item.longitude?.toString().includes(searchLower)) ||
         (item.change_category?.toLowerCase().includes(searchLower)) ||
         (item.division?.toLowerCase().includes(searchLower));
-
-      // Dedicated "Search by ID" input — matches the pixel/record ID only
-      const idLower = searchId.toLowerCase();
-      const matchesId = !idLower ||
-        (item.pixle_id?.toString().toLowerCase().includes(idLower));
 
       // Dedicated status filter — matches change_category / status
       const itemStatus = (item.change_category || (item.status ? 'Afforestation' : 'Degradation'));
@@ -1642,7 +1631,7 @@ const fetchAllDivisionsData = async (months) => {
       const matchesNotes = !showOnlyWithNotes || item.has_note;
       const matchesImages = !showOnlyWithImages || item.has_image;
 
-      return matchesSearch && matchesId && matchesStatus && matchesNotes && matchesImages;
+      return matchesSearch && matchesStatus && matchesNotes && matchesImages;
     });
 
     return [...filtered].sort((a, b) => {
@@ -1655,7 +1644,7 @@ const fetchAllDivisionsData = async (months) => {
       if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [currentTableData, searchTerm, searchId, statusFilter, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
+  }, [currentTableData, searchTerm, statusFilter, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
 
   // Paginated data
   const paginatedData = React.useMemo(() => {
@@ -1667,7 +1656,7 @@ const fetchAllDivisionsData = async (months) => {
   // Reset to first page when filters change
   React.useEffect(() => {
     setPage(0);
-  }, [searchTerm, searchId, statusFilter, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
+  }, [searchTerm, statusFilter, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
 
   // Handle page change
   const handleChangePage = (event, newPage) => {
@@ -2440,7 +2429,6 @@ const handleExportToPDF = async () => {
               <thead>
                 <tr>
                   ${showDivisionColumn ? `<th>${t.division}</th>` : ''}
-                  <th>${t.id}</th>
                   <th>${t.status}</th>
                   <th>${t.ndviChange}</th>
                   <th>${t.category}</th>
@@ -2454,7 +2442,6 @@ const handleExportToPDF = async () => {
                 ${filteredData.slice(0, 20).map(item => `
                   <tr>
                     ${showDivisionColumn ? `<td>${item.division || selectedDivision || '-'}</td>` : ''}
-                    <td>${item.pixle_id || '-'}</td>
                     <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? t.afforested : t.degraded}</span></td>
                    <td>${item.NDVI_change && !isNaN(parseFloat(item.NDVI_change)) ? parseFloat(item.NDVI_change).toFixed(4) : '-'}</td>
                     <td>${item.change_category || (item.status ? t.afforested : t.degraded)}</td>
@@ -3015,21 +3002,7 @@ const handleExportToPDF = async () => {
               <Card sx={{ mb: 3, borderRadius: 2, bgcolor: 'transparent' }}>
                 <CardContent>
                   <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        placeholder={t.searchById}
-                        value={searchId}
-                        onChange={(e) => setSearchId(e.target.value)}
-                        variant="outlined"
-                        size="small"
-                        InputProps={{
-                          startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
-                          sx: { borderRadius: 2 }
-                        }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={4}>
                       <FormControl fullWidth size="small">
                         <Select
                           displayEmpty
@@ -3043,7 +3016,7 @@ const handleExportToPDF = async () => {
                         </Select>
                       </FormControl>
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={4}>
                       <TextField
                         fullWidth
                         placeholder={t.searchPlaceholder}
@@ -3057,7 +3030,7 @@ const handleExportToPDF = async () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={4}>
 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
   <FormGroup row>
     {selectedDivision === 'all' && (
@@ -3105,7 +3078,6 @@ const handleExportToPDF = async () => {
     startIcon={<FilterList />}
     onClick={() => {
       setSearchTerm('');
-      setSearchId('');
       setStatusFilter('');
       setShowOnlyWithNotes(false);
       setShowOnlyWithImages(false);
@@ -3135,12 +3107,6 @@ const handleExportToPDF = async () => {
                             </Box>
                           </TableCell>
                         )}
-                        <TableCell onClick={() => handleSort('pixle_id')} sx={{ cursor: 'pointer' }}>
-                          <Box display="flex" alignItems="center">
-                            <strong>{t.id}</strong>
-                            <Sort sx={{ fontSize: 16, ml: 0.5 }} />
-                          </Box>
-                        </TableCell>
                         {/* <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer' }}>
                           <Box display="flex" alignItems="center">
                             <strong>Status</strong>
@@ -3168,7 +3134,7 @@ const handleExportToPDF = async () => {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={showDivisionColumn ? 8 : 7} align="center" sx={{ py: 6 }}>
+                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
                             <Box sx={{ textAlign: 'center' }}>
                               <CircularProgress size={36} />
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
@@ -3179,14 +3145,14 @@ const handleExportToPDF = async () => {
                         </TableRow>
                       ) : paginatedData.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={showDivisionColumn ? 8 : 7} align="center" sx={{ py: 6 }}>
+                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
                             <Box sx={{ textAlign: 'center' }}>
                               <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                               <Typography variant="h6" color="text.secondary" gutterBottom>
                                 {t.noRecordsFound}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                {searchTerm || searchId || statusFilter || showOnlyWithNotes || showOnlyWithImages
+                                {searchTerm || statusFilter || showOnlyWithNotes || showOnlyWithImages
                                   ? t.adjustFilters
                                   : t.noDataAvailable}
                               </Typography>
@@ -3203,11 +3169,6 @@ const handleExportToPDF = async () => {
                                 </Typography>
                               </TableCell>
                             )}
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                {row.pixle_id || '-'}
-                              </Typography>
-                            </TableCell>
                             {/* <TableCell>
                               <Chip
                                 label={row.status ? 'Afforested' : 'Degraded'}

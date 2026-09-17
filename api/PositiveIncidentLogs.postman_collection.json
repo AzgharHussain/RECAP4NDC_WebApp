@@ -1,0 +1,573 @@
+{
+  "info": {
+    "name": "RECAP4NDC Positive Incident APIs",
+    "_postman_id": "e4f5a6b7-8c9d-4e0f-1a2b-3c4d5e6f7a8b",
+    "description": "Complete API collection for Positive Incident Logs and Positive Incident Categories. All endpoints require JWT authentication via Authorization header (Bearer token) or authToken cookie. Positive incidents have NO severity levels.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.environment.get('base_url')) {",
+          "  pm.environment.set('base_url', 'http://localhost:5002');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5002",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "incident_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "category_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Positive Incident Logs",
+      "description": "CRUD operations for positive incident logs with MongoDB image storage. Supports division, range, round, beat, and village. No severity levels.",
+      "item": [
+        {
+          "name": "Create Positive Incident Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "incident_type",
+                  "value": "Positive",
+                  "type": "text",
+                  "description": "Optional: defaults to 'Positive' if not sent"
+                },
+                {
+                  "key": "incident_category_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "Optional: links to positive_incident_categories table"
+                },
+                {
+                  "key": "incident_subcategory",
+                  "value": "Sighting of wild animals",
+                  "type": "text",
+                  "description": "Optional: subcategory text"
+                },
+                {
+                  "key": "division",
+                  "value": "AHM",
+                  "type": "text",
+                  "description": "Optional: Division name"
+                },
+                {
+                  "key": "range_name",
+                  "value": "North Range",
+                  "type": "text",
+                  "description": "Optional: Range name"
+                },
+                {
+                  "key": "round",
+                  "value": "Round 1",
+                  "type": "text",
+                  "description": "Optional: Round name"
+                },
+                {
+                  "key": "beat",
+                  "value": "Beat 5",
+                  "type": "text",
+                  "description": "Optional: Beat name"
+                },
+                {
+                  "key": "village",
+                  "value": "Sample Village",
+                  "type": "text",
+                  "description": "Optional: Village name"
+                },
+                {
+                  "key": "incident_date",
+                  "value": "2026-09-17",
+                  "type": "text"
+                },
+                {
+                  "key": "incident_time",
+                  "value": "10:30",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Leopard sighted near waterhole in beat 5",
+                  "type": "text"
+                },
+                {
+                  "key": "incident_image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Optional image file (JPG, PNG, GIF, HEIC)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-logs"
+              ]
+            },
+            "description": "Create a new positive incident log. Accepts multipart/form-data. Image is stored in MongoDB with sourceType='positive_incident'. incident_type defaults to 'Positive'."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.incident_id) {",
+                  "  pm.environment.set('incident_id', res.data.incident_id);",
+                  "  console.log('Saved incident_id: ' + res.data.incident_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Positive Incident Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-logs"
+              ]
+            },
+            "description": "Fetch all positive incident logs with images from MongoDB and category name. Ordered by created_at DESC."
+          }
+        },
+        {
+          "name": "Get Positive Incident Logs by User ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-logs/user/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-logs",
+                "user",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Fetch all positive incident logs for a specific user_id. Includes images and category name."
+          }
+        },
+        {
+          "name": "Get Single Positive Incident Log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-logs/{{incident_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-logs",
+                "{{incident_id}}"
+              ]
+            },
+            "description": "Fetch a single positive incident log by incident_id. Includes image and category name."
+          }
+        },
+        {
+          "name": "Update Positive Incident Log",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "incident_type",
+                  "value": "Positive",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_category_id",
+                  "value": "2",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_subcategory",
+                  "value": "Pugmarks seen/identified",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "division",
+                  "value": "AHM",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "range_name",
+                  "value": "South Range",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "round",
+                  "value": "Round 2",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "beat",
+                  "value": "Beat 3",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "village",
+                  "value": "Updated Village",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_date",
+                  "value": "2026-09-18",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_time",
+                  "value": "11:45",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated description",
+                  "type": "text",
+                  "description": "Optional"
+                },
+                {
+                  "key": "incident_image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Optional new image (replaces old)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-logs/{{incident_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-logs",
+                "{{incident_id}}"
+              ]
+            },
+            "description": "Update a positive incident log. All fields are optional — only sent fields are updated. New image replaces old one in MongoDB."
+          }
+        },
+        {
+          "name": "Delete Positive Incident Log",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-logs/{{incident_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-logs",
+                "{{incident_id}}"
+              ]
+            },
+            "description": "Delete a positive incident log by incident_id. Also deletes its image from MongoDB."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Positive Incident Categories",
+      "description": "Lookup table for positive incident categories and subcategories. Seeded automatically on server start with 17 categories from the Positive Incident Categories document.",
+      "item": [
+        {
+          "name": "Get All Categories (Nested)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-categories"
+              ]
+            },
+            "description": "Fetch all positive categories with their subcategories nested. Used for dropdowns and frontend display."
+          }
+        },
+        {
+          "name": "Get All Categories (Flat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-categories/flat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-categories",
+                "flat"
+              ]
+            },
+            "description": "Fetch a flat list of positive categories only (no subcategories). For simple dropdowns."
+          }
+        },
+        {
+          "name": "Get Subcategories by Category ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-categories/{{category_id}}/subcategories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-categories",
+                "{{category_id}}",
+                "subcategories"
+              ]
+            },
+            "description": "Fetch subcategories for a specific positive category. Used for dependent/cascading dropdowns."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.category && res.category.category_id) {",
+                  "  pm.environment.set('category_id', res.category.category_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"New Positive Category\",\n  \"subcategories\": [\n    \"Subcategory 1\",\n    \"Subcategory 2\",\n    \"Subcategory 3\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-categories"
+              ]
+            },
+            "description": "Create a new positive incident category. Optionally include a subcategories array of strings."
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"Updated Category Name\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-categories/{{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-categories",
+                "{{category_id}}"
+              ]
+            },
+            "description": "Update a positive incident category name."
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/positive-incident-categories/{{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "positive-incident-categories",
+                "{{category_id}}"
+              ]
+            },
+            "description": "Delete a positive incident category and all its subcategories (cascade delete)."
+          }
+        }
+      ]
+    }
+  ]
+}

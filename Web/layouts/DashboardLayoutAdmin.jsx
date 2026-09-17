@@ -1,6 +1,6 @@
 import React, { useState, useEffect,useRef } from "react";
 import { NavLink, Outlet, useLocation,BrowserRouter,useNavigate } from "react-router-dom";
-import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight} from "react-icons/fa"; 
+import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight, FaCheckCircle} from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
 import brand from "../assets/Logogiz.png";
@@ -45,6 +45,7 @@ export default function DashboardLayoutAdmin() {
       geoDashboard: "Geo Dashboard",
       patrollingLogs: "Patrolling Logs",
       incidentLogs: "Incident Logs",
+      positiveIncidentLogs: "Positive Incidents",
       workingPlan: "Working Plan Areas",
       uploadCoupe: "Upload Coupe Boundaries",
       viewCoupe: "View Coupe Boundaries",
@@ -64,6 +65,7 @@ export default function DashboardLayoutAdmin() {
       geoDashboard: "ભૂગોળ ડેશબોર્ડ",
       patrollingLogs: "પેટ્રોલિંગ લોગ્સ",
       incidentLogs: "ઘટના લોગ્સ",
+      positiveIncidentLogs: "સકારાત્મક ઘટનાઓ",
       workingPlan: "કામ કરવાના વિસ્તારમાં",
       uploadCoupe: "કૂપ બાઉન્ડરી અપલોડ કરો",
       viewCoupe: "કૂપ બાઉન્ડરી જુઓ",
@@ -293,6 +295,14 @@ useEffect(() => {
           >
           <FaClipboardList />
           {text[language].incidentLogs}
+          </NavLink>
+          <NavLink
+            to="/positive-incident-logs"
+            className={`menu-item ${isActiveLink("/positive-incident-logs") ? "active" : ""}`}
+            onClick={handleLinkClick}
+          >
+          <FaCheckCircle />
+          {text[language].positiveIncidentLogs}
           </NavLink>
            </div>
          <div className="header-right">

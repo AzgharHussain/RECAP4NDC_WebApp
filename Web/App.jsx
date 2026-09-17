@@ -30,6 +30,7 @@ const BeatPatrolCoverage = lazy(() => import("./pages/BeatPatrolCoverage"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const UploadPatrolBoundary = lazy(() => import("./pages/UploadPatrolBoundary"));
 const IncidentLogs = lazy(() => import("./pages/IncidentLogs"));
+const PositiveIncidentLogs = lazy(() => import("./pages/PositiveIncidentLogs"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 
 
@@ -141,6 +142,7 @@ export default function App() {
             <Route path="/ndvi-notifications" element={<NDVINotifications />} />
            <Route path="/PatrolCoverageAnalysis" element={<BeatPatrolCoverage />} />
           <Route path="/incident-logs" element={<IncidentLogs />} />
+          <Route path="/positive-incident-logs" element={<PositiveIncidentLogs />} />
           </Route>
 
           <Route
@@ -154,6 +156,7 @@ export default function App() {
             <Route path="/UploadPatrolBoundary" element={<UploadPatrolBoundary />} />
             <Route path="/changepassword" element={<ChangePassword />} />
             <Route path="/incident-logs" element={<IncidentLogs />} />
+            <Route path="/positive-incident-logs" element={<PositiveIncidentLogs />} />
           </Route>
 
           {/* Fallback */}

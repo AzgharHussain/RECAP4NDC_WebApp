@@ -341,6 +341,8 @@ const supportRouter = require('./routers/support');
 const incidentLogsRouter = require('./routers/incidentLogs');
 const incidentCategoriesRouter = require('./routers/incidentCategories');
 const incidentSeverityRouter = require('./routers/incidentSeverity');
+const positiveIncidentCategoriesRouter = require('./routers/positiveIncidentCategories');
+const positiveIncidentLogsRouter = require('./routers/positiveIncidentLogs');
 const ndviChangesRouter = require('./routers/ndviChanges');
 
 const TEMP_SAVEUSER_TOKEN = process.env.TEMP_SAVEUSER_TOKEN || require('crypto').randomBytes(32).toString('hex');
@@ -998,6 +1000,8 @@ app.use('/api', supportRouter);
 app.use('/api', incidentLogsRouter);
 app.use('/api', incidentCategoriesRouter);
 app.use('/api', incidentSeverityRouter);
+app.use('/api', positiveIncidentCategoriesRouter);
+app.use('/api', positiveIncidentLogsRouter);
 app.use('/api/ndvi-changes', ndviChangesRouter);
 app.use("/api", forestRoutes);
 app.use('/api', auditLogsRouter);
@@ -1069,6 +1073,20 @@ const server = app.listen(PORT, "0.0.0.0" , async () => {
         console.log('✅ Incident logs table ensured');
       } catch (e) {
         console.error('❌ Incident logs table ensure failed:', e.message);
+      }
+      // Seed positive incident categories lookup tables
+      try {
+        await positiveIncidentCategoriesRouter.ensurePositiveIncidentCategoryTables();
+        console.log('✅ Positive incident categories tables ensured & seeded');
+      } catch (e) {
+        console.error('❌ Positive incident categories seed failed:', e.message);
+      }
+      // Ensure positive_incident_logs table exists after DB is confirmed ready
+      try {
+        await positiveIncidentLogsRouter.ensurePositiveIncidentLogsTable();
+        console.log('✅ Positive incident logs table ensured');
+      } catch (e) {
+        console.error('❌ Positive incident logs table ensure failed:', e.message);
       }
       // Backfill patrol_code for existing patrols with NULL codes
       try {
