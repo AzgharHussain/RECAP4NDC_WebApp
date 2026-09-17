@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Table, Button, Input, Select, DatePicker, Modal, Tag, Space, Card, Row, Col } from "antd";
-import { SearchOutlined, EyeOutlined, CheckCircleOutlined, EnvironmentOutlined } from "@ant-design/icons";
+import { Table, Button, Input, Select, DatePicker, Modal, Tag, Space, Card, Row, Col, message } from "antd";
+import { SearchOutlined, EyeOutlined, CheckCircleOutlined, EnvironmentOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Descriptions } from "antd";
 import "./PatrolIncidentLogs.css";
 import exportIcon from "../assets/excel.png";
@@ -27,15 +27,14 @@ const PositiveIncidentLogs = () => {
 
   const text = {
     en: {
-      title: "Positive Incident Logs",
-      searchPlaceholder: "Search by user, type, description...",
+      title: "Forest Good Practices",
+      searchPlaceholder: "Search by user, category, description...",
       categoryFilterPlaceholder: "All Categories",
       dateFilterPlaceholder: "Filter by date",
       exportButton: "Export",
-      noDataText: "No positive incident logs available",
+      noDataText: "No forest good practice logs available",
       incidentId: "Incident ID",
       username: "Username",
-      incidentType: "Incident Type",
       category: "Category",
       subcategory: "Subcategory",
       division: "Division",
@@ -48,28 +47,29 @@ const PositiveIncidentLogs = () => {
       description: "Description",
       images: "Images",
       view: "View",
+      download: "Download",
+      imageNotAvailable: "Image is not available",
       viewImages: "View Images",
-      totalIncidents: "Total Positive Incidents",
+      totalIncidents: "Total Good Practices",
       categories: "Categories",
       withImages: "With Images",
       clearFilters: "Clear Filters",
       actions: "Actions",
       viewDetails: "View Details",
-      incidentDetails: "Positive Incident Details",
+      incidentDetails: "Good Practice Details",
       createdAt: "Created At",
       updatedAt: "Updated At",
       noImages: "No images attached",
     },
     gu: {
-      title: "સકારાત્મક ઘટના લોગ્સ",
-      searchPlaceholder: "વપરાશકર્તા, પ્રકાર, વર્ણન દ્વારા શોધો...",
+      title: "વન સારી પ્રથાઓ",
+      searchPlaceholder: "વપરાશકર્તા, શ્રેણી, વર્ણન દ્વારા શોધો...",
       categoryFilterPlaceholder: "બધી શ્રેણીઓ",
       dateFilterPlaceholder: "તારીખ દ્વારા ફિલ્ટર",
       exportButton: "નિકાસ",
-      noDataText: "કોઈ સકારાત્મક ઘટના લોગ્સ ઉપલબ્ધ નથી",
+      noDataText: "કોઈ વન સારી પ્રથા લોગ્સ ઉપલબ્ધ નથી",
       incidentId: "ઘટના ID",
       username: "વપરાશકર્તા નામ",
-      incidentType: "ઘટના પ્રકાર",
       category: "શ્રેણી",
       subcategory: "ઉપશ્રેણી",
       division: "વિભાગ",
@@ -82,14 +82,16 @@ const PositiveIncidentLogs = () => {
       description: "વર્ણન",
       images: "છબીઓ",
       view: "જુઓ",
+      download: "ડાઉનલોડ",
+      imageNotAvailable: "છબી ઉપલબ્ધ નથી",
       viewImages: "છબીઓ જુઓ",
-      totalIncidents: "કુલ સકારાત્મક ઘટનાઓ",
+      totalIncidents: "કુલ સારી પ્રથાઓ",
       categories: "શ્રેણીઓ",
       withImages: "છબીઓ સાથે",
       clearFilters: "ફિલ્ટર સાફ કરો",
       actions: "ક્રિયાઓ",
       viewDetails: "વિગતો જુઓ",
-      incidentDetails: "સકારાત્મક ઘટના વિગતો",
+      incidentDetails: "સારી પ્રથા વિગતો",
       createdAt: "બનાવ્યું",
       updatedAt: "સુધારેલું",
       noImages: "કોઈ છબીઓ જોડાયેલ નથી",
@@ -153,7 +155,6 @@ const PositiveIncidentLogs = () => {
       const lower = searchText.toLowerCase();
       data = data.filter((item) =>
         (item.username || "").toLowerCase().includes(lower) ||
-        (item.incident_type || "").toLowerCase().includes(lower) ||
         (item.category_name || "").toLowerCase().includes(lower) ||
         (item.incident_subcategory || "").toLowerCase().includes(lower) ||
         (item.description || "").toLowerCase().includes(lower)
@@ -204,7 +205,6 @@ const PositiveIncidentLogs = () => {
       const exportData = filteredData.map((item) => ({
         [text[language].incidentId]: item.incident_code || item.incident_id,
         [text[language].username]: item.username || "-",
-        [text[language].incidentType]: item.incident_type || "-",
         [text[language].category]: item.category_name || "-",
         [text[language].subcategory]: item.incident_subcategory || "-",
         [text[language].division]: item.division || "-",
@@ -220,12 +220,12 @@ const PositiveIncidentLogs = () => {
 
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Positive Incident Logs");
+      XLSX.utils.book_append_sheet(wb, ws, "Forest Good Practices");
 
       const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       saveAs(
         new Blob([wbout], { type: "application/octet-stream" }),
-        "Positive_Incident_Logs.xlsx"
+        "Forest_Good_Practices.xlsx"
       );
     } finally {
       window.dispatchEvent(new Event('global-data-loading-end'));
@@ -235,6 +235,28 @@ const PositiveIncidentLogs = () => {
   const showModal = (images) => {
     setSelectedImages(images || []);
     setIsModalVisible(true);
+  };
+
+  const resolveImgSrc = (img) => {
+    if (!img?.image_data) return "";
+    const s = String(img.image_data).trim();
+    if (s.startsWith("data:") || s.startsWith("http")) return s;
+    return `data:${img.image_type || "image/jpeg"};base64,${s}`;
+  };
+
+  const downloadBase64Image = (image, fallbackName) => {
+    if (!image?.image_data) {
+      message.warning(text[language].imageNotAvailable);
+      return;
+    }
+    const mimeType = image.image_type || "image/jpeg";
+    const extension = mimeType.includes("png") ? "png" : mimeType.includes("gif") ? "gif" : mimeType.includes("heic") ? "heic" : "jpg";
+    const link = document.createElement("a");
+    link.href = `data:${mimeType};base64,${image.image_data}`;
+    link.download = `${fallbackName}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleCancel = () => {
@@ -268,14 +290,6 @@ const PositiveIncidentLogs = () => {
       sorter: (a, b) => (a.username || "").localeCompare(b.username || ""),
       align: "center",
       render: (val) => val || "-",
-    },
-    {
-      title: text[language].incidentType,
-      dataIndex: "incident_type",
-      key: "incident_type",
-      sorter: (a, b) => (a.incident_type || "").localeCompare(b.incident_type || ""),
-      align: "center",
-      render: (val) => <Tag color="green">{val || "Positive"}</Tag>,
     },
     {
       title: text[language].category,
@@ -377,9 +391,9 @@ const PositiveIncidentLogs = () => {
               color: "#000",
             }}
             icon={<EyeOutlined />}
-            onClick={() => showModal(images.map((img) => `data:${img.image_type};base64,${img.image_data}`))}
+            onClick={() => showModal(images)}
           >
-            {text[language].view} ({count})
+            {text[language].view}
           </Button>
         );
       },
@@ -532,17 +546,24 @@ const PositiveIncidentLogs = () => {
       >
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           {selectedImages.map((image, index) => (
-            <img
-              key={index}
-              src={image}
-              alt={`Image ${index}`}
-              style={{
-                width: "100%",
-                maxHeight: "500px",
-                objectFit: "contain",
-                marginBottom: "15px",
-              }}
-            />
+            <div key={index} style={{ width: "100%", marginBottom: "15px" }}>
+              <img
+                src={resolveImgSrc(image)}
+                alt={`Image ${index + 1}`}
+                style={{
+                  width: "100%",
+                  maxHeight: "500px",
+                  objectFit: "contain",
+                }}
+              />
+              <Button
+                icon={<DownloadOutlined />}
+                style={{ marginTop: 8 }}
+                onClick={() => downloadBase64Image(image, `good_practice_${selectedIncident?.incident_id || 'image'}_${index + 1}`)}
+              >
+                {text[language].download}
+              </Button>
+            </div>
           ))}
         </div>
       </Modal>
@@ -563,9 +584,6 @@ const PositiveIncidentLogs = () => {
               </Descriptions.Item>
               <Descriptions.Item label={text[language].username}>
                 {selectedIncident.username || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label={text[language].incidentType}>
-                <Tag color="green">{selectedIncident.incident_type || "Positive"}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label={text[language].category}>
                 {selectedIncident.category_name ? <Tag color="green">{selectedIncident.category_name}</Tag> : "-"}
@@ -611,20 +629,30 @@ const PositiveIncidentLogs = () => {
               {(selectedIncident.incident_image || []).length > 0 ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
                   {selectedIncident.incident_image.map((img, idx) => (
-                    <img
-                      key={idx}
-                      src={`data:${img.image_type};base64,${img.image_data}`}
-                      alt={`Incident ${idx}`}
-                      style={{
-                        width: 150,
-                        height: 150,
-                        objectFit: "cover",
-                        borderRadius: 8,
-                        border: "1px solid #e0e0e0",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => showModal(selectedIncident.incident_image.map((i) => `data:${i.image_type};base64,${i.image_data}`))}
-                    />
+                    <div key={idx}>
+                      <img
+                        src={resolveImgSrc(img)}
+                        alt={`Incident ${idx + 1}`}
+                        style={{
+                          width: 150,
+                          height: 150,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: "1px solid #e0e0e0",
+                          cursor: "pointer",
+                          display: "block",
+                        }}
+                        onClick={() => showModal(selectedIncident.incident_image)}
+                      />
+                      <Button
+                        size="small"
+                        icon={<DownloadOutlined />}
+                        style={{ marginTop: 6, width: "100%" }}
+                        onClick={() => downloadBase64Image(img, `good_practice_${selectedIncident.incident_id || 'image'}_${idx + 1}`)}
+                      >
+                        {text[language].download}
+                      </Button>
+                    </div>
                   ))}
                 </div>
               ) : (

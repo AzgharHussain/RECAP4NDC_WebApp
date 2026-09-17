@@ -102,6 +102,30 @@ const getImageUrl = (imageData) => {
   return `data:image/jpeg;base64,${imageData}`;
 };
 
+// Normalize the many date shapes the API can return ("2026-09-14",
+// "14-SEP-26 00:00:00", ISO timestamps) into "YYYY-MM-DD" for comparison.
+const MONTHS_3 = {
+  JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
+  JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12',
+};
+
+const parseBoundaryDate = (v) => {
+  if (!v) return "";
+  const s = String(v).trim();
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const dmy = s.match(/^(\d{1,2})[-\s]([A-Za-z]{3})[-\s](\d{2,4})/);
+  if (dmy) {
+    const mm = MONTHS_3[dmy[2].toUpperCase()];
+    if (mm) {
+      const y = dmy[3].length === 2 ? (Number(dmy[3]) < 50 ? `20${dmy[3]}` : `19${dmy[3]}`) : dmy[3];
+      return `${y}-${mm}-${dmy[1].padStart(2, '0')}`;
+    }
+  }
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+};
+
 const startIcon = new L.Icon({
   iconUrl: startIconImg,
   iconSize: [25, 41],
@@ -670,7 +694,7 @@ const BeatPatrolCoverage = () => {
       if (boundaryDateRange && boundaryDateRange[0] && boundaryDateRange[1]) {
         const start = boundaryDateRange[0].format("YYYY-MM-DD");
         const end = boundaryDateRange[1].format("YYYY-MM-DD");
-        const d = String(b.boundary_date || "").slice(0, 10);
+        const d = parseBoundaryDate(b.boundary_date || b.created_at);
         if (!d || d < start || d > end) return false;
       }
       return true;
@@ -695,8 +719,13 @@ const BeatPatrolCoverage = () => {
       title: t.boundaryDate,
       dataIndex: "boundary_date",
       key: "boundary_date",
-      sorter: (a, b) => String(a.boundary_date || "").localeCompare(String(b.boundary_date || "")),
-      render: (v) => v || "-",
+      sorter: (a, b) => parseBoundaryDate(a.boundary_date || a.created_at).localeCompare(parseBoundaryDate(b.boundary_date || b.created_at)),
+      render: (v, row) => {
+        const iso = parseBoundaryDate(v || row.created_at);
+        if (!iso) return "-";
+        const [y, m, d] = iso.split("-");
+        return `${d}-${m}-${y}`;
+      },
     },
   ];
 

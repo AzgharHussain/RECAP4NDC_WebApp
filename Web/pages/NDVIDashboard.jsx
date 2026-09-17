@@ -3,6 +3,7 @@ import axios from 'axios';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -1465,15 +1466,16 @@ const fetchAllDivisionsData = async (months) => {
     }
   };
 
-  // Handle start date change
+  // Handle start date change — month pickers can carry a day-of-month > 1,
+  // which makes a valid month compare greater than a day-1 bound. Normalize.
   const handleStartDateChange = (newDate) => {
-    setStartDate(newDate);
+    setStartDate(newDate ? startOfMonth(newDate) : null);
     setError(null);
   };
 
   // Handle end date change
   const handleEndDateChange = (newDate) => {
-    setEndDate(newDate);
+    setEndDate(newDate ? startOfMonth(newDate) : null);
     setError(null);
   };
 
@@ -2625,7 +2627,7 @@ const handleExportToPDF = async () => {
       minDate={new Date(2020, 0, 1)}
       maxDate={endDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
-        new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 2 : 11), 1).getTime()
+        endOfMonth(new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 2 : 11), 1)).getTime()
       )) : new Date(2030, 11, 31)}
       slotProps={{
         textField: {
@@ -2650,10 +2652,10 @@ const handleExportToPDF = async () => {
       shouldDisableDate={(date) => !isMonthAvailable(date)}
       shouldDisableMonth={(date) => !isMonthAvailable(date)}
       shouldDisableYear={(date) => !isYearAvailable(date.getFullYear())}
-      minDate={startDate || new Date(2020, 0, 1)}
+      minDate={startDate ? startOfMonth(startDate) : new Date(2020, 0, 1)}
       maxDate={startDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
-        new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 2 : 11), 1).getTime()
+        endOfMonth(new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 2 : 11), 1)).getTime()
       )) : new Date(2030, 11, 31)}
       slotProps={{
         textField: {

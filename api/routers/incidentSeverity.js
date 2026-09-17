@@ -44,11 +44,15 @@ const client = {
 // Seed data for severity levels
 // ─────────────────────────────────────────────────────────
 const SEED_SEVERITY_LEVELS = [
-  { level_name: 'Critical', display_order: 1, color_code: '#dc2626' },
-  { level_name: 'High', display_order: 2, color_code: '#ea580c' },
-  { level_name: 'Medium', display_order: 3, color_code: '#ca8a04' },
-  { level_name: 'Low', display_order: 4, color_code: '#16a34a' },
+  { level_name: 'Critical', level_name_gu: 'અતિ ગંભીર', display_order: 1, color_code: '#dc2626' },
+  { level_name: 'High', level_name_gu: 'ઉચ્ચ', display_order: 2, color_code: '#ea580c' },
+  { level_name: 'Medium', level_name_gu: 'મધ્યમ', display_order: 3, color_code: '#ca8a04' },
+  { level_name: 'Low', level_name_gu: 'નીચું', display_order: 4, color_code: '#16a34a' },
 ];
+
+// Gujarati UI sends ?language=gu (also accepts gujarati / gu-IN etc.)
+const wantsGujarati = (req) =>
+  String(req.query.language || '').toLowerCase().startsWith('gu');
 
 // ─────────────────────────────────────────────────────────
 // Ensure table exists and seed if empty
@@ -58,10 +62,17 @@ async function ensureIncidentSeverityTables() {
     CREATE TABLE IF NOT EXISTS public.incident_severity_levels (
       severity_id    SERIAL PRIMARY KEY,
       level_name     VARCHAR(50) UNIQUE NOT NULL,
+      level_name_gu  VARCHAR(100),
       display_order  INTEGER,
       color_code     VARCHAR(20),
       created_at     TIMESTAMP DEFAULT NOW()
     );
+  `);
+
+  // Existing deployments: add the Gujarati column if missing
+  await client.query(`
+    ALTER TABLE public.incident_severity_levels
+      ADD COLUMN IF NOT EXISTS level_name_gu VARCHAR(100)
   `);
 
   // Check if table is empty
@@ -74,11 +85,19 @@ async function ensureIncidentSeverityTables() {
     console.log('[incident_severity_levels] Seeding initial data...');
     for (const level of SEED_SEVERITY_LEVELS) {
       await client.query(
-        'INSERT INTO public.incident_severity_levels (level_name, display_order, color_code) VALUES ($1, $2, $3)',
-        [level.level_name, level.display_order, level.color_code]
+        'INSERT INTO public.incident_severity_levels (level_name, level_name_gu, display_order, color_code) VALUES ($1, $2, $3, $4)',
+        [level.level_name, level.level_name_gu, level.display_order, level.color_code]
       );
     }
     console.log(`[incident_severity_levels] Seeded ${SEED_SEVERITY_LEVELS.length} severity levels.`);
+  } else {
+    // Backfill Gujarati names for rows created before the column existed
+    for (const level of SEED_SEVERITY_LEVELS) {
+      await client.query(
+        'UPDATE public.incident_severity_levels SET level_name_gu = $1 WHERE level_name = $2 AND level_name_gu IS NULL',
+        [level.level_name_gu, level.level_name]
+      );
+    }
   }
 }
 
@@ -95,8 +114,13 @@ if (require('../utils/isPrimaryWorker')) {
 // ─────────────────────────────────────────────────────────
 router.get('/incident-severity', verifyJwt, async (req, res) => {
   try {
+    const gu = wantsGujarati(req);
     const result = await client.query(`
-      SELECT severity_id, level_name, display_order, color_code
+      SELECT severity_id,
+             ${gu ? 'COALESCE(level_name_gu, level_name)' : 'level_name'} AS level_name,
+             level_name AS level_name_en,
+             level_name_gu,
+             display_order, color_code
       FROM public.incident_severity_levels
       ORDER BY display_order ASC, severity_id ASC;
     `);
@@ -112,14 +136,14 @@ router.get('/incident-severity', verifyJwt, async (req, res) => {
 // Create a new severity level
 // ─────────────────────────────────────────────────────────
 router.post('/incident-severity', verifyJwt, async (req, res) => {
-  const { level_name, display_order, color_code } = req.body;
+  const { level_name, level_name_gu, display_order, color_code } = req.body;
   if (!level_name) {
     return res.status(400).json({ success: false, error: 'level_name is required' });
   }
   try {
     const result = await client.query(
-      'INSERT INTO public.incident_severity_levels (level_name, display_order, color_code) VALUES ($1, $2, $3) RETURNING *',
-      [level_name, display_order || null, color_code || null]
+      'INSERT INTO public.incident_severity_levels (level_name, level_name_gu, display_order, color_code) VALUES ($1, $2, $3, $4) RETURNING *',
+      [level_name, level_name_gu || null, display_order || null, color_code || null]
     );
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
@@ -134,12 +158,13 @@ router.post('/incident-severity', verifyJwt, async (req, res) => {
 // ─────────────────────────────────────────────────────────
 router.put('/incident-severity/:severity_id', verifyJwt, async (req, res) => {
   const { severity_id } = req.params;
-  const { level_name, display_order, color_code } = req.body;
+  const { level_name, level_name_gu, display_order, color_code } = req.body;
   try {
     const setClauses = [];
     const params = [];
     let idx = 1;
     if (level_name !== undefined) { setClauses.push(`level_name = $${idx++}`); params.push(level_name); }
+    if (level_name_gu !== undefined) { setClauses.push(`level_name_gu = $${idx++}`); params.push(level_name_gu); }
     if (display_order !== undefined) { setClauses.push(`display_order = $${idx++}`); params.push(display_order); }
     if (color_code !== undefined) { setClauses.push(`color_code = $${idx++}`); params.push(color_code); }
     if (setClauses.length === 0) {

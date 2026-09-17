@@ -394,6 +394,7 @@ router.get('/incident-logs', verifyJwt, async (req, res) => {
   const gu = wantsGujarati(req);
   const catNameCol = gu ? 'COALESCE(ic.category_name_gu, ic.category_name)' : 'ic.category_name';
   const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, il.incident_subcategory)' : 'il.incident_subcategory';
+  const sevNameCol = gu ? 'COALESCE(sev.level_name_gu, sev.level_name)' : 'sev.level_name';
   try {
     const query = `
       SELECT
@@ -409,7 +410,7 @@ router.get('/incident-logs', verifyJwt, async (req, res) => {
         il.beat,
         il.village,
         il.severity_id,
-        sev.level_name AS severity_name,
+        ${sevNameCol} AS severity_name,
         sev.color_code AS severity_color,
         il.incident_date::text AS incident_date,
         il.incident_time::text AS incident_time,
@@ -477,6 +478,7 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
   const gu = wantsGujarati(req);
   const catNameCol = gu ? 'COALESCE(ic.category_name_gu, ic.category_name)' : 'ic.category_name';
   const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, il.incident_subcategory)' : 'il.incident_subcategory';
+  const sevNameCol = gu ? 'COALESCE(sev.level_name_gu, sev.level_name)' : 'sev.level_name';
   try {
     const query = `
       SELECT
@@ -492,7 +494,7 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
         il.beat,
         il.village,
         il.severity_id,
-        sev.level_name AS severity_name,
+        ${sevNameCol} AS severity_name,
         sev.color_code AS severity_color,
         il.incident_date::text AS incident_date,
         il.incident_time::text AS incident_time,
@@ -557,6 +559,7 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
   const gu = wantsGujarati(req);
   const catNameCol = gu ? 'COALESCE(ic.category_name_gu, ic.category_name)' : 'ic.category_name';
   const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, il.incident_subcategory)' : 'il.incident_subcategory';
+  const sevNameCol = gu ? 'COALESCE(sev.level_name_gu, sev.level_name)' : 'sev.level_name';
 
   try {
     const query = `
@@ -573,7 +576,7 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
         il.beat,
         il.village,
         il.severity_id,
-        sev.level_name AS severity_name,
+        ${sevNameCol} AS severity_name,
         sev.color_code AS severity_color,
         il.incident_date::text AS incident_date,
         il.incident_time::text AS incident_time,

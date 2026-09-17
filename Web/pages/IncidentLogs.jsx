@@ -123,7 +123,7 @@ const IncidentLogs = () => {
   const fetchSeverityLevels = async () => {
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-      const response = await fetch(`${API_BASE_URL}/api/incident-severity`, {
+      const response = await fetch(`${API_BASE_URL}/api/incident-severity?language=${language}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) return;
