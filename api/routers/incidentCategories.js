@@ -124,6 +124,95 @@ const SEED_CATEGORIES = [
 ];
 
 // ─────────────────────────────────────────────────────────
+// Gujarati seed data — parallel to SEED_CATEGORIES
+// (from the Incident Categories Gujarati Forestry document)
+// ─────────────────────────────────────────────────────────
+const SEED_CATEGORIES_GU = [
+  { name: 'વન્યજીવ શિકાર / ગેરકાયદેસર શિકાર', subcategories: [
+    'ગેરકાયદેસર શિકારની શંકા', 'પ્રાણીનો મૃતદેહ મળી આવવો', 'ઇજાગ્રસ્ત પ્રાણી',
+    'ફાંસામાં ફસાયેલું પ્રાણી', 'ફાંસા / પાંજરા મળી આવવા', 'બંદૂકની ગોળીનો અવાજ સંભળાવો',
+    'શિકારના સાધનો મળી આવવા', 'શંકાસ્પદ શિકારી / વ્યક્તિઓ',
+    'વન્યજીવના અંગો / અવશેષો મળી આવવા', 'ગેરકાયદેસર માછીમારી',
+    'વન્યજીવની ગેરકાયદેસર હેરફેરના સંકેતો',
+  ]},
+  { name: 'આગ', subcategories: [
+    'સક્રિય જંગલની આગ', 'ધુમાડો / આગ જોવા મળવી', 'તાજેતરમાં દાઝેલો વિસ્તાર',
+    'ફાયર લાઇન ક્ષતિગ્રસ્ત / જાળવણી વિના હોવી', 'ઇરાદાપૂર્વક આગ લગાડવાની શંકા',
+    'ખેતરમાંથી આગ જંગલ તરફ ફેલાતી હોવી', 'બેદરકારીથી સળગતી કેમ્પફાયર',
+    'મુલાકાતીઓ દ્વારા લાગેલી આગ', 'આગ બાદનું નુકસાન',
+  ]},
+  { name: 'ગેરકાયદેસર વૃક્ષ કાપણી / ઇમારતી લાકડું', subcategories: [
+    'તાજી વૃક્ષ કાપણી', 'ગેરકાયદેસર વૃક્ષ કાપણી', 'અંશતઃ કાપેલું વૃક્ષ',
+    'લાકડાના ગોટા / ઇમારતી લાકડું મળી આવવું', 'ગેરકાયદેસર ઇમારતી લાકડાની હેરફેર',
+    'આરી / ચેઇનસૉ દ્વારા કાપણીના સંકેતો', 'ઇમારતી લાકડું એકત્રિત કરવાનું સ્થળ',
+    'વૃક્ષની છાલનો પટ્ટો ઉતારવો / છાલ દૂર કરવી', 'અનધિકૃત ડાળીઓની કાપણી',
+  ]},
+  { name: 'વન પેદાશોનું ગેરકાયદેસર સંગ્રહણ', subcategories: [
+    'બળતણના લાકડાનું ગેરકાયદેસર સંગ્રહણ', 'વાંસ કાપણી',
+    'અતિશય ઘાસચારો એકત્રિત કરવો', 'ઔષધીય વનસ્પતિનું સંગ્રહણ',
+    'કોયલા બનાવવાની પ્રવૃત્તિ', 'ગેરકાયદેસર બિન-લાકડાની વન પેદાશો (NTFP)નું સંગ્રહણ',
+    'અનધિકૃત ચરાણને કારણે વનસ્પતિ દૂર કરવી',
+  ]},
+  { name: 'દબાણ / જમીન પર અનધિકૃત પ્રવૃત્તિ', subcategories: [
+    'નવું દબાણ', 'કૃષિ વિસ્તારનો વિસ્તરણ',
+    'બિનઅધિકૃત પાકની ખેતી / વાવેતર કરવું', 'નવું મકાન / બાંધકામ જોવા મળવું',
+    'નવી જમીન સાફ કરેલી જોવા મળવી', 'હદ / સીમામાં ફેરફાર',
+    'ગેરકાયદેસર રસ્તો / પગદંડી બનાવવી', 'ખોદકામ',
+    'ખાણકામ / ખનન', 'માટી / રેતી / પથ્થરનું ગેરકાયદેસર ઉત્ખનન',
+  ]},
+  { name: 'ચરાણ / પશુધન જોવા મળવું', subcategories: [
+    'અનધિકૃત ચરાણ', 'પ્રતિબંધિત વિસ્તારમાં પશુધન જોવા મળવું',
+    'અતિશય ચરાણ', 'પશુધનનો પડાવ',
+    'ચરાણને કારણે વનસ્પતિને નુકસાન', 'પશુનો મૃતદેહ',
+    'પશુધન-વન્યજીવ સંઘર્ષની શંકા',
+  ]},
+  { name: 'સીમા / વાડને નુકસાન', subcategories: [
+    'વાડ ક્ષતિગ્રસ્ત', 'વાડ ઇરાદાપૂર્વક કાપવામાં આવી',
+    'વાડ ગાયબ / ચોરાઈ ગયેલી', 'અનધિકૃત અવરજવર માટે માર્ગ બનાવવામાં આવ્યો',
+  ]},
+  { name: 'કચરો / પ્રદૂષણ', subcategories: [
+    'કચરો ફેંકવો', 'પ્લાસ્ટિક કચરો', 'કોઈપણ જોખમી કચરો જોવા મળવો',
+    'બાંધકામનો કચરો', 'રસાયણ / તેલ ઢોળાવું', 'ગટરનું પાણી છોડવું',
+    'મૃત પશુધનનો નિકાલ / કચરો ફેંકવો', 'કચરો બાળવો',
+    'નજીકની પ્રવૃત્તિથી થતું પ્રદૂષણ',
+  ]},
+  { name: 'અનધિકૃત માનવ પ્રવૃત્તિ / દખલ / દબાણ', subcategories: [
+    'જંગલ વિસ્તારમાં અનધિકૃત વ્યક્તિઓ જોવા મળવી', 'ગેરકાયદેસર કેમ્પિંગ',
+    'અનધિકૃત પ્રવાસન પ્રવૃત્તિ', 'દારૂ / નશીલા પદાર્થો સંબંધિત પ્રવૃત્તિ',
+    'અનધિકૃત પ્રવેશ', 'શંકાસ્પદ વાહન',
+    'અનધિકૃત વાહન અવરજવર',
+    'પ્રતિબંધિત વિસ્તારમાં અનધિકૃત ફોટોગ્રાફી / ડ્રોનનો ઉપયોગ',
+  ]},
+  { name: 'માળખાકીય સુવિધાઓને નુકસાન', subcategories: [
+    'વોચટાવરને નુકસાન', 'વન માર્ગને નુકસાન',
+    'સાઇનબોર્ડ ક્ષતિગ્રસ્ત / ચોરાયેલું', 'અથવા અન્ય કોઈપણ માળખાકીય સુવિધાને નુકસાન',
+  ]},
+  { name: 'વૃક્ષ / રોપાને નુકસાન', subcategories: [
+    'વાવેતર વિસ્તારને નુકસાન', 'રોપાઓ ઉખેડી નાખવામાં આવ્યા', 'વાવેતરમાં રોપાઓનું મૃત્યુ',
+    'ચરાણને કારણે વાવેતરને નુકસાન', 'આગથી થયેલું નુકસાન',
+    'વાવેતર વિસ્તારની વાડને નુકસાન', 'અનધિકૃત ઉપજ / વન પેદાશ કાપણી',
+    'જીવાત / રોગનો ઉપદ્રવ', 'પાણી આપવાની માળખાકીય સુવિધાને નુકસાન',
+  ]},
+  { name: 'ગેરકાયદેસર વાહન / પરિવહન', subcategories: [
+    'શંકાસ્પદ વાહન જોવા મળવું', 'પ્રતિબંધિત વિસ્તારમાં વાહન જોવા મળવું',
+    'ઇમારતી લાકડાનું પરિવહન', 'વન્યજીવ / વન પેદાશોનું પરિવહન',
+    'બિનઅધિકૃત ટ્રેક્ટર / ટ્રક / લૉરી જોવા મળવી',
+    'ગેરકાયદેસર પ્રવેશના સંકેત આપતા વાહનના ટાયરનાં નિશાન જોવા મળવા',
+  ]},
+  { name: 'અન્ય / સામાન્ય નિરીક્ષણ', subcategories: [
+    'ઉપરોક્ત શ્રેણીઓમાં આવરી ન લેવાયેલી કોઈ મહત્વપૂર્ણ ઘટના',
+    'અસામાન્ય પર્યાવરણીય પરિસ્થિતિ',
+    'પેટ્રોલિંગ દરમિયાન મળેલી જાહેર ફરિયાદ',
+    'સલામતી માટેનું જોખમ',
+    'ગ્રામજનો / બાતમીદારો પાસેથી પ્રાપ્ત માહિતી',
+  ]},
+];
+
+// Returns true when ?language= is set to Gujarati ('gu', 'gujarati', 'gu-IN', ...)
+const wantsGujarati = (req) =>
+  String(req.query.language || '').toLowerCase().startsWith('gu');
+
+// ─────────────────────────────────────────────────────────
 // Auto-create tables and seed data when server starts
 // ─────────────────────────────────────────────────────────
 async function ensureIncidentCategoryTables() {
@@ -149,6 +238,16 @@ async function ensureIncidentCategoryTables() {
     );
   `);
 
+  // Gujarati name columns (added later — existing tables need the ALTER)
+  await client.query(`
+    ALTER TABLE public.incident_categories
+      ADD COLUMN IF NOT EXISTS category_name_gu VARCHAR(500);
+  `);
+  await client.query(`
+    ALTER TABLE public.incident_subcategories
+      ADD COLUMN IF NOT EXISTS subcategory_name_gu VARCHAR(500);
+  `);
+
   // Indexes
   await client.query(`
     CREATE INDEX IF NOT EXISTS idx_incident_subcategories_category_id
@@ -163,20 +262,53 @@ async function ensureIncidentCategoryTables() {
     console.log('[incident_categories] Seeding initial data...');
     for (let i = 0; i < SEED_CATEGORIES.length; i++) {
       const cat = SEED_CATEGORIES[i];
+      const catGu = SEED_CATEGORIES_GU[i] || { name: null, subcategories: [] };
       const catResult = await client.query(
-        'INSERT INTO public.incident_categories (category_name, display_order) VALUES ($1, $2) RETURNING category_id',
-        [cat.name, i + 1]
+        'INSERT INTO public.incident_categories (category_name, category_name_gu, display_order) VALUES ($1, $2, $3) RETURNING category_id',
+        [cat.name, catGu.name, i + 1]
       );
       const categoryId = catResult.rows[0].category_id;
 
       for (let j = 0; j < cat.subcategories.length; j++) {
         await client.query(
-          'INSERT INTO public.incident_subcategories (category_id, subcategory_name, display_order) VALUES ($1, $2, $3)',
-          [categoryId, cat.subcategories[j], j + 1]
+          'INSERT INTO public.incident_subcategories (category_id, subcategory_name, subcategory_name_gu, display_order) VALUES ($1, $2, $3, $4)',
+          [categoryId, cat.subcategories[j], catGu.subcategories[j] || null, j + 1]
         );
       }
     }
     console.log(`[incident_categories] Seeded ${SEED_CATEGORIES.length} categories with subcategories.`);
+  }
+
+  // Backfill Gujarati names for rows seeded before the _gu columns existed
+  const missingGu = await client.query(
+    'SELECT COUNT(*)::int AS cnt FROM public.incident_categories WHERE category_name_gu IS NULL'
+  );
+  if ((missingGu.rows[0]?.cnt || 0) > 0) {
+    console.log('[incident_categories] Backfilling Gujarati names...');
+    for (let i = 0; i < SEED_CATEGORIES.length; i++) {
+      const cat = SEED_CATEGORIES[i];
+      const catGu = SEED_CATEGORIES_GU[i];
+      if (!catGu) continue;
+
+      await client.query(
+        `UPDATE public.incident_categories SET category_name_gu = $1
+         WHERE category_name = $2 AND category_name_gu IS NULL`,
+        [catGu.name, cat.name]
+      );
+
+      for (let j = 0; j < cat.subcategories.length; j++) {
+        const subGu = catGu.subcategories[j];
+        if (!subGu) continue;
+        await client.query(
+          `UPDATE public.incident_subcategories s SET subcategory_name_gu = $1
+           FROM public.incident_categories c
+           WHERE s.category_id = c.category_id AND c.category_name = $2
+             AND s.subcategory_name = $3 AND s.subcategory_name_gu IS NULL`,
+          [subGu, cat.name, cat.subcategories[j]]
+        );
+      }
+    }
+    console.log('[incident_categories] Gujarati names backfilled.');
   }
 }
 
@@ -193,15 +325,18 @@ if (require('../utils/isPrimaryWorker')) {
 // Used for dropdowns and frontend display
 // ─────────────────────────────────────────────────────────
 router.get('/incident-categories', verifyJwt, async (req, res) => {
+  const gu = wantsGujarati(req);
+  const catNameCol = gu ? 'COALESCE(category_name_gu, category_name)' : 'category_name';
+  const subNameCol = gu ? 'COALESCE(subcategory_name_gu, subcategory_name)' : 'subcategory_name';
   try {
     const catResult = await client.query(`
-      SELECT category_id, category_name, display_order
+      SELECT category_id, ${catNameCol} AS category_name, display_order
       FROM public.incident_categories
       ORDER BY display_order ASC, category_id ASC;
     `);
 
     const subResult = await client.query(`
-      SELECT subcategory_id, category_id, subcategory_name, display_order
+      SELECT subcategory_id, category_id, ${subNameCol} AS subcategory_name, display_order
       FROM public.incident_subcategories
       ORDER BY display_order ASC, subcategory_id ASC;
     `);
@@ -236,9 +371,12 @@ router.get('/incident-categories', verifyJwt, async (req, res) => {
 // Returns a flat list of categories only (for simple dropdown)
 // ─────────────────────────────────────────────────────────
 router.get('/incident-categories/flat', verifyJwt, async (req, res) => {
+  const catNameCol = wantsGujarati(req)
+    ? 'COALESCE(category_name_gu, category_name)'
+    : 'category_name';
   try {
     const result = await client.query(`
-      SELECT category_id, category_name, display_order
+      SELECT category_id, ${catNameCol} AS category_name, display_order
       FROM public.incident_categories
       ORDER BY display_order ASC, category_id ASC;
     `);
@@ -255,11 +393,14 @@ router.get('/incident-categories/flat', verifyJwt, async (req, res) => {
 // ─────────────────────────────────────────────────────────
 router.get('/incident-categories/:category_id/subcategories', verifyJwt, async (req, res) => {
   const { category_id } = req.params;
+  const gu = wantsGujarati(req);
+  const catNameCol = gu ? 'COALESCE(category_name_gu, category_name)' : 'category_name';
+  const subNameCol = gu ? 'COALESCE(subcategory_name_gu, subcategory_name)' : 'subcategory_name';
 
   try {
     // Verify category exists
     const catCheck = await client.query(
-      'SELECT category_id, category_name FROM public.incident_categories WHERE category_id = $1',
+      `SELECT category_id, ${catNameCol} AS category_name FROM public.incident_categories WHERE category_id = $1`,
       [category_id]
     );
     if (catCheck.rows.length === 0) {
@@ -267,7 +408,7 @@ router.get('/incident-categories/:category_id/subcategories', verifyJwt, async (
     }
 
     const result = await client.query(`
-      SELECT subcategory_id, category_id, subcategory_name, display_order
+      SELECT subcategory_id, category_id, ${subNameCol} AS subcategory_name, display_order
       FROM public.incident_subcategories
       WHERE category_id = $1
       ORDER BY display_order ASC, subcategory_id ASC;
@@ -290,7 +431,7 @@ router.get('/incident-categories/:category_id/subcategories', verifyJwt, async (
 // Add a new category (admin)
 // ─────────────────────────────────────────────────────────
 router.post('/incident-categories', verifyJwt, async (req, res) => {
-  const { category_name, subcategories } = req.body;
+  const { category_name, category_name_gu, subcategories } = req.body;
 
   if (!category_name) {
     return res.status(400).json({ success: false, error: 'category_name is required' });
@@ -301,8 +442,8 @@ router.post('/incident-categories', verifyJwt, async (req, res) => {
     const nextOrder = (maxOrder.rows[0]?.max_order || 0) + 1;
 
     const result = await client.query(
-      'INSERT INTO public.incident_categories (category_name, display_order) VALUES ($1, $2) RETURNING category_id, category_name, display_order',
-      [category_name, nextOrder]
+      'INSERT INTO public.incident_categories (category_name, category_name_gu, display_order) VALUES ($1, $2, $3) RETURNING category_id, category_name, category_name_gu, display_order',
+      [category_name, category_name_gu || null, nextOrder]
     );
 
     const categoryId = result.rows[0].category_id;
@@ -311,10 +452,11 @@ router.post('/incident-categories', verifyJwt, async (req, res) => {
     if (Array.isArray(subcategories) && subcategories.length > 0) {
       for (let i = 0; i < subcategories.length; i++) {
         const name = typeof subcategories[i] === 'string' ? subcategories[i] : subcategories[i].subcategory_name;
+        const nameGu = typeof subcategories[i] === 'object' ? subcategories[i].subcategory_name_gu : null;
         if (name) {
           await client.query(
-            'INSERT INTO public.incident_subcategories (category_id, subcategory_name, display_order) VALUES ($1, $2, $3)',
-            [categoryId, name, i + 1]
+            'INSERT INTO public.incident_subcategories (category_id, subcategory_name, subcategory_name_gu, display_order) VALUES ($1, $2, $3, $4)',
+            [categoryId, name, nameGu || null, i + 1]
           );
         }
       }
@@ -340,7 +482,7 @@ router.post('/incident-categories', verifyJwt, async (req, res) => {
 // ─────────────────────────────────────────────────────────
 router.put('/incident-categories/:category_id', verifyJwt, async (req, res) => {
   const { category_id } = req.params;
-  const { category_name } = req.body;
+  const { category_name, category_name_gu } = req.body;
 
   if (!category_name) {
     return res.status(400).json({ success: false, error: 'category_name is required' });
@@ -348,8 +490,8 @@ router.put('/incident-categories/:category_id', verifyJwt, async (req, res) => {
 
   try {
     const result = await client.query(
-      'UPDATE public.incident_categories SET category_name = $1 WHERE category_id = $2 RETURNING category_id, category_name, display_order',
-      [category_name, category_id]
+      'UPDATE public.incident_categories SET category_name = $1, category_name_gu = COALESCE($3, category_name_gu) WHERE category_id = $2 RETURNING category_id, category_name, category_name_gu, display_order',
+      [category_name, category_id, category_name_gu || null]
     );
 
     if (result.rows.length === 0) {

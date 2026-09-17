@@ -45,6 +45,10 @@ const client = {
   },
 };
 
+// Returns true when ?language= is set to Gujarati ('gu', 'gujarati', 'gu-IN', ...)
+const wantsGujarati = (req) =>
+  String(req.query.language || '').toLowerCase().startsWith('gu');
+
 // Multer memory storage (same as patrol routes)
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -387,6 +391,9 @@ router.post('/incident-logs', verifyJwt, upload.single('incident_image'), async 
 // Returns all incident logs with their images from MongoDB
 // ─────────────────────────────────────────────────────────
 router.get('/incident-logs', verifyJwt, async (req, res) => {
+  const gu = wantsGujarati(req);
+  const catNameCol = gu ? 'COALESCE(ic.category_name_gu, ic.category_name)' : 'ic.category_name';
+  const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, il.incident_subcategory)' : 'il.incident_subcategory';
   try {
     const query = `
       SELECT
@@ -394,8 +401,8 @@ router.get('/incident-logs', verifyJwt, async (req, res) => {
         il.user_id,
         il.incident_type,
         il.incident_category_id,
-        ic.category_name,
-        il.incident_subcategory,
+        ${catNameCol} AS category_name,
+        ${subNameCol} AS incident_subcategory,
         il.division,
         il.range_name,
         il.round,
@@ -414,6 +421,7 @@ router.get('/incident-logs', verifyJwt, async (req, res) => {
       FROM public.incident_logs il
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
+      LEFT JOIN public.incident_subcategories isc ON isc.category_id = il.incident_category_id AND isc.subcategory_name = il.incident_subcategory
       LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
       ORDER BY
         COALESCE(sev.display_order, 9999) ASC,
@@ -466,6 +474,9 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
     return res.status(400).json({ success: false, error: 'user_id is required' });
   }
 
+  const gu = wantsGujarati(req);
+  const catNameCol = gu ? 'COALESCE(ic.category_name_gu, ic.category_name)' : 'ic.category_name';
+  const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, il.incident_subcategory)' : 'il.incident_subcategory';
   try {
     const query = `
       SELECT
@@ -473,8 +484,8 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
         il.user_id,
         il.incident_type,
         il.incident_category_id,
-        ic.category_name,
-        il.incident_subcategory,
+        ${catNameCol} AS category_name,
+        ${subNameCol} AS incident_subcategory,
         il.division,
         il.range_name,
         il.round,
@@ -493,6 +504,7 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
       FROM public.incident_logs il
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
+      LEFT JOIN public.incident_subcategories isc ON isc.category_id = il.incident_category_id AND isc.subcategory_name = il.incident_subcategory
       LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
       WHERE il.user_id = $1
       ORDER BY il.created_at DESC;
@@ -542,6 +554,9 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
 // ─────────────────────────────────────────────────────────
 router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
   const { incident_id } = req.params;
+  const gu = wantsGujarati(req);
+  const catNameCol = gu ? 'COALESCE(ic.category_name_gu, ic.category_name)' : 'ic.category_name';
+  const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, il.incident_subcategory)' : 'il.incident_subcategory';
 
   try {
     const query = `
@@ -550,8 +565,8 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
         il.user_id,
         il.incident_type,
         il.incident_category_id,
-        ic.category_name,
-        il.incident_subcategory,
+        ${catNameCol} AS category_name,
+        ${subNameCol} AS incident_subcategory,
         il.division,
         il.range_name,
         il.round,
@@ -570,6 +585,7 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
       FROM public.incident_logs il
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
+      LEFT JOIN public.incident_subcategories isc ON isc.category_id = il.incident_category_id AND isc.subcategory_name = il.incident_subcategory
       LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
       WHERE il.incident_id = $1;
     `;

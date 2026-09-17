@@ -9,7 +9,7 @@ const imageSchema = new mongoose.Schema(
     },
     sourceType: {
       type: String,
-      enum: ['patrol', 'ndvi', 'incident'],
+      enum: ['patrol', 'ndvi', 'incident', 'positive_incident'],
       required: true,
       index: true,
     },

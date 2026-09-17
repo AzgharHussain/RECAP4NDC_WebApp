@@ -106,7 +106,7 @@ const IncidentLogs = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-      const response = await fetch(`${API_BASE_URL}/api/incident-categories/flat`, {
+      const response = await fetch(`${API_BASE_URL}/api/incident-categories/flat?language=${language}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) return;
@@ -141,7 +141,7 @@ const IncidentLogs = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-      const response = await fetch(`${API_BASE_URL}/api/incident-logs`, {
+      const response = await fetch(`${API_BASE_URL}/api/incident-logs?language=${language}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -167,7 +167,7 @@ const IncidentLogs = () => {
     fetchSeverityLevels();
     const timer = setTimeout(() => fetchIncidentLogs(), 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [language]);
 
   // Apply filters
   useEffect(() => {
