@@ -758,7 +758,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           <MenuItem value="all" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
             <em>All Divisions</em>
           </MenuItem>
-          {division && division !== 'all' && divisions.length === 0 && (
+          {division && division !== 'all' && !divisions.find(d => d.division === division) && (
             <MenuItem value={division}>{division}</MenuItem>
           )}
           {divisions.map((d, index) => (
@@ -779,7 +779,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           disabled={!division || division === 'all' || !!lockedRange}
         >
           <MenuItem value="">Select Range</MenuItem>
-          {range && ranges.length === 0 && (
+          {range && !ranges.find(r => r.range === range) && (
             <MenuItem value={range}>{range}</MenuItem>
           )}
           {ranges.map((r, index) => (
@@ -805,7 +805,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           disabled={!range || division === 'all' || (!!lockedRound && !lockedBeat)}
         >
           <MenuItem value="">Select Round</MenuItem>
-          {round && rounds.length === 0 && (
+          {round && !rounds.find(r => r.round === round) && (
             <MenuItem value={round}>{round}</MenuItem>
           )}
           {rounds.map((r, index) => (
@@ -828,7 +828,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           disabled={division === 'all' || (!lockedBeat && !round)}
         >
           <MenuItem value="">Select Beat</MenuItem>
-          {beat && beats.length === 0 && (
+          {beat && !beats.find(b => b.beat === beat) && (
             <MenuItem value={beat}>{beat}</MenuItem>
           )}
           {beats.map((b, index) => (
