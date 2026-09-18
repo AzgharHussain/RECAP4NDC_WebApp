@@ -713,36 +713,28 @@ const PatrolIncidentLogs = () => {
   const [showmaproute, setShowMapRoute] = useState(false);
   
   // Filter states
-  // Locked division state — set in useEffect to avoid stale reads after login
-  const [_lockedDivision, _setLockedDivision] = useState(null);
-  const [_lockedRange, _setLockedRange] = useState(null);
-  const [_lockedBeat, _setLockedBeat] = useState(null);
+  // Initialise hierarchy filters *eagerly* from localStorage so the very first
+  // fetchAllData call (in the useEffect below) already has the correct values.
+  // getUserDivision/Range/Beat are synchronous reads — safe to call at render time.
+  const _initDiv = getUserDivision();
+  const _initRng = _initDiv ? getUserRange() : null;
+  const _initBts = _initDiv ? getUserBeat() : null;
+  const _initRnd = _initDiv ? (getUserRound() || "") : "";
+
+  const [_lockedDivision, _setLockedDivision] = useState(_initDiv);
+  const [_lockedRange, _setLockedRange] = useState(_initRng);
+  const [_lockedBeat, _setLockedBeat] = useState(_initBts);
   const [searchText, setSearchText] = useState("");
   const [startFilter, setStartFilter] = useState(null);
   const [endFilter, setEndFilter] = useState(null);
   const [typeFilter, setTypeFilter] = useState("");
-  const [divisionFilter, setDivisionFilter] = useState("");
-  const [rangeFilter, setRangeFilter] = useState("");
-  const [beatFilter, setBeatFilter] = useState("");
+  const [divisionFilter, setDivisionFilter] = useState(_initDiv || "");
+  const [rangeFilter, setRangeFilter] = useState(_initRng || "");
+  const [beatFilter, setBeatFilter] = useState(_initBts || "");
   const [forestId, setForestId] = useState("");
-  const [roundFilter, setRoundFilter] = useState("");
+  const [roundFilter, setRoundFilter] = useState(_initRnd);
   const [patrolLocationFilter, setPatrolLocationFilter] = useState("");
   const [patrolLocations, setPatrolLocations] = useState([]);
-
-  // Read the user's hierarchy from localStorage once userData is available
-  useEffect(() => {
-    const div = getUserDivision();
-    _setLockedDivision(div);
-    setDivisionFilter(div || "");
-    // If user has no division, show all divisions/data and do not lock lower hierarchy filters.
-    const rng = div ? getUserRange() : null;
-    const bts = div ? getUserBeat() : null;
-    _setLockedRange(rng);
-    _setLockedBeat(bts);
-    setRangeFilter(rng || "");
-    setRoundFilter(div ? (getUserRound() || "") : "");
-    setBeatFilter(bts || "");
-  }, []);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -1152,11 +1144,13 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       });
   }, []);
 
-  // Initial load
+  // Initial load — runs after hierarchy filter states are already set from localStorage.
+  // fetchAllData is called here so it uses the correct division/range/beat filters
+  // on the very first fetch (beat officer sees only their own data immediately).
   useEffect(() => {
     fetchAllData(1, pageSize);
     
-    // Fetch hierarchy data
+    // Fetch hierarchy dropdown data
     axios.get(`${API_BASE_URL}/api/forest-types`).then((res) => setForestTypes(res.data)).catch((err) => console.error(err));
     axios.get(`${API_BASE_URL}/api/patrolling-division`).then((res) => {
       const data = res.data;
@@ -1178,7 +1172,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       else if (data && data.data && Array.isArray(data.data)) setBeats1(data.data);
       else setBeats1([]);
     }).catch((err) => console.error("Error fetching beats:", err));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDivisionFilterChange = (value) => {
     setDivisionFilter(value);

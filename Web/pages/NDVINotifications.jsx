@@ -6,7 +6,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "../utils/leafletFix";
 import { API_BASE_URL } from "../config";
-import { getAuthHeaders, matchesUserHierarchy, matchesUserHierarchyString, getMostSpecificLevel } from "../utils/authUtils";
+import { getAuthHeaders, matchesUserHierarchy, matchesUserHierarchyString, getMostSpecificLevel, getUserDivision, getUserRange, getUserRound, getUserBeat } from "../utils/authUtils";
 import { capitalizeFirst } from "../utils/textFormat";
 import { useLanguage } from "../context/LanguageContext";
 import gujaratlogo from "../assets/FOREST DEPT.jpg";
@@ -163,10 +163,19 @@ const NDVINotifications = () => {
     <Tag color={resolved ? "success" : "error"}>{resolved ? t.resolved : t.notResolved}</Tag>
   );
 
-  // Check if the logged-in user has a division to lock
-  // Use state + useEffect to avoid stale reads when component mounts before
-  // userData is set in localStorage (right after login).
-  const [lockedDivision, setLockedDivision] = useState(null);
+  // ── Eagerly read the full hierarchy from localStorage at render time
+  // (synchronous, same pattern as Patrolling.jsx). This ensures the correct
+  // filters are applied on the very first fetch without an extra render cycle.
+  const _initDiv   = getUserDivision();
+  const _initRng   = _initDiv ? getUserRange()  : null;
+  const _initRnd   = _initDiv ? getUserRound()  : null;
+  const _initBt    = _initDiv ? getUserBeat()   : null;
+  // Most-specific level for the "division" query param (beat > round > range > division)
+  const _initMostSpecific = getMostSpecificLevel();
+
+  // lockedDivision is used for client-side hierarchy filter guard.
+  // Initialise eagerly so fetchReport reads the correct value on first call.
+  const [lockedDivision] = useState(_initDiv);
 
   const [loading, setLoading] = useState(true); // start true — avoids "No data" flash before first fetch
   const [data, setData] = useState([]);
@@ -176,7 +185,12 @@ const NDVINotifications = () => {
   // table_name kept in state for API calls but no longer shown as a UI filter
   const [filters, setFilters] = useState({
     username: null,
-    division: null,
+    // Pre-fill division with the most-specific hierarchy level so the first
+    // fetch is already scoped to this user's beat/round/range/division.
+    division: _initMostSpecific || null,
+    range:    _initRng || null,
+    round:    _initRnd || null,
+    beat:     _initBt  || null,
     month: null, dates: null
   });
   const [detailRecord, setDetailRecord] = useState(null);
@@ -206,7 +220,8 @@ const NDVINotifications = () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      ["username", "division", "month"].forEach((key) => {
+      // Send all hierarchy levels to the backend for narrower filtering
+      ["username", "division", "range", "round", "beat", "month"].forEach((key) => {
         if (overrideFilters[key]) params.append(key, overrideFilters[key]);
       });
       if (overrideFilters.dates?.[0]) params.append("start_date", overrideFilters.dates[0].format("YYYY-MM-DD"));
@@ -217,10 +232,11 @@ const NDVINotifications = () => {
       const res = await fetch(`${API_BASE_URL}/api/ndvi-notification-report?${params.toString()}`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to fetch notification report");
-      // Apply client-side hierarchy filter (beat → round → range → division → circle)
-      // as a backup to the backend ILIKE filter
+      // Apply client-side hierarchy filter as a safety net.
+      // matchesUserHierarchy reads from localStorage synchronously — no stale
+      // closure issue — so we don't need to check lockedDivision here.
       let rows = (json.data || []).map((item) => ({ ...item, key: item.id }));
-      if (lockedDivision) {
+      if (_initDiv) {
         rows = rows.filter(item =>
           matchesUserHierarchy(item) ||
           matchesUserHierarchyString(item.coupe_name || '')
@@ -228,7 +244,7 @@ const NDVINotifications = () => {
       }
       setData(rows);
       let monthlyRows = (json.monthlyDivisionSummary || []).map((item, index) => ({ ...item, key: `${item.month}-${item.division}-${index}` }));
-      if (lockedDivision) {
+      if (_initDiv) {
         monthlyRows = monthlyRows.filter(item => matchesUserHierarchy(item));
       }
       setMonthlySummary(monthlyRows);
@@ -253,18 +269,10 @@ const NDVINotifications = () => {
     }
   };
 
-  // Read the user's division from localStorage once userData is available,
-  // then update the filters and fetch the report.
+  // Fetch on mount — filters are already pre-seeded with the user's full
+  // hierarchy (division/range/round/beat) from the synchronous init above.
   useEffect(() => {
-    // Use the most specific hierarchy level (beat → round → range → division → circle)
-    const div = getMostSpecificLevel();
-    setLockedDivision(div);
-    if (div) {
-      setFilters(prev => ({ ...prev, division: div }));
-      fetchReport({ ...filters, division: div });
-    } else {
-      fetchReport();
-    }
+    fetchReport();
   }, []);
 
   // Handle Ant Design Table page change

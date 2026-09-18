@@ -387,12 +387,18 @@ const BeatPatrolCoverage = () => {
   const t = translations[language] || translations.en;
 
   // Selection states
-  // Use state + useEffect to avoid stale reads when component mounts before
-  // userData is set in localStorage (right after login).
-  // undefined = not yet resolved, null = no division (PCCF), string = locked division
-  const [lockedDivision, setLockedDivision] = useState(undefined);
-  const [lockedRange, setLockedRange] = useState(null);
-  const [lockedBeat, setLockedBeat] = useState(null);
+  // ── Eagerly read the full hierarchy from localStorage at render time
+  // (synchronous, same pattern as Patrolling.jsx). This ensures the correct
+  // filters are applied on the very first fetch without an extra render cycle.
+  const _initDiv   = getUserDivision();
+  const _initRng   = _initDiv ? getUserRange()  : null;
+  const _initBt    = _initDiv ? getUserBeat()   : null;
+
+  // lockedDivision, lockedRange, lockedBeat are used for client-side hierarchy
+  // filter guards. Initialise eagerly so fetch calls can use them on first render.
+  const [lockedDivision, setLockedDivision] = useState(_initDiv);
+  const [lockedRange, setLockedRange] = useState(_initRng);
+  const [lockedBeat, setLockedBeat] = useState(_initBt);
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
@@ -897,15 +903,6 @@ const BeatPatrolCoverage = () => {
   };
 
   useEffect(() => {
-    // Lock each hierarchy level the user holds (division → range → beat).
-    const div = getUserDivision();
-    setLockedDivision(div);
-    setLockedRange(div ? getUserRange() : null);
-    setLockedBeat(div ? getUserBeat() : null);
-  }, []);
-
-  useEffect(() => {
-    if (lockedDivision === undefined) return; // Wait until division is resolved
     fetchDivisions();
     fetchPatrolBoundaries();
 

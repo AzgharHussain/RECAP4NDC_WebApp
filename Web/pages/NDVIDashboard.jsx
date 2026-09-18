@@ -131,6 +131,7 @@ const dashboardText = {
     startDate: "Start Date",
     endDate: "End Date",
     submit: "Submit",
+    clearAll: "Clear All",
     
     // Error messages
     errorAllDivisionsRange: 'For "All Divisions", date range cannot exceed 3 months. Please select a shorter range.',
@@ -268,6 +269,7 @@ const dashboardText = {
     startDate: "પ્રારંભ તારીખ",
     endDate: "અંતિમ તારીખ",
     submit: "સબમિટ કરો",
+    clearAll: "બધું સાફ કરો",
     
     // Error messages
     errorAllDivisionsRange: '"બધા વિભાગો" માટે, તારીખ શ્રેણી 3 મહિનાથી વધુ ન હોઈ શકે. કૃપા કરીને ટૂંકી શ્રેણી પસંદ કરો.',
@@ -413,26 +415,32 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
   const [ranges, setRanges] = useState([]);
   const [rounds, setRounds] = useState([]);
   const [beats, setBeats] = useState([]);
-  const [division, setDivision] = useState("");
-  const [range, setRange] = useState("");
-  const [round, setRound] = useState("");
-  const [beat, setBeat] = useState("");
-  const { language } = useLanguage(); // Add this
+  const { language } = useLanguage();
+
+  // ── Eagerly read hierarchy from localStorage at render time (synchronous),
+  // exactly like Patrolling.jsx does. This ensures the dropdowns are
+  // pre-populated immediately on login without waiting for an async effect.
+  const _initDiv  = getUserDivision();
+  const _initRng  = _initDiv ? getUserRange()  : null;
+  const _initRnd  = _initDiv ? getUserRound()  : null;
+  const _initBt   = _initDiv ? getUserBeat()   : null;
 
   // The logged-in user's own hierarchy — lock each dropdown to the level
   // they hold (division → range → round → beat).
-  // undefined = not yet resolved; fields null = no lock at that level.
-  const [userHierarchy, setUserHierarchy] = useState(undefined);
+  // Initialized synchronously so there is no "undefined" flash.
+  const [userHierarchy] = useState({
+    division: _initDiv,
+    range:    _initRng,
+    round:    _initRnd,
+    beat:     _initBt,
+  });
 
-  useEffect(() => {
-    const div = getUserDivision();
-    setUserHierarchy({
-      division: div,
-      range: div ? getUserRange() : null,
-      round: div ? getUserRound() : null,
-      beat: div ? getUserBeat() : null,
-    });
-  }, []);
+  // Pre-populate dropdown state immediately with raw localStorage values
+  // so the UI shows the correct selection before the API cascade completes.
+  const [division, setDivision] = useState(_initDiv || "");
+  const [range,    setRange   ] = useState(_initRng || "");
+  const [round,    setRound   ] = useState(_initRnd || "");
+  const [beat,     setBeat    ] = useState(_initBt  || "");
 
   const lockedDivision = userHierarchy?.division || null;
   const lockedRange = userHierarchy?.range || null;
@@ -441,7 +449,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
 
   /* ------------------ Load Divisions from coupe_dropdown_master ------------------ */
   useEffect(() => {
-    if (userHierarchy === undefined) return; // Wait until resolved
+    // userHierarchy is always an object now (initialized synchronously).
 
     const postOptions = async (url, body) => {
       const token = localStorage.getItem("token");
@@ -464,44 +472,68 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
       const { division: uDiv, range: uRange, round: uRound, beat: uBeat } = userHierarchy;
       if (!uDiv) return;
 
+      // (Removed early onHierarchyChange call to ensure we wait for coupe lookup)
+
       const divOpt = divisionOptions.find(d => matchesDivision(d.division, uDiv));
       const divVal = divOpt ? divOpt.division : uDiv;
       setDivision(divVal);
 
       let rangeVal = null, roundVal = null, beatVal = null, coupeName = null;
       try {
+        // ── Range ──────────────────────────────────────────────────────────
         const rangeRows = await postOptions('/api/coupe-ranges', { division: divVal });
         setRanges(Array.isArray(rangeRows) ? rangeRows : []);
         if (uRange && Array.isArray(rangeRows)) {
           rangeVal = (rangeRows.find(r => matchesDivision(r.range, uRange)) || {}).range || null;
+          if (!rangeVal) {
+            // Exact case-insensitive fallback
+            rangeVal = (rangeRows.find(r => (r.range || '').toLowerCase().trim() === uRange.toLowerCase().trim()) || {}).range || null;
+          }
           if (rangeVal) setRange(rangeVal);
         }
 
+        // ── Round ──────────────────────────────────────────────────────────
         if (rangeVal) {
           const roundRows = await postOptions('/api/coupe-rounds', { division: divVal, range: rangeVal });
           setRounds(Array.isArray(roundRows) ? roundRows : []);
           if (uRound && Array.isArray(roundRows)) {
             roundVal = (roundRows.find(r => matchesDivision(r.round, uRound)) || {}).round || null;
+            if (!roundVal) {
+              roundVal = (roundRows.find(r => (r.round || '').toLowerCase().trim() === uRound.toLowerCase().trim()) || {}).round || null;
+            }
             if (roundVal) setRound(roundVal);
           }
         }
 
-        if (roundVal) {
-          const beatRows = await postOptions('/api/coupe-beats', { division: divVal, range: rangeVal, round: roundVal });
+        // ── Beat ───────────────────────────────────────────────────────────
+        // Continue even when roundVal is null — beat officers whose round field
+        // is missing/mismatched in localStorage should still get their beat loaded.
+        if (uBeat && rangeVal) {
+          const beatBody = { division: divVal, range: rangeVal };
+          if (roundVal) beatBody.round = roundVal; // include round only when resolved
+          const beatRows = await postOptions('/api/coupe-beats', beatBody);
           setBeats(Array.isArray(beatRows) ? beatRows : []);
-          if (uBeat && Array.isArray(beatRows)) {
+          if (Array.isArray(beatRows)) {
             beatVal = (beatRows.find(b => matchesDivision(b.beat, uBeat)) || {}).beat || null;
+            if (!beatVal) {
+              beatVal = (beatRows.find(b => (b.beat || '').toLowerCase().trim() === uBeat.toLowerCase().trim()) || {}).beat || null;
+            }
             if (beatVal) setBeat(beatVal);
           }
         }
 
+        // ── Coupe lookup ───────────────────────────────────────────────────
         if (beatVal) {
+          console.log("[NDVI Debug] Fetching coupe for beat:", beatVal);
           try {
             const res = await postOptions('/api/get-coupe-by-beat', {
               division: divVal, range: rangeVal, round: roundVal, beat: beatVal
             });
+            console.log("[NDVI Debug] Coupe lookup result:", res);
             if (res && res.coupe_name) coupeName = res.coupe_name;
-          } catch { /* coupe lookup optional */ }
+          } catch (err) { 
+            console.error("[NDVI Debug] Coupe lookup failed:", err);
+          }
         }
       } catch (err) {
         console.error("Error auto-selecting user hierarchy:", err);
@@ -509,9 +541,11 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
 
       onHierarchyChange({
         division: divVal,
-        range: rangeVal,
-        round: roundVal,
-        beat: beatVal,
+        // Fall back to raw user value when fuzzy-match found nothing,
+        // so the parent always has the most specific filter available.
+        range: rangeVal  || uRange  || null,
+        round: roundVal  || uRound  || null,
+        beat:  beatVal   || uBeat   || null,
         ...(coupeName ? { coupe_name: coupeName } : {}),
         isAllDivisions: false,
       });
@@ -724,6 +758,9 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           <MenuItem value="all" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
             <em>All Divisions</em>
           </MenuItem>
+          {division && division !== 'all' && divisions.length === 0 && (
+            <MenuItem value={division}>{division}</MenuItem>
+          )}
           {divisions.map((d, index) => (
             <MenuItem key={index} value={d.division}>
               {d.division}
@@ -732,7 +769,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
         </Select>
       </FormControl>
 
-      {/* Range Dropdown - Disabled when "All Divisions" is selected */}
+      {/* Range Dropdown */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>{t.range}</InputLabel>
         <Select
@@ -742,6 +779,9 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           disabled={!division || division === 'all' || !!lockedRange}
         >
           <MenuItem value="">Select Range</MenuItem>
+          {range && ranges.length === 0 && (
+            <MenuItem value={range}>{range}</MenuItem>
+          )}
           {ranges.map((r, index) => (
             <MenuItem key={index} value={r.range}>
               {r.range}
@@ -750,16 +790,24 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
         </Select>
       </FormControl>
 
-      {/* Round Dropdown - Disabled when "All Divisions" is selected */}
+      {/* Round Dropdown — disable only when:
+           - no range is selected, OR
+           - "All Divisions" is active, OR
+           - this user is a round-level (or lower) officer with a locked round
+             AND is NOT a beat officer (beat officers need round selectable
+             in case their round wasn't auto-resolved). */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>{t.round}</InputLabel>
         <Select
           value={round}
           onChange={handleRoundChange}
           label={t.round}
-          disabled={!range || division === 'all' || !!lockedRound}
+          disabled={!range || division === 'all' || (!!lockedRound && !lockedBeat)}
         >
           <MenuItem value="">Select Round</MenuItem>
+          {round && rounds.length === 0 && (
+            <MenuItem value={round}>{round}</MenuItem>
+          )}
           {rounds.map((r, index) => (
             <MenuItem key={index} value={r.round}>
               {r.round}
@@ -768,16 +816,21 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
         </Select>
       </FormControl>
 
-      {/* Beat Dropdown - Disabled when "All Divisions" is selected */}
+      {/* Beat Dropdown — enable whenever a beat lock exists, even if the
+           round state hasn't been populated yet (auto-cascade may still
+           be in flight or round field may be missing in the user profile). */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>{t.beat}</InputLabel>
         <Select
           value={beat}
           onChange={handleBeatChange}
           label={t.beat}
-          disabled={!round || division === 'all' || !!lockedBeat}
+          disabled={division === 'all' || (!lockedBeat && !round)}
         >
           <MenuItem value="">Select Beat</MenuItem>
+          {beat && beats.length === 0 && (
+            <MenuItem value={beat}>{beat}</MenuItem>
+          )}
           {beats.map((b, index) => (
             <MenuItem key={index} value={b.beat}>
               {b.beat}
@@ -835,6 +888,19 @@ const NDVIChangeDashboard = () => {
   const [selectedBeat, setSelectedBeat] = useState(null);
   const [hierarchyCoupeName, setHierarchyCoupeName] = useState(null);
 
+  // Track whether the hierarchy was auto-set from the user's login data
+  // (so we can auto-fetch with a default date range on first load).
+  const _autoHierarchyApplied = React.useRef(false);
+  const _pendingCoupeName = React.useRef(null);
+  // Refs to hold the latest range/round/beat synchronously so the
+  // auto-fetch setTimeout can read them before React state has settled.
+  const _pendingRange  = React.useRef(null);
+  const _pendingRound  = React.useRef(null);
+  const _pendingBeat   = React.useRef(null);
+
+  // Key used to force-remount the hierarchy dropdown (reset it on Clear All)
+  const [dropdownResetKey, setDropdownResetKey] = React.useState(0);
+
   // Add language context
   const { language } = useLanguage();
   const t = dashboardText[language]; // Translation object
@@ -891,6 +957,179 @@ const NDVIChangeDashboard = () => {
     fetchAvailableMonths();
   }, [selectedDivision]);
 
+  // Auto-fetch on login: when a beat/range/division officer logs in, the hierarchy
+  // dropdown auto-cascades and calls handleHierarchyChange. Once selectedDivision
+  // is set for the first time (and no dates have been manually chosen yet), we
+  // automatically set a default date range (last 3 months) and fetch data so the
+  // table is populated immediately — same UX fix as the Patrolling Logs page.
+  useEffect(() => {
+    if (!selectedDivision) return;                  // No hierarchy set yet
+    if (_autoHierarchyApplied.current) return;      // Already auto-fetched once
+    if (startDate || endDate) return;               // User already chose dates manually
+
+    _autoHierarchyApplied.current = true;
+
+    // Default range: 3 months back → current month
+    const now = new Date();
+    const defaultEnd = startOfMonth(now);
+    const defaultStart = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 2, 1));
+
+    setStartDate(defaultStart);
+    setEndDate(defaultEnd);
+
+    // Defer the fetch so state updates settle before we read them inside fetchFilteredData.
+    setTimeout(async () => {
+      const months = [];
+      let cur = new Date(defaultStart);
+      while (cur <= defaultEnd) {
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        months.push(`${y}-${m}`);
+        cur.setMonth(cur.getMonth() + 1);
+      }
+
+      if (months.length === 0) return;
+
+      setTableNames(months);
+      setLoading(true);
+      setError(null);
+      setMonthlyData({});
+      setCurrentTableData([]);
+      setSummaryStats(null);
+
+      try {
+        const token = localStorage.getItem("token");
+        const coupeToUse = _pendingCoupeName.current ||
+          (selectedDivision && selectedDivision !== 'all' ? transformDivisionToCoupe(selectedDivision) : null);
+
+        // Read range/round/beat from refs (updated synchronously in handleHierarchyChange)
+        // so they are available before React state has settled.
+        const rangeToUse  = _pendingRange.current;
+        const roundToUse  = _pendingRound.current;
+        const beatToUse   = _pendingBeat.current;
+
+        if (!coupeToUse || selectedDivision === 'all') {
+          setLoading(false);
+          return;
+        }
+
+        const totalCoupeArea = await (async () => {
+          try {
+            const r = await axios.post(
+              `${API_BASE_URL}/api/get-coupe-area`,
+              { tableName: coupeToUse },
+              { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            );
+            if (r.data.success) {
+              const a = parseFloat(r.data.data[0]?.total_area_sq_km || 0) * 100;
+              setTotalArea(a > 0 ? a : 10000);
+              return a > 0 ? a : 10000;
+            }
+          } catch { /* ignore */ }
+          setTotalArea(10000);
+          return 10000;
+        })();
+
+        const tempMonthlyData = {};
+
+        for (const month of months) {
+          try {
+            const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
+            console.log(`[NDVI Debug] Auto-fetching for month ${month}, table: ${tableName}`);
+            
+            const dataResponse = await axios.post(
+              `${API_BASE_URL}/api/ndvi-change-get-filtered`,
+              {
+                tableName,
+                division: selectedDivision,
+                range: rangeToUse,
+                round: roundToUse,
+                beat:  beatToUse,
+              },
+              { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            );
+            
+            console.log(`[NDVI Debug] Response for ${month}:`, dataResponse.data);
+
+            if (dataResponse.data.success && dataResponse.data.data.length > 0) {
+              const data = dataResponse.data.data;
+
+              // Fetch degraded area
+              let degradedAreaValue = 0;
+              try {
+                const degRes = await axios.post(
+                  `${API_BASE_URL}/api/ndvi-change-degraded-area`,
+                  { tableName, division: selectedDivision, range: rangeToUse, round: roundToUse, beat: beatToUse },
+                  { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+                );
+                if (degRes.data.success) {
+                  degradedAreaValue = parseFloat(degRes.data.data[0]?.total_area_sq_km || 0) * 100;
+                }
+              } catch { /* ignore */ }
+
+              const afforestedAreaValue = Math.max(0, totalCoupeArea - degradedAreaValue);
+              const degradedPolygons = data.filter(i => i.status === true).length;
+              const afforestedPolygons = data.filter(i => i.status === false).length;
+              const degradedAreaPerPolygon = degradedPolygons > 0 ? degradedAreaValue / degradedPolygons : 0;
+              const afforestedAreaPerPolygon = afforestedPolygons > 0 ? afforestedAreaValue / afforestedPolygons : 0;
+
+              const enhancedData = data.map(item => {
+                const isDegraded = item.status === true;
+                const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
+                const note = normalizeNote ? normalizeNote(item.note) : (item.note || '');
+                return {
+                  ...item,
+                  note,
+                  area_sq_km: polygonArea,
+                  month,
+                  status: isDegraded,
+                  change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
+                  has_note: note !== '',
+                  has_image: !!(item.image_data),
+                  pixle_id: item.pixle_id || '-',
+                  NDVI_change: item.NDVI_change != null ? parseFloat(item.NDVI_change) : null,
+                };
+              });
+
+              const withNotes = enhancedData.filter(i => i.has_note).length;
+              const withImages = enhancedData.filter(i => i.has_image).length;
+              const stats = {
+                totalPolygons: enhancedData.length,
+                degradedArea: degradedAreaValue,
+                afforestedArea: afforestedAreaValue,
+                totalArea: totalCoupeArea,
+                degradedPercentage: totalCoupeArea > 0 ? (degradedAreaValue / totalCoupeArea) * 100 : 0,
+                afforestedPercentage: totalCoupeArea > 0 ? (afforestedAreaValue / totalCoupeArea) * 100 : 0,
+                withNotes,
+                withImages,
+              };
+
+              tempMonthlyData[month] = { data: enhancedData, stats, month, degradedArea: degradedAreaValue, afforestedArea: afforestedAreaValue, totalArea: totalCoupeArea };
+            }
+          } catch (err) {
+            console.error(`Auto-fetch: error for month ${month}`, err);
+          }
+        }
+
+        if (Object.keys(tempMonthlyData).length > 0) {
+          setMonthlyData(tempMonthlyData);
+          const sortedMonths = Object.keys(tempMonthlyData).sort();
+          const first = sortedMonths[0];
+          setCurrentTableData(tempMonthlyData[first].data);
+          setSummaryStats(tempMonthlyData[first].stats);
+          setSelectedMonth(first);
+        } else {
+          setError('No NDVI data found for your selection in the last 3 months.');
+        }
+      } catch (err) {
+        console.error('Auto-fetch error:', err);
+        setError('Failed to auto-load NDVI data.');
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  }, [selectedDivision]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Toggle section expansion
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -907,6 +1146,7 @@ const NDVIChangeDashboard = () => {
     // doesn't follow the standard naming convention
     const coupeNameOverrides = {
       'bharuch': 'bharuchsubdivision_coupe',
+      'bhavnagar': 'Bhavnagar_coupes',
     };
 
     // Remove " Forest Division" and replace with "_coupe"
@@ -930,20 +1170,32 @@ const NDVIChangeDashboard = () => {
 
   // Handle hierarchy change from dropdown
   const handleHierarchyChange = (hierarchy) => {
-    
+    console.log("[NDVI Debug] handleHierarchyChange received:", hierarchy);
     setSelectedDivision(hierarchy.division);
     setSelectedRange(hierarchy.range);
     setSelectedRound(hierarchy.round);
     setSelectedBeat(hierarchy.beat);
     setHierarchyCoupeName(hierarchy.coupe_name || null);
+
+    // Mirror values into refs immediately so the auto-fetch setTimeout
+    // callback can read the correct values before React state has settled.
+    _pendingRange.current  = hierarchy.range  || null;
+    _pendingRound.current  = hierarchy.round  || null;
+    _pendingBeat.current   = hierarchy.beat   || null;
     
     // If division is selected and we have the division name, transform it to coupe name
+    let resolvedCoupe = hierarchy.coupe_name || null;
     if (hierarchy.division && !hierarchy.coupe_name && hierarchy.division !== 'all') {
       const transformedCoupe = transformDivisionToCoupe(hierarchy.division);
       setHierarchyCoupeName(transformedCoupe);
+      resolvedCoupe = transformedCoupe;
     } else if (hierarchy.division === 'all') {
       setHierarchyCoupeName('all_divisions');
+      resolvedCoupe = 'all_divisions';
     }
+
+    // Store the resolved coupe name for the auto-fetch effect.
+    _pendingCoupeName.current = resolvedCoupe;
   };
 
   // Generate table names based on date range
@@ -1325,6 +1577,8 @@ const fetchAllDivisionsData = async (months) => {
         return;
       }
       
+      console.log(`[NDVI Debug] fetchFilteredData starting for months: ${months.join(', ')} with coupe: ${coupeToUse}`);
+
       // Fetch total area for the coupe and wait for it
       const totalCoupeArea = await fetchTotalAreaAndReturn(coupeToUse);
       
@@ -1356,6 +1610,8 @@ const fetchAllDivisionsData = async (months) => {
             { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
           );
           
+          console.log(`[NDVI Debug] fetchFilteredData Response for ${month}:`, dataResponse.data);
+
           if (dataResponse.data.success) {
             const data = dataResponse.data.data;
             
@@ -2551,6 +2807,45 @@ const handleExportToPDF = async () => {
     }
   };
 
+  // Clear all filters and reset the dashboard to its initial state
+  const handleClearAll = () => {
+    // Reset date range
+    setStartDate(null);
+    setEndDate(null);
+
+    // Reset hierarchy
+    setSelectedDivision(null);
+    setSelectedRange(null);
+    setSelectedRound(null);
+    setSelectedBeat(null);
+    setHierarchyCoupeName(null);
+    _pendingCoupeName.current = null;
+    _pendingRange.current     = null;
+    _pendingRound.current     = null;
+    _pendingBeat.current      = null;
+
+    // Allow auto-fetch to fire again on next login auto-cascade
+    _autoHierarchyApplied.current = false;
+
+    // Reset all fetched data
+    setMonthlyData({});
+    setCurrentTableData([]);
+    setSummaryStats(null);
+    setTotalArea(0);
+    setTableNames([]);
+    setError(null);
+
+    // Reset table-level filters
+    setSearchTerm('');
+    setStatusFilter('');
+    setShowOnlyWithNotes(false);
+    setShowOnlyWithImages(false);
+    setPage(0);
+
+    // Force the hierarchy dropdown to remount so it visually resets
+    setDropdownResetKey(prev => prev + 1);
+  };
+
   return (
     <Container className="ndvi-dashboard-page" maxWidth="xl" sx={{ py: 3,
       minHeight: '100vh',
@@ -2597,7 +2892,7 @@ const handleExportToPDF = async () => {
           titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
           avatar={<Forest />}
         />
-        <NDVIMyCoups_dropdown onHierarchyChange={handleHierarchyChange} />
+        <NDVIMyCoups_dropdown key={dropdownResetKey} onHierarchyChange={handleHierarchyChange} />
       </Card>
 
       {/* Main Filters */}
@@ -2670,24 +2965,36 @@ const handleExportToPDF = async () => {
   </LocalizationProvider>
 </Grid>
 
-<Grid item xs={12} md={2}>
-  <Button
-    variant="contained"
-    color="primary"
-    fullWidth
-    startIcon={<Send />}
-    onClick={handleSubmit}
-    disabled={!startDate || !endDate || (() => {
-      if (!startDate || !endDate) return true;
-      const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                        (endDate.getMonth() - startDate.getMonth());
-      const maxAllowed = selectedDivision === 'all' ? 3 : 12;
-      return monthsDiff > maxAllowed;
-    })()}
-    sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
-  >
-    {t.submit}
-  </Button>
+<Grid item xs={12} md={3}>
+  <Box display="flex" gap={1}>
+    <Button
+      variant="contained"
+      color="primary"
+      fullWidth
+      startIcon={<Send />}
+      onClick={handleSubmit}
+      disabled={!startDate || !endDate || (() => {
+        if (!startDate || !endDate) return true;
+        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                          (endDate.getMonth() - startDate.getMonth());
+        const maxAllowed = selectedDivision === 'all' ? 3 : 12;
+        return monthsDiff > maxAllowed;
+      })()}
+      sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
+    >
+      {t.submit}
+    </Button>
+    <Button
+      variant="outlined"
+      color="error"
+      fullWidth
+      startIcon={<FilterList />}
+      onClick={handleClearAll}
+      sx={{ borderRadius: 2, height: '40px', whiteSpace: 'nowrap' }}
+    >
+      {t.clearAll}
+    </Button>
+  </Box>
 </Grid>
 
 {/* Error message for range exceeding limits */}

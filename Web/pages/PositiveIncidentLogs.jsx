@@ -7,6 +7,7 @@ import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
+import { matchesUserHierarchy } from "../utils/authUtils";
 
 const { Option } = Select;
 
@@ -115,7 +116,8 @@ const PositiveIncidentLogs = () => {
     }
   };
 
-  // Fetch all positive incident logs
+  // Fetch all positive incident logs and apply hierarchy filter so beat
+  // officers only see good practices within their own division/range/round/beat.
   const fetchIncidentLogs = async () => {
     setLoading(true);
     try {
@@ -132,6 +134,21 @@ const PositiveIncidentLogs = () => {
         ...item,
       }));
 
+      // Hierarchy field map for positive incident logs
+      // (range is stored as range_name in the API response)
+      const incidentFieldMap = {
+        beat:     ['beat', 'Beat'],
+        round:    ['round', 'Round'],
+        range:    ['range_name', 'range', 'Range'],
+        division: ['division', 'Division'],
+        circle:   ['circle', 'Circle'],
+      };
+
+      // Filter to the logged-in user's hierarchy.
+      // matchesUserHierarchy returns true for every row when the user has no
+      // division lock (PCCF / admin), so this is safe for all roles.
+      formatted = formatted.filter(item => matchesUserHierarchy(item, incidentFieldMap));
+
       setIncidentData(formatted);
     } catch (error) {
       console.error("Error fetching positive incident logs:", error);
@@ -140,6 +157,7 @@ const PositiveIncidentLogs = () => {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchCategories();
