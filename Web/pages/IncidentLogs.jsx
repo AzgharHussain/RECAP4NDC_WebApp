@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Table, Button, Input, Select, DatePicker, Modal, Tag, Space, Card, Row, Col, Statistic } from "antd";
-import { SearchOutlined, EyeOutlined, ExclamationCircleOutlined, FireOutlined, EnvironmentOutlined, UserOutlined } from "@ant-design/icons";
+import { Table, Button, Input, Select, DatePicker, Modal, Tag, Space, Card, Row, Col, Statistic, message } from "antd";
+import { SearchOutlined, EyeOutlined, ExclamationCircleOutlined, FireOutlined, EnvironmentOutlined, UserOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Descriptions } from "antd";
 import "./PatrolIncidentLogs.css";
 import exportIcon from "../assets/excel.png";
@@ -52,6 +52,8 @@ const IncidentLogs = () => {
       description: "Description",
       images: "Images",
       view: "View",
+      download: "Download",
+      imageNotAvailable: "Image is not available",
       viewImages: "View Images",
       totalIncidents: "Total Incidents",
       categories: "Categories",
@@ -88,6 +90,8 @@ const IncidentLogs = () => {
       description: "વર્ણન",
       images: "છબીઓ",
       view: "જુઓ",
+      download: "ડાઉનલોડ",
+      imageNotAvailable: "છબી ઉપલબ્ધ નથી",
       viewImages: "છબીઓ જુઓ",
       totalIncidents: "કુલ ઘટનાઓ",
       categories: "શ્રેણીઓ",
@@ -267,6 +271,28 @@ const IncidentLogs = () => {
     setIsModalVisible(true);
   };
 
+  const resolveImgSrc = (img) => {
+    if (!img?.image_data) return "";
+    const s = String(img.image_data).trim();
+    if (s.startsWith("data:") || s.startsWith("http")) return s;
+    return `data:${img.image_type || "image/jpeg"};base64,${s}`;
+  };
+
+  const downloadBase64Image = (image, fallbackName) => {
+    if (!image?.image_data) {
+      message.warning(text[language].imageNotAvailable);
+      return;
+    }
+    const mimeType = image.image_type || "image/jpeg";
+    const extension = mimeType.includes("png") ? "png" : mimeType.includes("gif") ? "gif" : mimeType.includes("heic") ? "heic" : "jpg";
+    const link = document.createElement("a");
+    link.href = `data:${mimeType};base64,${image.image_data}`;
+    link.download = `${fallbackName}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleCancel = () => {
     setIsModalVisible(false);
   };
@@ -419,9 +445,9 @@ const IncidentLogs = () => {
               color: "#000",
             }}
             icon={<EyeOutlined />}
-            onClick={() => showModal(images.map((img) => `data:${img.image_type};base64,${img.image_data}`))}
+            onClick={() => showModal(images)}
           >
-            {text[language].view} ({count})
+            {text[language].view}
           </Button>
         );
       },
@@ -586,17 +612,24 @@ const IncidentLogs = () => {
       >
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           {selectedImages.map((image, index) => (
-            <img
-              key={index}
-              src={image}
-              alt={`Image ${index}`}
-              style={{
-                width: "100%",
-                maxHeight: "500px",
-                objectFit: "contain",
-                marginBottom: "15px",
-              }}
-            />
+            <div key={index} style={{ width: "100%", marginBottom: "15px" }}>
+              <img
+                src={resolveImgSrc(image)}
+                alt={`Image ${index + 1}`}
+                style={{
+                  width: "100%",
+                  maxHeight: "500px",
+                  objectFit: "contain",
+                }}
+              />
+              <Button
+                icon={<DownloadOutlined />}
+                style={{ marginTop: 8 }}
+                onClick={() => downloadBase64Image(image, `incident_${selectedIncident?.incident_id || 'image'}_${index + 1}`)}
+              >
+                {text[language].download}
+              </Button>
+            </div>
           ))}
         </div>
       </Modal>
@@ -672,20 +705,30 @@ const IncidentLogs = () => {
               {(selectedIncident.incident_image || []).length > 0 ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
                   {selectedIncident.incident_image.map((img, idx) => (
-                    <img
-                      key={idx}
-                      src={`data:${img.image_type};base64,${img.image_data}`}
-                      alt={`Incident ${idx}`}
-                      style={{
-                        width: 150,
-                        height: 150,
-                        objectFit: "cover",
-                        borderRadius: 8,
-                        border: "1px solid #e0e0e0",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => showModal(selectedIncident.incident_image.map((i) => `data:${i.image_type};base64,${i.image_data}`))}
-                    />
+                    <div key={idx}>
+                      <img
+                        src={resolveImgSrc(img)}
+                        alt={`Incident ${idx + 1}`}
+                        style={{
+                          width: 150,
+                          height: 150,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: "1px solid #e0e0e0",
+                          cursor: "pointer",
+                          display: "block",
+                        }}
+                        onClick={() => showModal(selectedIncident.incident_image)}
+                      />
+                      <Button
+                        size="small"
+                        icon={<DownloadOutlined />}
+                        style={{ marginTop: 6, width: "100%" }}
+                        onClick={() => downloadBase64Image(img, `incident_${selectedIncident.incident_id || 'image'}_${idx + 1}`)}
+                      >
+                        {text[language].download}
+                      </Button>
+                    </div>
                   ))}
                 </div>
               ) : (

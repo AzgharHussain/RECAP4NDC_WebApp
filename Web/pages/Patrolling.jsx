@@ -715,6 +715,8 @@ const PatrolIncidentLogs = () => {
   // Filter states
   // Locked division state — set in useEffect to avoid stale reads after login
   const [_lockedDivision, _setLockedDivision] = useState(null);
+  const [_lockedRange, _setLockedRange] = useState(null);
+  const [_lockedBeat, _setLockedBeat] = useState(null);
   const [searchText, setSearchText] = useState("");
   const [startFilter, setStartFilter] = useState(null);
   const [endFilter, setEndFilter] = useState(null);
@@ -733,9 +735,13 @@ const PatrolIncidentLogs = () => {
     _setLockedDivision(div);
     setDivisionFilter(div || "");
     // If user has no division, show all divisions/data and do not lock lower hierarchy filters.
-    setRangeFilter(div ? (getUserRange() || "") : "");
+    const rng = div ? getUserRange() : null;
+    const bts = div ? getUserBeat() : null;
+    _setLockedRange(rng);
+    _setLockedBeat(bts);
+    setRangeFilter(rng || "");
     setRoundFilter(div ? (getUserRound() || "") : "");
-    setBeatFilter(div ? (getUserBeat() || "") : "");
+    setBeatFilter(bts || "");
   }, []);
   
   // Pagination states
@@ -1106,9 +1112,9 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     setTypeFilter("");
     setForestId("");
     setDivisionFilter(_lockedDivision || "");
-    setRangeFilter("");
-    setRoundFilter("");
-    setBeatFilter("");
+    setRangeFilter(_lockedRange || "");
+    setRoundFilter(_lockedDivision ? (getUserRound() || "") : "");
+    setBeatFilter(_lockedBeat || "");
     setCoupeFilter("");
     setPatrolLocationFilter("");
     setFilteredRanges([]);
@@ -2262,7 +2268,7 @@ const exportTableToExcel = async () => {
             allowClear
             showSearch
             optionFilterProp="children"
-            disabled={!divisionFilter}
+            disabled={!divisionFilter || !!_lockedRange}
           >
             <Option value="">{language === "gu" ? "બધી રેંજ" : "All Ranges"}</Option>
             {(filteredRanges.length > 0 ? filteredRanges : ranges1).map((range, index) => {
@@ -2291,7 +2297,7 @@ const exportTableToExcel = async () => {
             allowClear
             showSearch
             optionFilterProp="children"
-            disabled={!rangeFilter}
+            disabled={!rangeFilter || !!_lockedBeat}
           >
             <Option value="">{language === "gu" ? "બધી બીટ" : "All Beats"}</Option>
             {(filteredBeats.length > 0 ? filteredBeats : beats1).map((beat, index) => {

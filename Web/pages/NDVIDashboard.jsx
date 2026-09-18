@@ -2624,11 +2624,11 @@ const handleExportToPDF = async () => {
       shouldDisableDate={(date) => !isMonthAvailable(date)}
       shouldDisableMonth={(date) => !isMonthAvailable(date)}
       shouldDisableYear={(date) => !isYearAvailable(date.getFullYear())}
-      minDate={new Date(2020, 0, 1)}
-      maxDate={endDate ? new Date(Math.min(
-        new Date(2030, 11, 31).getTime(),
-        endOfMonth(new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 2 : 11), 1)).getTime()
-      )) : new Date(2030, 11, 31)}
+      minDate={endDate ? new Date(Math.max(
+        new Date(2020, 0, 1).getTime(),
+        startOfMonth(new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 3 : 12), 1)).getTime()
+      )) : new Date(2020, 0, 1)}
+      maxDate={endDate ? endOfMonth(endDate) : new Date(2030, 11, 31)}
       slotProps={{
         textField: {
           fullWidth: true,
@@ -2655,7 +2655,7 @@ const handleExportToPDF = async () => {
       minDate={startDate ? startOfMonth(startDate) : new Date(2020, 0, 1)}
       maxDate={startDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
-        endOfMonth(new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 2 : 11), 1)).getTime()
+        endOfMonth(new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 3 : 12), 1)).getTime()
       )) : new Date(2030, 11, 31)}
       slotProps={{
         textField: {

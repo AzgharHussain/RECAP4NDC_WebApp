@@ -20,7 +20,7 @@ import axios from "axios";
 import "./RouterMap.css";
 import "./BeatPatrolCoverage.css";
 import { API_BASE_URL } from "../config";
-import { getUserDivision, matchesDivision, getMostSpecificLevel } from "../utils/authUtils";
+import { getUserDivision, getUserRange, getUserBeat, matchesDivision, matchesRange, matchesBeat } from "../utils/authUtils";
 import Select from 'react-select';
 import vector from '../assets/Vector.png';
 import gisfylogo from "../assets/Gisfylogo.png";
@@ -391,6 +391,8 @@ const BeatPatrolCoverage = () => {
   // userData is set in localStorage (right after login).
   // undefined = not yet resolved, null = no division (PCCF), string = locked division
   const [lockedDivision, setLockedDivision] = useState(undefined);
+  const [lockedRange, setLockedRange] = useState(null);
+  const [lockedBeat, setLockedBeat] = useState(null);
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
@@ -828,6 +830,14 @@ const BeatPatrolCoverage = () => {
         label: item.range
       }));
       setRanges(rangeList);
+      // Auto-select the user's locked range and cascade to beats
+      if (lockedRange) {
+        const matchedRange = rangeList.find(r => matchesRange(r.value, lockedRange));
+        if (matchedRange) {
+          setSelectedRange(matchedRange);
+          fetchBeats(division, matchedRange);
+        }
+      }
     } catch (error) {
       console.error("Error fetching ranges:", error);
       message.error(t.failedToLoadRanges);
@@ -873,6 +883,11 @@ const BeatPatrolCoverage = () => {
         label: item.beat
       }));
       setBeats(beatList);
+      // Auto-select the user's locked beat
+      if (lockedBeat) {
+        const matchedBeat = beatList.find(b => matchesBeat(b.value, lockedBeat));
+        if (matchedBeat) setSelectedBeat(matchedBeat);
+      }
     } catch (error) {
       console.error("Error fetching beats:", error);
       message.error(t.failedToLoadBeats);
@@ -882,8 +897,11 @@ const BeatPatrolCoverage = () => {
   };
 
   useEffect(() => {
-    // Use the most specific hierarchy level (beat → round → range → division → circle)
-    setLockedDivision(getMostSpecificLevel());
+    // Lock each hierarchy level the user holds (division → range → beat).
+    const div = getUserDivision();
+    setLockedDivision(div);
+    setLockedRange(div ? getUserRange() : null);
+    setLockedBeat(div ? getUserBeat() : null);
   }, []);
 
   useEffect(() => {
@@ -940,8 +958,8 @@ const BeatPatrolCoverage = () => {
     setSelectedBoundary(selectedOption);
     if (selectedOption) {
       if (!lockedDivision) setSelectedDivision(null);
-      setSelectedRange(null);
-      setSelectedBeat(null);
+      if (!lockedRange) setSelectedRange(null);
+      if (!lockedBeat) setSelectedBeat(null);
       setSelectionMode('boundary');
       setValidationError(false);
     }
@@ -1550,11 +1568,11 @@ const BeatPatrolCoverage = () => {
                   </div>
                   <div className="coverage-field">
                     <label>{t.range}</label>
-                    <Select value={selectedRange} onChange={handleRangeChange} options={ranges} isClearable placeholder={t.selectRange} styles={customSelectStyles} isDisabled={!selectedDivision} />
+                    <Select value={selectedRange} onChange={handleRangeChange} options={ranges} isClearable placeholder={t.selectRange} styles={customSelectStyles} isDisabled={!selectedDivision || !!lockedRange} />
                   </div>
                   <div className="coverage-field">
                     <label>{t.beat}</label>
-                    <Select value={selectedBeat} onChange={handleBeatChange} options={beats} isClearable placeholder={t.selectBeat} styles={customSelectStyles} isDisabled={!selectedRange} />
+                    <Select value={selectedBeat} onChange={handleBeatChange} options={beats} isClearable placeholder={t.selectBeat} styles={customSelectStyles} isDisabled={!selectedRange || !!lockedBeat} />
                   </div>
                 </>
               ) : (
