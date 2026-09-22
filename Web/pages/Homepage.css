@@ -668,3 +668,61 @@ body {
     padding: 50px 4%;
   }
 }
+
+/* === iPad Pro Responsive — Homepage === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .hero-content.hero-content--over-video {
+    padding: 50px 5%;
+  }
+
+  .hero-left {
+    max-width: 100%;
+  }
+
+  .hero-title {
+    font-size: clamp(32px, 4vw, 48px);
+  }
+
+  .section-title {
+    font-size: 30px;
+  }
+
+  .faq-categories {
+    gap: 8px;
+  }
+
+  .faq-cat-btn {
+    padding: 8px 14px;
+    font-size: 12.5px;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .overview-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+
+  .hero-content.hero-content--over-video {
+    padding: 50px 5%;
+  }
+
+  .hero-left {
+    max-width: 560px;
+  }
+}

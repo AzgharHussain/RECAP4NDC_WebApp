@@ -514,3 +514,34 @@ a.support-contact-value:hover {
     align-self: stretch;
   }
 }
+
+/* === iPad Pro Responsive — Support Page === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .support-form-section {
+    grid-template-columns: 1fr 280px;
+    gap: 20px;
+  }
+
+  .support-form-wrapper {
+    padding: 28px 24px;
+  }
+
+  .support-faq-section {
+    padding: 32px 24px;
+  }
+
+  .support-form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .support-contact-card {
+    padding: 24px 20px;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .support-form-section {
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+  }
+}

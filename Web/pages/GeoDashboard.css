@@ -1657,3 +1657,167 @@ color: #000;
     height: 100%;
   }
 }
+
+/* ===========================
+   iPad Pro Responsive — GeoDashboard
+   =========================== */
+
+/* iPad Pro 11" portrait (834–1024px) */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .main-container {
+    flex-direction: row;
+  }
+
+  .main-container > div:first-child {
+    flex: 0 0 280px;
+    width: 280px;
+    overflow-y: auto;
+  }
+
+  .map-container {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .map-header2 {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  .map-header-tab {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  .map-header-mapview-h1 {
+    font-size: 16px !important;
+  }
+
+  .map-top-left {
+    top: 4px;
+    right: 4px;
+    gap: 8px;
+  }
+
+  .left-sidebar .tool-button,
+  .left-sidebar .tool-button-active {
+    width: 32px;
+    font-size: 1.1rem;
+  }
+
+  .sidebar-icon-set.sidebar-icon-left {
+    top: 60%;
+  }
+
+  .sidebar-icon-set button,
+  .basegallery,
+  .listcss {
+    padding: 14px;
+    font-size: 1.1rem;
+  }
+
+  .print-container {
+    left: 20%;
+    width: 400px;
+  }
+
+  .reports-content {
+    width: 280px;
+    top: 45px;
+    right: 10px;
+  }
+
+  .feedback-modal-content {
+    width: 360px;
+    max-width: 90vw;
+  }
+
+  .right-sidebar {
+    top: 60px;
+    right: 8px;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .search-control,
+  .search-box-input {
+    left: 20%;
+  }
+
+  .search-suggestions-dropdown {
+    left: 20%;
+  }
+}
+
+/* iPad Pro 12.9" portrait (1024px exactly in portrait) */
+@media only screen and (min-width: 1024px) and (max-width: 1024px) and (orientation: portrait) {
+  .main-container > div:first-child {
+    flex: 0 0 300px;
+    width: 300px;
+  }
+
+  .map-header-tab {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+
+  .map-header-mapview-h1 {
+    font-size: 18px !important;
+  }
+}
+
+/* iPad Pro landscape (1194–1366px) */
+@media only screen and (min-width: 1194px) and (max-width: 1366px) {
+  .main-container > div:first-child {
+    flex: 0 0 320px;
+    width: 320px;
+  }
+
+  .map-header-tab {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+
+  .map-header-mapview-h1 {
+    font-size: 20px !important;
+  }
+
+  .print-container {
+    left: 28%;
+    width: 440px;
+  }
+
+  .reports-content {
+    width: 300px;
+  }
+}
+
+/* Touch targets for map controls on iPad Pro */
+@media only screen and (min-width: 834px) and (max-width: 1366px) and (hover: none) and (pointer: coarse) {
+  .left-sidebar .tool-button,
+  .left-sidebar .tool-button-active {
+    width: 38px;
+    min-height: 38px;
+    font-size: 1.2rem;
+  }
+
+  .sidebar-icon-set button,
+  .basegallery,
+  .listcss {
+    padding: 16px;
+    min-height: 44px;
+  }
+
+  .map-header-tab {
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+
+  .report-actions button {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+}

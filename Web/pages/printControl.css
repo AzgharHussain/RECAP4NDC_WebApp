@@ -48,3 +48,21 @@
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     border: 2px solid #333;
 }
+
+/* === iPad Pro Responsive — Print Control === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .print-control-button {
+    top: 55% !important;
+    right: 3% !important;
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .print-control-button {
+    top: 57% !important;
+    right: 2.5% !important;
+  }
+}

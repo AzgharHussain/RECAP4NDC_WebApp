@@ -1173,3 +1173,141 @@ input[type="checkbox"]:focus {
   margin: 10px 0;
 }
 
+/* ===========================
+   iPad Pro Responsive — Layer Toggle Panel
+   =========================== */
+
+/* iPad Pro 11" portrait (834–1024px) */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .leftpanel {
+    width: 280px;
+    padding: 10px 8px;
+  }
+
+  .sidebar-title {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .group-title {
+    padding: 9px 10px;
+    font-size: 13px;
+  }
+
+  .group-title-content {
+    font-size: 12.5px;
+    gap: 6px;
+  }
+
+  .layer-item {
+    padding: 6px 10px 6px 18px;
+  }
+
+  .layer-label {
+    font-size: 12px;
+  }
+
+  .opacity-control {
+    padding-left: 18px;
+    gap: 8px;
+  }
+
+  .opacity-value {
+    font-size: 11px;
+    min-width: 34px;
+  }
+
+  .legend-toggle-btn,
+  .clear-all-btn {
+    padding: 4px 10px !important;
+    font-size: 11px !important;
+  }
+
+  .legend-panel {
+    max-width: 400px;
+    max-height: 200px;
+    bottom: 15px;
+    right: 15px;
+  }
+
+  .coupe-groups {
+    max-height: 300px;
+  }
+
+  .month-labels {
+    font-size: 8px;
+  }
+}
+
+/* iPad Pro 12.9" portrait (1024px) */
+@media only screen and (min-width: 1024px) and (max-width: 1024px) and (orientation: portrait) {
+  .leftpanel {
+    width: 300px;
+    padding: 12px 10px;
+  }
+}
+
+/* iPad Pro landscape (1194–1366px) */
+@media only screen and (min-width: 1194px) and (max-width: 1366px) {
+  .leftpanel {
+    width: 320px;
+    padding: 12px 10px;
+  }
+
+  .group-title-content {
+    font-size: 13px;
+  }
+
+  .layer-label {
+    font-size: 12.5px;
+  }
+
+  .legend-panel {
+    max-width: 480px;
+    max-height: 220px;
+  }
+}
+
+/* Touch targets for layer panel on iPad Pro */
+@media only screen and (min-width: 834px) and (max-width: 1366px) and (hover: none) and (pointer: coarse) {
+  .group-title {
+    min-height: 44px;
+  }
+
+  .layer-item {
+    min-height: 40px;
+    padding: 8px 10px 8px 18px;
+  }
+
+  .layer-label-container {
+    gap: 10px;
+  }
+
+  input[type="checkbox"] {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .opacity-control input[type="range"] {
+    height: 8px;
+  }
+
+  .opacity-control input[type="range"]::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+
+  .opacity-control input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+  }
+
+  .month-label {
+    padding: 4px 6px;
+    font-size: 10px;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+

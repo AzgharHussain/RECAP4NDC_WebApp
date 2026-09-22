@@ -314,3 +314,52 @@ button {
     min-width: 240px;
   }
 }
+
+/* === iPad Pro Responsive — Dashboard === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .dashboard-container {
+    padding: 12px;
+    overflow-y: auto;
+  }
+
+  .heading-container {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .filters {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .charts-grid {
+    gap: 14px;
+  }
+
+  .chart-card {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .chart-card .recharts-wrapper {
+    width: 100% !important;
+    max-width: 100%;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .dashboard-container {
+    padding: 14px;
+  }
+
+  .charts-grid {
+    gap: 16px;
+  }
+
+  .chart-card {
+    flex: 1 1 48%;
+    min-width: 340px;
+  }
+}

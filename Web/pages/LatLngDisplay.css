@@ -22,6 +22,15 @@
   }
 }
 
+/* iPad Pro 12.9" portrait & landscape (1025–1366px) */
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .lat-lng-display {
+    bottom: 2%;
+    left: 14%;
+    font-size: 9px;
+  }
+}
+
 @media (min-width: 1560px) {
   .lat-lng-display {
     bottom: 4%;

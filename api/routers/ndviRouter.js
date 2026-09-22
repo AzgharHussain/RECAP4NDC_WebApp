@@ -150,7 +150,7 @@ const transformTableName = (tableName, division) => {
 
 const getHyphenDateTableCandidate = (tableName) => tableName.replace(/^(\d{4}-\d{2}-\d{2})_/, '$1-');
 
-const resolveExistingNdviTableName = async (tableName) => {
+const resolveExistingNdviTableName = async (tableName, division) => {
   const candidates = [...new Set([tableName, getHyphenDateTableCandidate(tableName)])];
 
   for (const candidate of candidates) {
@@ -164,7 +164,33 @@ const resolveExistingNdviTableName = async (tableName) => {
     }
   }
 
-  return null;
+  const dateMatch = tableName.match(/^(\d{4})[-_](\d{2})[-_](\d{2})/);
+  if (!dateMatch || !division) return null;
+
+  const normalizedDivision = division
+    .replace(/ Forest Division$/i, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLowerCase();
+  const divisionOverrides = {
+    bharuch: 'bharuchsubdivision',
+    bharuchsubdivision: 'bharuchsubdivision',
+  };
+  const divisionKey = divisionOverrides[normalizedDivision] || normalizedDivision;
+  const datePattern = `^${dateMatch[1]}[-_]${dateMatch[2]}[-_]${dateMatch[3]}[-_]`;
+  const [matchingTables] = await sequelize.query(
+    `SELECT tablename
+     FROM pg_tables
+     WHERE schemaname = 'public'
+       AND tablename ~* :datePattern
+       AND tablename ~* 'ndvi[-_]change$'
+     ORDER BY tablename;`,
+    { replacements: { datePattern } }
+  );
+
+  const match = matchingTables.find(({ tablename }) =>
+    tablename.toLowerCase().replace(/[^a-z0-9]/g, '').includes(divisionKey)
+  );
+  return match?.tablename || null;
 };
 
 const getRecordIdCandidates = (recordId) => {
@@ -194,7 +220,7 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
     try {
         // Transform table name if needed based on division
         const transformedTableName = transformTableName(tableName, division);
-        const actualTableName = await resolveExistingNdviTableName(transformedTableName);
+        const actualTableName = await resolveExistingNdviTableName(transformedTableName, division);
         
 
         // Check if the table exists before doing anything else.
@@ -287,7 +313,7 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
     try {
         // Transform table name if needed based on division
         const transformedTableName = transformTableName(tableName, division);
-        const actualTableName = await resolveExistingNdviTableName(transformedTableName);
+        const actualTableName = await resolveExistingNdviTableName(transformedTableName, division);
 
         if (!actualTableName) {
             return res.json({
@@ -340,7 +366,7 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
         try {
             const { tableName, range, round, beat, division } = req.body;
             const transformedTableName = transformTableName(tableName, division);
-            const actualTableName = await resolveExistingNdviTableName(transformedTableName);
+            const actualTableName = await resolveExistingNdviTableName(transformedTableName, division);
 
             if (!actualTableName) {
                 return res.json({

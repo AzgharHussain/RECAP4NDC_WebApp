@@ -393,14 +393,17 @@ router.post('/incident-logs', verifyJwt, upload.single('incident_image'), async 
 router.get('/incident-logs', verifyJwt, async (req, res) => {
   const gu = wantsGujarati(req);
   const catNameCol = gu ? 'COALESCE(ic.category_name_gu, ic.category_name)' : 'ic.category_name';
-  const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, il.incident_subcategory)' : 'il.incident_subcategory';
+  const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, isc.subcategory_name, il.incident_subcategory)' : 'COALESCE(isc.subcategory_name, il.incident_subcategory)';
+  const typeNameCol = gu
+    ? `CASE WHEN il.incident_type ~ '[઀-૿]' THEN il.incident_type ELSE COALESCE(ic.category_name_gu, il.incident_type) END`
+    : `CASE WHEN il.incident_type ~ '[઀-૿]' THEN COALESCE(ic.category_name, il.incident_type) ELSE il.incident_type END`;
   const sevNameCol = gu ? 'COALESCE(sev.level_name_gu, sev.level_name)' : 'sev.level_name';
   try {
     const query = `
       SELECT
         il.incident_id,
         il.user_id,
-        il.incident_type,
+        ${typeNameCol} AS incident_type,
         il.incident_category_id,
         ${catNameCol} AS category_name,
         ${subNameCol} AS incident_subcategory,
@@ -422,7 +425,7 @@ router.get('/incident-logs', verifyJwt, async (req, res) => {
       FROM public.incident_logs il
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
-      LEFT JOIN public.incident_subcategories isc ON isc.category_id = il.incident_category_id AND isc.subcategory_name = il.incident_subcategory
+      LEFT JOIN public.incident_subcategories isc ON isc.category_id = il.incident_category_id AND il.incident_subcategory IN (isc.subcategory_name, isc.subcategory_name_gu)
       LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
       ORDER BY
         COALESCE(sev.display_order, 9999) ASC,
@@ -477,14 +480,17 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
 
   const gu = wantsGujarati(req);
   const catNameCol = gu ? 'COALESCE(ic.category_name_gu, ic.category_name)' : 'ic.category_name';
-  const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, il.incident_subcategory)' : 'il.incident_subcategory';
+  const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, isc.subcategory_name, il.incident_subcategory)' : 'COALESCE(isc.subcategory_name, il.incident_subcategory)';
+  const typeNameCol = gu
+    ? `CASE WHEN il.incident_type ~ '[઀-૿]' THEN il.incident_type ELSE COALESCE(ic.category_name_gu, il.incident_type) END`
+    : `CASE WHEN il.incident_type ~ '[઀-૿]' THEN COALESCE(ic.category_name, il.incident_type) ELSE il.incident_type END`;
   const sevNameCol = gu ? 'COALESCE(sev.level_name_gu, sev.level_name)' : 'sev.level_name';
   try {
     const query = `
       SELECT
         il.incident_id,
         il.user_id,
-        il.incident_type,
+        ${typeNameCol} AS incident_type,
         il.incident_category_id,
         ${catNameCol} AS category_name,
         ${subNameCol} AS incident_subcategory,
@@ -506,7 +512,7 @@ router.get('/incident-logs/user/:user_id', verifyJwt, async (req, res) => {
       FROM public.incident_logs il
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
-      LEFT JOIN public.incident_subcategories isc ON isc.category_id = il.incident_category_id AND isc.subcategory_name = il.incident_subcategory
+      LEFT JOIN public.incident_subcategories isc ON isc.category_id = il.incident_category_id AND il.incident_subcategory IN (isc.subcategory_name, isc.subcategory_name_gu)
       LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
       WHERE il.user_id = $1
       ORDER BY il.created_at DESC;
@@ -558,7 +564,10 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
   const { incident_id } = req.params;
   const gu = wantsGujarati(req);
   const catNameCol = gu ? 'COALESCE(ic.category_name_gu, ic.category_name)' : 'ic.category_name';
-  const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, il.incident_subcategory)' : 'il.incident_subcategory';
+  const subNameCol = gu ? 'COALESCE(isc.subcategory_name_gu, isc.subcategory_name, il.incident_subcategory)' : 'COALESCE(isc.subcategory_name, il.incident_subcategory)';
+  const typeNameCol = gu
+    ? `CASE WHEN il.incident_type ~ '[઀-૿]' THEN il.incident_type ELSE COALESCE(ic.category_name_gu, il.incident_type) END`
+    : `CASE WHEN il.incident_type ~ '[઀-૿]' THEN COALESCE(ic.category_name, il.incident_type) ELSE il.incident_type END`;
   const sevNameCol = gu ? 'COALESCE(sev.level_name_gu, sev.level_name)' : 'sev.level_name';
 
   try {
@@ -566,7 +575,7 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
       SELECT
         il.incident_id,
         il.user_id,
-        il.incident_type,
+        ${typeNameCol} AS incident_type,
         il.incident_category_id,
         ${catNameCol} AS category_name,
         ${subNameCol} AS incident_subcategory,
@@ -588,7 +597,7 @@ router.get('/incident-logs/:incident_id', verifyJwt, async (req, res) => {
       FROM public.incident_logs il
       LEFT JOIN public.government_department_users gdu ON il.user_id = gdu.user_id
       LEFT JOIN public.incident_categories ic ON il.incident_category_id = ic.category_id
-      LEFT JOIN public.incident_subcategories isc ON isc.category_id = il.incident_category_id AND isc.subcategory_name = il.incident_subcategory
+      LEFT JOIN public.incident_subcategories isc ON isc.category_id = il.incident_category_id AND il.incident_subcategory IN (isc.subcategory_name, isc.subcategory_name_gu)
       LEFT JOIN public.incident_severity_levels sev ON il.severity_id = sev.severity_id
       WHERE il.incident_id = $1;
     `;

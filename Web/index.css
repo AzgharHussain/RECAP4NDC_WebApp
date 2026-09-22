@@ -709,3 +709,159 @@ svg {
     padding-inline: 16px !important;
   }
 }
+
+/* ===========================
+   iPad Pro Responsive Overrides
+   iPad Pro 11": 834×1194 (portrait) / 1194×834 (landscape)
+   iPad Pro 12.9": 1024×1366 (portrait) / 1366×1024 (landscape)
+   =========================== */
+
+/* === iPad Pro portrait range (834 – 1024px width) === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .container,
+  .ndvi-dashboard-page,
+  .patrol-logs-page,
+  .ndvi-notifications-page {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .main-heading,
+  .ndvi-notifications-page .main-heading,
+  .patrol-logs-page .main-heading {
+    font-size: 22px !important;
+  }
+
+  .ant-card-body {
+    padding: 16px !important;
+  }
+
+  .ant-statistic-title {
+    font-size: 12px !important;
+  }
+
+  .ant-statistic-content {
+    font-size: 22px !important;
+  }
+
+  .ant-table {
+    font-size: 12px !important;
+  }
+
+  .ant-table-cell {
+    padding: 10px 8px !important;
+  }
+
+  .ant-btn {
+    font-size: 13px !important;
+    padding-inline: 12px !important;
+    min-height: 36px;
+  }
+
+  .ant-select,
+  .ant-picker,
+  .ant-input {
+    font-size: 13px !important;
+  }
+
+  .ant-table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ant-modal {
+    max-width: 90vw !important;
+  }
+
+  .ant-modal .ant-modal-body {
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+}
+
+/* === iPad Pro 12.9" landscape & general tablet-landscape (1024 – 1366px) === */
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .container,
+  .ndvi-dashboard-page,
+  .patrol-logs-page,
+  .ndvi-notifications-page {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .ant-card-body {
+    padding: 18px !important;
+  }
+
+  .ant-table {
+    font-size: 12px !important;
+  }
+
+  .ant-table-cell {
+    padding: 10px 10px !important;
+  }
+
+  .ant-statistic-title {
+    font-size: 12px !important;
+  }
+
+  .ant-statistic-content {
+    font-size: 22px !important;
+  }
+
+  .ant-btn {
+    font-size: 13px !important;
+  }
+}
+
+/* === iPad Pro portrait-specific orientation === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) and (orientation: portrait) {
+  .ant-table {
+    min-width: 700px;
+  }
+
+  .ant-space {
+    flex-wrap: wrap;
+  }
+
+  .ant-row {
+    margin-left: -6px !important;
+    margin-right: -6px !important;
+  }
+
+  .ant-col {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}
+
+/* === Touch-friendly sizing for all iPad Pro sizes === */
+@media only screen and (min-width: 834px) and (max-width: 1366px) and (hover: none) and (pointer: coarse) {
+  .ant-btn {
+    min-height: 40px !important;
+    touch-action: manipulation;
+  }
+
+  .ant-select-selector {
+    min-height: 40px !important;
+  }
+
+  .ant-picker {
+    min-height: 40px !important;
+  }
+
+  .ant-input {
+    min-height: 40px !important;
+  }
+
+  .ant-pagination-item {
+    min-width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+  }
+
+  input[type="checkbox"] {
+    min-width: 20px;
+    min-height: 20px;
+  }
+}

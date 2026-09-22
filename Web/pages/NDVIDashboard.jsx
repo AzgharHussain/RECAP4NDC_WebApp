@@ -875,6 +875,7 @@ const NDVIChangeDashboard = () => {
   const [endDate, setEndDate] = useState(null);
   const [tableNames, setTableNames] = useState([]);
   const [availableMonths, setAvailableMonths] = useState([]);
+  const [availableMonthsLoaded, setAvailableMonthsLoaded] = useState(false);
   
   // Pagination states
   const [page, setPage] = useState(0);
@@ -928,29 +929,32 @@ const NDVIChangeDashboard = () => {
 
   const isMonthAvailable = (date) => {
     if (!date) return false;
-    if (availableMonths.length === 0) return true; // fallback: allow all if not loaded yet
+    if (!availableMonthsLoaded) return true;
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     return availableMonths.includes(monthKey);
   };
 
   // Check if a year has any available months
   const isYearAvailable = (year) => {
-    if (availableMonths.length === 0) return true;
+    if (!availableMonthsLoaded) return true;
     return availableMonths.some(m => m.startsWith(`${year}-`));
   };
 
   useEffect(() => {
     const fetchAvailableMonths = async () => {
+      setAvailableMonthsLoaded(false);
       try {
         const token = localStorage.getItem("token");
         const params = selectedDivision ? `?division=${encodeURIComponent(selectedDivision)}` : "";
         const res = await axios.get(`${API_BASE_URL}/api/ndvi-available-months${params}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.data?.success) setAvailableMonths(res.data.data || []);
+        setAvailableMonths(res.data?.success ? res.data.data || [] : []);
       } catch (err) {
         console.error('Error fetching available NDVI months:', err);
         setAvailableMonths([]);
+      } finally {
+        setAvailableMonthsLoaded(true);
       }
     };
 
@@ -964,31 +968,28 @@ const NDVIChangeDashboard = () => {
   // table is populated immediately — same UX fix as the Patrolling Logs page.
   useEffect(() => {
     if (!selectedDivision) return;                  // No hierarchy set yet
+    if (!availableMonthsLoaded) return;
     if (_autoHierarchyApplied.current) return;      // Already auto-fetched once
     if (startDate || endDate) return;               // User already chose dates manually
 
     _autoHierarchyApplied.current = true;
 
-    // Default range: 3 months back → current month
-    const now = new Date();
-    const defaultEnd = startOfMonth(now);
-    const defaultStart = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 2, 1));
+    const months = [...availableMonths].sort().slice(-3);
+    if (months.length === 0) {
+      setError(`No processed NDVI data is available for ${selectedDivision}.`);
+      return;
+    }
+
+    const [startYear, startMonth] = months[0].split('-').map(Number);
+    const [endYear, endMonth] = months[months.length - 1].split('-').map(Number);
+    const defaultStart = new Date(startYear, startMonth - 1, 1);
+    const defaultEnd = new Date(endYear, endMonth - 1, 1);
 
     setStartDate(defaultStart);
     setEndDate(defaultEnd);
 
     // Defer the fetch so state updates settle before we read them inside fetchFilteredData.
     setTimeout(async () => {
-      const months = [];
-      let cur = new Date(defaultStart);
-      while (cur <= defaultEnd) {
-        const y = cur.getFullYear();
-        const m = String(cur.getMonth() + 1).padStart(2, '0');
-        months.push(`${y}-${m}`);
-        cur.setMonth(cur.getMonth() + 1);
-      }
-
-      if (months.length === 0) return;
 
       setTableNames(months);
       setLoading(true);
@@ -1128,7 +1129,7 @@ const NDVIChangeDashboard = () => {
         setLoading(false);
       }
     }, 300);
-  }, [selectedDivision]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedDivision, availableMonthsLoaded, availableMonths]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Toggle section expansion
   const toggleSection = (section) => {
@@ -1235,6 +1236,11 @@ const NDVIChangeDashboard = () => {
     
     if (!startDate || !endDate) {
       setError('Please select both start and end dates');
+      return;
+    }
+
+    if (availableMonthsLoaded && availableMonths.length === 0) {
+      setError(`No processed NDVI data is available for ${selectedDivision}.`);
       return;
     }
     

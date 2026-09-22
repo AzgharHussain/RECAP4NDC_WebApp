@@ -344,3 +344,41 @@ button:disabled {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* === iPad Pro Responsive — Edit Boundary Modal === */
+@media only screen and (min-width: 834px) and (max-width: 1366px) {
+  .edit-modal {
+    width: 85%;
+    max-width: 640px;
+    max-height: 85vh;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+  }
+
+  .modal-actions {
+    padding-top: 14px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn-delete,
+  .btn-replace,
+  .btn-cancel {
+    padding: 10px 18px;
+    font-size: 14px;
+  }
+
+  .upload-area {
+    padding: 20px;
+  }
+
+  .file-list {
+    max-height: 120px;
+  }
+}

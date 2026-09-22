@@ -247,3 +247,55 @@
     max-height: 48vh;
   }
 }
+
+/* === iPad Pro Responsive — Right Sidebar === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .tool-sidebar22222 {
+    right: 3%;
+    top: 12%;
+    padding: 6px 8px;
+    gap: 8px;
+  }
+
+  .right-sidebar-button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .drawing-list {
+    right: clamp(12px, 3vw, 40px);
+    width: clamp(240px, 30vw, 320px);
+    max-height: 38vh;
+  }
+
+  .drawing-item {
+    padding: 10px;
+    gap: 8px;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .tool-sidebar22222 {
+    right: 4%;
+    top: 14%;
+  }
+
+  .drawing-list {
+    width: clamp(280px, 26vw, 340px);
+    max-height: 40vh;
+  }
+}
+
+/* Touch targets for right sidebar buttons */
+@media only screen and (min-width: 834px) and (max-width: 1366px) and (hover: none) and (pointer: coarse) {
+  .right-sidebar-button {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .action-buttons button {
+    min-height: 42px;
+    padding: 10px 16px;
+  }
+}

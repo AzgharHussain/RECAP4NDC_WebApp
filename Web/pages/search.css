@@ -169,3 +169,34 @@
     margin-bottom: 0.5rem;
   }
 }
+
+/* === iPad Pro Responsive — Search Panel === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .search-container2 {
+    padding: 0.8rem;
+  }
+
+  .search-controls {
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+
+  .search-select,
+  .search-select-District,
+  .search-select-villages {
+    width: 100%;
+    max-width: 240px;
+  }
+
+  .clear-button {
+    min-height: 40px;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .search-select,
+  .search-select-District,
+  .search-select-villages {
+    max-width: 280px;
+  }
+}

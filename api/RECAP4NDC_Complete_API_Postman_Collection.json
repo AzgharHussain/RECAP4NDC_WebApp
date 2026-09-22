@@ -1,0 +1,2763 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "RECAP4NDC Complete API Collection",
+    "description": "Complete Postman collection for all API endpoints in the RECAP4NDC Forest Monitoring and Patrolling System (FMPS). Covers authentication, patrol management, NDVI analysis, incident reporting, boundary management, notifications, hierarchy/dropdown data, support tickets, audit logging, and system health.\n\nSetup:\n1. Set the `baseUrl` variable to your API server (default: http://localhost:5002)\n2. Run 'Admin Login' or 'Forest Officer Login' first to get a token\n3. The login requests have a post-response script that auto-sets the `token` variable\n4. All protected endpoints inherit Bearer token auth from the collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5002",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "patrolId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "imageId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "incidentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "severityId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "boundaryId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "ticketId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "tableName",
+      "value": "2025-01-01_Sabarkantha_North_Aravalli_NDVI_Change",
+      "type": "string"
+    },
+    {
+      "key": "pixelId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "layerName",
+      "value": "Gujarat_difference",
+      "type": "string"
+    },
+    {
+      "key": "ndviChangeId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Authentication & Session",
+      "description": "Login, logout, and password management endpoints.",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.token) {",
+                  "        pm.collectionVariables.set('token', jsonData.token);",
+                  "        console.log('Token saved successfully');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"your_password_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin"]
+            },
+            "description": "Admin login. Returns a JWT token on success. The token is auto-saved to the collection variable."
+          }
+        },
+        {
+          "name": "Forest Officer Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.token) {",
+                  "        pm.collectionVariables.set('token', jsonData.token);",
+                  "        console.log('Token saved successfully');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"officer_user_id\",\n  \"password\": \"officer_password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/forest-login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "forest-login"]
+            },
+            "description": "Forest officer login via Gujarat Forest Dept SOAP service. Returns JWT with hierarchy (circle, division, range, round, beat)."
+          }
+        },
+        {
+          "name": "Forest Officer Login (Alternate - saveuser)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"officer_user_id\",\n  \"password\": \"officer_password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/saveuser",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "saveuser"]
+            },
+            "description": "Alternate forest officer login route (forest-login.js). Same SOAP auth flow."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logout"]
+            },
+            "description": "Logs out the user. Nullifies the Firebase token for the user and blacklists the JWT."
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"currentPassword\": \"old_password\",\n  \"newPassword\": \"New_Password_1!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/changepassword",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "changepassword"]
+            },
+            "description": "Change password for admin users. New password must meet strength requirements (min 6 chars, upper, lower, digit, special char)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Patrol Data",
+      "description": "Create, read, and manage patrol records and images.",
+      "item": [
+        {
+          "name": "Create Patrol (patrol-post)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "patrol_officer_name", "value": "Test Officer", "type": "text" },
+                { "key": "start_time", "value": "2025-01-15 08:00", "type": "text" },
+                { "key": "end_time", "value": "2025-01-15 12:00", "type": "text" },
+                { "key": "start_location", "value": "22.3039,70.8022", "type": "text" },
+                { "key": "end_location", "value": "22.3139,70.8122", "type": "text" },
+                { "key": "distance_kms", "value": "5.2", "type": "text" },
+                { "key": "geom", "value": "22.3039 70.8022,22.3060 70.8050,22.3139 70.8122", "type": "text" },
+                { "key": "user_id", "value": "{{userId}}", "type": "text" },
+                { "key": "patrolling_type_id", "value": "1", "type": "text" },
+                { "key": "number_of_staff", "value": "2", "type": "text" },
+                { "key": "patrolling_location", "value": "Inside Forest", "type": "text" },
+                { "key": "division", "value": "Gandhinagar", "type": "text" },
+                { "key": "range", "value": "North", "type": "text" },
+                { "key": "beat", "value": "Beat-1", "type": "text" },
+                { "key": "start_image", "value": "", "type": "file", "src": "" },
+                { "key": "end_image", "value": "", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-post",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-post"]
+            },
+            "description": "Create a new patrol record. Accepts multipart form data with images (start_image, end_image, image_1..N). Used by the mobile app."
+          }
+        },
+        {
+          "name": "Get All Patrols",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-info-all?include_images=false&include_geom=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-info-all"],
+              "query": [
+                { "key": "include_images", "value": "false" },
+                { "key": "include_geom", "value": "false" }
+              ]
+            },
+            "description": "Get all patrol records. Set include_images and include_geom to true for full data."
+          }
+        },
+        {
+          "name": "Get Latest Patrols (patrol-info)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-info?user_id={{userId}}&include_images=full",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-info"],
+              "query": [
+                { "key": "user_id", "value": "{{userId}}" },
+                { "key": "include_images", "value": "full" }
+              ]
+            },
+            "description": "Get latest 5 patrols with images. include_images can be: full, meta, or none."
+          }
+        },
+        {
+          "name": "Get Patrols Paginated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-info-page?page=1&limit=10&include_geom=true&include_images=meta",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-info-page"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "include_geom", "value": "true" },
+                { "key": "include_images", "value": "meta" },
+                { "key": "officer_name", "value": "", "disabled": true },
+                { "key": "start_date", "value": "", "disabled": true },
+                { "key": "end_date", "value": "", "disabled": true },
+                { "key": "type_name", "value": "", "disabled": true },
+                { "key": "division", "value": "", "disabled": true },
+                { "key": "range", "value": "", "disabled": true },
+                { "key": "beat", "value": "", "disabled": true },
+                { "key": "round", "value": "", "disabled": true },
+                { "key": "patrolling_location", "value": "", "disabled": true },
+                { "key": "forest_id", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Get paginated patrol list with optional filters: officer_name, start_date, end_date, type_name, division, range, beat, round, patrolling_location, forest_id."
+          }
+        },
+        {
+          "name": "Get Patrols Filtered",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-info/filter?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-info", "filter"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "location", "value": "", "disabled": true },
+                { "key": "coupe", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Filtered patrol list. Supports same filters as patrol-info-page plus location and coupe."
+          }
+        },
+        {
+          "name": "Get Patrols by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-info-user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-info-user", "{{userId}}"]
+            },
+            "description": "Get all patrols for a specific user."
+          }
+        },
+        {
+          "name": "Get Single Patrol",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrols/{{patrolId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrols", "{{patrolId}}"]
+            },
+            "description": "Get a single patrol record with all images."
+          }
+        },
+        {
+          "name": "Get Patrols by User (Map Layer)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrols-by-user?user_id={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrols-by-user"],
+              "query": [
+                { "key": "user_id", "value": "{{userId}}" }
+              ]
+            },
+            "description": "Get patrol routes for map layer display. No auth required."
+          }
+        },
+        {
+          "name": "Get Patrol Image",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-images/{{imageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-images", "{{imageId}}"]
+            },
+            "description": "Get a single patrol image by its MongoDB image ID."
+          }
+        },
+        {
+          "name": "Update Patrol Image Note",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Updated observation note for this image\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-images/{{imageId}}/note",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-images", "{{imageId}}", "note"]
+            },
+            "description": "Update the note attached to a patrol image."
+          }
+        },
+        {
+          "name": "Delete Patrol Image Note",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-images/{{imageId}}/note",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-images", "{{imageId}}", "note"]
+            },
+            "description": "Remove the note from a patrol image."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Patrol Lookup & Dropdowns",
+      "description": "Patrol-related dropdown data for filters.",
+      "item": [
+        {
+          "name": "Get Patrolling Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-types"]
+            },
+            "description": "Get list of patrol types (Day Patrolling, Night Patrolling, Beat Checking)."
+          }
+        },
+        {
+          "name": "Get Patrolling Divisions",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-division",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-division"]
+            },
+            "description": "Get distinct divisions from patrol data. No auth required."
+          }
+        },
+        {
+          "name": "Get Patrolling Ranges",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-range",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-range"]
+            },
+            "description": "Get distinct ranges from patrol data. No auth required."
+          }
+        },
+        {
+          "name": "Get Patrolling Beats",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-beat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-beat"]
+            },
+            "description": "Get distinct beats from patrol data. No auth required."
+          }
+        },
+        {
+          "name": "Get Patrolling Rounds",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-round",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-round"]
+            },
+            "description": "Get distinct rounds from patrol data. No auth required."
+          }
+        },
+        {
+          "name": "Get Patrolling Locations",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-locations"]
+            },
+            "description": "Get distinct patrol locations (e.g., Inside Forest, Outside Forest). No auth required."
+          }
+        },
+        {
+          "name": "Get Patrolling Hierarchy",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-hierarchy",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-hierarchy"]
+            },
+            "description": "Get full patrol hierarchy data. No auth required."
+          }
+        },
+        {
+          "name": "Get Ranges by Division",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-range-by-division?division=Gandhinagar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-range-by-division"],
+              "query": [
+                { "key": "division", "value": "Gandhinagar" }
+              ]
+            },
+            "description": "Get ranges filtered by division name."
+          }
+        },
+        {
+          "name": "Get Beats by Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-beat-by-range?range=North&division=Gandhinagar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-beat-by-range"],
+              "query": [
+                { "key": "range", "value": "North" },
+                { "key": "division", "value": "Gandhinagar" }
+              ]
+            },
+            "description": "Get beats filtered by range and division."
+          }
+        },
+        {
+          "name": "Get Division-Range-Beat Combo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrolling-drb",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrolling-drb"]
+            },
+            "description": "Get division/range/beat combined data."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Patrol Coverage Analysis",
+      "description": "Endpoints for calculating patrol coverage percentage over geographic areas.",
+      "item": [
+        {
+          "name": "Beats Coverage by Forest Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beatscoverage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beatscoverage"]
+            },
+            "description": "Get list of beats by forest type for coverage analysis."
+          }
+        },
+        {
+          "name": "Beat Patrol Coverage",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"beat\": \"Beat-1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beat-patrol-coverage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beat-patrol-coverage"]
+            },
+            "description": "Calculate patrol coverage percentage for a beat."
+          }
+        },
+        {
+          "name": "Coupe Patrol Coverage",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"coupe_table\": \"coupe_name_here\",\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-01-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-patrol-coverage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupe-patrol-coverage"]
+            },
+            "description": "Calculate patrol coverage for a coupe area within a date range. Can also pass range or division instead of coupe_table."
+          }
+        },
+        {
+          "name": "Boundary Patrol Coverage",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boundary\": \"boundary_name_here\",\n  \"month\": \"2025-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/boundary-patrol-coverage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "boundary-patrol-coverage"]
+            },
+            "description": "Calculate patrol coverage for a plantation boundary area for a given month."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Forest Hierarchy & Dropdown APIs",
+      "description": "Cascading dropdown data for forest hierarchy (Division > Range > Round > Beat > Village > Coupe).",
+      "item": [
+        {
+          "name": "Get Forest Types",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/forest-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "forest-types"]
+            },
+            "description": "Get list of forest types (Wildlife=1, Territorial=2, Social Forestry=3). Cached 1 hour. No auth."
+          }
+        },
+        {
+          "name": "Get Divisions by Forest Type (POST)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/divisions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "divisions"]
+            },
+            "description": "Get divisions for a specific forest type. No auth."
+          }
+        },
+        {
+          "name": "Get Divisions (JWT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/get-divisions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "get-divisions"]
+            },
+            "description": "Get divisions for a forest type. Requires JWT."
+          }
+        },
+        {
+          "name": "Get Hierarchy (Full)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 2,\n  \"division_name\": \"Gandhinagar\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hierarchy"]
+            },
+            "description": "Get full hierarchy data (Division > Range > Round > Beat > Village > Coupe) for filtering. No auth."
+          }
+        },
+        {
+          "name": "Get Hierarchy Coupes (All)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy_coupes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hierarchy_coupes"]
+            },
+            "description": "Get all coupes. Cached 5 minutes. No auth."
+          }
+        },
+        {
+          "name": "Get Hierarchy Divisions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-divisions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hierarchy-divisions"]
+            },
+            "description": "Get distinct division names. Cached."
+          }
+        },
+        {
+          "name": "Get Hierarchy Ranges",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-ranges",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hierarchy-ranges"]
+            },
+            "description": "Get ranges for a division."
+          }
+        },
+        {
+          "name": "Get Hierarchy Rounds",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-rounds",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hierarchy-rounds"]
+            },
+            "description": "Get rounds for a division and range."
+          }
+        },
+        {
+          "name": "Get Hierarchy Beats",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\",\n  \"round\": \"Round-1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-beats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hierarchy-beats"]
+            },
+            "description": "Get beats for a division, range, and round."
+          }
+        },
+        {
+          "name": "Get Hierarchy Villages",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\",\n  \"round\": \"Round-1\",\n  \"beat\": \"Beat-1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hierarchy-villages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hierarchy-villages"]
+            },
+            "description": "Get villages for a specific hierarchy level."
+          }
+        },
+        {
+          "name": "Get Coupe Numbers",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"village\": \"village_name\",\n  \"coupe_name\": \"coupe_name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-numbers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupe-numbers"]
+            },
+            "description": "Get coupe numbers for a village and coupe name."
+          }
+        },
+        {
+          "name": "Get Ranges by Forest Type",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 2,\n  \"division_name\": \"Gandhinagar\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ranges",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ranges"]
+            },
+            "description": "Get ranges for a forest type and division. No auth."
+          }
+        },
+        {
+          "name": "Get Rounds by Forest Type",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 2,\n  \"division_name\": \"Gandhinagar\",\n  \"range_name\": \"North\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rounds",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rounds"]
+            },
+            "description": "Get rounds by forest type, division, and range. No auth."
+          }
+        },
+        {
+          "name": "Get Beats by Forest Type",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 2,\n  \"division_name\": \"Gandhinagar\",\n  \"range_name\": \"North\",\n  \"round_name\": \"Round-1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beats"]
+            },
+            "description": "Get beats by forest type hierarchy. No auth."
+          }
+        },
+        {
+          "name": "Get Coupes by Forest Type",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forest_id\": 2,\n  \"division_name\": \"Gandhinagar\",\n  \"range_name\": \"North\",\n  \"round_name\": \"Round-1\",\n  \"beat_name\": \"Beat-1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupes"]
+            },
+            "description": "Get coupes by forest type hierarchy. No auth."
+          }
+        },
+        {
+          "name": "Get Centroid",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"village\": \"village_name\",\n  \"coupe_name\": \"coupe_name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/get-centroid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "get-centroid"]
+            },
+            "description": "Get centroid latitude/longitude for a village and coupe."
+          }
+        },
+        {
+          "name": "Get Layer Bounds",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/layer-bounds/{{layerName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "layer-bounds", "{{layerName}}"]
+            },
+            "description": "Get extent, centroid, and feature count for a map layer table. No auth."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - NDVI Hierarchy Dropdowns",
+      "description": "NDVI-specific cascading dropdown data for coupe and beat hierarchy.",
+      "item": [
+        {
+          "name": "Get NDVI Coupe Divisions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-divisions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupe-divisions"]
+            },
+            "description": "Get divisions from NDVI coupe data. Cached 5 min."
+          }
+        },
+        {
+          "name": "Get NDVI Coupe Ranges",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-ranges",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupe-ranges"]
+            },
+            "description": "Get ranges for an NDVI coupe division. No auth."
+          }
+        },
+        {
+          "name": "Get NDVI Coupe Rounds",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-rounds",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupe-rounds"]
+            },
+            "description": "Get rounds for an NDVI coupe division+range. No auth."
+          }
+        },
+        {
+          "name": "Get NDVI Coupe Beats",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\",\n  \"round\": \"Round-1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-beats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupe-beats"]
+            },
+            "description": "Get beats for an NDVI coupe hierarchy. No auth."
+          }
+        },
+        {
+          "name": "Get Coupe by Beat",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\",\n  \"round\": \"Round-1\",\n  \"beat\": \"Beat-1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/get-coupe-by-beat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "get-coupe-by-beat"]
+            },
+            "description": "Get the coupe name associated with a specific beat."
+          }
+        },
+        {
+          "name": "Get Beat-Coupe Divisions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/beat-coupe-divisions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beat-coupe-divisions"]
+            },
+            "description": "Get divisions for beat-coupe coverage analysis. Cached."
+          }
+        },
+        {
+          "name": "Get Beat-Coupe Ranges",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beat-coupe-ranges",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beat-coupe-ranges"]
+            },
+            "description": "Get ranges for beat-coupe analysis. No auth."
+          }
+        },
+        {
+          "name": "Get Beat-Coupe Rounds",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beat-coupe-rounds",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beat-coupe-rounds"]
+            },
+            "description": "Get rounds for beat-coupe analysis. No auth."
+          }
+        },
+        {
+          "name": "Get Beat-Coupe Beats",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/beat-coupe-beats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "beat-coupe-beats"]
+            },
+            "description": "Get beats for beat-coupe analysis. No auth."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - NDVI Change Data",
+      "description": "NDVI vegetation change analysis endpoints (ndviRouter, mounted at /api).",
+      "item": [
+        {
+          "name": "Get NDVI Pixel List for Village",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"coupename\": \"coupe_name_here\",\n  \"village_name\": \"village_name_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change"]
+            },
+            "description": "Get list of NDVI change pixels for a village within a coupe."
+          }
+        },
+        {
+          "name": "Get NDVI Change Filtered",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tableName\": \"{{tableName}}\",\n  \"division\": \"\",\n  \"range\": \"\",\n  \"round\": \"\",\n  \"beat\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change-get-filtered",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change-get-filtered"]
+            },
+            "description": "Get filtered NDVI change rows from a specific monthly table. Used by NDVI Dashboard."
+          }
+        },
+        {
+          "name": "Get NDVI Degraded Area",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tableName\": \"{{tableName}}\",\n  \"division\": \"\",\n  \"range\": \"\",\n  \"round\": \"\",\n  \"beat\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change-degraded-area",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change-degraded-area"]
+            },
+            "description": "Get total degraded area (sq km) from a specific NDVI change table."
+          }
+        },
+        {
+          "name": "Get NDVI Change All Rows",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tableName\": \"{{tableName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change-get",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change-get"]
+            },
+            "description": "Get all rows from a validated NDVI change table with Mongo images."
+          }
+        },
+        {
+          "name": "Get Coupe Area",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tableName\": \"coupe_name_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe-area",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupe-area"]
+            },
+            "description": "Get total area of a coupe table."
+          }
+        },
+        {
+          "name": "Get Coupe Area (alt route)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tableName\": \"coupe_name_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/get-coupe-area",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "get-coupe-area"]
+            },
+            "description": "Get total area of a coupe (alternate endpoint in dropdownapis)."
+          }
+        },
+        {
+          "name": "Get Single NDVI Record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change?NdvicoupeName=coupe_name&id={{pixelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change"],
+              "query": [
+                { "key": "NdvicoupeName", "value": "coupe_name" },
+                { "key": "id", "value": "{{pixelId}}" }
+              ]
+            },
+            "description": "Get a single NDVI change record by coupe name and pixel/record ID."
+          }
+        },
+        {
+          "name": "Get NDVI Change Tables",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change-tables",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change-tables"]
+            },
+            "description": "List all NDVI change tables (pattern: *_coupe_NDVI_Change). No auth."
+          }
+        },
+        {
+          "name": "Get NDVI Available Months",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-available-months?division=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-available-months"],
+              "query": [
+                { "key": "division", "value": "" }
+              ]
+            },
+            "description": "Get months for which NDVI data exists. Optional division filter."
+          }
+        },
+        {
+          "name": "Get NDVI Change Layer Bounds",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change-layer-bounds/{{layerName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change-layer-bounds", "{{layerName}}"]
+            },
+            "description": "Get extent/centroid/feature count for an NDVI change layer. No auth."
+          }
+        },
+        {
+          "name": "Update NDVI Change (with image upload)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "pixle_id", "value": "{{pixelId}}", "type": "text" },
+                { "key": "NdvicoupeName", "value": "coupe_name", "type": "text" },
+                { "key": "note", "value": "Field observation note", "type": "text" },
+                { "key": "status", "value": "true", "type": "text" },
+                { "key": "image_data", "value": "", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change"]
+            },
+            "description": "Update note/status and optionally upload an image for an NDVI change pixel. Used by mobile app."
+          }
+        },
+        {
+          "name": "Update NDVI Change Base64",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"NdvicoupeName\": \"coupe_name\",\n  \"note\": \"Field observation note\",\n  \"status\": true,\n  \"image_data\": \"base64_encoded_image_string\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change-base64/{{ndviChangeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change-base64", "{{ndviChangeId}}"]
+            },
+            "description": "Update note/status with base64-encoded image for an NDVI record by ID."
+          }
+        },
+        {
+          "name": "Delete NDVI Change Record",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-change/{{ndviChangeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-change", "{{ndviChangeId}}"]
+            },
+            "description": "Delete an NDVI change record and its associated MongoDB image."
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - NDVI Changes (/api/ndvi-changes)",
+      "description": "NDVI change point detail and status endpoints (ndviChanges router, mounted at /api/ndvi-changes).",
+      "item": [
+        {
+          "name": "Get Changes for User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-changes/user/{{userId}}?limit=100",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-changes", "user", "{{userId}}"],
+              "query": [
+                { "key": "limit", "value": "100" }
+              ]
+            },
+            "description": "Get NDVI change points for a specific user's subscribed area. Max limit 5000."
+          }
+        },
+        {
+          "name": "Get Single Point Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-changes/point/{{tableName}}/{{pixelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-changes", "point", "{{tableName}}", "{{pixelId}}"]
+            },
+            "description": "Get full detail for a single NDVI change point including note, status, and image."
+          }
+        },
+        {
+          "name": "Update Point Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table_name\": \"{{tableName}}\",\n  \"pixel_id\": \"{{pixelId}}\",\n  \"status\": true,\n  \"note\": \"Verified - degradation confirmed\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-changes/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-changes", "status"]
+            },
+            "description": "Update the status and/or note of an NDVI change point. This is the resolution/approval workflow."
+          }
+        },
+        {
+          "name": "Get Village Changes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-changes/village?table_name={{tableName}}&village_name=village_name&page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-changes", "village"],
+              "query": [
+                { "key": "table_name", "value": "{{tableName}}" },
+                { "key": "village_name", "value": "village_name" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" }
+              ]
+            },
+            "description": "Get paginated NDVI degradation changes for a specific village (for push notification deep links)."
+          }
+        },
+        {
+          "name": "List NDVI Change Tables",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-changes/tables",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-changes", "tables"]
+            },
+            "description": "List all NDVI change tables in the database."
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - NDVI Change CRUD (changendvi)",
+      "description": "CRUD operations for the flat ndvi_change table.",
+      "item": [
+        {
+          "name": "Init NDVI Change Table",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/init-table",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "init-table"]
+            },
+            "description": "Create the ndvi_change table if it doesn't exist."
+          }
+        },
+        {
+          "name": "Create NDVI Change Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"state\": \"Gujarat\",\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-02-01\",\n  \"start_month_ndvi\": 0.65,\n  \"end_month_ndvi\": 0.45,\n  \"change_layer_name\": \"layer_name\",\n  \"coupe_name\": \"coupe_name\",\n  \"longitude\": 72.5,\n  \"latitude\": 23.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/create_changendvi",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "create_changendvi"]
+            },
+            "description": "Insert a new NDVI change record. ndvi_change is auto-computed as end - start."
+          }
+        },
+        {
+          "name": "Get All NDVI Change Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/changendvi",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "changendvi"]
+            },
+            "description": "Get all records from the ndvi_change table, ordered by created_at desc."
+          }
+        },
+        {
+          "name": "Get Single NDVI Change Record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/changendvi/{{ndviChangeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "changendvi", "{{ndviChangeId}}"]
+            },
+            "description": "Get a single ndvi_change record by ID."
+          }
+        },
+        {
+          "name": "Update NDVI Change Record",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"state\": \"Gujarat\",\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-02-01\",\n  \"start_month_ndvi\": 0.65,\n  \"end_month_ndvi\": 0.40,\n  \"change_layer_name\": \"layer_name\",\n  \"coupe_name\": \"coupe_name\",\n  \"longitude\": 72.5,\n  \"latitude\": 23.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/update_changendvi/{{ndviChangeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "update_changendvi", "{{ndviChangeId}}"]
+            },
+            "description": "Full update of an ndvi_change record. ndvi_change is recomputed."
+          }
+        },
+        {
+          "name": "Delete NDVI Change Record",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/delete_changendvi/{{ndviChangeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "delete_changendvi", "{{ndviChangeId}}"]
+            },
+            "description": "Delete an ndvi_change record by ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Notifications & FCM",
+      "description": "Firebase Cloud Messaging subscription, push notification, and notification report endpoints.",
+      "item": [
+        {
+          "name": "Subscribe User for NDVI Notifications",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"firebase_token\": \"fcm_token_here\",\n  \"village_name\": \"village_name\",\n  \"coupe_name\": \"coupe_name\",\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\",\n  \"round\": \"Round-1\",\n  \"beat\": \"Beat-1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/send-notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "send-notifications"]
+            },
+            "description": "Subscribe/register a user for NDVI change push notifications. Upserts the user's FCM token and area subscription."
+          }
+        },
+        {
+          "name": "Update Notification User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"firebase_token\": \"new_fcm_token\",\n  \"village_name\": \"new_village\",\n  \"coupe_name\": \"new_coupe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/update-notification-user",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "update-notification-user"]
+            },
+            "description": "Update a user's FCM token, village, or coupe subscription."
+          }
+        },
+        {
+          "name": "Test FCM Push",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"fcm_token_here\",\n  \"title\": \"Test Notification\",\n  \"body\": \"This is a test push notification\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/test-fcm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "test-fcm"]
+            },
+            "description": "Send a test FCM push notification to a specific token."
+          }
+        },
+        {
+          "name": "Send NDVI Notification to User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/send-notification",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "send-notification"]
+            },
+            "description": "Send an NDVI change summary push notification to a specific user."
+          }
+        },
+        {
+          "name": "Get NDVI Notification Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ndvi-notification-report?page=1&pageSize=100",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ndvi-notification-report"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "100" },
+                { "key": "username", "value": "", "disabled": true },
+                { "key": "division", "value": "", "disabled": true },
+                { "key": "range", "value": "", "disabled": true },
+                { "key": "round", "value": "", "disabled": true },
+                { "key": "beat", "value": "", "disabled": true },
+                { "key": "month", "value": "", "disabled": true },
+                { "key": "start_date", "value": "", "disabled": true },
+                { "key": "end_date", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Get paginated notification delivery report with summary, monthly division breakdown, and filter options. Scoped to JWT user's hierarchy."
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 - Incident Logs",
+      "description": "Create, read, update, and delete forest incident reports.",
+      "item": [
+        {
+          "name": "Create Incident",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "user_id", "value": "{{userId}}", "type": "text" },
+                { "key": "incident_type", "value": "Negative", "type": "text" },
+                { "key": "incident_date", "value": "2025-01-15", "type": "text" },
+                { "key": "incident_time", "value": "10:30", "type": "text" },
+                { "key": "category_id", "value": "1", "type": "text" },
+                { "key": "subcategory_id", "value": "1", "type": "text" },
+                { "key": "severity_id", "value": "1", "type": "text" },
+                { "key": "division", "value": "Gandhinagar", "type": "text" },
+                { "key": "range", "value": "North", "type": "text" },
+                { "key": "round", "value": "Round-1", "type": "text" },
+                { "key": "beat", "value": "Beat-1", "type": "text" },
+                { "key": "village", "value": "village_name", "type": "text" },
+                { "key": "description", "value": "Incident description here", "type": "text" },
+                { "key": "incident_image", "value": "", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-logs"]
+            },
+            "description": "Create a new incident log. Accepts multipart form data with an optional image."
+          }
+        },
+        {
+          "name": "Get All Incidents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-logs?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-logs"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get all incident logs. language=gu returns Gujarati category/severity names."
+          }
+        },
+        {
+          "name": "Get Incidents by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-logs/user/{{userId}}?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-logs", "user", "{{userId}}"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get incidents for a specific user."
+          }
+        },
+        {
+          "name": "Get Single Incident",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-logs/{{incidentId}}?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-logs", "{{incidentId}}"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get a single incident record by ID."
+          }
+        },
+        {
+          "name": "Update Incident",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "description", "value": "Updated description", "type": "text" },
+                { "key": "severity_id", "value": "2", "type": "text" },
+                { "key": "incident_image", "value": "", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-logs/{{incidentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-logs", "{{incidentId}}"]
+            },
+            "description": "Update an incident record. New image replaces all old images."
+          }
+        },
+        {
+          "name": "Delete Incident",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-logs/{{incidentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-logs", "{{incidentId}}"]
+            },
+            "description": "Delete an incident record and its associated MongoDB images."
+          }
+        },
+        {
+          "name": "Get Incidents With Images (Legacy)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incidents-with-images?user_id={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incidents-with-images"],
+              "query": [
+                { "key": "user_id", "value": "{{userId}}" }
+              ]
+            },
+            "description": "Legacy endpoint: Get incidents with images for a user. Used by GeoDashboard and Incident page."
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - Incident Categories & Severity",
+      "description": "Master data for incident categories, subcategories, and severity levels.",
+      "item": [
+        {
+          "name": "Get Categories (Nested)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-categories?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-categories"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get all incident categories with nested subcategories."
+          }
+        },
+        {
+          "name": "Get Categories (Flat)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-categories/flat?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-categories", "flat"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get all incident categories as a flat list. Used by IncidentLogs filters."
+          }
+        },
+        {
+          "name": "Get Subcategories for Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-categories/{{categoryId}}/subcategories?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-categories", "{{categoryId}}", "subcategories"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get subcategories for a specific category."
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"New Category\",\n  \"category_name_gu\": \"નવી શ્રેણી\",\n  \"subcategories\": [\n    { \"name\": \"Sub 1\", \"name_gu\": \"પેટા 1\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-categories"]
+            },
+            "description": "Create a new incident category with optional subcategories."
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"Updated Category Name\",\n  \"category_name_gu\": \"અપડેટ શ્રેણી\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-categories", "{{categoryId}}"]
+            },
+            "description": "Update an incident category name."
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-categories", "{{categoryId}}"]
+            },
+            "description": "Delete an incident category and its subcategories."
+          }
+        },
+        {
+          "name": "Get Severity Levels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-severity?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-severity"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get all severity levels (Critical, High, Medium, Low) with colors."
+          }
+        },
+        {
+          "name": "Create Severity Level",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"severity_name\": \"New Level\",\n  \"severity_name_gu\": \"નવું સ્તર\",\n  \"severity_color\": \"#FF0000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-severity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-severity"]
+            },
+            "description": "Create a new incident severity level."
+          }
+        },
+        {
+          "name": "Update Severity Level",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"severity_name\": \"Updated Level\",\n  \"severity_name_gu\": \"અપડેટ\",\n  \"severity_color\": \"#00FF00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-severity/{{severityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-severity", "{{severityId}}"]
+            },
+            "description": "Update a severity level."
+          }
+        },
+        {
+          "name": "Delete Severity Level",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incident-severity/{{severityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "incident-severity", "{{severityId}}"]
+            },
+            "description": "Delete a severity level."
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 - Positive Incident Logs (Forest Good Practices)",
+      "description": "CRUD for positive incident/good practice reports.",
+      "item": [
+        {
+          "name": "Create Positive Incident",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "user_id", "value": "{{userId}}", "type": "text" },
+                { "key": "incident_date", "value": "2025-01-15", "type": "text" },
+                { "key": "incident_time", "value": "10:30", "type": "text" },
+                { "key": "category_id", "value": "1", "type": "text" },
+                { "key": "subcategory_id", "value": "1", "type": "text" },
+                { "key": "division", "value": "Gandhinagar", "type": "text" },
+                { "key": "range", "value": "North", "type": "text" },
+                { "key": "beat", "value": "Beat-1", "type": "text" },
+                { "key": "village", "value": "village_name", "type": "text" },
+                { "key": "description", "value": "Good practice description", "type": "text" },
+                { "key": "incident_image", "value": "", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-logs"]
+            },
+            "description": "Create a new positive incident (forest good practice) log."
+          }
+        },
+        {
+          "name": "Get All Positive Incidents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-logs?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-logs"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get all positive incident logs."
+          }
+        },
+        {
+          "name": "Get Positive Incidents by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-logs/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-logs", "user", "{{userId}}"]
+            },
+            "description": "Get positive incidents for a specific user."
+          }
+        },
+        {
+          "name": "Get Single Positive Incident",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-logs/{{incidentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-logs", "{{incidentId}}"]
+            },
+            "description": "Get a single positive incident by ID."
+          }
+        },
+        {
+          "name": "Update Positive Incident",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "description", "value": "Updated description", "type": "text" },
+                { "key": "incident_image", "value": "", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-logs/{{incidentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-logs", "{{incidentId}}"]
+            },
+            "description": "Update a positive incident record."
+          }
+        },
+        {
+          "name": "Delete Positive Incident",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-logs/{{incidentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-logs", "{{incidentId}}"]
+            },
+            "description": "Delete a positive incident and its MongoDB images."
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 - Positive Incident Categories",
+      "description": "Master data for positive incident categories and subcategories.",
+      "item": [
+        {
+          "name": "Get Categories (Nested)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-categories?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-categories"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get positive incident categories with nested subcategories."
+          }
+        },
+        {
+          "name": "Get Categories (Flat)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-categories/flat?language=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-categories", "flat"],
+              "query": [
+                { "key": "language", "value": "en" }
+              ]
+            },
+            "description": "Get positive incident categories as a flat list."
+          }
+        },
+        {
+          "name": "Get Subcategories for Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-categories/{{categoryId}}/subcategories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-categories", "{{categoryId}}", "subcategories"]
+            },
+            "description": "Get subcategories for a positive incident category."
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"New Positive Category\",\n  \"category_name_gu\": \"નવી હકારાત્મક શ્રેણી\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-categories"]
+            },
+            "description": "Create a new positive incident category."
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"Updated Name\",\n  \"category_name_gu\": \"અપડેટ\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-categories", "{{categoryId}}"]
+            },
+            "description": "Update a positive incident category."
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/positive-incident-categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "positive-incident-categories", "{{categoryId}}"]
+            },
+            "description": "Delete a positive incident category and its subcategories."
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 - GIS Upload & Patrol Boundaries",
+      "description": "Upload, replace, and delete geographic boundary files (shapefiles, KML).",
+      "item": [
+        {
+          "name": "Upload Patrol Boundary",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "files", "value": "", "type": "file", "src": "" },
+                { "key": "color", "value": "#ff0000", "type": "text" },
+                { "key": "boundary_date", "value": "2025-01-15", "type": "text", "disabled": true }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload-patrol-boundary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "upload-patrol-boundary"]
+            },
+            "description": "Upload a new patrol/plantation boundary. Accepts SHP+SHX+DBF+PRJ or KML/KMZ files."
+          }
+        },
+        {
+          "name": "Replace Patrol Boundary",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "files", "value": "", "type": "file", "src": "" },
+                { "key": "color", "value": "#ff0000", "type": "text" },
+                { "key": "boundary_name", "value": "existing_boundary_name", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-boundaries/{{boundaryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-boundaries", "{{boundaryId}}"]
+            },
+            "description": "Replace an existing boundary with new files."
+          }
+        },
+        {
+          "name": "Get All Patrol Boundaries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-boundaries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-boundaries"]
+            },
+            "description": "List all patrol/plantation boundaries with metadata and first-feature geometry."
+          }
+        },
+        {
+          "name": "Get Single Boundary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-boundaries/{{boundaryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-boundaries", "{{boundaryId}}"]
+            },
+            "description": "Get a single patrol boundary by ID."
+          }
+        },
+        {
+          "name": "Delete Patrol Boundary",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-boundaries/{{boundaryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-boundaries", "{{boundaryId}}"]
+            },
+            "description": "Delete a patrol boundary (drops PostGIS table + metadata row)."
+          }
+        },
+        {
+          "name": "Check Boundary Name",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"boundary_name_to_check\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/patrol-boundaries/check-name",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "patrol-boundaries", "check-name"]
+            },
+            "description": "Check if a boundary name already exists."
+          }
+        },
+        {
+          "name": "Create Boundary from Coordinates",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"geom\": \"22.3039 70.8022,22.3060 70.8050,22.3139 70.8122,22.3039 70.8022\",\n  \"boundary_name\": \"new_boundary\",\n  \"officer\": \"Officer Name\",\n  \"division\": \"Gandhinagar\",\n  \"range\": \"North\",\n  \"beat\": \"Beat-1\",\n  \"village\": \"village_name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/create-boundary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "create-boundary"]
+            },
+            "description": "Create a boundary from raw coordinates (lat lng pairs)."
+          }
+        },
+        {
+          "name": "Upload Coupe Shapefile (Legacy)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "files", "value": "", "type": "file", "src": "" },
+                { "key": "color", "value": "#0000ff", "type": "text" },
+                { "key": "coupe_name", "value": "coupe_name", "type": "text", "disabled": true }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload-shp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "upload-shp"]
+            },
+            "description": "Legacy coupe shapefile upload (gis-upload1.js). No auth required."
+          }
+        },
+        {
+          "name": "Get Admin Coupes List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admincoupes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admincoupes"]
+            },
+            "description": "Get list of uploaded admin coupe names from coupe_village_master."
+          }
+        },
+        {
+          "name": "Test GDAL Availability",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/test-gdal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "test-gdal"]
+            },
+            "description": "Check if ogr2ogr and psql tools are available on the server. No auth."
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 - Coupe Observation",
+      "description": "Coupe observation log endpoints.",
+      "item": [
+        {
+          "name": "Get Coupe Observations With Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe/log-with-images?user_id={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupe", "log-with-images"],
+              "query": [
+                { "key": "user_id", "value": "{{userId}}" }
+              ]
+            },
+            "description": "Get coupe observation logs with images for a user."
+          }
+        },
+        {
+          "name": "Submit Coupe Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"issue_type\": \"Invasive Species\",\n  \"observation_notes\": \"Observation details here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupe/log",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "coupe", "log"]
+            },
+            "description": "Submit a coupe observation log entry. Used by mobile app."
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 - Support Tickets",
+      "description": "Public support request submission and admin ticket management.",
+      "item": [
+        {
+          "name": "Submit Support Ticket (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"subject\": \"Login Issue\",\n  \"issueType\": \"login\",\n  \"description\": \"Unable to login with my forest department credentials. Getting timeout error.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/support/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "support", "submit"]
+            },
+            "description": "Submit a support ticket. No auth required. Rate limited to 5 per minute. issueType: login, mobile_app, web_app, ndvi, patrolling, coupe, data_sync, other."
+          }
+        },
+        {
+          "name": "Get All Tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/support/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "support", "tickets"]
+            },
+            "description": "Get all support tickets (up to 500). Admin use."
+          }
+        },
+        {
+          "name": "Update Ticket Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/support/tickets/{{ticketId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "support", "tickets", "{{ticketId}}", "status"]
+            },
+            "description": "Update ticket status. Values: open, in_progress, resolved, closed."
+          }
+        },
+        {
+          "name": "Delete Ticket",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/support/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "support", "tickets", "{{ticketId}}"]
+            },
+            "description": "Delete a support ticket."
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 - User Locations",
+      "description": "GPS location tracking for mobile app users.",
+      "item": [
+        {
+          "name": "Get All User Locations",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user-locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user-locations"]
+            },
+            "description": "Get all user GPS locations. No auth."
+          }
+        },
+        {
+          "name": "Submit User Location",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"officer_name\",\n  \"latitude\": 22.3039,\n  \"longitude\": 70.8022\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user-locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user-locations"]
+            },
+            "description": "Submit a user GPS location. No auth."
+          }
+        },
+        {
+          "name": "Update User Location",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 22.3045,\n  \"longitude\": 70.8030\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user-locations/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user-locations", "{{userId}}"]
+            },
+            "description": "Update a user's GPS location. No auth."
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 - Geographic Search & Census",
+      "description": "State, district, and village lookup endpoints for map navigation.",
+      "item": [
+        {
+          "name": "Get States",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/states",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "states"]
+            },
+            "description": "Get list of Indian states (2011 census)."
+          }
+        },
+        {
+          "name": "Get Districts",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/districts?state=Gujarat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "districts"],
+              "query": [
+                { "key": "state", "value": "Gujarat" }
+              ]
+            },
+            "description": "Get districts for a state."
+          }
+        },
+        {
+          "name": "Get Villages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/villages?state=Gujarat&district=Gandhinagar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "villages"],
+              "query": [
+                { "key": "state", "value": "Gujarat" },
+                { "key": "district", "value": "Gandhinagar" }
+              ]
+            },
+            "description": "Get villages for a state and district. Also accepts village name in body for coupe-village lookup."
+          }
+        },
+        {
+          "name": "Get Centroid (State/District/Village)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Gujarat\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/centroid/state",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "centroid", "state"]
+            },
+            "description": "Get centroid coordinates for a state, district, or village. Replace 'state' in the URL with 'district' or 'village'."
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 - Audit Logs",
+      "description": "System audit trail query and export.",
+      "item": [
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-logs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" },
+                { "key": "action", "value": "", "disabled": true },
+                { "key": "status", "value": "", "disabled": true },
+                { "key": "userId", "value": "", "disabled": true },
+                { "key": "username", "value": "", "disabled": true },
+                { "key": "resourceType", "value": "", "disabled": true },
+                { "key": "startDate", "value": "", "disabled": true },
+                { "key": "endDate", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Get paginated audit logs with optional filters. Max limit 200."
+          }
+        },
+        {
+          "name": "Get Audit Log Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-logs", "stats"],
+              "query": [
+                { "key": "startDate", "value": "", "disabled": true },
+                { "key": "endDate", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Get audit log statistics aggregated by action and status."
+          }
+        },
+        {
+          "name": "Export Audit Logs (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-logs", "export"],
+              "query": [
+                { "key": "action", "value": "", "disabled": true },
+                { "key": "status", "value": "", "disabled": true },
+                { "key": "startDate", "value": "", "disabled": true },
+                { "key": "endDate", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Export audit logs as CSV file (up to 5000 rows)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 - System & Health",
+      "description": "Health check, test endpoints, and cache management.",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "System health check. Returns uptime, memory, event loop lag, and DB status. 503 if DB disconnected."
+          }
+        },
+        {
+          "name": "Test GET",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "test"]
+            },
+            "description": "Simple test endpoint."
+          }
+        },
+        {
+          "name": "Test POST",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"hello\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/test-post",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "test-post"]
+            },
+            "description": "Simple POST test endpoint."
+          }
+        },
+        {
+          "name": "Get Cache Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cache-stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cache-stats"]
+            },
+            "description": "View API cache statistics."
+          }
+        },
+        {
+          "name": "Clear Cache",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cache-stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cache-stats"]
+            },
+            "description": "Clear the API cache."
+          }
+        }
+      ]
+    }
+  ]
+}

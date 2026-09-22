@@ -248,3 +248,46 @@ body {
     width: 100%;
   }
 }
+
+/* === iPad Pro Responsive — NDVI Dashboard === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .ndvi-dashboard-page {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .ndvi-summary-grid .MuiGrid-item {
+    flex-basis: 50% !important;
+    max-width: 50% !important;
+  }
+
+  .ndvi-dashboard-page .MuiTableContainer-root {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ndvi-dashboard-page canvas {
+    max-height: 350px;
+  }
+
+  .ndvi-dashboard-page .MuiCardHeader-root,
+  .ndvi-dashboard-page .MuiCardContent-root {
+    padding: 16px !important;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .ndvi-dashboard-page {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  .ndvi-summary-grid .MuiGrid-item {
+    flex-basis: 25% !important;
+    max-width: 25% !important;
+  }
+
+  .ndvi-dashboard-page canvas {
+    max-height: 400px;
+  }
+}

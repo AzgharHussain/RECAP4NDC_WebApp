@@ -1241,3 +1241,92 @@
     justify-content: flex-start;
   }
 }
+
+/* === iPad Pro Responsive — Admin Dashboard === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .admin-sidebar {
+    width: 220px;
+  }
+
+  .admin-content {
+    padding: 1.25rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  .stat-info h3 {
+    font-size: 1.5rem;
+  }
+
+  .stat-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.25rem;
+  }
+
+  .content-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .coupe-list-container {
+    max-height: 400px;
+  }
+
+  .table-header,
+  .table-row {
+    grid-template-columns: 2fr 1fr 1fr;
+    font-size: 0.85rem;
+  }
+
+  .upload-area {
+    padding: 2rem 1.5rem;
+  }
+
+  .color-grid {
+    grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
+  }
+
+  .ticket-detail-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-header {
+    padding: 1rem 1.5rem;
+  }
+
+  .admin-header .header-left h1 {
+    font-size: 1.4rem;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .admin-sidebar {
+    width: 240px;
+  }
+
+  .admin-content {
+    padding: 1.5rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .content-columns {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .ticket-detail-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
