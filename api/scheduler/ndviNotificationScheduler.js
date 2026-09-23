@@ -210,6 +210,17 @@ function getPreviousMonth() {
   };
 }
 
+function normalizeCoupeName(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/^\d{4}[-_]\d{2}[-_]\d{2}[-_]/, '')
+    .replace(/ndvi[-_]?change$/i, '')
+    .replace(/forest[-_ ]?division/g, '')
+    .replace(/coupes?/g, '')
+    .replace(/view/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
 /**
  * Core NDVI notification logic — DAILY 3 TIMES, ONE SUMMARY NOTIFICATION PER USER.
  *
@@ -271,28 +282,23 @@ async function runNdviNotifications(admin) {
     // 3️⃣ For each user, collect last month's changes and send ONE summary notification
     // ------------------------------------------------
     let notificationsSent = 0;
+    let repeatedNotificationCount = 0;
+    let coupeMismatchCount = 0;
+    let noRecordsCount = 0;
+    let firebaseFailureCount = 0;
 
     for (const user of users) {
       const { user_id, firebase_token, village_name, coupe_name } = user;
 
       if (firebaseCredentialError) break;
 
-      // Check if already sent for this user/date/slot
-      const alreadySent = await queryWithRetry(client, `
-        SELECT 1 FROM public.ndvi_daily_notification_log
-        WHERE user_id = $1 AND notification_date = $2 AND notification_slot = $3
-        LIMIT 1
-      `, {
-        bind: [user_id, date, slot],
-        type: sequelize.QueryTypes.SELECT
-      });
-
-      if (alreadySent.length > 0) {
-        continue; // Already sent for this slot today
-      }
-
       // Collect all NDVI changes for this user's village/coupe from last month
       let totalChanges = 0;
+      let matchedTableCount = 0;
+      let notificationVillage = village_name;
+      let notificationCoupe = coupe_name;
+      let repeatedNotification = false;
+      const normalizedUserCoupe = normalizeCoupeName(coupe_name);
       // Track the first (primary) table that had changes for this village.
       // Sent at the top level of the notification data payload so the client
       // can call the village-records API directly when the user taps the
@@ -303,9 +309,11 @@ async function runNdviNotifications(admin) {
         const tableName = table.table_name;
 
         // Match coupe
-        if (!tableName.toUpperCase().includes(`_${coupe_name.toUpperCase()}_NDVI_CHANGE`)) {
+        if (!normalizedUserCoupe || normalizeCoupeName(tableName) !== normalizedUserCoupe) {
           continue;
         }
+        matchedTableCount++;
+        if (!primaryTableName) primaryTableName = tableName;
 
         // Ensure pixle_id column
         if (!ensuredPixleIdTables.has(tableName)) {
@@ -328,7 +336,8 @@ async function runNdviNotifications(admin) {
               latitude,
               village
             FROM public."${tableName}"
-            WHERE village = $1
+            WHERE REGEXP_REPLACE(LOWER(BTRIM(COALESCE(village, ''))), '[[:space:]_-]+', '', 'g') =
+                  REGEXP_REPLACE(LOWER(BTRIM($1)), '[[:space:]_-]+', '', 'g')
             ORDER BY "NDVI_change" DESC
           `, {
             bind: [village_name],
@@ -344,8 +353,38 @@ async function runNdviNotifications(admin) {
         }
       }
 
+      if (matchedTableCount === 0) {
+        coupeMismatchCount++;
+        console.log(`[ndvi-scheduler] User ${user_id} skipped: no ${monthLabel} table matched coupe "${coupe_name}".`);
+        continue;
+      }
+
       if (totalChanges === 0) {
-        continue; // No changes for this user — skip notification
+        const previousNotifications = await queryWithRetry(client, `
+          SELECT change_count, village_name, coupe_name
+          FROM public.ndvi_daily_notification_log
+          WHERE user_id = $1
+            AND notification_date = $2
+            AND change_month = $3
+            AND change_count > 0
+          ORDER BY notification_slot DESC, sent_at DESC
+          LIMIT 1
+        `, {
+          bind: [user_id, date, monthPrefix.slice(0, 7)],
+          type: sequelize.QueryTypes.SELECT
+        });
+
+        if (previousNotifications.length === 0) {
+          noRecordsCount++;
+          console.log(`[ndvi-scheduler] User ${user_id} skipped: no records matched village "${village_name}" in ${matchedTableCount} coupe table(s), and no successful notification exists today.`);
+          continue;
+        }
+
+        totalChanges = Number(previousNotifications[0].change_count) || 0;
+        notificationVillage = previousNotifications[0].village_name || village_name;
+        notificationCoupe = previousNotifications[0].coupe_name || coupe_name;
+        repeatedNotification = true;
+        repeatedNotificationCount++;
       }
 
       // ------------------------------------------------
@@ -355,13 +394,13 @@ async function runNdviNotifications(admin) {
         token: firebase_token,
         notification: {
           title: `NDVI Alert 🌿 — ${totalChanges} change(s) detected`,
-          body: `${totalChanges} vegetation change(s) detected in ${village_name} for ${monthLabel}. Tap to view details.`
+          body: `${totalChanges} vegetation change(s) detected in ${notificationVillage} for ${monthLabel}. Tap to view details.`
         },
         data: {
           type: 'ndvi_summary',
           user_id,
-          village_name,
-          coupe_name,
+          village_name: notificationVillage,
+          coupe_name: notificationCoupe,
           table_name: primaryTableName,
           total_changes: String(totalChanges),
           notification_date: date,
@@ -380,15 +419,21 @@ async function runNdviNotifications(admin) {
           INSERT INTO public.ndvi_daily_notification_log
           (user_id, notification_date, notification_slot, change_count, sent_at, village_name, coupe_name, change_month)
           VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5, $6, $7)
-          ON CONFLICT (user_id, notification_date, notification_slot) DO NOTHING
+          ON CONFLICT (user_id, notification_date, notification_slot) DO UPDATE SET
+            change_count = EXCLUDED.change_count,
+            sent_at = CURRENT_TIMESTAMP,
+            village_name = EXCLUDED.village_name,
+            coupe_name = EXCLUDED.coupe_name,
+            change_month = EXCLUDED.change_month
         `, {
-          bind: [user_id, date, slot, totalChanges, village_name, coupe_name, monthPrefix.slice(0, 7)],
+          bind: [user_id, date, slot, totalChanges, notificationVillage, notificationCoupe, monthPrefix.slice(0, 7)],
           type: sequelize.QueryTypes.INSERT
         });
 
-        console.log(`[ndvi-scheduler] Sent summary notification to user ${user_id}: ${totalChanges} changes in ${village_name} for ${monthLabel}`);
+        console.log(`[ndvi-scheduler] ${repeatedNotification ? 'Repeated' : 'Sent'} summary notification to user ${user_id}: ${totalChanges} changes in ${notificationVillage} for ${monthLabel}`);
 
       } catch (err) {
+        firebaseFailureCount++;
         const isCredentialError = err.message && (
           err.message.includes('Invalid JWT Signature') ||
           err.message.includes('invalid_grant') ||
@@ -430,7 +475,7 @@ async function runNdviNotifications(admin) {
       }
     }
 
-    console.log(`[ndvi-scheduler] Daily slot ${slot} run completed (${monthLabel}). ${notificationsSent} notification(s) sent.`);
+    console.log(`[ndvi-scheduler] Daily slot ${slot} run completed (${monthLabel}). ${notificationsSent} sent (${repeatedNotificationCount} repeated from today's latest successful notification); ${coupeMismatchCount} coupe mismatch; ${noRecordsCount} without matching village records or prior notification; ${firebaseFailureCount} Firebase failure(s).`);
   } catch (err) {
     console.error("[ndvi-scheduler] Scheduler error:", err);
   }

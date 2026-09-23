@@ -140,10 +140,10 @@
 }
 .header-bottom2 {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
-  padding-left: clamp(4px, 5%, 14%);
+  padding-left: 10px;
   gap: 4px;
 }
 .container-fluid22{
@@ -948,8 +948,9 @@ body{
 
   .header-bottom {
     flex-wrap: nowrap;
-    justify-content: center;
-    overflow: hidden;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .header-bottom .menu-item {

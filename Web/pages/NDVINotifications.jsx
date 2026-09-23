@@ -17,6 +17,13 @@ const { Option } = Select;
 
 const emptyOptions = { usernames: [], villages: [], coupes: [], divisions: [], months: [] };
 
+const resolveImageSrc = (data) => {
+  if (!data) return null;
+  const value = String(data).trim();
+  if (value.startsWith("data:") || value.startsWith("http://") || value.startsWith("https://") || value.startsWith("blob:")) return value;
+  return `data:image/jpeg;base64,${value}`;
+};
+
 // Convert any timestamp to IST (UTC+5:30) and display as DD-MM-YYYY HH:mm:ss
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
@@ -215,6 +222,7 @@ const NDVINotifications = () => {
   const [pointDetailRecord, setPointDetailRecord] = useState(null);
   const [pointDetailLoading, setPointDetailLoading] = useState(false);
   const [pointDetailImage, setPointDetailImage] = useState(null);
+  const [fullImageOpen, setFullImageOpen] = useState(false);
 
   const fetchReport = async (overrideFilters = filters, page = pagination.current, pageSize = pagination.pageSize) => {
     setLoading(true);
@@ -483,7 +491,7 @@ const NDVINotifications = () => {
           change_category: data.change_category || prev.change_category,
         }));
         if (data.image_data) {
-          setPointDetailImage(`data:image/jpeg;base64,${data.image_data}`);
+          setPointDetailImage(resolveImageSrc(data.image_data));
         }
       }
     } catch (err) {
@@ -769,7 +777,10 @@ const NDVINotifications = () => {
       <Modal
         title="Point Details"
         open={pointDetailOpen}
-        onCancel={() => setPointDetailOpen(false)}
+        onCancel={() => {
+          setPointDetailOpen(false);
+          setFullImageOpen(false);
+        }}
         footer={null}
         width={700}
       >
@@ -806,7 +817,7 @@ const NDVINotifications = () => {
                         <Button
                           type="link"
                           icon={<EyeOutlined />}
-                          onClick={() => window.open(pointDetailImage, "_blank")}
+                          onClick={() => setFullImageOpen(true)}
                         >
                           View Full Image
                         </Button>
@@ -819,6 +830,24 @@ const NDVINotifications = () => {
               </>
             )}
           </div>
+        )}
+      </Modal>
+
+      <Modal
+        title={`NDVI Image - Pixel ${pointDetailRecord?.pixel_id || ""}`}
+        open={fullImageOpen}
+        onCancel={() => setFullImageOpen(false)}
+        footer={null}
+        width="90vw"
+        centered
+        destroyOnHidden
+      >
+        {pointDetailImage && (
+          <img
+            src={pointDetailImage}
+            alt={`NDVI Point ${pointDetailRecord?.pixel_id || ""}`}
+            style={{ display: "block", width: "100%", maxHeight: "80vh", objectFit: "contain" }}
+          />
         )}
       </Modal>
 

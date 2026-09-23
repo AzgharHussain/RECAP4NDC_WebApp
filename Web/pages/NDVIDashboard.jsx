@@ -848,7 +848,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
 const NDVIChangeDashboard = () => {
   // State management
   const [selectedCoupe, setSelectedCoupe] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('2025-02');
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [monthlyData, setMonthlyData] = useState({});
   const [currentTableData, setCurrentTableData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -889,12 +889,8 @@ const NDVIChangeDashboard = () => {
   const [selectedBeat, setSelectedBeat] = useState(null);
   const [hierarchyCoupeName, setHierarchyCoupeName] = useState(null);
 
-  // Track whether the hierarchy was auto-set from the user's login data
-  // (so we can auto-fetch with a default date range on first load).
-  const _autoHierarchyApplied = React.useRef(false);
   const _pendingCoupeName = React.useRef(null);
-  // Refs to hold the latest range/round/beat synchronously so the
-  // auto-fetch setTimeout can read them before React state has settled.
+  // Refs hold the latest hierarchy values synchronously.
   const _pendingRange  = React.useRef(null);
   const _pendingRound  = React.useRef(null);
   const _pendingBeat   = React.useRef(null);
@@ -961,18 +957,10 @@ const NDVIChangeDashboard = () => {
     fetchAvailableMonths();
   }, [selectedDivision]);
 
-  // Auto-fetch on login: when a beat/range/division officer logs in, the hierarchy
-  // dropdown auto-cascades and calls handleHierarchyChange. Once selectedDivision
-  // is set for the first time (and no dates have been manually chosen yet), we
-  // automatically set a default date range (last 3 months) and fetch data so the
-  // table is populated immediately — same UX fix as the Patrolling Logs page.
   useEffect(() => {
-    if (!selectedDivision) return;                  // No hierarchy set yet
+    if (!selectedDivision) return;
     if (!availableMonthsLoaded) return;
-    if (_autoHierarchyApplied.current) return;      // Already auto-fetched once
-    if (startDate || endDate) return;               // User already chose dates manually
-
-    _autoHierarchyApplied.current = true;
+    if (startDate || endDate) return;
 
     const months = [...availableMonths].sort().slice(-3);
     if (months.length === 0) {
@@ -1129,7 +1117,7 @@ const NDVIChangeDashboard = () => {
         setLoading(false);
       }
     }, 300);
-  }, [selectedDivision, availableMonthsLoaded, availableMonths]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Toggle section expansion
   const toggleSection = (section) => {
@@ -2830,12 +2818,10 @@ const handleExportToPDF = async () => {
     _pendingRound.current     = null;
     _pendingBeat.current      = null;
 
-    // Allow auto-fetch to fire again on next login auto-cascade
-    _autoHierarchyApplied.current = false;
-
     // Reset all fetched data
     setMonthlyData({});
     setCurrentTableData([]);
+    setSelectedMonth('');
     setSummaryStats(null);
     setTotalArea(0);
     setTableNames([]);
