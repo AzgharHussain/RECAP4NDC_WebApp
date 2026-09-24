@@ -1213,17 +1213,22 @@ router.post('/coupe-rounds', async (req, res) => {
   }
 });
 
-// Get beats based on selected division, range, and round from generated NDVI Change tables
+// Get beats based on selected division and range (round is optional).
+// Beat officers often have no round value in their profile, so this endpoint
+// must still return the beats that belong to their division/range.
 router.post('/coupe-beats', async (req, res) => {
   try {
-    const { division, range , round} = req.body;
-    
-    if (!division || !range || !round) {
-      return res.status(400).json({ error: 'division, range, and round are required' });
+    const { division, range, round } = req.body;
+
+    if (!division || !range) {
+      return res.status(400).json({ error: 'division and range are required' });
     }
 
-    const result = await getNdviHierarchyValues('beat', { division, range, round });
-    
+    const filters = { division, range };
+    if (round) filters.round = round;
+
+    const result = await getNdviHierarchyValues('beat', filters);
+
     res.json(result);
   } catch (error) {
     console.error('Error fetching beats:', error);
@@ -1342,6 +1347,50 @@ router.post('/beat-coupe-beats', async (req, res) => {
   }
 });
 
+
+// Map a division/range/round/beat selection to the NDVI coupe table name.
+// Round and beat are accepted for consistency but are not required for the
+// mapping because the NDVI table name is derived from the selected division.
+router.post('/get-coupe-by-beat', verifyJwt, async (req, res) => {
+  try {
+    let { division } = req.body;
+    if (!division || division === 'all') {
+      return res.status(400).json({ success: false, message: 'division is required' });
+    }
+
+    const normalizedDivision = String(division).toLowerCase().trim();
+
+    const DIVISION_TO_COUPE_MAP = {
+      'aravalli': 'aravalli',
+      'bharuch sub division': 'bharuchsubdivision',
+      'bharuch_sub_division': 'bharuchsubdivision',
+      'bharuch': 'bharuchsubdivision',
+      'bhavnagar': 'bhavnagar_coupes',
+      'bhavnagar coupes': 'bhavnagar_coupes',
+    };
+
+    let coupeName = DIVISION_TO_COUPE_MAP[normalizedDivision];
+    if (!coupeName) {
+      // Derive from the selected division name: remove " Forest Division",
+      // replace spaces/underscores/hyphens with underscores, lowercase.
+      const base = normalizedDivision
+        .replace(/ forest division$/i, '')
+        .replace(/[\s\-_]+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      coupeName = base ? `${base}_coupe` : null;
+    }
+
+    return res.json({
+      success: true,
+      division,
+      coupe_name: coupeName || null,
+    });
+  } catch (error) {
+    console.error('Error in get-coupe-by-beat:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // DISABLED: column "input_table_name" does not exist in coupe_metadata table.
 // This endpoint is not used by the frontend. Re-enable only if the column
