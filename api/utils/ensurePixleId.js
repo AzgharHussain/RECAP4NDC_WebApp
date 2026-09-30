@@ -95,17 +95,19 @@ async function ensurePixleIdColumn(client, tableName, opts = {}) {
          ADD COLUMN IF NOT EXISTS pixle_id INTEGER;`
     );
 
-    // Back-fill unique values using ROW_NUMBER() over a stable ordering.
+    // Back-fill NULL values using ROW_NUMBER() over a stable ordering.
     // ctid guarantees a stable, unique per-row ordering even when no PK exists.
     await exec(
       `WITH ranked AS (
           SELECT ctid, ROW_NUMBER() OVER (ORDER BY ctid) AS rn
             FROM public."${tableName}"
+           WHERE pixle_id IS NULL
        )
        UPDATE public."${tableName}" t
           SET pixle_id = ranked.rn
          FROM ranked
-        WHERE t.ctid = ranked.ctid;`
+        WHERE t.ctid = ranked.ctid
+          AND t.pixle_id IS NULL;`
     );
 
     // Create an index for fast lookups (not unique — caller can promote later).
@@ -121,7 +123,6 @@ async function ensurePixleIdColumn(client, tableName, opts = {}) {
       console.warn(`[ensurePixleId] index creation skipped for "${tableName}":`, idxErr.message);
     }
 
-    console.log(`[ensurePixleId] added + populated pixle_id for "${tableName}"`);
     return true;
   }
 
@@ -151,7 +152,6 @@ async function ensurePixleIdColumn(client, tableName, opts = {}) {
          FROM ranked
         WHERE t.ctid = ranked.ctid;`
     );
-    console.log(`[ensurePixleId] back-filled ${nullCount} NULL pixle_id rows in "${tableName}"`);
     return true;
   }
 

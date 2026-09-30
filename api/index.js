@@ -21,34 +21,55 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+console.log('[DEBUG] After dotenv');
 // === Global query timeout — must be loaded BEFORE any router ===
 // Patches pg.Pool.prototype.query so every DB query across ALL routers
 // gets a 30-second statement_timeout. Prevents slow queries from blocking
 // the event loop and making the server unreachable.
 const setupQueryTimeout = require('./middlewares/queryTimeout');
+console.log('[DEBUG] Required queryTimeout');
 setupQueryTimeout({ timeoutMs: 30000 });
+console.log('[DEBUG] Executed setupQueryTimeout');
 
+console.log('[DEBUG] Required middlewares');
 const validateAlphaNumSpaceUnderscore = require("./middlewares/validateAlphaNumSpaceUnderscore");
 const { verifyJwt } = require("./middlewares/verifyJwt");
+console.log('[DEBUG] Requiring database.js');
 const { sequelize, testConnection } = require('./config/database');
+console.log('[DEBUG] Requiring mongo.js');
 const { connectMongo } = require('./config/mongo');
+console.log('[DEBUG] Requiring bcrypt');
 const bcrypt = require('bcrypt');
+console.log('[DEBUG] Requiring cacheControl');
 const setNoCacheHeaders = require('./middlewares/cacheControl');
+console.log('[DEBUG] Requiring firebase-admin');
 const admin = require("firebase-admin");
+console.log('[DEBUG] Requiring errorHandler');
 const errorHandler = require("./middlewares/errorHandler");
+console.log('[DEBUG] Requiring joi');
 const Joi = require("joi");
 // At top of server.js
+console.log('[DEBUG] Requiring tokenBlacklist');
 const blacklistedTokens = require("./middlewares/tokenBlacklist");
+console.log('[DEBUG] Requiring helmet');
 const helmet = require("helmet");
+console.log('[DEBUG] Requiring crypto');
 const crypto = require('crypto');
+console.log('[DEBUG] Requiring rate-limit');
 const rateLimit = require("express-rate-limit");
+console.log('[DEBUG] Requiring forest-login');
 const forestRoutes = require("./routers/forest-login");
+console.log('[DEBUG] Done requiring other deps');
 const auditMiddleware = require("./middlewares/auditMiddleware");
 const auditLogsRouter = require("./routers/auditLogs");
 const { logFromRequest } = require("./utils/auditLogger");
 const app = express();
 app.set('trust proxy', 1);
+console.log('[DEBUG] Requiring ndviNotificationScheduler');
 const startNdviScheduler = require("./scheduler/ndviNotificationScheduler");
+console.log('[DEBUG] Requiring dataRetentionScheduler');
+const startDataRetentionScheduler = require("./scheduler/dataRetentionScheduler");
+console.log('[DEBUG] Schedulers required');
 
 
 // ----------------------------------------------------
@@ -79,7 +100,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: false,
 }));
-app.use(compression({ threshold: 1024 }));
+app.use(compression({ threshold: 256, level: 6 }));
 /* Content Security Policy */
 // app.use(
 //   helmet.contentSecurityPolicy({
@@ -120,12 +141,12 @@ app.get("/", (req, res) => {
 
 const validateHttpHeaders = require('./middlewares/validateHttpHeaders');
 
-// === Global API rate limiter — tuned for 5000 concurrent users ===
-// 2000 requests per minute per IP is generous enough for a busy office
+// === Global API rate limiter — tuned for 1M concurrent users ===
+// 5000 requests per minute per IP is generous enough for a busy office
 // (many users behind one NAT IP) while still mitigating flood attacks.
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,       // 1 minute
-  max: 2000,                 // 2000 requests/min per IP
+  max: 5000,                 // 5000 requests/min per IP (supports large NAT offices)
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: "Too many requests. Please slow down." },
@@ -133,6 +154,17 @@ const apiLimiter = rateLimit({
   skip: (req) => req.method === 'OPTIONS' || req.path === '/api/test' || req.path === '/api/health',
 });
 app.use('/api', apiLimiter);
+
+// === Stricter rate limiter for auth endpoints — prevents brute force ===
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 50,                   // 50 auth attempts per 15 min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many login attempts. Please try again later." },
+  skip: (req) => req.method === 'OPTIONS',
+});
+app.use('/api/admin', authLimiter);
 
 app.use('/api', validateHttpHeaders);
 app.use('/api', validateAlphaNumSpaceUnderscore);
@@ -201,12 +233,13 @@ app.use(cookieParser());
 
 
 
-// Use express built-in JSON parser (remove body-parser)
-app.use(express.json({ 
-  limit: '10mb',
-  type: ['application/json', 'application/*+json'] // Explicitly set accepted content types
+// Use express built-in JSON parser — 2MB limit for normal API requests
+// (file uploads go through multer, not JSON parser)
+app.use(express.json({
+  limit: '2mb',
+  type: ['application/json', 'application/*+json']
 }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // Request logger
 app.use((req, res, next) => {
@@ -234,42 +267,12 @@ app.use((req, res, next) => {
     next();
 });
 
-// Response sanitization — optimized for high concurrency.
-// Only sanitizes string values (escapes HTML entities) to prevent XSS.
-// Skips large responses (>1MB) for performance — those are typically
-// spatial/geo data that doesn't need HTML escaping.
-const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-const HTML_ESCAPE_RE = /[&<>"']/g;
-const SANITIZE_SKIP_SIZE = 1024 * 1024; // 1MB
-
-app.use((req, res, next) => {
-  const originalJson = res.json;
-  res.json = function(data) {
-    // Skip sanitization for very large responses (geo/spatial data)
-    try {
-      const serialized = JSON.stringify(data);
-      if (serialized.length > SANITIZE_SKIP_SIZE) {
-        return originalJson.call(this, data);
-      }
-    } catch { return originalJson.call(this, data); }
-
-    function sanitizeOutput(obj) {
-      if (typeof obj === 'string') {
-        return obj.replace(HTML_ESCAPE_RE, (m) => HTML_ESCAPE_MAP[m]);
-      } else if (Array.isArray(obj)) {
-        for (let i = 0; i < obj.length; i++) obj[i] = sanitizeOutput(obj[i]);
-        return obj;
-      } else if (obj && typeof obj === 'object') {
-        for (const key in obj) obj[key] = sanitizeOutput(obj[key]);
-        return obj;
-      }
-      return obj;
-    }
-
-    return originalJson.call(this, sanitizeOutput(data));
-  };
-  next();
-});
+// NOTE: Global response sanitization removed for performance.
+// Per-field sanitization via clean() (xss) in route handlers handles XSS
+// where needed. The global middleware was double-sanitizing every response
+// (recursive walk + HTML entity escaping on ALL string fields), which
+// blocked the event loop and corrupted JSON data values (e.g. O'Brien).
+// Input-side validation (validateAlphaNumSpaceUnderscore, Joi) remains.
 
 // ==================== FILE STORAGE ==================== //
 const patrolImageDir = path.join(__dirname, '..', 'Patrolimage');
@@ -335,6 +338,12 @@ const gisupload = require('./routers/gisupload');
 const gisupload1 = require('./routers/gis-upload1');
 const forestLoginRoutes = require('./routers/forestLogin');
 const supportRouter = require('./routers/support');
+const incidentLogsRouter = require('./routers/incidentLogs');
+const incidentCategoriesRouter = require('./routers/incidentCategories');
+const incidentSeverityRouter = require('./routers/incidentSeverity');
+const positiveIncidentCategoriesRouter = require('./routers/positiveIncidentCategories');
+const positiveIncidentLogsRouter = require('./routers/positiveIncidentLogs');
+const ndviChangesRouter = require('./routers/ndviChanges');
 
 const TEMP_SAVEUSER_TOKEN = process.env.TEMP_SAVEUSER_TOKEN || require('crypto').randomBytes(32).toString('hex');
 const verifyTempToken = (req, res, next) => {
@@ -416,6 +425,16 @@ app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'Test route works!' });
 });
 
+// Cache stats endpoint (admin/debug)
+const { getCacheSize, clearCache } = require('./middlewares/apiCache');
+app.get('/api/cache-stats', verifyJwt, (req, res) => {
+  res.json({ success: true, cacheSize: getCacheSize() });
+});
+app.delete('/api/cache-stats', verifyJwt, (req, res) => {
+  clearCache();
+  res.json({ success: true, message: 'Cache cleared' });
+});
+
 // Test POST endpoint to verify body parsing
 app.post('/api/test-post', (req, res) => {
   res.json({ 
@@ -468,18 +487,63 @@ function validateNoDuplicateParams22(req, res, next) {
   }
 }
 try {
-  const serviceAccount = require("./routers/recap4ndc-add07-firebase-adminsdk-fbsvc-5a8fab9fe1_1967.json");
+  const serviceAccount = require("./routers/recap4ndc-add07-firebase-adminsdk-fbsvc-a7d6b597e7.json");
 
-  if (!admin.apps.length) {
+  // Validate the service account key has required fields
+  if (!serviceAccount.private_key || !serviceAccount.client_email) {
+    console.error("❌ Firebase service account key is missing required fields (private_key or client_email).");
+    console.error("   Generate a new key at: https://console.firebase.google.com/project/recap4ndc-add07/settings/serviceaccounts/adminsdk");
+  } else if (!admin.apps.length) {
+    // Temporarily clear proxy env vars so google-auth-library can reach
+    // https://www.googleapis.com directly (bypassing corporate proxy that
+    // times out with ETIMEDOUT 10.10.2.248:8080).
+    const savedProxyVars = {};
+    for (const key of ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']) {
+      if (process.env[key]) {
+        savedProxyVars[key] = process.env[key];
+        delete process.env[key];
+      }
+    }
+
+    // Permanently add googleapis.com to NO_PROXY so token refreshes
+    // also bypass the proxy (google-auth-library checks NO_PROXY).
+    const googleHosts = 'googleapis.com,www.googleapis.com,oauth2.googleapis.com,firestore.googleapis.com,fcm.googleapis.com';
+    process.env.NO_PROXY = process.env.NO_PROXY
+      ? `${process.env.NO_PROXY},${googleHosts}`
+      : googleHosts;
+    process.env.no_proxy = process.env.NO_PROXY;
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
+
+    // Restore proxy env vars after Firebase init
+    Object.assign(process.env, savedProxyVars);
   }
 } catch (err) {
-  console.error("❌ Firebase service account missing:", err);
+  console.error("❌ Firebase initialization failed:", err.message);
+  console.error("   If 'Invalid JWT Signature', the service account key may be revoked.");
+  console.error("   Generate a new key at: https://console.firebase.google.com/project/recap4ndc-add07/settings/serviceaccounts/adminsdk");
+  console.error("   Save it as: api/routers/recap4ndc-add07-firebase-adminsdk-fbsvc-a7d6b597e7.json");
 }
 
-startNdviScheduler(admin);
+// Only run schedulers on the first worker in cluster mode to avoid
+// 8× duplicate execution. In single-process mode (no cluster), always run.
+const isPrimaryWorker = require('./utils/isPrimaryWorker');
+
+if (isPrimaryWorker) {
+  console.log('[scheduler] This worker will run cron schedulers (NODE_APP_INSTANCE=' + (process.env.NODE_APP_INSTANCE || 'none') + ')');
+  startNdviScheduler(admin);
+
+  // --------------------------------------------------
+  // Data Retention Scheduler — auto-deletes patrol rows
+  // and NDVI Change tables older than 1 year. Runs daily
+  // at 2:00 AM and once on startup.
+  // --------------------------------------------------
+  startDataRetentionScheduler();
+} else {
+  console.log('[scheduler] Schedulers skipped on worker ' + process.env.NODE_APP_INSTANCE);
+}
 
 // --------------------------------------------------
 // 2. Schema-based Validation (Joi)
@@ -933,9 +997,29 @@ app.use('/api', gisupload);
 app.use('/api', gisupload1);
 app.use('/api', forestLoginRoutes);
 app.use('/api', supportRouter);
+app.use('/api', incidentLogsRouter);
+app.use('/api', incidentCategoriesRouter);
+app.use('/api', incidentSeverityRouter);
+app.use('/api', positiveIncidentCategoriesRouter);
+app.use('/api', positiveIncidentLogsRouter);
+app.use('/api/ndvi-changes', ndviChangesRouter);
 app.use("/api", forestRoutes);
 app.use('/api', auditLogsRouter);
 // Error handling middleware
+// Catch JSON parse errors (empty/malformed body with Content-Type: application/json)
+// and return a clean 400 instead of crashing with a 500.
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.warn('[json-parse] Malformed or empty JSON body on', req.method, req.originalUrl);
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid or empty JSON body',
+      message: 'Request body is not valid JSON. Send a JSON object or use multipart/form-data.',
+    });
+  }
+  next(err);
+});
+
 app.use((err, req, res, next) => {
   console.error('Server error:', err.stack);
   res.status(500).json({
@@ -961,40 +1045,99 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5002;
 
 const server = app.listen(PORT, "0.0.0.0" , async () => {
+  console.log(`✅ Backend server listening on http://0.0.0.0:${PORT}`);
   try {
     await sequelize.authenticate();
+    // One-time schema setup/backfills run ONLY on the primary worker.
+    // Running them in every cluster worker makes 8 workers race the same
+    // DDL (CREATE INDEX IF NOT EXISTS, REFRESH, etc.) → catalog lock
+    // contention, "Unknown constraint error" and pool acquire timeouts.
+    if (isPrimaryWorker) {
+      // Seed incident categories lookup tables after DB is confirmed ready
+      try {
+        await incidentCategoriesRouter.ensureIncidentCategoryTables();
+        console.log('✅ Incident categories tables ensured & seeded');
+      } catch (e) {
+        console.error('❌ Incident categories seed failed:', e.message);
+      }
+      // Seed incident severity levels lookup table
+      try {
+        await incidentSeverityRouter.ensureIncidentSeverityTables();
+        console.log('✅ Incident severity levels ensured & seeded');
+      } catch (e) {
+        console.error('❌ Incident severity levels seed failed:', e.message);
+      }
+      // Ensure incident_logs table exists after DB is confirmed ready
+      try {
+        await incidentLogsRouter.ensureIncidentLogsTable();
+        console.log('✅ Incident logs table ensured');
+      } catch (e) {
+        console.error('❌ Incident logs table ensure failed:', e.message);
+      }
+      // Seed positive incident categories lookup tables
+      try {
+        await positiveIncidentCategoriesRouter.ensurePositiveIncidentCategoryTables();
+        console.log('✅ Positive incident categories tables ensured & seeded');
+      } catch (e) {
+        console.error('❌ Positive incident categories seed failed:', e.message);
+      }
+      // Ensure positive_incident_logs table exists after DB is confirmed ready
+      try {
+        await positiveIncidentLogsRouter.ensurePositiveIncidentLogsTable();
+        console.log('✅ Positive incident logs table ensured');
+      } catch (e) {
+        console.error('❌ Positive incident logs table ensure failed:', e.message);
+      }
+      // Backfill patrol_code for existing patrols with NULL codes
+      try {
+        await patrolRoutes.backfillPatrolCodes();
+        console.log('✅ Patrol codes backfilled');
+      } catch (e) {
+        console.error('❌ Patrol code backfill failed:', e.message);
+      }
+    }
   } catch (err) {
     console.error('❌ Database connection failed:', err.message);
   }
 
-  // Connect to MongoDB
+  // Connect to MongoDB (every worker needs its own connection)
   try {
     await connectMongo();
+    console.log('✅ MongoDB connected successfully');
+    if (isPrimaryWorker) {
+      const MongoImage = require('./models/Image');
+      await MongoImage.ensurePatrolNotesField();
+      console.log('✅ Patrol image notes field ensured');
+    }
   } catch (err) {
-    console.error('❌ MongoDB connection failed:', err.message);
+    console.error('❌ MongoDB connection/notes field check failed:', err.message);
   }
 
-  // Add database indexes (async — don't block startup)
-  try {
-    const addIndexes = require('./scripts/addIndexes');
-    addIndexes().catch(e => console.warn('⚠️ Index creation warning:', e.message));
-  } catch (e) {
-    console.warn('⚠️ Could not load addIndexes:', e.message);
+  // Add database indexes (async — don't block startup; primary worker only)
+  if (isPrimaryWorker) {
+    try {
+      const addIndexes = require('./scripts/addIndexes');
+      addIndexes().catch(e => console.warn('⚠️ Index creation warning:', e.message));
+    } catch (e) {
+      console.warn('⚠️ Could not load addIndexes:', e.message);
+    }
   }
 
-  // Seed AuditLog counter with current max logId
-  try {
-    const AuditLog = require('./models/AuditLog');
-    const Counter = require('mongoose').model('AuditLogCounter');
-    const lastDoc = await AuditLog.findOne({}, {}, { sort: { logId: -1 } });
-    const currentMax = lastDoc && lastDoc.logId ? lastDoc.logId : 0;
-    await Counter.findByIdAndUpdate(
-      { _id: 'auditLog' },
-      { $max: { seq: currentMax } },
-      { upsert: true, setDefaultsOnInsert: true }
-    );
-  } catch (err) {
-    console.error('⚠️ AuditLog counter seed failed:', err.message);
+  // Seed AuditLog counter with current max logId (primary worker only)
+  if (isPrimaryWorker) {
+    try {
+      const AuditLog = require('./models/AuditLog');
+      const Counter = require('mongoose').model('AuditLogCounter');
+      const lastDoc = await AuditLog.findOne({}, {}, { sort: { logId: -1 } });
+      const currentMax = lastDoc && lastDoc.logId ? lastDoc.logId : 0;
+      await Counter.findByIdAndUpdate(
+        { _id: 'auditLog' },
+        { $max: { seq: currentMax } },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+    } catch (err) {
+      console.error('⚠️ AuditLog counter seed failed:', err.message);
+    }
   }
 
 

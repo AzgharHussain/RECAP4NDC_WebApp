@@ -1,0 +1,306 @@
+{
+  "info": {
+    "name": "RECAP4NDC Plantation Boundary APIs",
+    "_postman_id": "9f4d88b8-646f-4ec7-bdaf-4b04210d7310",
+    "description": "Postman collection for Plantation/Patrol Boundary APIs. Supports boundary_date/date input. If date is not sent, backend saves current date automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5002",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "boundary_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "boundary_name",
+      "value": "Sample Plantation Boundary",
+      "type": "string"
+    },
+    {
+      "key": "boundary_date",
+      "value": "2026-09-09",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Upload Plantation Boundary File",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "files",
+              "type": "file",
+              "src": [],
+              "description": "Upload KML/KMZ file OR shapefile components (.shp, .shx, .dbf). Add multiple files with same key 'files'."
+            },
+            {
+              "key": "boundary_name",
+              "value": "{{boundary_name}}",
+              "type": "text",
+              "description": "Optional. If same boundary_name exists, API replaces existing boundary."
+            },
+            {
+              "key": "color",
+              "value": "#ff0000",
+              "type": "text"
+            },
+            {
+              "key": "boundary_date",
+              "value": "{{boundary_date}}",
+              "type": "text",
+              "description": "Optional. Format YYYY-MM-DD. If not sent, backend saves current date. You can also send key 'date'."
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/upload-patrol-boundary",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "upload-patrol-boundary"
+          ]
+        },
+        "description": "Upload a plantation/patrol boundary file. Supports KML/KMZ or SHP components. Saves boundary_date from form-data; if absent, saves current date."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var res = pm.response.json();",
+              "if (res.data && res.data.boundary_name) { pm.environment.set('boundary_name', res.data.boundary_name); }",
+              "console.log('Boundary upload response:', res);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Plantation Boundary From Coordinates",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{boundary_name}}\",\n  \"geom\": \"23.0225 72.5714,23.0235 72.5724,23.0245 72.5714,23.0225 72.5714\",\n  \"color\": \"#ff0000\",\n  \"officer_name\": \"Test Officer\",\n  \"division\": \"AHM\",\n  \"range\": \"North Range\",\n  \"round\": \"Round 1\",\n  \"beat\": \"Beat 5\",\n  \"village\": \"Sample Village\",\n  \"boundary_date\": \"{{boundary_date}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/create-boundary",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "create-boundary"
+          ]
+        },
+        "description": "Create a plantation/patrol boundary from coordinate string. boundary_date is optional. If not sent, backend saves current date."
+      }
+    },
+    {
+      "name": "Check Boundary Name",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{boundary_name}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/patrol-boundaries/check-name",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "patrol-boundaries",
+            "check-name"
+          ]
+        },
+        "description": "Check whether a plantation/patrol boundary name already exists."
+      }
+    },
+    {
+      "name": "Get All Plantation Boundaries",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-boundaries",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "patrol-boundaries"
+          ]
+        },
+        "description": "Fetch all plantation/patrol boundaries. Response includes boundary_date."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var res = pm.response.json();",
+              "if (res.data && res.data.length && res.data[0].id) { pm.environment.set('boundary_id', res.data[0].id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Single Plantation Boundary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-boundaries/{{boundary_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "patrol-boundaries",
+            "{{boundary_id}}"
+          ]
+        },
+        "description": "Fetch single plantation/patrol boundary by ID. Response includes boundary_date."
+      }
+    },
+    {
+      "name": "Update/Replace Plantation Boundary File",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "files",
+              "type": "file",
+              "src": [],
+              "description": "Upload replacement KML/KMZ file OR shapefile components (.shp, .shx, .dbf)."
+            },
+            {
+              "key": "color",
+              "value": "#00ff00",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/patrol-boundaries/{{boundary_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "patrol-boundaries",
+            "{{boundary_id}}"
+          ]
+        },
+        "description": "Replace an existing plantation/patrol boundary file by boundary ID."
+      }
+    },
+    {
+      "name": "Delete Plantation Boundary",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-boundaries/{{boundary_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "patrol-boundaries",
+            "{{boundary_id}}"
+          ]
+        },
+        "description": "Delete a plantation/patrol boundary by ID."
+      }
+    }
+  ]
+}

@@ -5,7 +5,7 @@
  * Each worker runs its own independent Express server instance, sharing
  * the same port via the OS load balancer (round-robin on most platforms).
  *
- * For 5000 concurrent users this is critical — a single Node.js thread
+ * For 1M concurrent users this is critical — a single Node.js thread
  * can only process one JavaScript operation at a time, so spreading
  * work across N cores gives ~N× throughput for I/O-bound API requests.
  *
@@ -22,7 +22,11 @@ const os = require('os');
 const path = require('path');
 
 // Allow override via env (e.g. in containers with limited CPUs)
-const numCPUs = Math.max(1, Number(process.env.WORKERS) || os.cpus().length);
+// For 1M users, default to 2× CPU cores (Node is I/O-bound, so more workers
+// than cores helps when waiting on DB/network). Cap at 16 to avoid
+// excessive context switching on very large machines.
+const cpuCount = os.cpus().length;
+const numCPUs = Math.max(1, Number(process.env.WORKERS) || Math.min(cpuCount * 2, 16));
 
 // --single flag → skip clustering (useful for debugging with nodemon)
 const singleMode = process.argv.includes('--single') || process.env.NODE_ENV === 'test';
@@ -31,6 +35,8 @@ if (singleMode) {
   // Run directly without clustering
   require(path.join(__dirname, 'index.js'));
 } else if (cluster.isPrimary) {
+
+  console.log(`[cluster] Starting ${numCPUs} workers (CPUs: ${cpuCount})`);
 
   // Fork workers
   for (let i = 0; i < numCPUs; i++) {
@@ -41,6 +47,7 @@ if (singleMode) {
   let workersStarted = 0;
   cluster.on('listening', (worker, address) => {
     workersStarted++;
+    console.log(`[cluster] Worker ${worker.process.pid} listening (${workersStarted}/${numCPUs})`);
   });
 
   // Restart a worker if it crashes
@@ -51,10 +58,11 @@ if (singleMode) {
 
   // Graceful shutdown — only SIGTERM (let terminal handle SIGINT/Ctrl+C)
   process.on('SIGTERM', () => {
+    console.log('[cluster] SIGTERM received — draining workers...');
     for (const id in cluster.workers) {
       cluster.workers[id].process.kill('SIGTERM');
     }
-    setTimeout(() => process.exit(0), 5000);
+    setTimeout(() => process.exit(0), 10000);
   });
 } else {
   // Worker process — start the actual server

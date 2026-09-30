@@ -1,0 +1,597 @@
+{
+  "info": {
+    "name": "Patrolling APIs - Updated",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "description": "Postman collection for all updated Patrolling APIs including image notes CRUD.\n\nBase URL: {{base_url}}\n\nAuthentication: All protected endpoints require a JWT token in the Authorization header as `Bearer {{token}}`. Use the Login request first to obtain the token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5002",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "patrol_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "image_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth - Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"your_username\",\n  \"password\": \"your_password\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/forest-login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "forest-login"]
+        },
+        "description": "Login to obtain a JWT token. Copy the `token` from the response and set it as the `token` collection variable."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.json() && pm.response.json().token) {",
+              "  pm.collectionVariables.set('token', pm.response.json().token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Patrol (with images + notes)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "patrol_officer_name",
+              "value": "John Doe",
+              "type": "text"
+            },
+            {
+              "key": "start_time",
+              "value": "2025-01-15 08:00:00",
+              "type": "text"
+            },
+            {
+              "key": "end_time",
+              "value": "2025-01-15 10:00:00",
+              "type": "text"
+            },
+            {
+              "key": "start_location",
+              "value": "START_POINT",
+              "type": "text"
+            },
+            {
+              "key": "end_location",
+              "value": "END_POINT",
+              "type": "text"
+            },
+            {
+              "key": "distance_kms",
+              "value": "5.2",
+              "type": "text"
+            },
+            {
+              "key": "geom",
+              "value": "LINESTRING(72.5 23.0, 72.51 23.01, 72.52 23.02)",
+              "type": "text"
+            },
+            {
+              "key": "user_id",
+              "value": "1",
+              "type": "text"
+            },
+            {
+              "key": "patrolling_type_id",
+              "value": "1",
+              "type": "text"
+            },
+            {
+              "key": "number_of_staff",
+              "value": "3",
+              "type": "text"
+            },
+            {
+              "key": "beat",
+              "value": "Beat A",
+              "type": "text"
+            },
+            {
+              "key": "range",
+              "value": "Range X",
+              "type": "text"
+            },
+            {
+              "key": "division",
+              "value": "Division 1",
+              "type": "text"
+            },
+            {
+              "key": "patrolling_location",
+              "value": "Inside Forest",
+              "type": "text"
+            },
+            {
+              "key": "image_notes",
+              "value": "[\"Note for start image\", \"Note for end image\", \"Note for image 1\"]",
+              "type": "text",
+              "description": "Optional. Array of notes for each image, in file upload order. Can also be sent as `note`, `notes`, or `imageNotes`."
+            },
+            {
+              "key": "files",
+              "type": "file",
+              "src": [],
+              "description": "Image files (JPG, PNG, GIF, HEIC, HEIF). First file = start_image, second = end_image, rest = image_1, image_2, ..."
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/patrol-post",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrol-post"]
+        },
+        "description": "Create a new patrol record with multiple images and optional notes.\n\nRequired fields: patrol_officer_name, start_time, end_time, start_location, end_location, distance_kms, geom, user_id, patrolling_type_id, number_of_staff\n\nIf patrolling_location = 'Inside Forest' (default): beat, range, division are required.\nIf patrolling_location = 'Outside Forest': current_location_distict, current_location_village are required.\n\nImage notes can be provided via:\n- `image_notes` (JSON array string)\n- `imageNotes` (JSON array string)\n- `notes` / `note` (JSON array string)\n- Per-file: `<fieldname>_note`, `note_<index>`, `image_note_<index>`"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var res = pm.response.json();",
+              "if (res.patrol_id) {",
+              "  pm.collectionVariables.set('patrol_id', res.patrol_id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get All Patrols (latest 5)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-info-all",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrol-info-all"]
+        },
+        "description": "Get the latest 5 patrol records with their images and notes."
+      }
+    },
+    {
+      "name": "Get All Patrols (full list)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-info",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrol-info"]
+        },
+        "description": "Get all patrol records with their images and notes."
+      }
+    },
+    {
+      "name": "Get Patrols (Paginated)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-info-page?page=1&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrol-info-page"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number (default: 1)"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Items per page (default: 10)"
+            }
+          ]
+        },
+        "description": "Get paginated patrol records with images and notes.\n\nResponse includes: data, pagination { currentPage, pageSize, totalItems, totalPages, hasNextPage, hasPreviousPage }"
+      }
+    },
+    {
+      "name": "Get Patrols (Filtered + Paginated)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-info/filter?page=1&limit=10&division=Division 1&range=Range X&beat=Beat A&officer_name=John&start_date=2025-01-01&end_date=2025-01-31",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrol-info", "filter"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "division",
+              "value": "Division 1",
+              "description": "Optional. Filter by division."
+            },
+            {
+              "key": "range",
+              "value": "Range X",
+              "description": "Optional. Filter by range."
+            },
+            {
+              "key": "beat",
+              "value": "Beat A",
+              "description": "Optional. Filter by beat."
+            },
+            {
+              "key": "officer_name",
+              "value": "John",
+              "description": "Optional. Filter by officer name (partial match)."
+            },
+            {
+              "key": "start_date",
+              "value": "2025-01-01",
+              "description": "Optional. Filter by start date (YYYY-MM-DD)."
+            },
+            {
+              "key": "end_date",
+              "value": "2025-01-31",
+              "description": "Optional. Filter by end date (YYYY-MM-DD)."
+            }
+          ]
+        },
+        "description": "Get filtered and paginated patrol records with images and notes."
+      }
+    },
+    {
+      "name": "Get Patrols by User ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-info-user/{{user_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrol-info-user", "{{user_id}}"]
+        },
+        "description": "Get all patrol records for a specific user, with images and notes."
+      }
+    },
+    {
+      "name": "Get Single Patrol by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrols/{{patrol_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrols", "{{patrol_id}}"]
+        },
+        "description": "Get a single patrol record by patrol_id, including all images with their notes.\n\nEach image object contains:\n- image_id\n- image_data (base64)\n- image_type (e.g. image/jpeg)\n- image_category (start_image, end_image, image_1, ...)\n- note (string or null)"
+      }
+    },
+    {
+      "name": "Update Image Note",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"note\": \"Updated note text for this image\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/patrol-images/{{image_id}}/note",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrol-images", "{{image_id}}", "note"]
+        },
+        "description": "Update or create a note for a specific patrol image.\n\nPath param: image_id (the MongoDB imageId, returned as `image_id` in patrol image arrays)\n\nBody:\n- `note` (string): The note text. Can also use `notes` as the field name.\n\nResponse:\n```json\n{\n  \"message\": \"Patrol image note updated successfully\",\n  \"data\": {\n    \"image_id\": 1,\n    \"patrol_id\": 5,\n    \"image_category\": \"start_image\",\n    \"note\": \"Updated note text for this image\"\n  }\n}\n```"
+      }
+    },
+    {
+      "name": "Delete Image Note",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-images/{{image_id}}/note",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrol-images", "{{image_id}}", "note"]
+        },
+        "description": "Delete the note from a specific patrol image (sets note to null).\n\nPath param: image_id (the MongoDB imageId)\n\nResponse:\n```json\n{\n  \"message\": \"Patrol image note deleted successfully\",\n  \"data\": {\n    \"image_id\": 1,\n    \"patrol_id\": 5,\n    \"image_category\": \"start_image\",\n    \"note\": null\n  }\n}\n```"
+      }
+    },
+    {
+      "name": "Dropdown - Patrolling Types",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrolling-types",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrolling-types"]
+        },
+        "description": "Get all patrolling types (type_id, type_name)."
+      }
+    },
+    {
+      "name": "Dropdown - Divisions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/patrolling-division",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrolling-division"]
+        },
+        "description": "Get all divisions. No auth required."
+      }
+    },
+    {
+      "name": "Dropdown - Ranges",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/patrolling-range",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrolling-range"]
+        },
+        "description": "Get all ranges. No auth required."
+      }
+    },
+    {
+      "name": "Dropdown - Beats",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/patrolling-beat",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrolling-beat"]
+        },
+        "description": "Get all beats. No auth required."
+      }
+    },
+    {
+      "name": "Dropdown - Rounds",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/patrolling-round",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrolling-round"]
+        },
+        "description": "Get all patrolling rounds. No auth required."
+      }
+    },
+    {
+      "name": "Dropdown - Ranges by Division",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrolling-range-by-division?division=Division 1",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrolling-range-by-division"],
+          "query": [
+            {
+              "key": "division",
+              "value": "Division 1",
+              "description": "Required. Division name to filter ranges by."
+            }
+          ]
+        },
+        "description": "Get ranges filtered by a specific division."
+      }
+    },
+    {
+      "name": "Dropdown - Beats by Range",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrolling-beat-by-range?range=Range X&division=Division 1",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrolling-beat-by-range"],
+          "query": [
+            {
+              "key": "range",
+              "value": "Range X",
+              "description": "Required. Range name to filter beats by."
+            },
+            {
+              "key": "division",
+              "value": "Division 1",
+              "description": "Optional. Additional division filter."
+            }
+          ]
+        },
+        "description": "Get beats filtered by range (and optionally by division)."
+      }
+    },
+    {
+      "name": "Dropdown - Hierarchy (DRB)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/patrolling-hierarchy?division=Division 1&range=Range X&beat=Beat A",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrolling-hierarchy"],
+          "query": [
+            {
+              "key": "division",
+              "value": "Division 1",
+              "description": "Optional. Filter by division."
+            },
+            {
+              "key": "range",
+              "value": "Range X",
+              "description": "Optional. Filter by range."
+            },
+            {
+              "key": "beat",
+              "value": "Beat A",
+              "description": "Optional. Filter by beat."
+            }
+          ]
+        },
+        "description": "Get division-range-beat hierarchy data in a single call. No auth required."
+      }
+    },
+    {
+      "name": "Dropdown - DRB List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrolling-drb",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patrolling-drb"]
+        },
+        "description": "Get the full DRB (Division-Range-Beat) list."
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect,useRef } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight, FaMapMarkedAlt} from "react-icons/fa"; 
+import { FaThLarge, FaGlobe, FaClipboardList, FaBars, FaUpload, FaTimes, FaEye,FaChevronUp, FaChevronDown ,FaChevronRight, FaMapMarkedAlt, FaCheckCircle} from "react-icons/fa"; 
 import { MdLocalPolice } from "react-icons/md";
 import { GiNotebook } from "react-icons/gi";
 import brand from "../assets/FOREST DEPT.jpg";
@@ -37,20 +37,33 @@ export default function DashboardLayout() {
   const [isWorkingPlanOpen, setIsWorkingPlanOpen] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate(); // Add useNavigate hook
+  const navigate = useNavigate();
   const { language, toggleLanguage } = useLanguage();
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const headerRef = useRef(null);
-const [contentHeight, setContentHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  // Track viewport width for responsive hamburger
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close sidebar when navigating on small screens
+  useEffect(() => {
+    if (windowWidth <= 1024) setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   // Language Texts
   const text = {
     en: {
-      appTitle: "FOREST MONITORING & PATROLLING SYSTEM",
+      appTitle: "FOREST MONITORING AND PATROLLING SYSTEM",
       overview: "Overview",
       geoDashboard: "Geo Dashboard",
       patrollingLogs: "Patrolling Logs",
       incidentLogs: "Incident Logs",
+      positiveIncidentLogs: "Forest Good Practices",
       workingPlan: "Working Plan Areas",
       uploadCoupe: "Upload Coupe Boundaries",
       viewCoupe: "View Coupe Boundaries",
@@ -62,6 +75,7 @@ const [contentHeight, setContentHeight] = useState(0);
       english: "English",
       gujarati: "Gujarati",
       NDVIDashboard: "NDVI Dashboard",
+      NDVINotifications: "NDVI Notifications",
       PatrolCoverageAnalysis: "Plantation Coverage Analysis"
     },
     gu: {
@@ -70,17 +84,19 @@ const [contentHeight, setContentHeight] = useState(0);
       geoDashboard: "ભૂગોળ ડેશબોર્ડ",
       patrollingLogs: "પેટ્રોલિંગ લોગ્સ",
       incidentLogs: "ઘટના લોગ્સ",
+      positiveIncidentLogs: "વન સારી પ્રથાઓ",
       workingPlan: "કામ કરવાના વિસ્તારમાં",
       uploadCoupe: "કૂપ બાઉન્ડરી અપલોડ કરો",
       viewCoupe: "કૂપ બાઉન્ડરી જુાા",
       coupeLog: "કૂપ અવલોકન લોગ",
       patrollingIncident: "પેટ્રોલિંગ",
-      logout: "લ಼ોગઆઉટ",
+      logout: "લૉગઆઉટ",
       admin: "એડમિન",
       language: "ભાષા",
       english: "અંગ્રેજી",
       gujarati: "ગુજરાતી",
       NDVIDashboard: "NDVI ડેશબોર્ડ",
+      NDVINotifications: "NDVI સૂચનાઓ",
       PatrolCoverageAnalysis: "પ્લાન્ટેશન આવરણનું વિશ્લેષણ"
     },
   };
@@ -244,14 +260,32 @@ useEffect(() => {
 }, []);
   return (
     <div className="layout">
-      {/* Navigation loader overlay — blocks all clicks while loading */}
+      {/* Navigation loader overlay — blocks all clicks/focus while loading */}
       {isNavigating && (
-        <div className="nav-loader-overlay" role="status" aria-live="polite">
+        <div
+          className="nav-loader-overlay"
+          role="status"
+          aria-live="polite"
+          aria-label="Loading page"
+          // inert prevents any focusable descendant from receiving focus while
+          // the overlay is visible, eliminating the aria-hidden/focus conflict.
+          inert=""
+        >
           <div className="nav-loader-box">
             <div className="nav-loader-spinner" />
             <div className="nav-loader-text">Loading…</div>
           </div>
         </div>
+      )}
+
+
+      {/* Sidebar backdrop for tablet/mobile */}
+      {isSidebarOpen && windowWidth <= 1024 && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
       )}
       {/* Header */}
       <header className="header" ref={headerRef}>
@@ -311,22 +345,27 @@ useEffect(() => {
 
         <header id="after-login-header">
                 <div className="container-fluid22">
-                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px',   padding:'2px',width:'100%',borderRadius:'50px'}}>
+                    <div className="headAssets" style={{display:'flex',justifyContent:'space-between', alignItems:'center', gap:'10px', padding:'2px',width:'100%',borderRadius:'50px'}}>
                         <div className="logo" style={{display:'flex', alignItems:'center', gap:'10px',paddingLeft:'25px'}}>
-                            {/* <a href="indexs.aspx">
-                                </a> */}
-                                <img src={gujaratlogo} alt="logo picture" style={{width:'50px'}}></img>
-                      
+                          {/* Hamburger — visible on tablet and mobile */}
+                          <button
+                            className="hamburger-btn"
+                            aria-label="Toggle navigation menu"
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                          >
+                            {isSidebarOpen ? <FaTimes /> : <FaBars />}
+                          </button>
+                            <img src={gujaratlogo} alt="logo picture" style={{width:'50px'}}></img>
+                        
                         <div className="portal-header">
                             <h2 style={{letterSpacing:"2px"}}><b style={{fontFamily: '"arial', fontWeight: 700,}}>{text[language].appTitle}</b></h2>
                         </div>  </div>
                       
                         <div className="ministryLogo" style={{display:'flex', alignItems:'center', gap:'23px', paddingRight:'45px'}}>
-                            <div className="l_1">
-                                {/* <a href="https://moef.gov.in/" target="_blank">
-                                    </a> */}
+                            {/* <div className="l_1">
+                              
                                     <img src={Moef} alt="picture" style={{width:'120px'}}></img>
-                            </div>
+                            </div> */}
                             <div className="l_2">
                                 {/* <a href="https://www.giz.de/de/html/index.html" target="_blank">
                                     </a> */}
@@ -385,6 +424,16 @@ useEffect(() => {
             {text[language].NDVIDashboard}
           </NavLink>
           <NavLink
+            to="/ndvi-notifications"
+            className={`menu-item ${
+              isActiveLink("/ndvi-notifications") ? "active" : ""
+            }`}
+            onClick={handleLinkClick}
+          >
+            <FiActivity style={{ fontSize: '20px', marginRight: '6px' }} />
+            {text[language].NDVINotifications}
+          </NavLink>
+          <NavLink
             to="PatrolCoverageAnalysis"
             className={`menu-item ${
               isActiveLink("/PatrolCoverageAnalysis") ? "active" : ""
@@ -393,6 +442,26 @@ useEffect(() => {
           >
           <FaMapMarkedAlt />
           {text[language].PatrolCoverageAnalysis} 
+          </NavLink>
+          <NavLink
+            to="/incident-logs"
+            className={`menu-item ${
+              isActiveLink("/incident-logs") ? "active" : ""
+            }`}
+            onClick={handleLinkClick}
+          >
+          <FaClipboardList />
+          {text[language].incidentLogs}
+          </NavLink>
+          <NavLink
+            to="/positive-incident-logs"
+            className={`menu-item ${
+              isActiveLink("/positive-incident-logs") ? "active" : ""
+            }`}
+            onClick={handleLinkClick}
+          >
+          <FaCheckCircle />
+          {text[language].positiveIncidentLogs}
           </NavLink>
            </div>
          <div className="header-right">
@@ -403,14 +472,14 @@ useEffect(() => {
       onClick={() => toggleLanguage("en")}
       title="English"
     >
-      EN
+      English
     </button>
     <button
       className={`header-lang-btn ${language === "gu" ? "active" : ""}`}
       onClick={() => toggleLanguage("gu")}
       title="ગુજરાતી"
     >
-      ગુ
+      ગુજ
     </button>
   </div>
   <div className="user-dropdown" ref={dropdownRef}>
@@ -423,8 +492,22 @@ useEffect(() => {
 
     </div>
 
-    {/* Dropdown menu */}
+    {/* Dropdown menu — positioned relative to user-dropdown */}
+    {isDropdownOpen && (
+      <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
+        <div className="username">
+        <b>{username}</b>
+        {isAdmin && <span className="admin-badge"> (Admin)</span>}
+      </div>
 
+        <button
+          className="logout-btn dropdown-item"
+          onClick={handleLogout}
+        >
+          {text[language].logout}
+        </button>
+      </div>
+    )}
   </div>
 </div>
         </div>
@@ -465,21 +548,6 @@ useEffect(() => {
           
         </div>
       )}
-         {isDropdownOpen && (
-      <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
-        <div className="username">
-        <b>{username}</b>
-        {isAdmin && <span className="admin-badge"> (Admin)</span>}
-      </div>
-
-        <button
-          className="logout-btn dropdown-item"
-          onClick={handleLogout}
-        >
-          {text[language].logout}
-        </button>
-      </div>
-    )}
     </div>
   );
 }

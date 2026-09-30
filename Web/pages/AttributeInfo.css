@@ -78,3 +78,29 @@
   padding: 4px 0;
   word-break: break-word;
 }
+
+/* === iPad Pro Responsive — Attribute Info === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .attribute-info-panel {
+    width: 260px;
+    top: 80px;
+    right: 14px;
+    max-height: 350px;
+  }
+
+  .attribute-table {
+    font-size: 12px;
+  }
+
+  .info-header h3 {
+    font-size: 14px;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .attribute-info-panel {
+    width: 280px;
+    top: 90px;
+    right: 18px;
+  }
+}

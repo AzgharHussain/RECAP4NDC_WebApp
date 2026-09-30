@@ -426,7 +426,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
     await Promise.all(uploadedFiles.map(file => {
       const filePath = path.join(UPLOAD_DIR, file.originalname);
       return fs.promises.unlink(filePath)
-        .then(() => console.log(`✓ Deleted: ${file.originalname}`))
+        .then(() => console.error(`✓ Deleted: ${file.originalname}`))
         .catch(cleanupErr => console.warn(`⚠ Failed to delete ${filePath}:`, cleanupErr.message));
     }));
 
@@ -472,7 +472,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
     await Promise.all(uploadedFiles.map(file => {
       const filePath = path.join(UPLOAD_DIR, file.originalname);
       return fs.promises.unlink(filePath)
-        .then(() => console.log(`✓ Cleaned up on error: ${file.originalname}`))
+        .then(() => console.error(`✓ Cleaned up on error: ${file.originalname}`))
         .catch(cleanupErr => console.warn(`⚠ Failed to delete ${filePath}:`, cleanupErr.message));
     }));
     

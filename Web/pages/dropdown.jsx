@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Select, Row, Col, Spin, message } from 'antd';
 import { API_BASE_URL } from '../config';
+import { capitalizeFirst } from '../utils/textFormat';
 
 const { Option } = Select;
 
@@ -504,7 +505,7 @@ const handleCoupeChange = (coupeName) => {
             >
               {forestTypes.map(forest => (
                 <Option key={forest.forest_id} value={forest.forest_id}>
-                  {forest.forest_type}
+                  {capitalizeFirst(forest.forest_type)}
                 </Option>
               ))}
             </Select>
@@ -531,7 +532,7 @@ const handleCoupeChange = (coupeName) => {
             >
               {divisions.map(division => (
                 <Option key={division.value} value={division.value}>
-                  {division.label}
+                  {capitalizeFirst(division.label)}
                 </Option>
               ))}
             </Select>
@@ -558,7 +559,7 @@ const handleCoupeChange = (coupeName) => {
             >
               {ranges.map(range => (
                 <Option key={range.value} value={range.value}>
-                  {range.label}
+                  {capitalizeFirst(range.label)}
                 </Option>
               ))}
             </Select>
@@ -584,7 +585,7 @@ const handleCoupeChange = (coupeName) => {
             >
               {rounds.map(round => (
                 <Option key={round.value} value={round.value}>
-                  {round.label}
+                  {capitalizeFirst(round.label)}
                 </Option>
               ))}
             </Select>
@@ -610,7 +611,7 @@ const handleCoupeChange = (coupeName) => {
             >
               {beats.map(beat => (
                 <Option key={beat.value} value={beat.value}>
-                  {beat.label}
+                  {capitalizeFirst(beat.label)}
                 </Option>
               ))}
             </Select>
@@ -636,7 +637,7 @@ const handleCoupeChange = (coupeName) => {
             >
               {villages.map(village => (
                 <Option key={village.value} value={village.value}>
-                  {village.label}
+                  {capitalizeFirst(village.label)}
                 </Option>
               ))}
             </Select>
@@ -662,7 +663,7 @@ const handleCoupeChange = (coupeName) => {
             >
               {coupes.map(coupe => (
                 <Option key={coupe.value} value={coupe.value}>
-                  {coupe.label}
+                  {capitalizeFirst(coupe.label)}
                 </Option>
               ))}
             </Select>

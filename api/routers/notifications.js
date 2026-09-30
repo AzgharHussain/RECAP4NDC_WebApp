@@ -1,8 +1,6 @@
 const express = require('express');
-const { Pool } = require('pg');
 const multer = require('multer');
 const admin = require("firebase-admin");
-const { DATE } = require('sequelize');
 const { sequelize } = require('../config/r_quire');
 const router = express.Router();
 const upload = multer();
@@ -11,27 +9,77 @@ const blacklistedTokens = require("../middlewares/tokenBlacklist");
 const { logFromRequest } = require("../utils/auditLogger");
 const { ensurePixleIdColumn } = require("../utils/ensurePixleId");
 
-
-// ----------------------------------------------------
-// 2. Postgres Connection Pool
-// ----------------------------------------------------
-const client = new Pool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  port: Number(process.env.DB_PORT),
-  database: process.env.DB_NAME,
-  max: Number(process.env.DB_POOL_MAX || 50),
-  min: 5,
-  acquireTimeoutMillis: 60000,
-  idleTimeoutMillis: 30000,
-});
-
-client.on('error', (err) => {
-  console.error('Unexpected PostgreSQL pool error:', err.message);
-});
-
-
+// ─────────────────────────────────────────────────────────
+// Use a thin adapter that delegates to Sequelize so ALL queries share the
+// ONE connection pool (database.js). Replacing the old separate pg.Pool which
+// was creating a second pool that fired DDL at module load and blocked startup
+// by holding connections for up to 60 s (acquireTimeoutMillis).
+// ─────────────────────────────────────────────────────────
+const client = {
+  /**
+   * Executes any SQL via the shared Sequelize pool.
+   * Returns { rows: [...] } to match the pg Pool API used throughout this file.
+   *
+   * Supports:
+   *   client.query(sql)           → { rows: [] }
+   *   client.query(sql, params)   → { rows: [...] }   (positional $1, $2...)
+   */
+  query: async (sql, params) => {
+    const trimmed = sql.trim().toUpperCase();
+    let queryType;
+    if (/^SELECT/.test(trimmed)) {
+      queryType = sequelize.QueryTypes.SELECT;
+    } else if (/^INSERT/.test(trimmed)) {
+      queryType = sequelize.QueryTypes.INSERT;
+    } else if (/^UPDATE/.test(trimmed)) {
+      queryType = sequelize.QueryTypes.UPDATE;
+    } else if (/^DELETE/.test(trimmed)) {
+      queryType = sequelize.QueryTypes.DELETE;
+    } else {
+      queryType = sequelize.QueryTypes.RAW;
+    }
+    const options = { raw: true, type: queryType };
+    if (params) {
+      // Replace undefined with null — Sequelize's bind throws on undefined values
+      const safeParams = (Array.isArray(params) ? params : [params]).map(v => v === undefined ? null : v);
+      options.bind = safeParams;
+    }
+    // Retry on ConnectionAcquireTimeoutError — the pool is momentarily
+    // exhausted (e.g. during a scheduler burst or concurrent report
+    // requests). Wait briefly and retry instead of failing immediately.
+    const MAX_ACQUIRE_RETRIES = 2;
+    let lastErr;
+    for (let attempt = 0; attempt <= MAX_ACQUIRE_RETRIES; attempt++) {
+      try {
+        const result = await sequelize.query(sql, options);
+        // Normalize to { rows: [...] }
+        // SELECT → result is the array of rows directly (not [rows, metadata])
+        // INSERT/UPDATE/DELETE/RAW → result[0] is the rows array (or metadata)
+        let rows;
+        if (queryType === sequelize.QueryTypes.SELECT) {
+          rows = Array.isArray(result) ? result : (result ? [result] : []);
+        } else if (Array.isArray(result[0])) {
+          rows = result[0];
+        } else if (result[0] !== null && result[0] !== undefined) {
+          rows = [result[0]];
+        } else {
+          rows = [];
+        }
+        return { rows };
+      } catch (err) {
+        lastErr = err;
+        const isAcquireTimeout =
+          err.name === 'SequelizeConnectionAcquireTimeoutError' ||
+          err.message?.includes('Operation timeout') ||
+          err.message?.includes('ConnectionAcquireTimeoutError');
+        if (!isAcquireTimeout || attempt === MAX_ACQUIRE_RETRIES) throw err;
+        // Brief backoff before retrying — 500ms, then 1000ms
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+    throw lastErr;
+  },
+};
 
 
 // ----------------------------------------------------
@@ -64,18 +112,79 @@ async function createNotificationTables() {
       )
     `);
 
+    // Add division/range/round/beat columns if they don't exist yet
+    const extraCols = ['division', 'range', 'round', 'beat'];
+    for (const col of extraCols) {
+      await client.query(`
+        ALTER TABLE public.ndvi_notification_users
+        ADD COLUMN IF NOT EXISTS ${col} TEXT
+      `);
+    }
+
     // notification log table
     await client.query(`
       CREATE TABLE IF NOT EXISTS public.ndvi_notification_log (
         id SERIAL PRIMARY KEY,
         user_id TEXT,
         table_name TEXT,
-        pixel_id INTEGER,
+        pixel_id TEXT,
         sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(user_id, table_name, pixel_id)
       )
     `);
 
+    // Migrate pixel_id to TEXT only if the column is not already TEXT.
+    // ALTER COLUMN TYPE causes a full table rewrite + ACCESS EXCLUSIVE lock.
+    // Running it unconditionally on every startup hangs the server.
+    const pixelIdType = await client.query(`
+      SELECT data_type FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'ndvi_notification_log'
+        AND column_name = 'pixel_id'
+      LIMIT 1
+    `);
+    if (pixelIdType.rows.length > 0 && pixelIdType.rows[0].data_type !== 'text') {
+      await client.query(`
+        ALTER TABLE public.ndvi_notification_log
+        ALTER COLUMN pixel_id TYPE TEXT USING pixel_id::text
+      `);
+    }
+
+    // Ensure sent_at column exists and is populated (idempotent)
+    await client.query(`
+      ALTER TABLE public.ndvi_notification_log
+      ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+
+    await client.query(`
+      UPDATE public.ndvi_notification_log
+      SET sent_at = CURRENT_TIMESTAMP
+      WHERE sent_at IS NULL
+    `);
+
+    // Performance indexes — created once at startup, skipped if already exist
+    // Use non-concurrent creation to avoid issues inside transactions
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ndvi_log_user_table
+      ON public.ndvi_notification_log (user_id, table_name)
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ndvi_users_token
+      ON public.ndvi_notification_users (firebase_token)
+      WHERE firebase_token IS NOT NULL
+    `).catch(() => {});
+
+    // Additional indexes for report query performance
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ndvi_log_table_pixel
+      ON public.ndvi_notification_log (table_name, pixel_id)
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ndvi_log_sent_at
+      ON public.ndvi_notification_log (sent_at DESC NULLS LAST)
+    `).catch(() => {});
 
   } catch (err) {
 
@@ -85,8 +194,22 @@ async function createNotificationTables() {
 
 }
 
-// run once
-createNotificationTables();
+// Defer ALL startup DDL to well after the server has bound its port.
+// createNotificationTables() runs ALTER TABLE, CREATE INDEX, UPDATE — these
+// take exclusive locks and block the pool. Running them at module load time
+// (before app.listen) starves other startup code and hangs the server.
+// Primary worker only — 8 cluster workers running the same DDL/UPDATE
+// at startup causes lock contention and pool acquire timeouts.
+if (require('../utils/isPrimaryWorker')) {
+  console.log('[notifications] Module loaded. Table setup deferred 5s to let server bind first.');
+  setTimeout(() => {
+    createNotificationTables().catch(err => console.error('[notifications] startup table setup failed:', err.message));
+    // Run default note cleanup after table setup (30s delay for safety)
+    setTimeout(() => {
+      cleanupDefaultNotes().catch(err => console.error('[notifications] startup note cleanup failed:', err.message));
+    }, 30000);
+  }, 5000);
+}
 
 // ----------------------------------------------------
 // 4. Helper: Send Notification using Firebase Admin
@@ -145,6 +268,8 @@ async function sendNotification(firebaseToken, record) {
       longitude: String(longitude || ""),
       degraded_forest_Layer_N,
       coupe_name,
+      table_name: degraded_forest_Layer,
+      village_name: String(record.village_name || record.village || ""),
       date
     }
   };
@@ -179,143 +304,6 @@ async function setNotificationSent(id) {
 // ----------------------------------------------------
 // 6. API: Send NDVI Notifications
 // ----------------------------------------------------
-// router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) => {
-
-//   try {
-
-//     const firebase_token = (req.body.firebase_token || "").trim();
-//     const user_id = (req.body.user_id || "").trim();
-//     const village_name = (req.body.village_name || "").trim();
-//     const coupe_name = (req.body.coupe_name || "").trim();
-
-//     if (!firebase_token || !user_id || !village_name || !coupe_name) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "invalid request"
-//       });
-//     }
-
-//     // ------------------------------------------------
-//     // Generate NDVI Table Name
-//     // ------------------------------------------------
-//     const degraded_forest_Layer = `"2026-01-01_${coupe_name}_NDVI_Change"`;
-
-//     // month extraction
-//     const date = "2026-01-01";
-//     const dateObj = new Date(date);
-//     const monthFull = dateObj.toLocaleString('default', { month: 'long' }).toUpperCase();
-
-//     // ------------------------------------------------
-//     // Query NDVI record
-//     // ------------------------------------------------
-//     const q = `
-//       SELECT
-//         pixle_id as id,
-//         "Dec_NDVI" as jan_ndvi,
-//         "Jan_NDVI" as feb_ndvi,
-//         "NDVI_change" as ndvi_change,
-//         change_category,
-//         longitude,
-//         latitude
-//       FROM public.${degraded_forest_Layer}
-//       WHERE village = $1
-//       AND notification_sent = FALSE
-//       ORDER BY "NDVI_change" DESC
-//       LIMIT 1
-//     `;
-
-//     const result = await client.query(q, [village_name]);
-
-//     if (result.rows.length === 0) {
-//       return res.json({
-//         success: true,
-//         message: "No NDVI alerts for this village"
-//       });
-//     }
-
-//     const record = result.rows[0];
-
-//     // ------------------------------------------------
-//     // Notification Title
-//     // ------------------------------------------------
-//     let title = `NDVI Alert For ${monthFull}`;
-//     let body = `Coupe: ${coupe_name}`;
-
-//     switch (record.change_category) {
-
-//       case "significant_decrease":
-//         title = "🚨 Significant Vegetation Decrease";
-//         body = `NDVI dropped from ${record.jan_ndvi} to ${record.feb_ndvi}`;
-//         break;
-
-//       case "moderate_decrease":
-//         title = "⚠️ Moderate Vegetation Decrease";
-//         body = `NDVI decreased from ${record.jan_ndvi} to ${record.feb_ndvi}`;
-//         break;
-
-//       case "significant_increase":
-//         title = "🌱 Significant Vegetation Improvement";
-//         body = `NDVI increased from ${record.jan_ndvi} to ${record.feb_ndvi}`;
-//         break;
-
-//       case "moderate_increase":
-//         title = "📈 Moderate Vegetation Improvement";
-//         body = `NDVI improved from ${record.jan_ndvi} to ${record.feb_ndvi}`;
-//         break;
-//     }
-
-//     // ------------------------------------------------
-//     // Send Firebase Notification
-//     // ------------------------------------------------
-//     const monthtext = "JANUARY";
-//     const message = {
-//       token: firebase_token,
-//       notification: {
-//         title,
-//         body
-//       },
-//       data: {
-//         id: String(record.id),
-//         latitude: String(record.latitude || ""),
-//         longitude: String(record.longitude || ""),
-//         village_name,
-//         coupe_name,
-//         month: monthtext,
-//       }
-//     };
-// console.log("📩 Sending notification with payload:", message);
-//     const response = await admin.messaging().send(message);
-
-//     // ------------------------------------------------
-//     // Update notification flag
-//     // ------------------------------------------------
-//     await client.query(
-//       `UPDATE public.${degraded_forest_Layer}
-//        SET notification_sent = TRUE
-//        WHERE pixle_id = $1`,
-//       [record.id]
-//     );
-
-//   res.json({
-//   success: true,
-//   messageId: response,
-//   data: record,
-//   month: monthtext,
-// });
-
-//   } catch (err) {
-
-//     console.error("Notification Error:", err);
-
-//     res.status(500).json({
-//       success: false,
-//       error: err.message
-//     });
-
-//   }
-
-// });
-
 router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) => {
 
   try {
@@ -335,6 +323,12 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
       ""
     ).trim();
 
+    // Extract division/range/round/beat from JWT (set at login from forest API)
+    const division = (req.user?.division || req.body.division || "").trim();
+    const range    = (req.user?.range    || req.body.range    || "").trim();
+    const round    = (req.user?.round    || req.body.round    || "").trim();
+    const beat     = (req.user?.beat     || req.body.beat     || "").trim();
+
     if (!firebase_token || !user_id || !village_name || !coupe_name) {
       return res.status(400).json({
         success: false,
@@ -345,32 +339,26 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
     }
 
     // ------------------------------------------------
-    // 1️⃣ Create table if not exists
-    // ------------------------------------------------
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS public.ndvi_notification_users (
-        user_id TEXT PRIMARY KEY,
-        firebase_token TEXT,
-        village_name TEXT,
-        coupe_name TEXT
-      )
-    `);
-
-    // ------------------------------------------------
-    // 2️⃣ Insert or update user subscription
+    // Insert or update user subscription (with division/range/round/beat)
+    // NOTE: Columns are guaranteed by createNotificationTables() at startup.
+    // DO NOT run ALTER TABLE here — it blocks the connection pool on every call.
     // ------------------------------------------------
     await client.query(
       `
       INSERT INTO public.ndvi_notification_users
-      (user_id, firebase_token, village_name, coupe_name)
-      VALUES ($1,$2,$3,$4)
+        (user_id, firebase_token, village_name, coupe_name, division, range, round, beat)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       ON CONFLICT (user_id)
       DO UPDATE SET
         firebase_token = EXCLUDED.firebase_token,
-        village_name = EXCLUDED.village_name,
-        coupe_name = EXCLUDED.coupe_name
+        village_name   = EXCLUDED.village_name,
+        coupe_name     = EXCLUDED.coupe_name,
+        division       = COALESCE(NULLIF(EXCLUDED.division, ''), ndvi_notification_users.division),
+        range          = COALESCE(NULLIF(EXCLUDED.range,    ''), ndvi_notification_users.range),
+        round          = COALESCE(NULLIF(EXCLUDED.round,    ''), ndvi_notification_users.round),
+        beat           = COALESCE(NULLIF(EXCLUDED.beat,     ''), ndvi_notification_users.beat)
       `,
-      [user_id, firebase_token, village_name, coupe_name]
+      [user_id, firebase_token, village_name, coupe_name, division, range, round, beat]
     );
 
     logFromRequest(req, {
@@ -512,6 +500,202 @@ router.post("/test-fcm", verifyJwt,upload.none(), async (req, res) => {
   }
 });
 
+
+// ----------------------------------------------------
+// 7b. Send NDVI summary notification on demand
+//     POST /api/send-notification
+//     Body: { user_id, firebase_token }
+//     Looks up the user's village_name + coupe_name, finds the last
+//     month's NDVI Change table(s) for that coupe, counts the village's
+//     changes, and sends ONE summary notification with table_name and
+//     village_name in the background data payload. When the user taps
+//     the notification, the client calls GET /api/ndvi-changes/village
+//     with those two values to fetch the village's records.
+// ----------------------------------------------------
+router.post("/send-notification", verifyJwt, upload.none(), async (req, res) => {
+  try {
+    // Coerce to string safely — client may send JSON where user_id is a number
+    // or send multipart form data. Handles both without throwing.
+    const user_id = (req.body.user_id != null ? String(req.body.user_id) : "").trim();
+    const firebase_token = (req.body.firebase_token != null ? String(req.body.firebase_token) : "").trim();
+
+    if (!user_id || !firebase_token) {
+      return res.status(400).json({
+        success: false,
+        message: "user_id and firebase_token are required",
+      });
+    }
+
+    // 1) Look up the user's subscription (village_name, coupe_name)
+    const userRows = await client.query(
+      `SELECT user_id, firebase_token, village_name, coupe_name
+       FROM public.ndvi_notification_users
+       WHERE user_id = $1`,
+      [user_id]
+    );
+
+    if (userRows.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User subscription not found. Subscribe first via /send-notifications.",
+      });
+    }
+
+    const user = userRows.rows[0];
+    const village_name = user.village_name;
+    const coupe_name = user.coupe_name;
+
+    if (!village_name || !coupe_name) {
+      return res.status(400).json({
+        success: false,
+        message: "User has no village_name or coupe_name set in subscription",
+      });
+    }
+
+    // 2) Find NDVI Change tables matching this coupe
+    const tables = await client.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_name LIKE '%_NDVI_Change'
+        AND UPPER(table_name) LIKE UPPER($1)
+      ORDER BY table_name DESC
+    `, [`%_${coupe_name}_NDVI_Change%`]);
+
+    if (tables.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: "No NDVI Change tables found for this coupe",
+        sent: 0,
+      });
+    }
+
+    // 3) Count changes for this village across matching tables and
+    //    pick the first (most recent) table that has changes as the
+    //    primary table_name for the notification payload.
+    let totalChanges = 0;
+    let primaryTableName = '';
+
+    for (const t of tables.rows) {
+      const tableName = t.table_name;
+
+      try {
+        await ensurePixleIdColumn(client, tableName);
+      } catch (ensureErr) {
+        console.error(`[send-notification] ensurePixleId failed for "${tableName}":`, ensureErr.message);
+        continue;
+      }
+
+      let records;
+      try {
+        records = await client.query(`
+          SELECT pixle_id
+          FROM public."${tableName}"
+          WHERE village = $1
+        `, [village_name]);
+      } catch (qErr) {
+        console.error(`[send-notification] Query failed for table "${tableName}":`, qErr.message);
+        continue;
+      }
+
+      if (records.rows.length > 0) {
+        totalChanges += records.rows.length;
+        if (!primaryTableName) primaryTableName = tableName;
+      }
+    }
+
+    if (totalChanges === 0) {
+      return res.json({
+        success: true,
+        message: "No NDVI changes found for this village",
+        sent: 0,
+      });
+    }
+
+    // 4) Send ONE summary notification with table_name + village_name in background
+    const message = {
+      token: firebase_token,
+      notification: {
+        title: `NDVI Alert 🌿 — ${totalChanges} change(s) detected`,
+        body: `${totalChanges} vegetation change(s) detected in ${village_name}. Tap to view details.`
+      },
+      data: {
+        type: 'ndvi_summary',
+        user_id,
+        village_name,
+        coupe_name,
+        table_name: primaryTableName,
+        total_changes: String(totalChanges),
+      },
+    };
+
+    try {
+      const response = await admin.messaging().send(message);
+
+      logFromRequest(req, {
+        action: 'SEND_NOTIFICATION',
+        status: 'SUCCESS',
+        statusCode: 200,
+        userId: user_id,
+        resourceType: 'notification',
+        details: { village_name, coupe_name, table_name: primaryTableName, total_changes: totalChanges },
+      });
+
+      return res.json({
+        success: true,
+        message: `Notification sent: ${totalChanges} change(s) in ${village_name}`,
+        messageId: response,
+        sent: 1,
+        table_name: primaryTableName,
+        village_name,
+        total_changes: totalChanges,
+      });
+    } catch (sendErr) {
+      console.error('[send-notification] Firebase send error:', sendErr.message);
+
+      // Clear invalid token
+      const isInvalidToken =
+        sendErr.code === 'messaging/registration-token-not-registered' ||
+        sendErr.code === 'messaging/invalid-registration-token' ||
+        (sendErr.errorInfo && sendErr.errorInfo.code === 'messaging/registration-token-not-registered') ||
+        (sendErr.message && (
+          sendErr.message.includes('Requested entity was not found') ||
+          sendErr.message.includes('NotRegistered')
+        ));
+
+      if (isInvalidToken) {
+        try {
+          await client.query(
+            `UPDATE public.ndvi_notification_users SET firebase_token = NULL WHERE user_id = $1`,
+            [user_id]
+          );
+        } catch (e) { /* ignore */ }
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send notification',
+        error: sendErr.message,
+      });
+    }
+  } catch (err) {
+    console.error('send-notification error:', err);
+
+    logFromRequest(req, {
+      action: 'SEND_NOTIFICATION',
+      status: 'ERROR',
+      statusCode: 500,
+      userId: req.body?.user_id || null,
+      errorMessage: err.message,
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: 'An internal error occurred. Please try again later.',
+    });
+  }
+});
+
 router.post('/logout',verifyJwt ,async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -525,8 +709,14 @@ router.post('/logout',verifyJwt ,async (req, res) => {
     
     const { user_id } = req.body;
 
+    // Don't DELETE the subscription row — that destroys the village/coupe
+    // mapping needed to view historical NDVI changes from the notification
+    // report. Instead, NULL out the firebase_token so the user stops
+    // receiving push notifications but their subscription metadata is
+    // preserved for historical data access.
     const query = `
-      DELETE FROM ndvi_notification_users
+      UPDATE ndvi_notification_users
+      SET firebase_token = NULL
       WHERE user_id = $1
       RETURNING *;
     `;
@@ -569,291 +759,518 @@ router.post('/logout',verifyJwt ,async (req, res) => {
 
 
 // ----------------------------------------------------
-// 8. Send pending notifications from PREVIOUS month(s)
-//    Called when a user logs in during the current month.
-//    Finds NDVI tables from the previous month, checks which
-//    notifications the user hasn't received yet, and sends them.
+// 8. Per-pixel pending notifications REMOVED.
+//    Notifications are now sent only as a daily summary (3x/day)
+//    by the NDVI scheduler, which includes the last month's
+//    table_name and village_name in the notification data payload.
+//    The scheduler also runs once on server startup.
 // ----------------------------------------------------
 
-/**
- * Calculates the previous month's date prefix (YYYY-MM-01).
- * @param {Date} refDate - reference date (defaults to now)
- * @returns {{prevMonthStart: string, prevMonthLabel: string, prevMonthDate: string}}
- */
-function getPreviousMonthInfo(refDate = new Date()) {
-  const prevMonth = new Date(refDate.getFullYear(), refDate.getMonth() - 1, 1);
-  const yyyy = prevMonth.getFullYear();
-  const mm = String(prevMonth.getMonth() + 1).padStart(2, '0');
-  const dateStr = `${yyyy}-${mm}-01`;
-  const label = prevMonth.toLocaleString('default', { month: 'long' }).toUpperCase();
-  return { prevMonthStart: dateStr, prevMonthLabel: label, prevMonthDate: dateStr };
-}
+const DEFAULT_NOTE_TEXT = 'NDVI decrease less than -0.3';
 
 /**
- * Sends all pending NDVI notifications from the previous month to a user.
- * A "pending" notification is one that exists in a previous-month NDVI table
- * but has no entry in ndvi_notification_log for this (user_id, table_name, pixel_id).
- *
- * @param {string} userId - the user's ID (username)
- * @param {string} firebaseToken - FCM token to send to
- * @returns {Promise<{sent: number, skipped: number, errors: number}>}
+ * Cleans up the default auto-generated note "NDVI decrease less than -0.3"
+ * from all NDVI Change tables, setting it to NULL.
+ * Also cleans up any note column in ndvi_notification_log if it exists.
+ * Runs once per server startup.
  */
-async function sendPendingNotificationsFromPreviousMonth(userId, firebaseToken) {
-  const result = { sent: 0, skipped: 0, errors: 0, details: [] };
-
-  if (!userId || !firebaseToken) {
-    console.warn('[pending-notifications] Missing userId or firebaseToken');
-    return result;
-  }
-
+let defaultNoteCleanupDone = false;
+async function cleanupDefaultNotes() {
+  if (defaultNoteCleanupDone) return;
+  defaultNoteCleanupDone = true;
   try {
-    // 1) Get the user's subscription (village_name, coupe_name)
-    const userRows = await client.query(
-      `SELECT user_id, firebase_token, village_name, coupe_name
-       FROM public.ndvi_notification_users
-       WHERE user_id = $1`,
-      [userId]
-    );
-
-    if (userRows.rows.length === 0) {
-      return result;
-    }
-
-    const user = userRows.rows[0];
-
-    // Use the latest firebase_token passed in (may be newer than stored)
-    const token = firebaseToken || user.firebase_token;
-    if (!token) {
-      return result;
-    }
-
-    const { prevMonthStart, prevMonthLabel } = getPreviousMonthInfo();
-
-    // 2) Find NDVI tables from the previous month
-    //    Table naming pattern: YYYY-MM-DD_<coupe>_NDVI_Change
+    // 1. Clean up NDVI Change tables
     const tables = await client.query(`
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
-        AND table_name LIKE '${prevMonthStart}%_NDVI_Change'
+        AND table_type = 'BASE TABLE'
+        AND table_name LIKE '%_NDVI_Change'
+      ORDER BY table_name
     `);
-
-    if (tables.rows.length === 0) {
-      return result;
-    }
-
-
-    // 3) For each table, find pending notifications for this user
-    for (const t of tables.rows) {
-      const tableName = t.table_name;
-
-      // Match the user's coupe name
-      if (user.coupe_name && !tableName.toUpperCase().includes(`_${user.coupe_name.toUpperCase()}_NDVI_CHANGE`)) {
-        continue;
-      }
-
-      // Ensure the table has a `pixle_id` column before we SELECT it.
-      // Auto-created NDVI tables may lack it; we add + populate unique values
-      // (not a primary key) when missing. Idempotent & cheap.
+    let cleanedTables = 0;
+    for (const { table_name } of tables.rows) {
       try {
-        await ensurePixleIdColumn(client, tableName);
-      } catch (ensureErr) {
-        console.error(`[pending-notifications] ensurePixleId failed for "${tableName}":`, ensureErr.message);
-        result.errors++;
-        continue;
-      }
+        // Check if the table has a note column
+        const colCheck = await client.query(`
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = $1 AND column_name = 'note'
+        `, [table_name]);
+        if (colCheck.rows.length === 0) continue;
 
-      // Get NDVI change records for the user's village
-      let records;
-      try {
-        records = await client.query(`
-          SELECT
-            pixle_id,
-            "NDVI_change",
-            change_category,
-            longitude,
-            latitude,
-            village
-          FROM public."${tableName}"
-          WHERE village = $1
-          ORDER BY "NDVI_change" DESC
-          LIMIT 10
-        `, [user.village_name]);
-      } catch (qErr) {
-        console.error(`[pending-notifications] Query failed for table "${tableName}":`, qErr.message);
-        result.errors++;
-        continue;
-      }
-
-      if (records.rows.length === 0) continue;
-
-      for (const record of records.rows) {
-        // Check if already sent
-        const alreadySent = await client.query(`
-          SELECT 1
-          FROM public.ndvi_notification_log
-          WHERE user_id = $1
-            AND table_name = $2
-            AND pixel_id = $3
-          LIMIT 1
-        `, [userId, tableName, record.pixle_id]);
-
-        if (alreadySent.rows.length > 0) {
-          result.skipped++;
-          continue;
+        const result = await client.query(`
+          UPDATE public."${table_name}"
+          SET note = NULL
+          WHERE btrim(note) = $1
+        `, [DEFAULT_NOTE_TEXT]);
+        if (result.rowCount > 0) {
+          cleanedTables += 1;
         }
-
-        // Build notification message
-        let title = `NDVI Alert for ${prevMonthLabel}`;
-        let body = `Vegetation change detected in ${user.village_name}`;
-
-        switch (record.change_category) {
-          case 'significant_decrease':
-            title = `🚨 Significant Vegetation Decrease — ${prevMonthLabel}`;
-            body = `NDVI dropped significantly in ${user.village_name}`;
-            break;
-          case 'moderate_decrease':
-            title = `⚠️ Moderate Vegetation Decrease — ${prevMonthLabel}`;
-            body = `NDVI decreased in ${user.village_name}`;
-            break;
-          case 'significant_increase':
-            title = `🌱 Significant Vegetation Improvement — ${prevMonthLabel}`;
-            body = `NDVI improved significantly in ${user.village_name}`;
-            break;
-          case 'moderate_increase':
-            title = `📈 Moderate Vegetation Improvement — ${prevMonthLabel}`;
-            body = `NDVI improved in ${user.village_name}`;
-            break;
-        }
-
-        const message = {
-          token,
-          notification: { title, body },
-          data: {
-            pixle_id: String(record.pixle_id),
-            village_name: String(user.village_name || ''),
-            coupe_name: String(user.coupe_name || ''),
-            latitude: String(record.latitude || ''),
-            longitude: String(record.longitude || ''),
-            ndvi_change: String(record.NDVI_change || ''),
-            change_category: String(record.change_category || ''),
-            table_name: tableName,
-            month: prevMonthStart,
-          },
-        };
-
-        try {
-          await admin.messaging().send(message);
-
-          // Log it
-          await client.query(`
-            INSERT INTO public.ndvi_notification_log (user_id, table_name, pixel_id)
-            VALUES ($1, $2, $3)
-            ON CONFLICT DO NOTHING
-          `, [userId, tableName, record.pixle_id]);
-
-          result.sent++;
-          result.details.push({ table: tableName, pixel_id: record.pixle_id, category: record.change_category });
-        } catch (sendErr) {
-          console.error(`[pending-notifications] ❌ Firebase send error:`, sendErr.message);
-          result.errors++;
-
-          // Clear invalid token
-          const isInvalidToken =
-            sendErr.code === 'messaging/registration-token-not-registered' ||
-            sendErr.code === 'messaging/invalid-registration-token' ||
-            (sendErr.message && sendErr.message.includes('Requested entity was not found'));
-
-          if (isInvalidToken) {
-            try {
-              await client.query(
-                `UPDATE public.ndvi_notification_users SET firebase_token = NULL WHERE user_id = $1`,
-                [userId]
-              );
-            } catch (e) { /* ignore */ }
-            break; // no point continuing with an invalid token
-          }
-        }
+      } catch (err) {
+        // Skip tables that error out
       }
     }
+    if (cleanedTables > 0) {
+      console.log(`[notifications] Cleaned default note from ${cleanedTables} NDVI Change table(s).`);
+    }
 
-    return result;
+    // 2. Clean up ndvi_notification_log if it has a note column
+    const logColCheck = await client.query(`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'ndvi_notification_log' AND column_name = 'note'
+    `);
+    if (logColCheck.rows.length > 0) {
+      const logResult = await client.query(`
+        UPDATE public.ndvi_notification_log
+        SET note = NULL
+        WHERE btrim(note) = $1
+      `, [DEFAULT_NOTE_TEXT]);
+      if (logResult.rowCount > 0) {
+        console.log(`[notifications] Cleaned default note from ${logResult.rowCount} ndvi_notification_log row(s).`);
+      }
+    }
   } catch (err) {
-    console.error('[pending-notifications] Error:', err.message);
-    result.errors++;
-    return result;
+    console.error('[notifications] Failed to cleanup default notes:', err.message);
   }
 }
 
-// Endpoint: manually trigger pending notifications for a user
-// POST /api/send-pending-notifications
-// Body: { user_id, firebase_token }
-router.post('/send-pending-notifications', verifyJwt, upload.none(), async (req, res) => {
+// ----------------------------------------------------
+// 9. NDVI Notification Report (daily summary model)
+//    Queries ndvi_daily_notification_log (the new daily
+//    summary table written by the scheduler 3x/day) and
+//    joins it with ndvi_notification_users and
+//    government_department_users for display.
+// ----------------------------------------------------
+const SLOT_LABELS = { 1: 'Morning (08:00)', 2: 'Afternoon (13:00)', 3: 'Evening (18:00)' };
+
+// Cache whether ndvi_daily_notification_log has a change_month column.
+// Checking information_schema on every request wastes a pool connection and
+// can itself time out when the pool is exhausted (which then cascades).
+// The column is added by the scheduler; once we detect it, cache true.
+let _hasChangeMonthCache = null;
+
+async function checkChangeMonthColumn() {
+  if (_hasChangeMonthCache !== null) return _hasChangeMonthCache;
   try {
-    const user_id = (req.body.user_id || '').trim();
-    const firebase_token = (req.body.firebase_token || '').trim();
-
-    if (!user_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'user_id is required',
-      });
-    }
-
-    // If no firebase_token in request, try to get it from stored subscription
-    let token = firebase_token;
-    if (!token) {
-      const stored = await client.query(
-        'SELECT firebase_token FROM public.ndvi_notification_users WHERE user_id = $1',
-        [user_id]
+    const colCheck = await sequelize.query(
+      `SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'ndvi_daily_notification_log'
+         AND column_name = 'change_month'`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    const exists = colCheck.length > 0;
+    if (!exists) {
+      await sequelize.query(
+        `ALTER TABLE public.ndvi_daily_notification_log ADD COLUMN IF NOT EXISTS change_month TEXT`
       );
-      if (stored.rows.length > 0) {
-        token = stored.rows[0].firebase_token;
+    }
+    _hasChangeMonthCache = true;
+    return true;
+  } catch (colErr) {
+    console.warn('[notifications] change_month column check/add failed, querying without it:', colErr.message);
+    _hasChangeMonthCache = false;
+    return false;
+  }
+}
+
+// Warm the cache at startup (deferred so it doesn't block server bind)
+setTimeout(() => { checkChangeMonthColumn().catch(() => {}); }, 10000);
+
+router.get('/ndvi-notification-report', verifyJwt, async (req, res) => {
+  try {
+    const {
+      user_id, username, village_name, coupe_name,
+      month, division, start_date, end_date,
+      page: pageParam, pageSize: pageSizeParam
+    } = req.query;
+
+    // Server-side pagination — default 500 rows per page
+    const pageSize = Math.min(Math.max(parseInt(pageSizeParam) || 500, 1), 2000);
+    const page = Math.max(parseInt(pageParam) || 1, 1);
+    const offset = (page - 1) * pageSize;
+
+    // Use cached column check — avoids a query per request
+    const hasChangeMonth = await checkChangeMonthColumn();
+
+    const conditions = [];
+    const values = [];
+
+    const addCondition = (sql, value) => {
+      values.push(value);
+      conditions.push(sql.replace('?', `$${values.length}`));
+    };
+
+    if (user_id) addCondition('d.user_id = ?', user_id);
+    if (username) addCondition('g.username = ?', username);
+    if (village_name) addCondition('COALESCE(u.village_name, d.village_name) = ?', village_name);
+    if (coupe_name) addCondition('COALESCE(u.coupe_name, d.coupe_name) = ?', coupe_name);
+    if (division) addCondition('u.division ILIKE ?', `%${division}%`);
+
+    // Hierarchy-scoped visibility: restrict rows to the requesting user's
+    // own level(s) from the JWT (beat → round → range → division → circle).
+    // A row matches if ANY of the user's levels match — mirrors the
+    // frontend's fallback filter. Coupe/village names encode the division,
+    // so they're matched too for rows where the subscription columns are
+    // still NULL (pre-hierarchy subscriptions).
+    const nonEmpty = (v) => { const s = String(v ?? '').trim(); return s && s !== '-'; };
+    const hierLevels = [
+      ['beat', req.user?.beat],
+      ['round', req.user?.round],
+      ['range', req.user?.range],
+      ['division', req.user?.division],
+    ].filter(([, v]) => nonEmpty(v));
+
+    if (hierLevels.length > 0) {
+      const hierParts = [];
+      for (const [field, value] of hierLevels) {
+        values.push(`%${value}%`);
+        hierParts.push(`u.${field} ILIKE $${values.length}`);
       }
+      const divVal = hierLevels.find(([f]) => f === 'division')?.[1];
+      if (divVal) {
+        values.push(`%${divVal}%`);
+        hierParts.push(`COALESCE(u.coupe_name, d.coupe_name) ILIKE $${values.length}`);
+      }
+      conditions.push(`(${hierParts.join(' OR ')})`);
     }
 
-    if (!token) {
-      return res.json({
-        success: true,
-        message: 'No firebase token available — user not subscribed or token cleared',
-        sent: 0,
-      });
-    }
+    if (month) addCondition("TO_CHAR(d.notification_date, 'YYYY-MM') = ?", month);
+    if (start_date) addCondition('d.notification_date >= ?', start_date);
+    if (end_date) addCondition('d.notification_date <= ?', end_date);
 
-    const result = await sendPendingNotificationsFromPreviousMonth(user_id, token);
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    logFromRequest(req, {
-      action: 'PENDING_NOTIFICATIONS_SEND',
-      status: 'SUCCESS',
-      statusCode: 200,
-      userId: user_id,
-      resourceType: 'notification',
-      details: { sent: result.sent, skipped: result.skipped, errors: result.errors },
+    // Build paginated query — use $N+1 and $N+2 for LIMIT/OFFSET after filter params
+    const limitIdx = values.length + 1;
+    const offsetIdx = values.length + 2;
+    const changeMonthCol = hasChangeMonth ? 'd.change_month' : 'NULL::text AS change_month';
+    const reportQuery = `
+      SELECT
+        d.id,
+        d.user_id,
+        g.username,
+        COALESCE(u.village_name, d.village_name) AS village_name,
+        COALESCE(u.coupe_name, d.coupe_name) AS coupe_name,
+        u.division,
+        u.range,
+        u.round,
+        u.beat,
+        TO_CHAR(d.notification_date, 'YYYY-MM-DD') AS notification_date,
+        d.notification_slot,
+        d.change_count,
+        d.sent_at::text AS sent_at,
+        TO_CHAR(d.sent_at, 'DD-MM-YYYY HH24:MI:SS') AS sent_at_formatted,
+        ${changeMonthCol}
+      FROM public.ndvi_daily_notification_log d
+      LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
+      LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id
+      ${whereClause}
+      ORDER BY d.sent_at DESC NULLS LAST, d.id DESC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `;
+
+    const countQuery = `
+      SELECT
+        COUNT(*)::int AS total_notifications,
+        COUNT(DISTINCT d.user_id)::int AS users_received,
+        COALESCE(SUM(d.change_count), 0)::int AS total_changes
+      FROM public.ndvi_daily_notification_log d
+      LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
+      LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id
+      ${whereClause}
+    `;
+
+    const optionsQuery = `
+      SELECT
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT g.username ORDER BY g.username), NULL) AS usernames,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT COALESCE(u.village_name, d.village_name) ORDER BY COALESCE(u.village_name, d.village_name)), NULL) AS villages,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT COALESCE(u.coupe_name, d.coupe_name) ORDER BY COALESCE(u.coupe_name, d.coupe_name)), NULL) AS coupes,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT u.division ORDER BY u.division), NULL) AS divisions
+      FROM public.ndvi_daily_notification_log d
+      LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
+      LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id
+    `;
+
+    const monthOptionsQuery = `
+      SELECT DISTINCT TO_CHAR(notification_date, 'YYYY-MM') AS month
+      FROM public.ndvi_daily_notification_log
+      ORDER BY month DESC
+    `;
+
+    // Run queries SEQUENTIALLY (not Promise.all) to limit concurrent
+    // connection usage. Firing 4 queries at once can exhaust the pool
+    // when other requests or the scheduler are also active.
+    const report = await client.query(reportQuery, [...values, pageSize, offset]);
+    const counts = await client.query(countQuery, values);
+    const options = await client.query(optionsQuery);
+    const monthRows = await client.query(monthOptionsQuery);
+
+    // Annotate rows with readable slot labels and month
+    // Dates are already cast to text in SQL, so they come as strings like "2026-09-10"
+    const MONTH_NAMES = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    // Convert "YYYY-MM" (e.g. "2026-08") to "August 2026"
+    const formatMonthLabel = (ym) => {
+      if (!ym || ym === '-') return '-';
+      const [y, m] = ym.split('-');
+      const idx = parseInt(m, 10) - 1;
+      if (idx >= 0 && idx < 12) return `${MONTH_NAMES[idx]} ${y}`;
+      return ym;
+    };
+    // Compute the previous calendar month from a "YYYY-MM-DD" date string.
+    // The scheduler always reports the PREVIOUS month's NDVI data, so for
+    // existing rows where change_month is NULL, we can derive it from the
+    // notification_date (the month before the notification was sent).
+    // Handles multiple date formats: "2026-09-11", "11-SEP-26", "11-Sep-2026", etc.
+    const previousMonthFromDate = (dateStr) => {
+      if (!dateStr) return null;
+      // Try parsing as YYYY-MM-DD (standard PostgreSQL text cast)
+      let match = /^(\d{4})-(\d{2})-\d{2}/.exec(dateStr);
+      if (match) {
+        let year = parseInt(match[1], 10);
+        let month = parseInt(match[2], 10) - 1;
+        if (month < 1) { month = 12; year -= 1; }
+        return `${year}-${String(month).padStart(2, '0')}`;
+      }
+      // Try parsing as DD-MMM-YY or DD-MMM-YYYY (e.g. "11-SEP-26", "11-Sep-2026")
+      const MONTH_MAP = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
+      match = /^\d{1,2}-([A-Za-z]{3})-(\d{2,4})/.exec(dateStr);
+      if (match) {
+        const mIdx = MONTH_MAP[match[1].toUpperCase()];
+        if (mIdx) {
+          let year = parseInt(match[2], 10);
+          if (year < 100) year += 2000;
+          let month = mIdx - 1;
+          if (month < 1) { month = 12; year -= 1; }
+          return `${year}-${String(month).padStart(2, '0')}`;
+        }
+      }
+      // Fallback: use Date object
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        d.setMonth(d.getMonth() - 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      }
+      return null;
+    };
+
+    const annotatedRows = report.rows.map((row) => {
+      const dateStr = row.notification_date || '';
+      // Extract YYYY-MM from the date string (handles both "2026-09-10" and "2026-09-10T00:00:00.000Z")
+      const monthStr = dateStr ? dateStr.slice(0, 7) : '-';
+      // change_month is the NDVI data month (YYYY-MM) extracted from the
+      // NDVI Change table name — this is the month the vegetation changes
+      // belong to, NOT the month the notification was sent.
+      // For existing rows where change_month is NULL, derive it from the
+      // notification_date (previous month = the data month the scheduler
+      // would have reported).
+      const changeMonth = row.change_month || previousMonthFromDate(dateStr.slice(0, 10));
+      return {
+        ...row,
+        notification_date: dateStr ? dateStr.slice(0, 10) : null,
+        slot_label: SLOT_LABELS[row.notification_slot] || `Slot ${row.notification_slot}`,
+        month: monthStr,
+        village: row.village_name || '-',
+        change_month: changeMonth,
+        change_month_label: changeMonth ? formatMonthLabel(changeMonth) : '-',
+      };
     });
 
-    return res.json({
+    // ── Resolved / not-resolved counts from the NDVI Change tables ────────
+    // A change point counts as "resolved" when it has a note OR an image.
+    // Table names look like "2026-08-01_<coupe>_NDVI_Change" — the date
+    // prefix is the DATA month; its notification goes out the next month,
+    // so a table is attributed to notification month = dataMonth + 1.
+    const normDim = (v) => String(v ?? '').trim().toLowerCase();
+    const emptyDim = (v) => { const n = normDim(v); return n === '' || n === '-'; };
+    const monthAdd = (ym, n) => {
+      const [y, m] = ym.split('-').map(Number);
+      const d = new Date(y, m - 1 + n, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    };
+
+    let changeStats = [];
+    try {
+      // NOTE: qualify with alias `t` — a bare `SELECT table_name FROM
+      // information_schema.tables` makes the pg driver fall back to
+      // array-rows, so r.table_name comes back undefined.
+      const tableRows = await sequelize.query(
+        `SELECT t.table_name FROM information_schema.tables t
+         WHERE t.table_schema = 'public' AND t.table_name LIKE '%\\_NDVI\\_Change' ESCAPE '\\'`,
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      const tableNames = tableRows.map(r => r.table_name ?? r[0]).filter(Boolean);
+      if (tableNames.length) {
+        const colRows = await sequelize.query(
+          `SELECT c.table_name, c.column_name FROM information_schema.columns c
+           WHERE c.table_schema = 'public' AND c.table_name IN (:tableNames)`,
+          { replacements: { tableNames }, type: sequelize.QueryTypes.SELECT }
+        );
+        const colsByTable = {};
+        colRows.forEach(r => {
+          const tn = r.table_name ?? r[0];
+          const cn = r.column_name ?? r[1];
+          (colsByTable[tn] = colsByTable[tn] || new Set()).add(cn);
+        });
+
+        const dimCol = (cols, name) => (cols.has(name) ? `"${name}"` : `NULL::text`);
+        // Run per-table queries SEQUENTIALLY (not Promise.all) to avoid
+        // exhausting the connection pool when there are many NDVI Change
+        // tables. Each query needs its own connection; firing N at once
+        // can starve the pool and cause ConnectionAcquireTimeoutError.
+        const perTable = [];
+        for (const tn of tableNames) {
+          const cols = colsByTable[tn] || new Set();
+          const noteExpr = cols.has('note') ? `NULLIF(btrim("note"::text), '') IS NOT NULL` : 'FALSE';
+          const imgExpr = cols.has('image_data') ? `NULLIF(btrim("image_data"::text), '') IS NOT NULL` : 'FALSE';
+          const resolvedExpr = `(${noteExpr}) OR (${imgExpr})`;
+          try {
+            const rows = await sequelize.query(
+              `SELECT
+                 ${dimCol(cols, 'village')} AS village,
+                 ${dimCol(cols, 'division')} AS division,
+                 ${dimCol(cols, 'range')} AS range,
+                 ${dimCol(cols, 'round')} AS round,
+                 ${dimCol(cols, 'beat')} AS beat,
+                 COUNT(*) FILTER (WHERE ${resolvedExpr})::int AS resolved,
+                 COUNT(*) FILTER (WHERE NOT (${resolvedExpr}))::int AS not_resolved
+               FROM public."${tn}"
+               GROUP BY 1, 2, 3, 4, 5`,
+              { type: sequelize.QueryTypes.SELECT }
+            );
+            perTable.push(...rows.map(r => ({ ...r, table_name: tn })));
+          } catch (tblErr) {
+            console.warn(`[ndvi-report] resolved stats failed for ${tn}:`, tblErr.message);
+          }
+        }
+        changeStats = perTable.map(r => {
+          const m = /^(\d{4}-\d{2})-\d{2}_(.+)_NDVI_Change$/i.exec(r.table_name);
+          return {
+            dataMonth: m ? m[1] : null,
+            notifMonth: m ? monthAdd(m[1], 1) : null,
+            village: r.village, division: r.division, range: r.range, round: r.round, beat: r.beat,
+            resolved: r.resolved || 0, not_resolved: r.not_resolved || 0,
+          };
+        });
+      }
+    } catch (statsErr) {
+      console.warn('[ndvi-report] resolved stats aggregation failed:', statsErr.message);
+    }
+
+    // Scope the counts to what was actually notified: the distinct
+    // (change_month, village) pairs in the filtered notification log.
+    // Total Changes is a sum of change_count over those rows, so the
+    // resolved totals must cover the same change points, not every row
+    // in every NDVI Change table.
+    let scopedStats = [];
+    try {
+      const scopeRows = await client.query(
+        `SELECT DISTINCT
+           COALESCE(u.village_name, d.village_name) AS village_name,
+           ${hasChangeMonth ? 'd.change_month' : 'NULL::text AS change_month'},
+           TO_CHAR(d.notification_date, 'YYYY-MM-DD') AS notification_date
+         FROM public.ndvi_daily_notification_log d
+         LEFT JOIN public.ndvi_notification_users u ON u.user_id = d.user_id
+         LEFT JOIN public.government_department_users g ON g.user_id::text = d.user_id
+         ${whereClause}`,
+        values
+      );
+      const scopeSet = new Set();
+      scopeRows.rows.forEach(r => {
+        const cm = r.change_month || previousMonthFromDate((r.notification_date || '').slice(0, 10));
+        if (cm && r.village_name) scopeSet.add(`${cm}||${normDim(r.village_name)}`);
+      });
+      scopedStats = changeStats.filter(s =>
+        s.dataMonth && !emptyDim(s.village) &&
+        scopeSet.has(`${s.dataMonth}||${normDim(s.village)}`)
+      );
+    } catch (scopeErr) {
+      console.warn('[ndvi-report] resolved stats scoping failed:', scopeErr.message);
+    }
+    const resolvedTotal = scopedStats.reduce((s, r) => s + r.resolved, 0);
+    const notResolvedTotal = scopedStats.reduce((s, r) => s + r.not_resolved, 0);
+
+    // Attribute a change-table stat row to a monthly-summary item.
+    // Village is the strongest link (change tables are village-scoped);
+    // rows without a village fall back to matching all available dims.
+    const statMatchesItem = (item, row) => {
+      if (row.notifMonth !== item.month) return false;
+      if (!emptyDim(row.village)) return normDim(row.village) === normDim(item.village);
+      const dims = ['division', 'range', 'round', 'beat'];
+      if (dims.every(d => emptyDim(row[d]))) return false; // unattributable
+      return dims.every(d => emptyDim(row[d]) || normDim(row[d]) === normDim(item[d]));
+    };
+
+    // Monthly division-wise summary
+    const monthlyDivisionMap = new Map();
+    annotatedRows.forEach((row) => {
+      const key = `${row.month}__${row.division || '-'}__${row.range || '-'}__${row.round || '-'}__${row.beat || '-'}__${row.village}`;
+      if (!monthlyDivisionMap.has(key)) {
+        monthlyDivisionMap.set(key, {
+          month: row.month,
+          division: row.division || '-',
+          range: row.range || '-',
+          round: row.round || '-',
+          beat: row.beat || '-',
+          village: row.village,
+          alerts_generated: 0,
+          notifications_sent: 0,
+          resolved: 0,
+          not_resolved: 0,
+        });
+      }
+      const item = monthlyDivisionMap.get(key);
+      item.alerts_generated += row.change_count || 0;
+      item.notifications_sent += 1;
+    });
+
+    // Attach resolved / not-resolved counts to each summary row
+    monthlyDivisionMap.forEach((item) => {
+      for (const s of scopedStats) {
+        if (statMatchesItem(item, s)) {
+          item.resolved += s.resolved;
+          item.not_resolved += s.not_resolved;
+        }
+      }
+    });
+
+    const optionRows = options.rows[0] || {};
+    const monthOptions = monthRows.rows.map(r => r.month).filter(Boolean);
+
+    const totalCount = counts.rows[0] || { total_notifications: 0, users_received: 0, total_changes: 0 };
+
+    res.json({
       success: true,
-      message: `Sent ${result.sent} pending notification(s) from previous month`,
-      ...result,
+      data: annotatedRows,
+      pagination: {
+        page,
+        pageSize,
+        total: totalCount.total_notifications,
+        totalPages: Math.ceil(totalCount.total_notifications / pageSize),
+      },
+      summary: {
+        total_notifications: totalCount.total_notifications,
+        users_received: totalCount.users_received,
+        total_changes: totalCount.total_changes,
+        resolved: resolvedTotal,
+        not_resolved: notResolvedTotal,
+      },
+      monthlyDivisionSummary: Array.from(monthlyDivisionMap.values()).sort((a, b) => b.month.localeCompare(a.month) || a.division.localeCompare(b.division)),
+      options: {
+        usernames: optionRows.usernames || [],
+        villages: optionRows.villages || [],
+        coupes: optionRows.coupes || [],
+        divisions: optionRows.divisions || [],
+        months: monthOptions,
+      },
     });
   } catch (err) {
-    console.error('send-pending-notifications error:', err);
-    logFromRequest(req, {
-      action: 'PENDING_NOTIFICATIONS_SEND',
-      status: 'ERROR',
-      statusCode: 500,
-      userId: req.body?.user_id || null,
-      errorMessage: err.message,
-    });
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to send pending notifications',
-    });
+    console.error('ndvi-notification-report error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch NDVI notification report' });
   }
 });
-
-// Export the function so it can be called from forestLogin.js
-router.sendPendingNotificationsFromPreviousMonth = sendPendingNotificationsFromPreviousMonth;
 
 module.exports = router;
 

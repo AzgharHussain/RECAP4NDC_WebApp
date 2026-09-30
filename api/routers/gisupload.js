@@ -18,9 +18,14 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // --- DB & GEOSERVER CONFIG (from .env only) ---
 const PG_HOST = process.env.DB_HOST;
+const PG_PORT = process.env.DB_PORT || "5432";
 const PG_USER = process.env.DB_USER;
 const PG_PASS = process.env.DB_PASSWORD;
 const PG_DB = process.env.DB_NAME;
+
+// Shared CLI prefixes so every shell-out uses the same host/port/user/db
+const PSQL = `psql -h ${PG_HOST} -p ${PG_PORT} -U ${PG_USER} -d ${PG_DB} -w`;
+const OGR_PG_DSN = `PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=${PG_PORT}"`;
 
 const GEOSERVER_URL = process.env.GEOSERVER_URL;
 const GEOSERVER_USER = process.env.GEOSERVER_USER;
@@ -33,15 +38,29 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
 });
 
-// Environment variables for GDAL
+// Environment variables for GDAL.
+// Binary/data locations are configurable so the same code runs on Windows dev
+// machines (OSGeo4W defaults) and on Linux servers (system gdal-bin / postgresql-client).
+//   GDAL_BIN   - directory containing ogr2ogr      (default: C:\OSGeo4W\bin on Windows)
+//   PG_BIN     - directory containing psql         (default: C:\Program Files\PostgreSQL\17\bin on Windows)
+//   GDAL_DATA  - GDAL data dir                     (default: C:\OSGeo4W\share\gdal on Windows)
+//   PROJ_LIB   - PROJ data dir                     (default: C:\OSGeo4W\share\proj on Windows)
+const isWindows = process.platform === "win32";
+const extraBinDirs = [
+  process.env.GDAL_BIN || (isWindows ? "C:\\OSGeo4W\\bin" : null),
+  process.env.PG_BIN || (isWindows ? "C:\\Program Files\\PostgreSQL\\17\\bin" : null),
+].filter(Boolean);
+
 const GDAL_ENV = {
   ...process.env,
-  PATH: `${process.env.PATH};C:\\OSGeo4W\\bin;C:\\Program Files\\PostgreSQL\\17\\bin`,
-  GDAL_DATA: "C:\\OSGeo4W\\share\\gdal",
-  PROJ_LIB: "C:\\OSGeo4W\\share\\proj",
+  PATH: [process.env.PATH, ...extraBinDirs].filter(Boolean).join(path.delimiter),
   PROJ_IGNORE_CATALOG_ERRORS: "YES",
   PROJ_NETWORK: "OFF",
 };
+const gdalData = process.env.GDAL_DATA || (isWindows ? "C:\\OSGeo4W\\share\\gdal" : null);
+const projLib = process.env.PROJ_LIB || (isWindows ? "C:\\OSGeo4W\\share\\proj" : null);
+if (gdalData) GDAL_ENV.GDAL_DATA = gdalData;
+if (projLib) GDAL_ENV.PROJ_LIB = projLib;
 // --------------------------------
 
 // Multer storage — sanitize filename to prevent path traversal
@@ -58,9 +77,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // --- Utility: Run shell commands ---
-function runCommand(cmd, env = GDAL_ENV) {
+function runCommand(cmd, env = GDAL_ENV, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
-    exec(cmd, { maxBuffer: 1024 * 1024 * 50, env }, (err, stdout, stderr) => {
+    const child = exec(cmd, { maxBuffer: 1024 * 1024 * 50, env, timeout: timeoutMs }, (err, stdout, stderr) => {
       if (err) {
         if (
           stderr &&
@@ -75,6 +94,11 @@ function runCommand(cmd, env = GDAL_ENV) {
       }
       resolve({ stdout, stderr });
     });
+    // Safety net: kill the process if exec's timeout option doesn't fire
+    const killTimer = setTimeout(() => {
+      try { child.kill('SIGKILL'); } catch (_) {}
+    }, timeoutMs + 5000);
+    child.on('exit', () => clearTimeout(killTimer));
   });
 }
 
@@ -86,15 +110,22 @@ async function testGDALConnection() {
     try {
       const { stdout: pgVersion } = await runCommand("psql --version");
     } catch (pgError) {
-      console.warn("⚠ PostgreSQL client not found in PATH");
+      console.warn("⚠ PostgreSQL client (psql) not found in PATH — set PG_BIN in .env");
     }
 
     return true;
   } catch (error) {
-    console.error("✗ GDAL not found or not in PATH");
+    console.error(
+      "✗ GDAL (ogr2ogr) not found or not in PATH — set GDAL_BIN in .env.",
+      error?.err?.message || error?.stderr || error?.message || error,
+    );
     return false;
   }
 }
+
+const GDAL_UNAVAILABLE_MESSAGE =
+  "GDAL not available on the server. Install GDAL (ogr2ogr) and the PostgreSQL client (psql) " +
+  "and/or set GDAL_BIN and PG_BIN in the API .env to the directories containing them.";
 
 // --- Generate SLD for GeoServer styling ---
 function generateSLD(layerName, color) {
@@ -171,7 +202,7 @@ async function fixPostgreSQLTable(tableName) {
     let retries = 5;
     
     while (retries > 0 && !tableExists) {
-      const checkTableCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '${lowerTable}');"`;
+      const checkTableCmd = `${PSQL} -t -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '${lowerTable}');"`;
       
       try {
         const { stdout } = await runCommand(checkTableCmd, env);
@@ -196,7 +227,7 @@ async function fixPostgreSQLTable(tableName) {
 
 
     // Check and add geometry column if needed
-    const checkGeomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name IN ('wkb_geometry', 'geom', 'geometry');"`;
+    const checkGeomCmd = `${PSQL} -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name IN ('wkb_geometry', 'geom', 'geometry');"`;
     const { stdout: geomColumns } = await runCommand(checkGeomCmd, env);
 
     const columns = geomColumns
@@ -212,28 +243,40 @@ async function fixPostgreSQLTable(tableName) {
 
     // Standardize geometry column name to 'geom'
     if (columns.includes("wkb_geometry") && !columns.includes("geom")) {
-      const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN wkb_geometry TO geom;"`;
+      const geomCmd = `${PSQL} -c "ALTER TABLE ${lowerTable} RENAME COLUMN wkb_geometry TO geom;"`;
       await runCommand(geomCmd, env);
     } else if (columns.includes("geometry") && !columns.includes("geom")) {
-      const geomCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} RENAME COLUMN geometry TO geom;"`;
+      const geomCmd = `${PSQL} -c "ALTER TABLE ${lowerTable} RENAME COLUMN geometry TO geom;"`;
       await runCommand(geomCmd, env);
     }
 
     // Check if fid exists and add if needed
-    const checkFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name='fid';"`;
+    const checkFidCmd = `${PSQL} -t -c "SELECT column_name FROM information_schema.columns WHERE table_name='${lowerTable}' AND column_name='fid';"`;
     const { stdout: fidResult } = await runCommand(checkFidCmd, env);
 
     if (!fidResult.trim()) {
-      const createFidCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL PRIMARY KEY;"`;
-      await runCommand(createFidCmd, env);
+      // Check if the table already has a primary key — if so, add fid as a
+      // plain SERIAL column (not a primary key) to avoid "multiple primary keys
+      // for table" errors on tables that were created with an explicit PK.
+      const checkPkCmd = `${PSQL} -t -c "SELECT 1 FROM pg_constraint WHERE conrelid = '${lowerTable}'::regclass AND contype = 'p' LIMIT 1;"`;
+      const { stdout: pkResult } = await runCommand(checkPkCmd, env);
+
+      if (pkResult.trim()) {
+        // Table already has a primary key — add fid without PRIMARY KEY
+        const createFidCmd = `${PSQL} -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL;"`;
+        await runCommand(createFidCmd, env);
+      } else {
+        const createFidCmd = `${PSQL} -c "ALTER TABLE ${lowerTable} ADD COLUMN fid SERIAL PRIMARY KEY;"`;
+        await runCommand(createFidCmd, env);
+      }
     }
 
     // Create spatial index
-    const indexCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "CREATE INDEX IF NOT EXISTS idx_${lowerTable}_geom ON ${lowerTable} USING GIST (geom);"`;
+    const indexCmd = `${PSQL} -c "CREATE INDEX IF NOT EXISTS idx_${lowerTable}_geom ON ${lowerTable} USING GIST (geom);"`;
     await runCommand(indexCmd, env);
     
     // Update SRID to 4326
-    const updateSridCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "SELECT UpdateGeometrySRID('${lowerTable}', 'geom', 4326);"`;
+    const updateSridCmd = `${PSQL} -c "SELECT UpdateGeometrySRID('${lowerTable}', 'geom', 4326);"`;
     await runCommand(updateSridCmd, env);
 
     return true;
@@ -249,6 +292,12 @@ async function fixPostgreSQLTable(tableName) {
 // --- Publish to GeoServer ---
 async function publishToGeoServer(tableName, color) {
   try {
+    // Guard: if GEOSERVER_URL is not configured, fail fast with a clear message
+    // instead of constructing invalid URLs like "undefined/rest/styles?...".
+    if (!GEOSERVER_URL) {
+      throw new Error("GEOSERVER_URL is not set in environment variables — GeoServer publish skipped.");
+    }
+
     const lowerTable = tableName.toLowerCase();
 
     const axiosInstance = axios.create({
@@ -260,6 +309,7 @@ async function publishToGeoServer(tableName, color) {
       headers: {
         Accept: "application/json",
       },
+      timeout: 15000, // 15s per request — prevents 504 when GeoServer is slow/down
     });
 
     // First, check if the layer already exists
@@ -438,7 +488,16 @@ async function publishToGeoServer(tableName, color) {
   }
 }
 
+const getBoundaryDate = (value) => {
+  if (!value) return new Date().toISOString().slice(0, 10);
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return new Date().toISOString().slice(0, 10);
+  return parsed.toISOString().slice(0, 10);
+};
+
+let patrolBoundaryTableReady = false;
 const createPatrolBoundaryTable = async () => {
+  if (patrolBoundaryTableReady) return;
   try {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS patrol_boundaries (
@@ -448,11 +507,17 @@ const createPatrolBoundaryTable = async () => {
         workspace VARCHAR(100),
         layer_name VARCHAR(200),
         color VARCHAR(20),
+        boundary_date DATE DEFAULT CURRENT_DATE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await sequelize.query(`
+      ALTER TABLE patrol_boundaries
+      ADD COLUMN IF NOT EXISTS boundary_date DATE DEFAULT CURRENT_DATE
+    `);
+    patrolBoundaryTableReady = true;
   } catch (error) {
-    console.error("Error creating patrol_boundaries table:", error);
+    console.error("Error creating patrol_boundaries table:", error.message);
   }
 };
 
@@ -497,7 +562,7 @@ router.put(
       if (!gdalAvailable) {
         return res.status(500).json({
           success: false,
-          message: "GDAL not available",
+          message: GDAL_UNAVAILABLE_MESSAGE,
         });
       }
 
@@ -533,11 +598,11 @@ router.put(
           });
         }
 
-        const kmlPath = path.join(UPLOAD_DIR, kmlFile.originalname);
+        const kmlPath = kmlFile.path || path.join(UPLOAD_DIR, kmlFile.filename || kmlFile.originalname);
 
         // Import KML to temporary table
         const ogrCmd = `ogr2ogr -f "PostgreSQL" \
-PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+${OGR_PG_DSN} \
 "${kmlPath}" \
 -nln "${tempTableName}" \
 -nlt PROMOTE_TO_MULTI \
@@ -548,20 +613,20 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
 
         try {
-          await runCommand(ogrCmd);
+          await runCommand(ogrCmd, GDAL_ENV, 120000);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for KML:", ogrError.stderr);
 
           // Try with simpler options
           const altCmd = `ogr2ogr -f "PostgreSQL" \
-PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+${OGR_PG_DSN} \
 "${kmlPath}" \
 -nln "${tempTableName}" \
 -overwrite`;
 
           try {
-            await runCommand(altCmd);
+            await runCommand(altCmd, GDAL_ENV, 120000);
             importSuccess = true;
           } catch (altError) {
             console.error("Alternative import also failed:", altError);
@@ -588,11 +653,11 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
           });
         }
 
-        const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
+        const shpPath = shpFile.path || path.join(UPLOAD_DIR, shpFile.filename || shpFile.originalname);
 
         // Import SHP to temporary table
         const ogrCmd = `ogr2ogr -f "PostgreSQL" \
-PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+${OGR_PG_DSN} \
 "${shpPath}" \
 -nln "${tempTableName}" \
 -nlt PROMOTE_TO_MULTI \
@@ -603,20 +668,20 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
 
         try {
-          await runCommand(ogrCmd);
+          await runCommand(ogrCmd, GDAL_ENV, 120000);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for SHP:", ogrError.stderr);
 
           // Try with simpler options
           const altCmd = `ogr2ogr -f "PostgreSQL" \
-PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+${OGR_PG_DSN} \
 "${shpPath}" \
 -nln "${tempTableName}" \
 -overwrite`;
 
           try {
-            await runCommand(altCmd);
+            await runCommand(altCmd, GDAL_ENV, 120000);
             importSuccess = true;
           } catch (altError) {
             console.error("Alternative import also failed:", altError);
@@ -647,12 +712,12 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       
       try {
         // Check if table exists before trying to rename
-        const checkTableCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '${tableName}');"`;
+        const checkTableCmd = `${PSQL} -t -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '${tableName}');"`;
         const { stdout } = await runCommand(checkTableCmd, env);
         
         if (stdout.trim().includes("t")) {
           // Table exists, rename it to backup
-          const renameCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${tableName} RENAME TO ${backupTableName};"`;
+          const renameCmd = `${PSQL} -c "ALTER TABLE ${tableName} RENAME TO ${backupTableName};"`;
           await runCommand(renameCmd, env);
         } else {
         }
@@ -663,14 +728,14 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
       // Rename the temporary table to the final table name
       try {
-        const renameCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${tempTableName} RENAME TO ${tableName};"`;
+        const renameCmd = `${PSQL} -c "ALTER TABLE ${tempTableName} RENAME TO ${tableName};"`;
         await runCommand(renameCmd, env);
       } catch (renameError) {
         console.error("Error renaming table:", renameError.message);
         
         // Try to restore from backup if available
         try {
-          const restoreCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${backupTableName} RENAME TO ${tableName};"`;
+          const restoreCmd = `${PSQL} -c "ALTER TABLE ${backupTableName} RENAME TO ${tableName};"`;
           await runCommand(restoreCmd, env);
         } catch (restoreError) {
           console.error("Failed to restore from backup:", restoreError.message);
@@ -709,13 +774,13 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
       // Cleanup uploaded files
       await Promise.all(uploadedFiles.map((file) => {
-        const filePath = path.join(UPLOAD_DIR, file.originalname);
+        const filePath = file.path || path.join(UPLOAD_DIR, file.filename || file.originalname);
         return fs.promises.unlink(filePath).catch(() => {});
       }));
 
       // Delete backup table after successful replacement
       try {
-        const deleteBackupCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "DROP TABLE IF EXISTS ${backupTableName};"`;
+        const deleteBackupCmd = `${PSQL} -c "DROP TABLE IF EXISTS ${backupTableName};"`;
         await runCommand(deleteBackupCmd, env);
       } catch (deleteError) {
         console.warn("Could not delete backup table:", deleteError.message);
@@ -759,7 +824,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
       // Cleanup uploaded files
       await Promise.all(uploadedFiles.map((file) => {
-        const filePath = path.join(UPLOAD_DIR, file.originalname);
+        const filePath = file.path || path.join(UPLOAD_DIR, file.filename || file.originalname);
         return fs.promises.unlink(filePath).catch(() => {});
       }));
 
@@ -795,7 +860,7 @@ router.post(
       if (!gdalAvailable) {
         return res.status(500).json({
           success: false,
-          message: "GDAL not available",
+          message: GDAL_UNAVAILABLE_MESSAGE,
         });
       }
 
@@ -809,6 +874,7 @@ router.post(
       }
 
       const color = req.body.color || "#ff0000";
+      const boundaryDate = getBoundaryDate(req.body.boundary_date || req.body.date);
       let tableName;
       let importSuccess = false;
 
@@ -837,14 +903,14 @@ router.post(
         
         try {
           const env = { ...GDAL_ENV, PGPASSWORD: PG_PASS };
-          const backupCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "ALTER TABLE ${tableName} RENAME TO ${backupTableName};"`;
+          const backupCmd = `${PSQL} -c "ALTER TABLE ${tableName} RENAME TO ${backupTableName};"`;
           await runCommand(backupCmd, env);
         } catch (backupError) {
           console.error("Error creating backup:", backupError.message);
         }
         
         // Drop the table after backup (it's renamed, so we need to create new one)
-        const dropCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -c "DROP TABLE IF EXISTS ${tableName};"`;
+        const dropCmd = `${PSQL} -c "DROP TABLE IF EXISTS ${tableName};"`;
         await runCommand(dropCmd, { ...GDAL_ENV, PGPASSWORD: PG_PASS });
       } else {
         // New boundary - generate new table name
@@ -889,12 +955,12 @@ router.post(
           });
         }
 
-        const kmlPath = path.join(UPLOAD_DIR, kmlFile.originalname);
+        const kmlPath = kmlFile.path || path.join(UPLOAD_DIR, kmlFile.filename || kmlFile.originalname);
 
 
         // Import KML to PostGIS - Skip SRS transformation to avoid PROJ error
         const ogrCmd = `ogr2ogr -f "PostgreSQL" \
-PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+${OGR_PG_DSN} \
 "${kmlPath}" \
 -nln "${tableName}" \
 -nlt PROMOTE_TO_MULTI \
@@ -905,19 +971,19 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
 
         try {
-          await runCommand(ogrCmd);
+          await runCommand(ogrCmd, GDAL_ENV, 120000);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for KML:", ogrError.stderr);
 
           // If that fails, try with even simpler options
           const altCmd = `ogr2ogr -f "PostgreSQL" \
-PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+${OGR_PG_DSN} \
 "${kmlPath}" \
 -nln "${tableName}" \
 -overwrite`;
 
-          await runCommand(altCmd);
+          await runCommand(altCmd, GDAL_ENV, 120000);
           importSuccess = true;
         }
       } else {
@@ -941,12 +1007,12 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
           });
         }
 
-        const shpPath = path.join(UPLOAD_DIR, shpFile.originalname);
+        const shpPath = shpFile.path || path.join(UPLOAD_DIR, shpFile.filename || shpFile.originalname);
 
 
         // Import to PostGIS - Skip SRS transformation to avoid PROJ error
         const ogrCmd = `ogr2ogr -f "PostgreSQL" \
-PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+${OGR_PG_DSN} \
 "${shpPath}" \
 -nln "${tableName}" \
 -nlt PROMOTE_TO_MULTI \
@@ -957,19 +1023,19 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
 
 
         try {
-          await runCommand(ogrCmd);
+          await runCommand(ogrCmd, GDAL_ENV, 120000);
           importSuccess = true;
         } catch (ogrError) {
           console.error("ogr2ogr error for SHP:", ogrError.stderr);
 
           // If that fails, try with even simpler options
           const altCmd = `ogr2ogr -f "PostgreSQL" \
-PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=5432" \
+${OGR_PG_DSN} \
 "${shpPath}" \
 -nln "${tableName}" \
 -overwrite`;
 
-          await runCommand(altCmd);
+          await runCommand(altCmd, GDAL_ENV, 120000);
           importSuccess = true;
         }
       }
@@ -1003,12 +1069,13 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       await sequelize.query(
         `
         INSERT INTO patrol_boundaries
-        (table_name, boundary_name, workspace, layer_name, color)
-        VALUES ($1, $2, $3, $4, $5)
+        (table_name, boundary_name, workspace, layer_name, color, boundary_date)
+        VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (table_name) 
         DO UPDATE SET 
           boundary_name = EXCLUDED.boundary_name,
-          color = EXCLUDED.color
+          color = EXCLUDED.color,
+          boundary_date = EXCLUDED.boundary_date
         `,
         {
           bind: [
@@ -1017,13 +1084,14 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
             WORKSPACE,
             `${WORKSPACE}:${tableName}`,
             color,
+            boundaryDate,
           ],
         },
       );
 
       // Cleanup
       await Promise.all(uploadedFiles.map((file) => {
-        const filePath = path.join(UPLOAD_DIR, file.originalname);
+        const filePath = file.path || path.join(UPLOAD_DIR, file.filename || file.originalname);
         return fs.promises.unlink(filePath).catch(() => {});
       }));
 
@@ -1041,6 +1109,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
           workspace: WORKSPACE,
           wms_url: `${GEOSERVER_URL}/${WORKSPACE}/wms`,
           color: color,
+          boundary_date: boundaryDate,
           is_replace: !!existingBoundary,
         },
       });
@@ -1065,7 +1134,7 @@ PG:"host=${PG_HOST} user=${PG_USER} password=${PG_PASS} dbname=${PG_DB} port=543
       });
 
       await Promise.all(uploadedFiles.map((file) => {
-        const filePath = path.join(UPLOAD_DIR, file.originalname);
+        const filePath = file.path || path.join(UPLOAD_DIR, file.filename || file.originalname);
         return fs.promises.unlink(filePath).catch(() => {});
       }));
 
@@ -1122,6 +1191,7 @@ router.post("/patrol-boundaries/check-name", verifyJwt, async (req, res) => {
 // --- Get all patrol boundaries ---
 router.get("/patrol-boundaries", verifyJwt, async (req, res) => {
   try {
+    await createPatrolBoundaryTable();
     const boundaries = await sequelize.query(
       `
       SELECT
@@ -1131,6 +1201,7 @@ router.get("/patrol-boundaries", verifyJwt, async (req, res) => {
         layer_name,
         workspace,
         color,
+        boundary_date::text AS boundary_date,
         created_at
       FROM patrol_boundaries
       ORDER BY created_at DESC
@@ -1140,23 +1211,29 @@ router.get("/patrol-boundaries", verifyJwt, async (req, res) => {
 
     const dataWithGeom = await Promise.all(
       boundaries.map(async (item) => {
+        // Guard against injection / odd names — table names are generated as patrol_boundary_<slug>
+        if (!/^[a-z0-9_]+$/i.test(item.table_name || "")) {
+          return { ...item, geom: null };
+        }
         try {
+          // ST_AsGeoJSON guarantees GeoJSON regardless of whether the pg driver
+          // has PostGIS type parsers registered (it often doesn't on a fresh server).
           const geomResult = await sequelize.query(
-            `SELECT geom FROM ${item.table_name} LIMIT 1`,
+            `SELECT ST_AsGeoJSON(geom)::json AS geom FROM "${item.table_name}" WHERE geom IS NOT NULL LIMIT 1`,
             { type: sequelize.QueryTypes.SELECT }
           );
 
+          const geom = geomResult.length ? geomResult[0].geom : null;
+          const parsed = typeof geom === "string" ? JSON.parse(geom) : geom;
+
           return {
-  ...item,
-  geom: geomResult.length
-    ? {
-        ...geomResult[0].geom,
-        coordinates: geomResult[0].geom.coordinates[0]
-      }
-    : null,
-};
+            ...item,
+            geom: parsed && Array.isArray(parsed.coordinates)
+              ? { ...parsed, coordinates: parsed.coordinates[0] }
+              : null,
+          };
         } catch (err) {
-          console.error(`Error fetching geom from ${item.table_name}:`, err);
+          console.error(`Error fetching geom from ${item.table_name}:`, err.message);
           return {
             ...item,
             geom: null,
@@ -1193,6 +1270,7 @@ router.get("/patrol-boundaries/:id", verifyJwt, async (req, res) => {
         layer_name,
         workspace,
         color,
+        boundary_date::text AS boundary_date,
         created_at
       FROM patrol_boundaries
       WHERE id = $1
@@ -1291,7 +1369,7 @@ router.get("/test-gdal", async (req, res) => {
 
     if (gdalAvailable) {
       const env = { ...GDAL_ENV, PGPASSWORD: PG_PASS };
-      const testCmd = `psql -h ${PG_HOST} -U ${PG_USER} -d ${PG_DB} -w -t -c "SELECT version();"`;
+      const testCmd = `${PSQL} -t -c "SELECT version();"`;
 
       try {
         const { stdout } = await runCommand(testCmd, env);
@@ -1340,6 +1418,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
     round,
     beat,
     village,
+    boundary_date,
+    date,
   } = req.body;
 
   if (!name || !geom) {
@@ -1350,6 +1430,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
   }
 
   try {
+    const boundaryDate = getBoundaryDate(boundary_date || date);
+
     // Check if boundary name already exists
     const nameCheckResult = await sequelize.query(
       `
@@ -1419,6 +1501,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
                 round VARCHAR(255),
                 beat VARCHAR(255),
                 village VARCHAR(255),
+                boundary_date DATE DEFAULT CURRENT_DATE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `;
@@ -1434,7 +1517,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
                 range, 
                 round, 
                 beat, 
-                village
+                village,
+                boundary_date
             )
             VALUES (
                 ST_GeomFromText(:polygonText, 4326),
@@ -1443,7 +1527,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
                 :range,
                 :round,
                 :beat,
-                :village
+                :village,
+                :boundaryDate
             )
         `;
 
@@ -1456,6 +1541,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
         round: round || null,
         beat: beat || null,
         village: village || null,
+        boundaryDate,
       },
     });
 
@@ -1468,8 +1554,8 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
     // Save metadata
     await sequelize.query(
       `
-            INSERT INTO patrol_boundaries (table_name, boundary_name, workspace, layer_name, color)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO patrol_boundaries (table_name, boundary_name, workspace, layer_name, color, boundary_date)
+            VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (table_name) DO NOTHING
             `,
       {
@@ -1479,6 +1565,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
           WORKSPACE,
           `${WORKSPACE}:${tableName}`,
           color,
+          boundaryDate,
         ],
       },
     );
@@ -1492,6 +1579,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
         geoserver_layer: `${WORKSPACE}:${tableName}`,
         wms_url: `${GEOSERVER_URL}/${WORKSPACE}/wms`,
         color: color,
+        boundary_date: boundaryDate,
         total_points: parsedCoordinates.length,
         metadata: {
           officer_name: officer_name || null,
@@ -1500,6 +1588,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
           round: round || null,
           beat: beat || null,
           village: village || null,
+          boundary_date: boundaryDate,
         },
       },
     });
@@ -1513,6 +1602,7 @@ router.post("/create-boundary", verifyJwt, async (req, res) => {
   }
 });
 
-createPatrolBoundaryTable();
+// Primary worker only — avoid every cluster worker racing the same DDL.
+if (require('../utils/isPrimaryWorker')) createPatrolBoundaryTable();
 
 module.exports = router;

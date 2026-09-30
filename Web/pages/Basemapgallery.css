@@ -90,3 +90,17 @@
   transform: translateY(0) scale(1.02);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
 }
+
+/* === iPad Pro Responsive — Basemap Gallery === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .basemap-deck {
+    left: 55%;
+    bottom: 3%;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .basemap-deck {
+    left: 45%;
+  }
+}

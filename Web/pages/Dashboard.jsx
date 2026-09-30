@@ -13,9 +13,11 @@ import {
 } from "recharts";
 import { Select, Table } from "antd";
 import { useLanguage } from "../context/LanguageContext";
+import { capitalizeFirst } from "../utils/textFormat";
 import "./Dashboard.css";
 import filterIcon from "../assets/filter.png";
 import { API_BASE_URL } from "../config";
+import { getUserDivision, getUserRange, matchesDivision, matchesUserHierarchy } from "../utils/authUtils";
 
 const { Option } = Select;
 
@@ -154,9 +156,21 @@ export default function Dashboard() {
   const [patrollingTypes, setPatrollingTypes] = useState([]);
 
   const [selectedForest, setSelectedForest] = useState("all");
+  // Locked division state — set in useEffect to avoid stale reads after login
+  const [_userDivision, _setUserDivision] = useState(null);
   const [selectedDivision, setSelectedDivision] = useState("all");
   const [selectedRange, setSelectedRange] = useState("all");
   const [selectedPatrolType, setSelectedPatrolType] = useState("all");
+
+  // Read the user's division and range from localStorage once userData is available
+  useEffect(() => {
+    const div = getUserDivision();
+    _setUserDivision(div);
+    setSelectedDivision(div || "all");
+    // If user has no division, show all divisions/data and do not lock range.
+    const rng = div ? getUserRange() : null;
+    setSelectedRange(rng || "all");
+  }, []);
 
   const [forestChangeData, setForestChangeData] = useState([]);
   const [loadingForest, setLoadingForest] = useState(false);
@@ -221,12 +235,18 @@ export default function Dashboard() {
   };
 
   // Fetch patrols once (no date filters anymore). Filtering will be applied on client side.
+  // Use include_images=false to skip base64 image payloads — Dashboard only
+  // needs patrol metadata for charts/tables, so this avoids transferring
+  // large blobs that dominate page load time.
   useEffect(() => {
     const fetchPatrols = async () => {
       setPatrolDataLoading(true);
       setTableLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/patrol-info`);
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_BASE_URL}/api/patrol-info-all?include_images=false&include_geom=false`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const json = await res.json();
         const data = json?.data || json || [];
         setRawPatrolsData(data);
@@ -347,12 +367,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (selectedForest && selectedForest !== "all") {
       fetchDivisions(selectedForest);
-      setSelectedDivision("all"); // reset division on forest change
-      setSelectedRange("all"); // reset range on forest change
+      // Don't reset division if user has a locked division
+      if (!_userDivision) setSelectedDivision("all");
+      setSelectedRange("all");
     } else {
       setDivisions([]);
       setRanges([]);
-      setSelectedDivision("all");
+      if (!_userDivision) setSelectedDivision("all");
       setSelectedRange("all");
     }
   }, [selectedForest]);
@@ -372,14 +393,23 @@ export default function Dashboard() {
   const filteredPatrols = useMemo(() => {
     if (!rawPatrolsData || !rawPatrolsData.length) return [];
     
-    return rawPatrolsData.filter((p) => {
+    // First, apply the user's hierarchy filter (beat → round → range → division → circle)
+    const hierarchyFiltered = rawPatrolsData.filter(p => matchesUserHierarchy(p));
+    
+    return hierarchyFiltered.filter((p) => {
       // Guess multiple candidate keys because backend shape can vary
       const forestCandidates = ["forest_id", "forestId", "forest_type_id", "forest_type", "forest_type_name", "forestName"];
       const divisionCandidates = ["division_id", "divisionId", "division_name", "divisionName"];
       const rangeCandidates = ["range", "range_id", "rangeId", "range_name", "rangeName"];
 
       const forestMatches = matchesValue(p, forestCandidates, selectedForest);
-      const divisionMatches = matchesValue(p, divisionCandidates, selectedDivision);
+      // Use fuzzy division matching for division field
+      const divisionMatches = !selectedDivision || selectedDivision === "all" ? true :
+        divisionCandidates.some(key => {
+          const val = p[key];
+          if (val == null) return false;
+          return matchesDivision(String(val), selectedDivision);
+        });
       const rangeMatches = matchesValue(p, rangeCandidates, selectedRange);
       
       // Use the specialized function for patrol types
@@ -389,12 +419,26 @@ export default function Dashboard() {
     });
   }, [rawPatrolsData, selectedForest, selectedDivision, selectedRange, selectedPatrolType, patrollingTypes]);
 
+  const parsePatrolTimestamp = (dateString) => {
+    if (!dateString) return null;
+    if (dateString instanceof Date) return Number.isNaN(dateString.getTime()) ? null : dateString;
+    if (typeof dateString === "string") {
+      const match = dateString.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+      if (match) {
+        const [, day, month, year, hour, minute] = match;
+        return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+      }
+    }
+    const date = new Date(dateString);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
   // Build monthly chart data from filteredPatrols
   const patrolChartData = useMemo(() => {
     const monthlyMap = {};
     filteredPatrols.forEach((p) => {
-      const d = new Date(p.start_time || p.started_at || p.created_at || p.startTime);
-      if (isNaN(d)) return;
+      const d = parsePatrolTimestamp(p.start_time || p.started_at || p.created_at || p.startTime);
+      if (!d) return;
       const month = d.toLocaleString("default", { month: "short", year: "numeric" });
       monthlyMap[month] = (monthlyMap[month] || 0) + 1;
     });
@@ -413,15 +457,22 @@ export default function Dashboard() {
   // Prepare table data helpers
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    const date = new Date(dateString);
-    if (isNaN(date)) return dateString;
-    return date.toLocaleDateString(language === "gu" ? "gu-IN" : "en-IN", {
+    if (typeof dateString === "string" && /^\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}$/.test(dateString)) return dateString;
+    const date = parsePatrolTimestamp(dateString);
+    if (!date) return dateString;
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "2-digit",
       year: "numeric",
-      month: "short",
-      day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    });
+      hour12: false,
+    }).formatToParts(date).reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+    return `${parts.day}-${parts.month}-${parts.year} ${parts.hour}:${parts.minute}`;
   };
 
   const formatLocation = (location) => {
@@ -437,6 +488,9 @@ export default function Dashboard() {
       startTime: formatDate(patrol.start_time || patrol.startTime || patrol.started_at),
       endTime: formatDate(patrol.end_time || patrol.endTime || patrol.ended_at),
       distance: parseFloat(patrol.distance_kms || patrol.distance || 0).toFixed(2),
+      patrolLocation: formatLocation(patrol.patrolling_location || patrol.patrolling_Location || patrol.patrollingLocation),
+      district: formatLocation(patrol.current_location_distict || patrol.current_location_district || patrol.currentLocationDistrict),
+      village: formatLocation(patrol.current_location_village || patrol.currentLocationVillage),
       startLocation: formatLocation(patrol.start_location || patrol.startLocation),
       endLocation: formatLocation(patrol.end_location || patrol.endLocation),
       rawData: patrol,
@@ -481,14 +535,14 @@ export default function Dashboard() {
       dataIndex: "startTime",
       key: "startTime",
       width: 180,
-      sorter: (a, b) => new Date(a.rawData?.start_time || a.rawData?.started_at || 0) - new Date(b.rawData?.start_time || b.rawData?.started_at || 0),
+      sorter: (a, b) => (parsePatrolTimestamp(a.rawData?.start_time || a.rawData?.started_at)?.getTime() || 0) - (parsePatrolTimestamp(b.rawData?.start_time || b.rawData?.started_at)?.getTime() || 0),
     },
     {
       title: text[language].endTime,
       dataIndex: "endTime",
       key: "endTime",
       width: 180,
-      sorter: (a, b) => new Date(a.rawData?.end_time || a.rawData?.ended_at || 0) - new Date(b.rawData?.end_time || b.rawData?.ended_at || 0),
+      sorter: (a, b) => (parsePatrolTimestamp(a.rawData?.end_time || a.rawData?.ended_at)?.getTime() || 0) - (parsePatrolTimestamp(b.rawData?.end_time || b.rawData?.ended_at)?.getTime() || 0),
     },
     {
       title: text[language].distance,
@@ -497,6 +551,27 @@ export default function Dashboard() {
       width: 120,
       sorter: (a, b) => parseFloat(a.distance) - parseFloat(b.distance),
       render: (distance) => `${distance} km`,
+    },
+    {
+      title: language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location",
+      dataIndex: "patrolLocation",
+      key: "patrolLocation",
+      width: 160,
+      ellipsis: true,
+    },
+    {
+      title: language === "gu" ? "જિલ્લો" : "District",
+      dataIndex: "district",
+      key: "district",
+      width: 140,
+      ellipsis: true,
+    },
+    {
+      title: language === "gu" ? "ગામ" : "Village",
+      dataIndex: "village",
+      key: "village",
+      width: 140,
+      ellipsis: true,
     },
     {
       title: text[language].startLocation,
@@ -622,10 +697,10 @@ export default function Dashboard() {
               {patrollingTypes.map((t) => {
                 const id = t.type_id ?? t.id ?? t.value ?? t.key;
                 const name = t.type_name ?? t.name ?? t.label;
-                
+
                 return (
                   <Option key={id || name} value={id || name}>
-                    {name || id}
+                    {capitalizeFirst(name || id)}
                   </Option>
                 );
               })}
@@ -634,9 +709,9 @@ export default function Dashboard() {
 
           <button
             onClick={() => {
-              // reset all filters
+              // reset all filters (keep locked division if user has one)
               setSelectedForest("all");
-              setSelectedDivision("all");
+              setSelectedDivision(_userDivision || "all");
               setSelectedRange("all");
               setSelectedPatrolType("all");
             }}

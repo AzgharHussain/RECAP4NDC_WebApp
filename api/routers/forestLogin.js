@@ -7,26 +7,10 @@ const { logFromRequest } = require('../utils/auditLogger');
 const { sequelize } = require('../config/database');
 const bcrypt = require('bcrypt');
 
-// Lazy-load notifications router to avoid circular dependency at startup.
-// This lets us trigger pending notifications on login.
-let sendPendingNotificationsFromPreviousMonth = null;
-function getPendingNotificationsFn() {
-  if (!sendPendingNotificationsFromPreviousMonth) {
-    try {
-      const notificationsRouter = require('./notifications');
-      sendPendingNotificationsFromPreviousMonth = notificationsRouter.sendPendingNotificationsFromPreviousMonth;
-    } catch (e) {
-      console.warn('Could not load sendPendingNotificationsFromPreviousMonth:', e.message);
-    }
-  }
-  return sendPendingNotificationsFromPreviousMonth;
-}
-
 const SECRET_KEY = process.env.JWT_SECRET;
 
 router.post('/forest-login', async (req, res) => {
   const { username, password } = req.body;
-
 
   if (!username || !password) {
     return res.status(400).json({
@@ -48,17 +32,29 @@ router.post('/forest-login', async (req, res) => {
 
   try {
     const soapUrl = process.env.SOAP_API_URL;
-    const response = await axios.post(soapUrl, soapRequest, {
+    const axiosConfig = {
       headers: {
         'Content-Type': 'text/xml; charset=utf-8',
         'SOAPAction': 'http://tempuri.org/LOGIN_EGUJFOREST'
       },
-      timeout: 30000,
+      timeout: 45000,
       // Bypass any HTTP_PROXY/HTTPS_PROXY env vars — the SOAP service is on
       // the internal Gujarat govt network (172.16.0.0/16) and the Cisco WSA
       // proxy blocks this host with "BLOCK-DEST / GujaratDenied".
       proxy: false,
-    });
+    };
+
+    let response;
+    try {
+      response = await axios.post(soapUrl, soapRequest, axiosConfig);
+    } catch (firstErr) {
+      if (firstErr.code === 'ECONNABORTED' || firstErr.code === 'ECONNRESET' || /timeout|socket hang up/i.test(firstErr.message)) {
+        console.warn('[SOAP] First attempt failed (' + (firstErr.code || firstErr.message) + '), retrying once...');
+        response = await axios.post(soapUrl, soapRequest, axiosConfig);
+      } else {
+        throw firstErr;
+      }
+    }
 
 
     const parsed = await xml2js.parseStringPromise(response.data, {
@@ -146,6 +142,7 @@ router.post('/forest-login', async (req, res) => {
 
     // Generate JWT token so the frontend doesn't need a separate /saveuser call
     let token = null;
+    let dbUser = null;
     try {
       // Check if user exists in database, create if not
       const trimmedUsername = username.trim();
@@ -154,21 +151,21 @@ router.post('/forest-login', async (req, res) => {
         { bind: [trimmedUsername] }
       );
 
-      let user;
+
       if (users.length > 0) {
-        user = users[0];
+        dbUser = users[0];
       } else {
         const [insertResult] = await sequelize.query(
           `INSERT INTO public.government_department_users (username) VALUES ($1) RETURNING user_id, username`,
           { bind: [trimmedUsername] }
         );
-        user = insertResult[0];
+        dbUser = insertResult[0];
       }
 
       token = jwt.sign(
         {
-          userId: user.user_id,
-          username: user.username,
+          userId: dbUser.user_id,
+          username: dbUser.username,
           name: userData.NAME,
           cadre: userData.CadreName,
           circle: userData.CircleName,
@@ -187,6 +184,33 @@ router.post('/forest-login', async (req, res) => {
       // Continue without token — frontend will handle via saveuser fallback
     }
 
+    // Keep the NDVI notification subscription's hierarchy in sync with the
+    // login data so reports can show division/range/round/beat — including
+    // for subscriptions created before those columns existed.
+    if (dbUser && dbUser.user_id != null) {
+      try {
+        await sequelize.query(
+          `UPDATE public.ndvi_notification_users
+           SET division = NULLIF(NULLIF($1, ''), '-'),
+               range    = NULLIF(NULLIF($2, ''), '-'),
+               round    = NULLIF(NULLIF($3, ''), '-'),
+               beat     = NULLIF(NULLIF($4, ''), '-')
+           WHERE user_id = $5`,
+          {
+            bind: [
+              userData.DivisionName || '',
+              userData.RangeName || '',
+              userData.RoundName || '',
+              userData.BeatName || '',
+              String(dbUser.user_id)
+            ]
+          }
+        );
+      } catch (syncErr) {
+        console.error('ndvi_notification_users hierarchy sync failed:', syncErr.message);
+      }
+    }
+
     // Set token as HTTP-only cookie (backup auth mechanism)
     if (token) {
       res.cookie('authToken', token, {
@@ -197,36 +221,14 @@ router.post('/forest-login', async (req, res) => {
       });
     }
 
-    // === Fire-and-forget: send pending notifications from previous month ===
-    // Runs AFTER the response is sent so it doesn't slow down login.
-    // The user must be subscribed (have a firebase_token in ndvi_notification_users).
-    // If not subscribed yet, this is a no-op.
-    const loginUsername = username.trim();
-    setImmediate(async () => {
-      try {
-        const fn = getPendingNotificationsFn();
-        if (!fn) return;
-
-        // Use the shared sequelize connection — NOT a new pg.Pool (which leaks connections)
-        const [subRows] = await sequelize.query(
-          'SELECT firebase_token FROM public.ndvi_notification_users WHERE user_id = $1 AND firebase_token IS NOT NULL',
-          { bind: [loginUsername] }
-        );
-
-        if (subRows.length === 0) {
-          return;
-        }
-
-        const fbToken = subRows[0].firebase_token;
-        const result = await fn(loginUsername, fbToken);
-      } catch (e) {
-        console.error('[login-notifications] Error:', e.message);
-      }
-    });
+    // Per-pixel pending notifications on login REMOVED.
+    // Notifications are now sent only as a daily summary (3x/day) by the
+    // NDVI scheduler, which also runs once on server startup.
 
     return res.json({
       success: true,
       jsonMap: userData,
+      userId: dbUser ? dbUser.user_id : null,
       token, // Include token in response so frontend can save to localStorage
       message: 'Authentication successful'
     });
@@ -314,22 +316,7 @@ router.post('/forest-login', async (req, res) => {
             details: { name: userData.NAME }
           });
 
-          // Fire-and-forget: send pending notifications from previous month
-          setImmediate(async () => {
-            try {
-              const fn = getPendingNotificationsFn();
-              if (!fn) return;
-              // Use shared sequelize connection — no new pg.Pool
-              const [subRows] = await sequelize.query(
-                'SELECT firebase_token FROM public.ndvi_notification_users WHERE user_id = $1 AND firebase_token IS NOT NULL',
-                { bind: [trimmedUsername] }
-              );
-              if (subRows.length === 0) return;
-              const result = await fn(trimmedUsername, subRows[0].firebase_token);
-            } catch (e) {
-              console.error('[login-notifications] Fallback error:', e.message);
-            }
-          });
+          // Per-pixel pending notifications on login REMOVED.
 
           return res.json({
             success: true,

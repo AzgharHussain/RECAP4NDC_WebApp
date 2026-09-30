@@ -122,7 +122,7 @@ const PatrolRoutePopup = ({ patrol, language }) => {
       >
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Text strong>{language === "gu" ? "પેટ્રોલ આઈડી:" : "Patrol ID:"} {patrol.patrol_id || "N/A"}</Text>
+            <Text strong>{language === "gu" ? "પેટ્રોલ આઈડી:" : "Patrol ID:"} {patrol.patrol_id || "-"}</Text>
           </Col>
           <Col span={24}>
             <Tag color={getTypeColor(patrol.type_name)}>
@@ -130,7 +130,7 @@ const PatrolRoutePopup = ({ patrol, language }) => {
             </Tag>
           </Col>
           <Col span={24}>
-            <Text strong>{language === "gu" ? "અધિકારી:" : "Officer:"} {patrol.patrol_officer_name || "N/A"}</Text>
+            <Text strong>{language === "gu" ? "અધિકારી:" : "Officer:"} {patrol.patrol_officer_name || "-"}</Text>
           </Col>
           <Col span={12}>
             <Text type="secondary">{language === "gu" ? "શરૂઆત:" : "Start:"}</Text>
@@ -283,8 +283,8 @@ const parseGeomCoordinates = (geom) => {
 
           <ResizeMapOnShow coords={getAllCoordinates()} />
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-            url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+            attribution='&copy; <a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by EOX'
+            url="https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
           />
           
           {patrolData.map((patrol) => {

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { verifyJwt } = require("../middlewares/verifyJwt"); 
+const { verifyJwt } = require("../middlewares/verifyJwt");
+const { cacheMiddleware } = require("../middlewares/apiCache");
 
 const { sequelize } = require('../config/ndvidatabase');
 
@@ -62,7 +63,7 @@ router.post('/divisions', async (req, res) => {
   }
 });
 
-router.get('/hierarchy_coupes', async (req, res) => {
+router.get('/hierarchy_coupes', cacheMiddleware(300), async (req, res) => {
   try {
     const query = `
       SELECT * FROM coupe_all;
@@ -98,7 +99,7 @@ const normalizeDivision = (value) => {
 /* ============================================================
    GET ALL DIVISIONS
 ============================================================ */
-router.get('/hierarchy-divisions', verifyJwt, async (req, res) => {
+router.get('/hierarchy-divisions', verifyJwt, cacheMiddleware(300), async (req, res) => {
   try {
     const query = `
       SELECT DISTINCT division
@@ -897,7 +898,7 @@ router.post('/hierarchy', async (req, res) => {
 });
 
 // Get forest types
-router.get('/forest-types', async (req, res) => {
+router.get('/forest-types', cacheMiddleware(3600), async (req, res) => {
   try {
     const  myquery = `
       SELECT forest_id, forest_type
@@ -1013,9 +1014,9 @@ router.get('/layer-bounds/:layerName', async (req, res) => {
       },
       featureCount: parseInt(results[0].feature_count),
       metadata: {
-        range: results[0].range || 'N/A',
-        division: results[0].division || 'N/A',
-        circle: results[0].circle || 'N/A'
+        range: results[0].range || '-',
+        division: results[0].division || '-',
+        circle: results[0].circle || '-'
       }
     };
     
@@ -1085,24 +1086,99 @@ router.post('/get-coupe-area', verifyJwt, async (req, res) => {
     }
 });
 
-// Get all divisions
-router.get('/coupe-divisions',  verifyJwt,async (req, res) => {
+const normalizeNdviDivisionName = (value) => {
+  const division = value
+    .replace(/_coupe_NDVI_Change$/i, '')
+    .replace(/^\d{4}[-_]\d{2}[-_]\d{2}[-_]/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  if (division.replace(/\s+/g, '').toLowerCase() === 'bharuchsubdivision') {
+    return 'Bharuch Sub Division';
+  }
+
+  return division;
+};
+
+const divisionToNdviCoupeName = (division) => {
+  if (!division) return null;
+
+  const normalizedDivision = division
+    .replace(/ Forest Division$/i, '')
+    .replace(/\s+/g, '_')
+    .toLowerCase();
+
+  const overrides = {
+    bharuch: 'bharuchsubdivision',
+    bharuch_sub_division: 'bharuchsubdivision',
+  };
+
+  return overrides[normalizedDivision] || normalizedDivision;
+};
+
+const getNdviChangeTables = async (division) => {
+  const coupeName = divisionToNdviCoupeName(division);
+  const query = `
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename LIKE '%\\_coupe\\_NDVI\\_Change' ESCAPE '\\'
+      ${coupeName ? "AND (tablename LIKE ? OR tablename LIKE ?)" : ""}
+    ORDER BY tablename DESC
+  `;
+
+  return sequelize.query(query, {
+    replacements: coupeName ? [`%_${coupeName}_coupe_NDVI_Change`, `%-${coupeName}_coupe_NDVI_Change`] : [],
+    type: sequelize.QueryTypes.SELECT
+  });
+};
+
+const getNdviHierarchyValues = async (column, filters = {}) => {
+  const tables = await getNdviChangeTables(filters.division);
+  const allowedColumns = new Set(['range', 'round', 'beat']);
+
+  if (!allowedColumns.has(column) || tables.length === 0) return [];
+
+  const whereParts = [`"${column}" IS NOT NULL`, `"${column}"::text != ''`];
+  const replacements = {};
+
+  if (filters.range) {
+    whereParts.push('"range" = :range');
+    replacements.range = filters.range;
+  }
+
+  if (filters.round) {
+    whereParts.push('"round" = :round');
+    replacements.round = filters.round;
+  }
+
+  const unionQuery = tables
+    .map((table) => `SELECT DISTINCT "${column}" FROM public."${table.tablename}" WHERE ${whereParts.join(' AND ')}`)
+    .join(' UNION ');
+
+  return sequelize.query(`SELECT DISTINCT "${column}" FROM (${unionQuery}) ndvi_hierarchy ORDER BY "${column}"`, {
+    replacements,
+    type: sequelize.QueryTypes.SELECT
+  });
+};
+
+// Get all divisions from generated NDVI Change tables
+router.get('/coupe-divisions',  verifyJwt, cacheMiddleware(300), async (req, res) => {
   try {
-    const query = `
-      SELECT DISTINCT division
-      FROM public.coupe_dropdown_master
-      ORDER BY division
-    `;
-    
-    const result = await sequelize.query(query);
-    res.json(result);
+    const tables = await getNdviChangeTables();
+    const divisions = [...new Set(tables.map((table) => normalizeNdviDivisionName(table.tablename)))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b))
+      .map((division) => ({ division }));
+
+    res.json([divisions]);
   } catch (error) {
     console.error('Error fetching divisions:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Get ranges based on selected division - POST with body
+// Get ranges based on selected division from generated NDVI Change tables
 router.post('/coupe-ranges', async (req, res) => {
   try {
     const { division } = req.body;
@@ -1111,18 +1187,7 @@ router.post('/coupe-ranges', async (req, res) => {
       return res.status(400).json({ error: 'division is required' });
     }
 
-    const query = `
-      SELECT DISTINCT range
-      FROM public.coupe_dropdown_master
-      WHERE division = ?
-      ORDER BY range
-    `;
-    
-    // Using parameterized query with replacements
-    const result = await sequelize.query(query, {
-      replacements: [division],
-      type: sequelize.QueryTypes.SELECT
-    });
+    const result = await getNdviHierarchyValues('range', { division });
     
     res.json(result);
   } catch (error) {
@@ -1139,50 +1204,31 @@ router.post('/coupe-rounds', async (req, res) => {
       return res.status(400).json({ error: 'division and range are required' });
     }
 
-    const query = `
-      SELECT DISTINCT round
-      FROM public.coupe_dropdown_master
-      WHERE division = ?
-      AND range = ?
-      ORDER BY round
-    `;
-    
-    // Using parameterized query with replacements
-    const result = await sequelize.query(query, {
-      replacements: [division, range],
-      type: sequelize.QueryTypes.SELECT
-    });
+    const result = await getNdviHierarchyValues('round', { division, range });
     
     res.json(result);
   } catch (error) {
-    console.error('Error fetching beats:', error);
+    console.error('Error fetching rounds:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Get beats based on selected division and range - POST with body
+// Get beats based on selected division and range (round is optional).
+// Beat officers often have no round value in their profile, so this endpoint
+// must still return the beats that belong to their division/range.
 router.post('/coupe-beats', async (req, res) => {
   try {
-    const { division, range , round} = req.body;
-    
+    const { division, range, round } = req.body;
+
     if (!division || !range) {
       return res.status(400).json({ error: 'division and range are required' });
     }
 
-    const query = `
-      SELECT DISTINCT beat
-      FROM public.coupe_dropdown_master
-      WHERE division = ?
-      AND range = ? AND round = ?
-      ORDER BY beat
-    `;
-    
-    // Using parameterized query with replacements
-    const result = await sequelize.query(query, {
-      replacements: [division, range, round],
-      type: sequelize.QueryTypes.SELECT
-    });
-    
+    const filters = { division, range };
+    if (round) filters.round = round;
+
+    const result = await getNdviHierarchyValues('beat', filters);
+
     res.json(result);
   } catch (error) {
     console.error('Error fetching beats:', error);
@@ -1191,7 +1237,7 @@ router.post('/coupe-beats', async (req, res) => {
 });
 
 // Get all divisions
-router.get('/beat-coupe-divisions',  verifyJwt,async (req, res) => {
+router.get('/beat-coupe-divisions',  verifyJwt, cacheMiddleware(300), async (req, res) => {
   try {
     const query = `
       SELECT DISTINCT division
@@ -1301,6 +1347,50 @@ router.post('/beat-coupe-beats', async (req, res) => {
   }
 });
 
+
+// Map a division/range/round/beat selection to the NDVI coupe table name.
+// Round and beat are accepted for consistency but are not required for the
+// mapping because the NDVI table name is derived from the selected division.
+router.post('/get-coupe-by-beat', verifyJwt, async (req, res) => {
+  try {
+    let { division } = req.body;
+    if (!division || division === 'all') {
+      return res.status(400).json({ success: false, message: 'division is required' });
+    }
+
+    const normalizedDivision = String(division).toLowerCase().trim();
+
+    const DIVISION_TO_COUPE_MAP = {
+      'aravalli': 'aravalli',
+      'bharuch sub division': 'bharuchsubdivision',
+      'bharuch_sub_division': 'bharuchsubdivision',
+      'bharuch': 'bharuchsubdivision',
+      'bhavnagar': 'bhavnagar_coupes',
+      'bhavnagar coupes': 'bhavnagar_coupes',
+    };
+
+    let coupeName = DIVISION_TO_COUPE_MAP[normalizedDivision];
+    if (!coupeName) {
+      // Derive from the selected division name: remove " Forest Division",
+      // replace spaces/underscores/hyphens with underscores, lowercase.
+      const base = normalizedDivision
+        .replace(/ forest division$/i, '')
+        .replace(/[\s\-_]+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      coupeName = base ? `${base}_coupe` : null;
+    }
+
+    return res.json({
+      success: true,
+      division,
+      coupe_name: coupeName || null,
+    });
+  } catch (error) {
+    console.error('Error in get-coupe-by-beat:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // DISABLED: column "input_table_name" does not exist in coupe_metadata table.
 // This endpoint is not used by the frontend. Re-enable only if the column

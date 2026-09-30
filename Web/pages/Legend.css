@@ -191,4 +191,30 @@
   }
 }
 
+/* === iPad Pro Responsive — Legend === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .legend-container {
+    width: 250px;
+    bottom: 16px;
+    right: 16px;
+    max-height: 28vh;
+  }
+
+  .legend-title {
+    width: 190px;
+    font-size: 13px;
+  }
+
+  .panel-title {
+    font-size: 13px;
+    max-width: 120px;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .legend-container {
+    width: 260px;
+    max-height: 30vh;
+  }
+}
 

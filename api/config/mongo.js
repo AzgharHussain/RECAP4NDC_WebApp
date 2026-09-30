@@ -12,9 +12,12 @@ const connectMongo = async () => {
   try {
     await mongoose.connect(MONGO_URI, {
       serverSelectionTimeoutMS: 15000,
-      maxPoolSize: 100,
-      minPoolSize: 5,
+      maxPoolSize: 500,
+      minPoolSize: 10,
       socketTimeoutMS: 60000,
+      connectTimeoutMS: 30000,
+      // Heartbeat every 10s to detect dead connections fast
+      heartbeatFrequencyMS: 10000,
     });
     return true;
   } catch (error) {

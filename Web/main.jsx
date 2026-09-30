@@ -11,14 +11,15 @@ import './index.css';
 // auto-logout on 401/403). All pages should use `apiClient` instead of raw `axios`.
 import './utils/apiClient';
 
-// === Register Service Worker for offline caching ===
-// Caches static assets so repeat visits don't hit the server at all.
-// Only register in production (not during development with Vite HMR).
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// === Unregister any existing service worker ===
+// Clear old service workers that may be causing caching issues
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((reg) => {})
-      .catch((err) => console.warn('SW registration failed:', err));
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => {
+        registration.unregister();
+      });
+    });
   });
 }
 

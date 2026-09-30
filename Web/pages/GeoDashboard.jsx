@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, useMap,ScaleControl ,WMSTileLayer  } from "rea
 import {FaInfoCircle} from 'react-icons/fa';
 import L, { icon } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "../utils/leafletFix";
 import "leaflet-easyprint";
 import PrintControl from "./PrintControl";
 import axios from 'axios';
@@ -26,6 +27,7 @@ import 'leaflet-measure/dist/leaflet-measure.css';
 // import "./Homepage.css";
 import gisfylogo from "../assets/Gisfylogo.png";
 import { API_BASE_URL } from '../config';
+import { matchesUserHierarchy } from '../utils/authUtils';
 
 const Loader = () => {
   return (
@@ -54,12 +56,12 @@ const position = [22.7531, 71.8046];
 const customCRS = L.CRS.EPSG4326;
 const basemaps = {
   LightGray: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  DarkGray: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-  Imagery: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-  Oceans: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
-  Streets: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-  NationalGeo: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
-  positron:"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"
+  DarkGray: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  Imagery: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg',
+  Oceans: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+  Streets: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  NationalGeo: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+  positron:"https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
 };
 
 
@@ -147,18 +149,7 @@ export default function MapView() {
 //   "cite:2025_09_01_AGAR_view_ndvi_change"
  
 // ];
-  const fetchCoupeLayers = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/coupe_metadata/location`);
-      setCoupeLayers(response.data || []);
-    } catch (error) {
-      console.error("Error fetching coupe layers:", error);
-    }
-  };
 
-  useEffect(() => {
-    fetchCoupeLayers();
-  }, []);
 
   useEffect(() => {
   // Fallback: hide loader after 15s in case map load events never fire
@@ -176,7 +167,14 @@ export default function MapView() {
       const userId = userData.user_id || userData.id || '';
       fetch(`${import.meta.env.VITE_API_URL}/api/incidents-with-images?user_id=${userId}`)
         .then((res) => res.json())
-        .then((data) => setIncidentsData(data))
+        .then((data) => {
+          // Filter by the logged-in user's hierarchy (beat → round → range → division → circle)
+          if (Array.isArray(data)) {
+            return data.filter(item => matchesUserHierarchy(item));
+          }
+          return data;
+        })
+        .then((filteredData) => setIncidentsData(filteredData))
         .catch((err) => console.error("Error fetching incidents", err));
     } else {
       setIncidentsData([]);
@@ -374,6 +372,12 @@ const handleFilter = ({ fromDate, toDate }) => {
         if (layer._url || layer.wmsParams) {
           pendingLayers.add(L.stamp(layer));
           layer.on('load', () => {
+            pendingLayers.delete(L.stamp(layer));
+            checkAllLoaded();
+          });
+          // If tiles error out (GeoServer down / 404 / CORS), 'load' never
+          // fires — treat the layer as done so the loader can't get stuck.
+          layer.on('tileerror', () => {
             pendingLayers.delete(L.stamp(layer));
             checkAllLoaded();
           });
@@ -940,7 +944,7 @@ const handleLayerToggle = (layerType, isChecked) => {
 </Suspense>
             </div>
           {/* )} */}
-     <div style={{ display: "flex", width: "auto", height: "auto" }}>
+     <div style={{ display: "flex", flex: 1, minWidth: 0, minHeight: 0, height: "100%" }}>
             <MapContainer
               center={position}
               zoom={6.8}

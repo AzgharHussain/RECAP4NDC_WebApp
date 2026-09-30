@@ -1,0 +1,142 @@
+{
+  "info": {
+    "name": "NDVI Changes APIs",
+    "description": "Postman collection for NDVI change management APIs.\n\n- Get all NDVI changes for a user's village/coupe\n- Get single point details\n- Update point status + note\n- List all NDVI Change tables\n\nAll endpoints require JWT authentication (Bearer token or authToken cookie).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5002",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "123",
+      "type": "string"
+    },
+    {
+      "key": "table_name",
+      "value": "2025-11-01_Dahod_SF_NDVI_Change",
+      "type": "string"
+    },
+    {
+      "key": "pixel_id",
+      "value": "456",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Get User NDVI Changes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ndvi-changes/user/{{user_id}}?limit=500",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ndvi-changes", "user", "{{user_id}}"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "500",
+              "description": "Max rows to return (1-5000, default 500)"
+            }
+          ]
+        },
+        "description": "Returns all NDVI changes for the user's subscribed village/coupe.\n\nLooks up the user's village_name and coupe_name from ndvi_notification_users, then queries all matching NDVI Change tables.\n\nResponse:\n{\n  \"success\": true,\n  \"data\": [\n    {\n      \"pixel_id\": \"456\",\n      \"NDVI_change\": -0.35,\n      \"change_category\": \"High Decrease\",\n      \"longitude\": \"73.123\",\n      \"latitude\": \"22.456\",\n      \"village\": \"Dahod\",\n      \"note\": null,\n      \"status\": null,\n      \"table_name\": \"2025-11-01_Dahod_SF_NDVI_Change\"\n    }\n  ],\n  \"village_name\": \"Dahod\",\n  \"coupe_name\": \"Dahod_SF\",\n  \"total\": 1\n}"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Single Point Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ndvi-changes/point/{{table_name}}/{{pixel_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ndvi-changes", "point", "{{table_name}}", "{{pixel_id}}"]
+        },
+        "description": "Returns details of a single NDVI change point.\n\nResponse:\n{\n  \"success\": true,\n  \"data\": {\n    \"pixel_id\": \"456\",\n    \"NDVI_change\": -0.35,\n    \"change_category\": \"High Decrease\",\n    \"longitude\": \"73.123\",\n    \"latitude\": \"22.456\",\n    \"village\": \"Dahod\",\n    \"note\": \"Checked on site\",\n    \"status\": \"Resolved\",\n    \"division\": \"Dahod SF\",\n    \"range\": \"...\",\n    \"round\": \"...\",\n    \"beat\": \"...\"\n  },\n  \"table_name\": \"2025-11-01_Dahod_SF_NDVI_Change\"\n}"
+      },
+      "response": []
+    },
+    {
+      "name": "Update Point Status",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"table_name\": \"{{table_name}}\",\n  \"pixel_id\": \"{{pixel_id}}\",\n  \"status\": \"Resolved\",\n  \"note\": \"Verified on site. Vegetation recovering.\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ndvi-changes/status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ndvi-changes", "status"]
+        },
+        "description": "Updates the status and/or note of a specific NDVI change point.\n\nRequest body:\n{\n  \"table_name\": \"2025-11-01_Dahod_SF_NDVI_Change\",  // required\n  \"pixel_id\": \"456\",                                  // required\n  \"status\": \"Resolved\",                               // optional: Pending | Under Review | Resolved | False Positive\n  \"note\": \"Verified on site\"                          // optional: action taken / notes\n}\n\nIf the status or note column doesn't exist on the NDVI Change table, it will be added automatically.\n\nResponse:\n{\n  \"success\": true,\n  \"message\": \"Status updated successfully\",\n  \"data\": {\n    \"pixel_id\": \"456\",\n    \"status\": \"Resolved\",\n    \"note\": \"Verified on site\"\n  }\n}"
+      },
+      "response": []
+    },
+    {
+      "name": "List All NDVI Change Tables",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/ndvi-changes/tables",
+          "host": ["{{base_url}}"],
+          "path": ["api", "ndvi-changes", "tables"]
+        },
+        "description": "Lists all NDVI Change table names in the database.\n\nResponse:\n{\n  \"success\": true,\n  \"data\": [\n    \"2025-11-01_Dahod_SF_NDVI_Change\",\n    \"2025-11-01_Bharuch_Sub_Division_NDVI_Change\"\n  ]\n}"
+      },
+      "response": []
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -89,10 +90,12 @@ import {
   CloseFullscreen,
   Send,
   KeyboardArrowDown,
-  KeyboardArrowUp
+  KeyboardArrowUp,
+  Directions as DirectionIcon
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { useLanguage } from "../context/LanguageContext"; // Add this import
+import { getUserDivision, getUserRange, getUserRound, getUserBeat, matchesDivision } from '../utils/authUtils';
 import "./NDVIDashboard.css";
 
 // Register ChartJS components
@@ -128,6 +131,7 @@ const dashboardText = {
     startDate: "Start Date",
     endDate: "End Date",
     submit: "Submit",
+    clearAll: "Clear All",
     
     // Error messages
     errorAllDivisionsRange: 'For "All Divisions", date range cannot exceed 3 months. Please select a shorter range.',
@@ -157,7 +161,10 @@ const dashboardText = {
     
     // Data Table Section
     detailedDataTable: "1. Detailed Data Table",
-    searchPlaceholder: "Search by ID, status, coordinates, notes, division...",
+    searchPlaceholder: "Search by coordinates, notes, division...",
+    allStatuses: "All Statuses",
+    degradation: "Degradation",
+    afforestation: "Afforestation",
     showDivisionColumn: "Show Division Column",
     onlyWithNotes: "Only with Notes",
     onlyWithImages: "Only with Images",
@@ -172,7 +179,7 @@ const dashboardText = {
     ndviChange: "NDVI Change",
     category: "Category",
     location: "Location",
-    areaKm: "Area (km²)",
+    areaKm: "Area (ha)",
     hasNote: "Has Note",
     hasImage: "Has Image",
     actions: "Actions",
@@ -221,10 +228,11 @@ const dashboardText = {
     // Image Preview Modal
     imagePreview: "Image Preview",
     noImageAvailable: "No Image Available",
+    download: "Download",
     close: "Close",
     
     // Footer
-    footerNote: "Note: All area measurements are in square kilometers (km²). Afforested area is calculated as (Total Coupe Area - Degraded Area from NDVI analysis).",
+    footerNote: "Note: All area measurements are in hectares (ha). Afforested area is calculated as (Total Coupe Area - Degraded Area from NDVI analysis).",
     
     // Month Select
     selectMonth: "Select Month",
@@ -261,6 +269,7 @@ const dashboardText = {
     startDate: "પ્રારંભ તારીખ",
     endDate: "અંતિમ તારીખ",
     submit: "સબમિટ કરો",
+    clearAll: "બધું સાફ કરો",
     
     // Error messages
     errorAllDivisionsRange: '"બધા વિભાગો" માટે, તારીખ શ્રેણી 3 મહિનાથી વધુ ન હોઈ શકે. કૃપા કરીને ટૂંકી શ્રેણી પસંદ કરો.',
@@ -275,13 +284,13 @@ loadingNDVIChange: "મહિના મુજબ NDVI ફેરફારનો �
     // Area Analysis
     areaAnalysis: "વિસ્તાર વિશ્લેષણ",
     totalArea: "કુલ વિસ્તાર",
-    afforestedArea: "વનીકૃત વિસ્તાર",
-    degradedArea: "અધોગતિ વિસ્ાર",
+    afforestedArea: "વનસર્જિત વિસ્તાર",
+    degradedArea: "અવનતિગ્રસ્ત વિસ્તાર",
     latest: "(નવીਨતમ)",
     
     // Summary Cards
-    degradedAreaLatest: "અધોગતિ વિસ્તાર (નવીનતમ)",
-    afforestedAreaLatest: "વનીકૃત વિસ્તાર (નવીનતમ)",
+    degradedAreaLatest: "અવનતિગ્રસ્ત વિસ્તાર (નવીનતમ)",
+    afforestedAreaLatest: "વનસર્જિત વિસ્તાર (નવીનતમ)",
     recordsWithNotes: "નોંધો સાથે રેકોર્ડ્સ",
     recordsWithImages: "છબીઓ સાથે રેકોર્ડ્స",
     
@@ -290,7 +299,10 @@ loadingNDVIChange: "મહિના મુજબ NDVI ફેરફારનો �
     
     // Data Table Section
     detailedDataTable: "૧. વિગતવાર ડેટા ટેબલ",
-    searchPlaceholder: "ID, સ્થિતિ, સ્થાન, નોંધો, વિભાગ દ્વારા શોધો...",
+    searchPlaceholder: "સ્થાન, નોંધો, વિભાગ દ્વારા શોધો...",
+    allStatuses: "બધી સ્થિતિઓ",
+    degradation: "અવનતિ",
+    afforestation: "વનસર્જન",
     showDivisionColumn: "વિభாக காலம் காண்பி",
     onlyWithNotes: "ફક્ત નોંધો સાથે",
 onlyWithImages: "ફક્ત છબીઓ સાથે",
@@ -333,8 +345,8 @@ clearFilters: "ફિલ્ટર દૂર કરો",
     
     // Monthly Overview
     monthlyOverview: "૨. માસિક ઝાંખી",
-    degraded: "અધોગતિ",
-    afforested: "વનીકૃત",
+    degraded: "અવનતિગ્રસ્ત",
+    afforested: "વનસર્જિત",
     positive: "↑ હકારાત્મક",
     negative: "↓ નકારાત્મક",
     records_count: "રેકોર્ડ્સ",
@@ -354,10 +366,11 @@ clearFilters: "ફિલ્ટર દૂર કરો",
     // Image Preview Modal
     imagePreview: "છબી પૂર્વાવલોકન",
     noImageAvailable: "કોઈ છબી ઉપલબ્ધ નથી",
+    download: "ડાઉનલોડ",
     close: "બંધ કરો",
     
     // Footer
-    footerNote: "નોંધ: બધા વિસ્તાર માપન ચોરસ કિલોમીટર (કિમી²) માં છે. વનીકૃત વિસ્તાર (કુલ કૂપ વિસ્તાર - NDVI વિશ્લેષણથી અધોગતિ વિસ્તાર) તરીકે ગણવામાં આવે છે.",
+    footerNote: "નોંધ: બધા વિસ્તાર માપન ચોરસ કિલોમીટર (કિમી²) માં છે. વનસર્જિત વિસ્તાર (કુલ કૂપ વિસ્તાર - NDVI વિશ્લેષણથી અવનતિગ્રસ્ત વિસ્તાર) તરીકે ગણવામાં આવે છે.",
     
     // Month Select
     selectMonth: "મહિનો પસંદ કરો",
@@ -366,8 +379,8 @@ clearFilters: "ફિલ્ટર દૂર કરો",
     allDivisions: "બધા વિભાગો",
     
     // Area values
-    degradedAreaValue: "અધોગતિ વિસ્તાર",
-    afforestedAreaValue: "વનીકૃત વિસ્તાર",
+    degradedAreaValue: "અવનતિગ્રસ્ત વિસ્તાર",
+    afforestedAreaValue: "વનસર્જિત વિસ્તાર",
     netChange: "નેટ ફેરફાર",
     
     // Chart titles
@@ -380,6 +393,20 @@ clearFilters: "ફિલ્ટર દૂર કરો",
   }
 };
 
+// Base64 image data may arrive with or without a data: prefix — normalize.
+const resolveImageSrc = (data) => {
+  if (!data) return null;
+  const s = String(data).trim();
+  if (s.startsWith('data:') || s.startsWith('http')) return s;
+  return `data:image/jpeg;base64,${s}`;
+};
+
+const DEFAULT_NDVI_NOTE_PATTERN = /^NDVI decrease less than -0\.3\s*$/i;
+const normalizeNote = (note) => {
+  const value = typeof note === 'string' ? note.trim() : '';
+  return DEFAULT_NDVI_NOTE_PATTERN.test(value) ? '' : value;
+};
+
 // ============================================
 // NDVIMyCoups_dropdown Component
 // ============================================
@@ -388,14 +415,142 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
   const [ranges, setRanges] = useState([]);
   const [rounds, setRounds] = useState([]);
   const [beats, setBeats] = useState([]);
-  const [division, setDivision] = useState("");
-  const [range, setRange] = useState("");
-  const [round, setRound] = useState("");
-  const [beat, setBeat] = useState("");
-  const { language } = useLanguage(); // Add this
+  const { language } = useLanguage();
+
+  // ── Eagerly read hierarchy from localStorage at render time (synchronous),
+  // exactly like Patrolling.jsx does. This ensures the dropdowns are
+  // pre-populated immediately on login without waiting for an async effect.
+  const _initDiv  = getUserDivision();
+  const _initRng  = _initDiv ? getUserRange()  : null;
+  const _initRnd  = _initDiv ? getUserRound()  : null;
+  const _initBt   = _initDiv ? getUserBeat()   : null;
+
+  // The logged-in user's own hierarchy — lock each dropdown to the level
+  // they hold (division → range → round → beat).
+  // Initialized synchronously so there is no "undefined" flash.
+  const [userHierarchy] = useState({
+    division: _initDiv,
+    range:    _initRng,
+    round:    _initRnd,
+    beat:     _initBt,
+  });
+
+  // Pre-populate dropdown state immediately with raw localStorage values
+  // so the UI shows the correct selection before the API cascade completes.
+  const [division, setDivision] = useState(_initDiv || "");
+  const [range,    setRange   ] = useState(_initRng || "");
+  const [round,    setRound   ] = useState(_initRnd || "");
+  const [beat,     setBeat    ] = useState(_initBt  || "");
+
+  const lockedDivision = userHierarchy?.division || null;
+  const lockedRange = userHierarchy?.range || null;
+  const lockedRound = userHierarchy?.round || null;
+  const lockedBeat = userHierarchy?.beat || null;
 
   /* ------------------ Load Divisions from coupe_dropdown_master ------------------ */
   useEffect(() => {
+    // userHierarchy is always an object now (initialized synchronously).
+
+    const postOptions = async (url, body) => {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API_BASE_URL}${url}`,
+        body,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return res.data;
+    };
+
+    // Auto-select division → range → round → beat using the user's own
+    // hierarchy values (fuzzy-matched against the real dropdown options).
+    const applyUserHierarchy = async (divisionOptions) => {
+      const { division: uDiv, range: uRange, round: uRound, beat: uBeat } = userHierarchy;
+      if (!uDiv) return;
+
+      // (Removed early onHierarchyChange call to ensure we wait for coupe lookup)
+
+      const divOpt = divisionOptions.find(d => matchesDivision(d.division, uDiv));
+      const divVal = divOpt ? divOpt.division : uDiv;
+      setDivision(divVal);
+
+      let rangeVal = null, roundVal = null, beatVal = null, coupeName = null;
+      try {
+        // ── Range ──────────────────────────────────────────────────────────
+        const rangeRows = await postOptions('/api/coupe-ranges', { division: divVal });
+        setRanges(Array.isArray(rangeRows) ? rangeRows : []);
+        if (uRange && Array.isArray(rangeRows)) {
+          rangeVal = (rangeRows.find(r => matchesDivision(r.range, uRange)) || {}).range || null;
+          if (!rangeVal) {
+            // Exact case-insensitive fallback
+            rangeVal = (rangeRows.find(r => (r.range || '').toLowerCase().trim() === uRange.toLowerCase().trim()) || {}).range || null;
+          }
+          if (rangeVal) setRange(rangeVal);
+        }
+
+        // ── Round ──────────────────────────────────────────────────────────
+        if (rangeVal) {
+          const roundRows = await postOptions('/api/coupe-rounds', { division: divVal, range: rangeVal });
+          setRounds(Array.isArray(roundRows) ? roundRows : []);
+          if (uRound && Array.isArray(roundRows)) {
+            roundVal = (roundRows.find(r => matchesDivision(r.round, uRound)) || {}).round || null;
+            if (!roundVal) {
+              roundVal = (roundRows.find(r => (r.round || '').toLowerCase().trim() === uRound.toLowerCase().trim()) || {}).round || null;
+            }
+            if (roundVal) setRound(roundVal);
+          }
+        }
+
+        // ── Beat ───────────────────────────────────────────────────────────
+        // Continue even when roundVal is null — beat officers whose round field
+        // is missing/mismatched in localStorage should still get their beat loaded.
+        if (uBeat && rangeVal) {
+          const beatBody = { division: divVal, range: rangeVal };
+          if (roundVal) beatBody.round = roundVal; // include round only when resolved
+          const beatRows = await postOptions('/api/coupe-beats', beatBody);
+          setBeats(Array.isArray(beatRows) ? beatRows : []);
+          if (Array.isArray(beatRows)) {
+            beatVal = (beatRows.find(b => matchesDivision(b.beat, uBeat)) || {}).beat || null;
+            if (!beatVal) {
+              beatVal = (beatRows.find(b => (b.beat || '').toLowerCase().trim() === uBeat.toLowerCase().trim()) || {}).beat || null;
+            }
+            if (beatVal) setBeat(beatVal);
+          }
+        }
+
+        // ── Coupe lookup ───────────────────────────────────────────────────
+        if (beatVal) {
+          console.log("[NDVI Debug] Fetching coupe for beat:", beatVal);
+          try {
+            const res = await postOptions('/api/get-coupe-by-beat', {
+              division: divVal, range: rangeVal, round: roundVal, beat: beatVal
+            });
+            console.log("[NDVI Debug] Coupe lookup result:", res);
+            if (res && res.coupe_name) coupeName = res.coupe_name;
+          } catch (err) { 
+            console.error("[NDVI Debug] Coupe lookup failed:", err);
+          }
+        }
+      } catch (err) {
+        console.error("Error auto-selecting user hierarchy:", err);
+      }
+
+      onHierarchyChange({
+        division: divVal,
+        // Fall back to raw user value when fuzzy-match found nothing,
+        // so the parent always has the most specific filter available.
+        range: rangeVal  || uRange  || null,
+        round: roundVal  || uRound  || null,
+        beat:  beatVal   || uBeat   || null,
+        ...(coupeName ? { coupe_name: coupeName } : {}),
+        isAllDivisions: false,
+      });
+    };
+
     const fetchDivisions = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -408,18 +563,21 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
             },
           }
         );
-        setDivisions(res.data[0] || []);
+        const allDivisions = res.data[0] || [];
+        setDivisions(allDivisions);
+
+        // Auto-cascade the user's hierarchy (division → beat)
+        await applyUserHierarchy(allDivisions);
       } catch (error) {
         console.error("Error fetching divisions:", error);
       }
     };
 
     fetchDivisions();
-  }, []);
+  }, [userHierarchy]);
 
   /* ------------------ Load Ranges based on selected Division ------------------ */
-  const handleDivisionChange = async (e) => {
-    const selectedDivision = e.target.value;
+  const selectDivision = async (selectedDivision) => {
     setDivision(selectedDivision);
     setRange("");
     setRound("");
@@ -456,6 +614,10 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
     } catch (error) {
       console.error("Error fetching ranges:", error);
     }
+  };
+
+  const handleDivisionChange = async (e) => {
+    await selectDivision(e.target.value);
   };
 
   /* ------------------ Load Rounds based on selected Division and Range ------------------ */
@@ -590,11 +752,15 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
           value={division}
           onChange={handleDivisionChange}
           label={t.division}
+          disabled={!!lockedDivision}
         >
           <MenuItem value="">Select Division</MenuItem>
           <MenuItem value="all" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
             <em>All Divisions</em>
           </MenuItem>
+          {division && division !== 'all' && !divisions.find(d => d.division === division) && (
+            <MenuItem value={division}>{division}</MenuItem>
+          )}
           {divisions.map((d, index) => (
             <MenuItem key={index} value={d.division}>
               {d.division}
@@ -603,16 +769,19 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
         </Select>
       </FormControl>
 
-      {/* Range Dropdown - Disabled when "All Divisions" is selected */}
+      {/* Range Dropdown */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>{t.range}</InputLabel>
         <Select
           value={range}
           onChange={handleRangeChange}
           label={t.range}
-          disabled={!division || division === 'all'}
+          disabled={!division || division === 'all' || !!lockedRange}
         >
           <MenuItem value="">Select Range</MenuItem>
+          {range && !ranges.find(r => r.range === range) && (
+            <MenuItem value={range}>{range}</MenuItem>
+          )}
           {ranges.map((r, index) => (
             <MenuItem key={index} value={r.range}>
               {r.range}
@@ -621,16 +790,24 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
         </Select>
       </FormControl>
 
-      {/* Round Dropdown - Disabled when "All Divisions" is selected */}
+      {/* Round Dropdown — disable only when:
+           - no range is selected, OR
+           - "All Divisions" is active, OR
+           - this user is a round-level (or lower) officer with a locked round
+             AND is NOT a beat officer (beat officers need round selectable
+             in case their round wasn't auto-resolved). */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>{t.round}</InputLabel>
         <Select
           value={round}
           onChange={handleRoundChange}
           label={t.round}
-          disabled={!range || division === 'all'}
+          disabled={!range || division === 'all' || (!!lockedRound && !lockedBeat)}
         >
           <MenuItem value="">Select Round</MenuItem>
+          {round && !rounds.find(r => r.round === round) && (
+            <MenuItem value={round}>{round}</MenuItem>
+          )}
           {rounds.map((r, index) => (
             <MenuItem key={index} value={r.round}>
               {r.round}
@@ -639,16 +816,21 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
         </Select>
       </FormControl>
 
-      {/* Beat Dropdown - Disabled when "All Divisions" is selected */}
+      {/* Beat Dropdown — enable whenever a beat lock exists, even if the
+           round state hasn't been populated yet (auto-cascade may still
+           be in flight or round field may be missing in the user profile). */}
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>{t.beat}</InputLabel>
         <Select
           value={beat}
           onChange={handleBeatChange}
           label={t.beat}
-          disabled={!round || division === 'all'}
+          disabled={division === 'all' || (!lockedBeat && !round)}
         >
           <MenuItem value="">Select Beat</MenuItem>
+          {beat && !beats.find(b => b.beat === beat) && (
+            <MenuItem value={beat}>{beat}</MenuItem>
+          )}
           {beats.map((b, index) => (
             <MenuItem key={index} value={b.beat}>
               {b.beat}
@@ -666,7 +848,7 @@ const NDVIMyCoups_dropdown = ({ onHierarchyChange }) => {
 const NDVIChangeDashboard = () => {
   // State management
   const [selectedCoupe, setSelectedCoupe] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('2025-02');
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [monthlyData, setMonthlyData] = useState({});
   const [currentTableData, setCurrentTableData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -680,6 +862,7 @@ const NDVIChangeDashboard = () => {
   const [summaryStats, setSummaryStats] = useState(null);
   const [chartType, setChartType] = useState('bar');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showOnlyWithNotes, setShowOnlyWithNotes] = useState(false);
   const [showOnlyWithImages, setShowOnlyWithImages] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'pixle_id', direction: 'asc' });
@@ -691,6 +874,8 @@ const NDVIChangeDashboard = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [tableNames, setTableNames] = useState([]);
+  const [availableMonths, setAvailableMonths] = useState([]);
+  const [availableMonthsLoaded, setAvailableMonthsLoaded] = useState(false);
   
   // Pagination states
   const [page, setPage] = useState(0);
@@ -703,6 +888,15 @@ const NDVIChangeDashboard = () => {
   const [selectedRound, setSelectedRound] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
   const [hierarchyCoupeName, setHierarchyCoupeName] = useState(null);
+
+  const _pendingCoupeName = React.useRef(null);
+  // Refs hold the latest hierarchy values synchronously.
+  const _pendingRange  = React.useRef(null);
+  const _pendingRound  = React.useRef(null);
+  const _pendingBeat   = React.useRef(null);
+
+  // Key used to force-remount the hierarchy dropdown (reset it on Clear All)
+  const [dropdownResetKey, setDropdownResetKey] = React.useState(0);
 
   // Add language context
   const { language } = useLanguage();
@@ -724,6 +918,207 @@ const NDVIChangeDashboard = () => {
     monthlyOverview: true
   });
 
+  const openCoordinatesInMap = (latitude, longitude) => {
+    if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) return;
+    window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const isMonthAvailable = (date) => {
+    if (!date) return false;
+    if (!availableMonthsLoaded) return true;
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    return availableMonths.includes(monthKey);
+  };
+
+  // Check if a year has any available months
+  const isYearAvailable = (year) => {
+    if (!availableMonthsLoaded) return true;
+    return availableMonths.some(m => m.startsWith(`${year}-`));
+  };
+
+  useEffect(() => {
+    const fetchAvailableMonths = async () => {
+      setAvailableMonthsLoaded(false);
+      try {
+        const token = localStorage.getItem("token");
+        const params = selectedDivision ? `?division=${encodeURIComponent(selectedDivision)}` : "";
+        const res = await axios.get(`${API_BASE_URL}/api/ndvi-available-months${params}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAvailableMonths(res.data?.success ? res.data.data || [] : []);
+      } catch (err) {
+        console.error('Error fetching available NDVI months:', err);
+        setAvailableMonths([]);
+      } finally {
+        setAvailableMonthsLoaded(true);
+      }
+    };
+
+    fetchAvailableMonths();
+  }, [selectedDivision]);
+
+  useEffect(() => {
+    if (!selectedDivision) return;
+    if (!availableMonthsLoaded) return;
+    if (startDate || endDate) return;
+
+    const months = [...availableMonths].sort().slice(-3);
+    if (months.length === 0) {
+      setError(`No processed NDVI data is available for ${selectedDivision}.`);
+      return;
+    }
+
+    const [startYear, startMonth] = months[0].split('-').map(Number);
+    const [endYear, endMonth] = months[months.length - 1].split('-').map(Number);
+    const defaultStart = new Date(startYear, startMonth - 1, 1);
+    const defaultEnd = new Date(endYear, endMonth - 1, 1);
+
+    setStartDate(defaultStart);
+    setEndDate(defaultEnd);
+
+    // Defer the fetch so state updates settle before we read them inside fetchFilteredData.
+    setTimeout(async () => {
+
+      setTableNames(months);
+      setLoading(true);
+      setError(null);
+      setMonthlyData({});
+      setCurrentTableData([]);
+      setSummaryStats(null);
+
+      try {
+        const token = localStorage.getItem("token");
+        const coupeToUse = _pendingCoupeName.current ||
+          (selectedDivision && selectedDivision !== 'all' ? transformDivisionToCoupe(selectedDivision) : null);
+
+        // Read range/round/beat from refs (updated synchronously in handleHierarchyChange)
+        // so they are available before React state has settled.
+        const rangeToUse  = _pendingRange.current;
+        const roundToUse  = _pendingRound.current;
+        const beatToUse   = _pendingBeat.current;
+
+        if (!coupeToUse || selectedDivision === 'all') {
+          setLoading(false);
+          return;
+        }
+
+        const totalCoupeArea = await (async () => {
+          try {
+            const r = await axios.post(
+              `${API_BASE_URL}/api/get-coupe-area`,
+              { tableName: coupeToUse },
+              { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            );
+            if (r.data.success) {
+              const a = parseFloat(r.data.data[0]?.total_area_sq_km || 0) * 100;
+              setTotalArea(a > 0 ? a : 10000);
+              return a > 0 ? a : 10000;
+            }
+          } catch { /* ignore */ }
+          setTotalArea(10000);
+          return 10000;
+        })();
+
+        const tempMonthlyData = {};
+
+        for (const month of months) {
+          try {
+            const tableName = `${month}-01_${coupeToUse}_NDVI_Change`;
+            console.log(`[NDVI Debug] Auto-fetching for month ${month}, table: ${tableName}`);
+            
+            const dataResponse = await axios.post(
+              `${API_BASE_URL}/api/ndvi-change-get-filtered`,
+              {
+                tableName,
+                division: selectedDivision,
+                range: rangeToUse,
+                round: roundToUse,
+                beat:  beatToUse,
+              },
+              { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+            );
+            
+            console.log(`[NDVI Debug] Response for ${month}:`, dataResponse.data);
+
+            if (dataResponse.data.success && dataResponse.data.data.length > 0) {
+              const data = dataResponse.data.data;
+
+              // Fetch degraded area
+              let degradedAreaValue = 0;
+              try {
+                const degRes = await axios.post(
+                  `${API_BASE_URL}/api/ndvi-change-degraded-area`,
+                  { tableName, division: selectedDivision, range: rangeToUse, round: roundToUse, beat: beatToUse },
+                  { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+                );
+                if (degRes.data.success) {
+                  degradedAreaValue = parseFloat(degRes.data.data[0]?.total_area_sq_km || 0) * 100;
+                }
+              } catch { /* ignore */ }
+
+              const afforestedAreaValue = Math.max(0, totalCoupeArea - degradedAreaValue);
+              const degradedPolygons = data.filter(i => i.status === true).length;
+              const afforestedPolygons = data.filter(i => i.status === false).length;
+              const degradedAreaPerPolygon = degradedPolygons > 0 ? degradedAreaValue / degradedPolygons : 0;
+              const afforestedAreaPerPolygon = afforestedPolygons > 0 ? afforestedAreaValue / afforestedPolygons : 0;
+
+              const enhancedData = data.map(item => {
+                const isDegraded = item.status === true;
+                const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
+                const note = normalizeNote ? normalizeNote(item.note) : (item.note || '');
+                return {
+                  ...item,
+                  note,
+                  area_sq_km: polygonArea,
+                  month,
+                  status: isDegraded,
+                  change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
+                  has_note: note !== '',
+                  has_image: !!(item.image_data),
+                  pixle_id: item.pixle_id || '-',
+                  NDVI_change: item.NDVI_change != null ? parseFloat(item.NDVI_change) : null,
+                };
+              });
+
+              const withNotes = enhancedData.filter(i => i.has_note).length;
+              const withImages = enhancedData.filter(i => i.has_image).length;
+              const stats = {
+                totalPolygons: enhancedData.length,
+                degradedArea: degradedAreaValue,
+                afforestedArea: afforestedAreaValue,
+                totalArea: totalCoupeArea,
+                degradedPercentage: totalCoupeArea > 0 ? (degradedAreaValue / totalCoupeArea) * 100 : 0,
+                afforestedPercentage: totalCoupeArea > 0 ? (afforestedAreaValue / totalCoupeArea) * 100 : 0,
+                withNotes,
+                withImages,
+              };
+
+              tempMonthlyData[month] = { data: enhancedData, stats, month, degradedArea: degradedAreaValue, afforestedArea: afforestedAreaValue, totalArea: totalCoupeArea };
+            }
+          } catch (err) {
+            console.error(`Auto-fetch: error for month ${month}`, err);
+          }
+        }
+
+        if (Object.keys(tempMonthlyData).length > 0) {
+          setMonthlyData(tempMonthlyData);
+          const sortedMonths = Object.keys(tempMonthlyData).sort();
+          const first = sortedMonths[0];
+          setCurrentTableData(tempMonthlyData[first].data);
+          setSummaryStats(tempMonthlyData[first].stats);
+          setSelectedMonth(first);
+        } else {
+          setError('No NDVI data found for your selection in the last 3 months.');
+        }
+      } catch (err) {
+        console.error('Auto-fetch error:', err);
+        setError('Failed to auto-load NDVI data.');
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Toggle section expansion
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -740,6 +1135,7 @@ const NDVIChangeDashboard = () => {
     // doesn't follow the standard naming convention
     const coupeNameOverrides = {
       'bharuch': 'bharuchsubdivision_coupe',
+      'bhavnagar': 'Bhavnagar_coupes',
     };
 
     // Remove " Forest Division" and replace with "_coupe"
@@ -763,20 +1159,32 @@ const NDVIChangeDashboard = () => {
 
   // Handle hierarchy change from dropdown
   const handleHierarchyChange = (hierarchy) => {
-    
+    console.log("[NDVI Debug] handleHierarchyChange received:", hierarchy);
     setSelectedDivision(hierarchy.division);
     setSelectedRange(hierarchy.range);
     setSelectedRound(hierarchy.round);
     setSelectedBeat(hierarchy.beat);
     setHierarchyCoupeName(hierarchy.coupe_name || null);
+
+    // Mirror values into refs immediately so the auto-fetch setTimeout
+    // callback can read the correct values before React state has settled.
+    _pendingRange.current  = hierarchy.range  || null;
+    _pendingRound.current  = hierarchy.round  || null;
+    _pendingBeat.current   = hierarchy.beat   || null;
     
     // If division is selected and we have the division name, transform it to coupe name
+    let resolvedCoupe = hierarchy.coupe_name || null;
     if (hierarchy.division && !hierarchy.coupe_name && hierarchy.division !== 'all') {
       const transformedCoupe = transformDivisionToCoupe(hierarchy.division);
       setHierarchyCoupeName(transformedCoupe);
+      resolvedCoupe = transformedCoupe;
     } else if (hierarchy.division === 'all') {
       setHierarchyCoupeName('all_divisions');
+      resolvedCoupe = 'all_divisions';
     }
+
+    // Store the resolved coupe name for the auto-fetch effect.
+    _pendingCoupeName.current = resolvedCoupe;
   };
 
   // Generate table names based on date range
@@ -818,6 +1226,11 @@ const NDVIChangeDashboard = () => {
       setError('Please select both start and end dates');
       return;
     }
+
+    if (availableMonthsLoaded && availableMonths.length === 0) {
+      setError(`No processed NDVI data is available for ${selectedDivision}.`);
+      return;
+    }
     
     if (startDate > endDate) {
       setError('Start date must be before end date');
@@ -857,18 +1270,19 @@ const NDVIChangeDashboard = () => {
 
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
-        const areaValue = parseFloat(area);
-        const finalArea = areaValue > 0 ? areaValue : 100;
+        // API returns square km — convert to hectares (1 sq km = 100 ha)
+        const areaValue = parseFloat(area) * 100;
+        const finalArea = areaValue > 0 ? areaValue : 10000;
         setTotalArea(finalArea);
         return finalArea;
       } else {
-        setTotalArea(100);
-        return 100;
+        setTotalArea(10000);
+        return 10000;
       }
     } catch (err) {
       console.error('Error fetching area:', err);
-      setTotalArea(100);
-      return 100;
+      setTotalArea(10000);
+      return 10000;
     } finally {
       setLoadingArea(false);
     }
@@ -892,7 +1306,7 @@ const NDVIChangeDashboard = () => {
       
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
-        return parseFloat(area);
+        return parseFloat(area) * 100; // ha → hectares
       }
       return 0;
     } catch (err) {
@@ -913,7 +1327,7 @@ const NDVIChangeDashboard = () => {
 
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
-        return parseFloat(area) > 0 ? parseFloat(area) : 0;
+        return parseFloat(area) * 100; // ha → hectares
       }
       return 0;
     } catch (err) {
@@ -1002,7 +1416,7 @@ const fetchAllDivisionsData = async (months) => {
                 );
                 
                 const degradedAreaValue = degradedAreaResponse.data.success 
-                  ? parseFloat(degradedAreaResponse.data.data[0]?.total_area_sq_km || 0)
+                  ? parseFloat(degradedAreaResponse.data.data[0]?.total_area_sq_km || 0) * 100
                   : 0;
                 
                 const afforestedAreaValue = Math.max(0, divisionTotalArea - degradedAreaValue);
@@ -1019,17 +1433,19 @@ const fetchAllDivisionsData = async (months) => {
                 const enhancedData = data.map(item => {
                   const isDegraded = item.status === true;
                   const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
+                  const note = normalizeNote(item.note);
                   
                   return {
                     ...item,
+                    note,
                     area_sq_km: polygonArea,
                     month: month,
                     division: divisionName,
                     status: isDegraded,
                     change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
-                    has_note: !!(item.note && item.note.trim() !== ''),
+                    has_note: note !== '',
                     has_image: !!(item.image_data),
-                    pixle_id: `${divisionName}_${item.pixle_id || 'N/A'}`
+                    pixle_id: `${divisionName}_${item.pixle_id || '-'}`
                   };
                 });
                 
@@ -1155,6 +1571,8 @@ const fetchAllDivisionsData = async (months) => {
         return;
       }
       
+      console.log(`[NDVI Debug] fetchFilteredData starting for months: ${months.join(', ')} with coupe: ${coupeToUse}`);
+
       // Fetch total area for the coupe and wait for it
       const totalCoupeArea = await fetchTotalAreaAndReturn(coupeToUse);
       
@@ -1186,6 +1604,8 @@ const fetchAllDivisionsData = async (months) => {
             { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
           );
           
+          console.log(`[NDVI Debug] fetchFilteredData Response for ${month}:`, dataResponse.data);
+
           if (dataResponse.data.success) {
             const data = dataResponse.data.data;
             
@@ -1210,16 +1630,18 @@ const fetchAllDivisionsData = async (months) => {
                 const isDegraded = item.status === true;
                 // Assign area based on status
                 const polygonArea = isDegraded ? degradedAreaPerPolygon : afforestedAreaPerPolygon;
+                const note = normalizeNote(item.note);
                 
                 return {
                   ...item,
+                  note,
                   area_sq_km: polygonArea,
                   month: month,
                   status: isDegraded,
                   change_category: item.change_category || (isDegraded ? 'Degradation' : 'Afforestation'),
-                  has_note: !!(item.note && item.note.trim() !== ''),
+                  has_note: note !== '',
                   has_image: !!(item.image_data),
-                  pixle_id: item.pixle_id || 'N/A',
+                  pixle_id: item.pixle_id || '-',
                   NDVI_change: item.NDVI_change !== null && item.NDVI_change !== undefined 
       ? parseFloat(item.NDVI_change) 
       : null
@@ -1294,15 +1716,16 @@ const fetchAllDivisionsData = async (months) => {
     }
   };
 
-  // Handle start date change
+  // Handle start date change — month pickers can carry a day-of-month > 1,
+  // which makes a valid month compare greater than a day-1 bound. Normalize.
   const handleStartDateChange = (newDate) => {
-    setStartDate(newDate);
+    setStartDate(newDate ? startOfMonth(newDate) : null);
     setError(null);
   };
 
   // Handle end date change
   const handleEndDateChange = (newDate) => {
-    setEndDate(newDate);
+    setEndDate(newDate ? startOfMonth(newDate) : null);
     setError(null);
   };
 
@@ -1354,14 +1777,14 @@ const fetchAllDivisionsData = async (months) => {
 
       if (response.data.success) {
         const area = response.data.data[0]?.total_area_sq_km || 0;
-        const areaValue = parseFloat(area);
-        setTotalArea(areaValue > 0 ? areaValue : 100);
+        const areaValue = parseFloat(area) * 100; // ha → hectares
+        setTotalArea(areaValue > 0 ? areaValue : 10000);
       } else {
-        setTotalArea(100);
+        setTotalArea(10000);
       }
     } catch (err) {
       console.error('Error fetching area:', err);
-      setTotalArea(100);
+      setTotalArea(10000);
     } finally {
       setLoadingArea(false);
     }
@@ -1444,8 +1867,7 @@ const fetchAllDivisionsData = async (months) => {
   const filteredData = React.useMemo(() => {
     let filtered = currentTableData.filter(item => {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        (item.pixle_id?.toString().toLowerCase().includes(searchLower)) ||
+      const matchesSearch = !searchLower ||
         (item.status?.toString().toLowerCase().includes(searchLower)) ||
         (item.note?.toLowerCase().includes(searchLower)) ||
         (item.latitude?.toString().includes(searchLower)) ||
@@ -1453,10 +1875,15 @@ const fetchAllDivisionsData = async (months) => {
         (item.change_category?.toLowerCase().includes(searchLower)) ||
         (item.division?.toLowerCase().includes(searchLower));
 
+      // Dedicated status filter — matches change_category / status
+      const itemStatus = (item.change_category || (item.status ? 'Afforestation' : 'Degradation'));
+      const matchesStatus = !statusFilter ||
+        itemStatus.toLowerCase() === statusFilter.toLowerCase();
+
       const matchesNotes = !showOnlyWithNotes || item.has_note;
       const matchesImages = !showOnlyWithImages || item.has_image;
 
-      return matchesSearch && matchesNotes && matchesImages;
+      return matchesSearch && matchesStatus && matchesNotes && matchesImages;
     });
 
     return [...filtered].sort((a, b) => {
@@ -1469,7 +1896,7 @@ const fetchAllDivisionsData = async (months) => {
       if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [currentTableData, searchTerm, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
+  }, [currentTableData, searchTerm, statusFilter, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
 
   // Paginated data
   const paginatedData = React.useMemo(() => {
@@ -1481,7 +1908,7 @@ const fetchAllDivisionsData = async (months) => {
   // Reset to first page when filters change
   React.useEffect(() => {
     setPage(0);
-  }, [searchTerm, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
+  }, [searchTerm, statusFilter, showOnlyWithNotes, showOnlyWithImages, sortConfig]);
 
   // Handle page change
   const handleChangePage = (event, newPage) => {
@@ -1608,7 +2035,7 @@ const fetchAllDivisionsData = async (months) => {
           label: function(context) {
             let label = context.dataset.label || '';
             if (label) label += ': ';
-            label += context.parsed.y.toFixed(2) + ' km²';
+            label += context.parsed.y.toFixed(2) + ' ha';
             return label;
           }
         }
@@ -1619,12 +2046,12 @@ const fetchAllDivisionsData = async (months) => {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Area (km²)',
+          text: 'Area (ha)',
           font: { weight: 'bold' }
         },
         ticks: {
           callback: function(value) {
-            return value.toFixed(1) + ' km²';
+            return value.toFixed(1) + ' ha';
           }
         }
       },
@@ -1665,7 +2092,7 @@ const fetchAllDivisionsData = async (months) => {
           label: function(context) {
             const label = context.label || '';
             const value = context.raw || 0;
-            return `${label}: ${value.toFixed(2)} km²`;
+            return `${label}: ${value.toFixed(2)} ha`;
           }
         }
       }
@@ -1715,7 +2142,8 @@ const fetchAllDivisionsData = async (months) => {
 
   // Export to PDF
 // Enhanced Export to PDF function
-const handleExportToPDF = () => {
+const handleExportToPDF = async () => {
+  let exportLoaderStarted = false;
   try {
     // Check if there's data to export
     if (!monthlyData || Object.keys(monthlyData).length === 0) {
@@ -1727,6 +2155,10 @@ const handleExportToPDF = () => {
       alert('Please select a valid month for the report.');
       return;
     }
+
+    exportLoaderStarted = true;
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Get current date for filename and report
     const now = new Date();
@@ -2098,7 +2530,7 @@ const handleExportToPDF = () => {
             <div class="info-grid">
               <div class="info-item">
                 <div class="info-label">${t.division}</div>
-                <div class="info-value">${selectedDivision === 'all' ? t.allDivisions : (selectedDivision || 'N/A')}</div>
+                <div class="info-value">${selectedDivision === 'all' ? t.allDivisions : (selectedDivision || '-')}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Range / Round / Beat</div>
@@ -2132,14 +2564,14 @@ const handleExportToPDF = () => {
                   <div style="text-align: center;">
                     <div style="font-size: 14px; opacity: 0.9;">${t.totalArea}</div>
                     <div style="font-size: 36px; font-weight: 700;">${totalArea.toFixed(2)}</div>
-                    <div style="font-size: 14px; opacity: 0.9;">km²</div>
+                    <div style="font-size: 14px; opacity: 0.9;">ha</div>
                   </div>
                   <div style="text-align: center;">
                     <div style="font-size: 14px; opacity: 0.9;">Net Change (Latest)</div>
                     <div style="font-size: 36px; font-weight: 700; color: ${summaryStats.afforestedArea > summaryStats.degradedArea ? '#86efac' : '#fca5a5'};">
                       ${(summaryStats.afforestedArea - summaryStats.degradedArea).toFixed(2)}
                     </div>
-                    <div style="font-size: 14px; opacity: 0.9;">km²</div>
+                    <div style="font-size: 14px; opacity: 0.9;">ha</div>
                   </div>
                   <div style="text-align: center;">
                     <div style="font-size: 14px; opacity: 0.9;">Total Records</div>
@@ -2156,12 +2588,12 @@ const handleExportToPDF = () => {
               <div class="stats-grid">
                 <div class="stat-card degraded">
                   <div class="stat-label">${t.degraded}</div>
-                  <div class="stat-value">${summaryStats.degradedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
+                  <div class="stat-value">${summaryStats.degradedArea.toFixed(2)}<span class="stat-unit">ha</span></div>
                 </div>
                 
                 <div class="stat-card afforested">
                   <div class="stat-label">${t.afforested}</div>
-                  <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)}<span class="stat-unit">km²</span></div>
+                  <div class="stat-value">${summaryStats.afforestedArea.toFixed(2)}<span class="stat-unit">ha</span></div>
                 </div>
                 
                 
@@ -2169,7 +2601,7 @@ const handleExportToPDF = () => {
               <div class="stats-grid">
 <div class="stat-card total">
                   <div class="stat-label">${t.totalArea}</div>
-                  <div class="stat-value">${totalArea.toFixed(2)}<span class="stat-unit">km²</span></div>
+                  <div class="stat-value">${totalArea.toFixed(2)}<span class="stat-unit">ha</span></div>
                 </div>
                 
                 <div class="stat-card total">
@@ -2191,7 +2623,7 @@ const handleExportToPDF = () => {
                     <div style="margin-bottom: 15px;">
                       <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <span style="color: #ef4444; font-size: 13px;">${t.degraded}</span>
-                        <span style="font-weight: 600;">${stats.degradedArea.toFixed(2)} km²</span>
+                        <span style="font-weight: 600;">${stats.degradedArea.toFixed(2)} ha</span>
                       </div>
                       <div class="progress-bar">
                         <div class="progress-fill degraded" style="width: ${stats.degradedPercentage}%;"></div>
@@ -2199,7 +2631,7 @@ const handleExportToPDF = () => {
                       
                       <div style="display: flex; justify-content: space-between; margin: 10px 0 5px;">
                         <span style="color: #22c55e; font-size: 13px;">${t.afforested}</span>
-                        <span style="font-weight: 600;">${stats.afforestedArea.toFixed(2)} km²</span>
+                        <span style="font-weight: 600;">${stats.afforestedArea.toFixed(2)} ha</span>
                       </div>
                       <div class="progress-bar">
                         <div class="progress-fill" style="width: ${stats.afforestedPercentage}%;"></div>
@@ -2223,16 +2655,16 @@ const handleExportToPDF = () => {
                   <div class="month-title">${month}</div>
                   <div class="month-stat">
                     <span>${t.degraded}:</span>
-                    <span style="color: #ef4444; font-weight: 600;">${data.stats.degradedArea.toFixed(2)} km²</span>
+                    <span style="color: #ef4444; font-weight: 600;">${data.stats.degradedArea.toFixed(2)} ha</span>
                   </div>
                   <div class="month-stat">
                     <span>${t.afforested}:</span>
-                    <span style="color: #22c55e; font-weight: 600;">${data.stats.afforestedArea.toFixed(2)} km²</span>
+                    <span style="color: #22c55e; font-weight: 600;">${data.stats.afforestedArea.toFixed(2)} ha</span>
                   </div>
                   <div class="month-stat">
                     <span>${t.netChange}:</span>
                     <span style="color: ${data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444'}; font-weight: 600;">
-                      ${(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
+                      ${(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} ha
                     </span>
                   </div>
                   <div class="month-stat">
@@ -2254,7 +2686,6 @@ const handleExportToPDF = () => {
                   <th>${t.category}</th>
                   <th>${t.lat}</th>
                   <th>${t.lon}</th>
-                  <th>${t.areaKm}</th>
                   <th>${t.note}</th>
                   <th>${t.imageAvailable}</th>
                 </tr>
@@ -2262,13 +2693,12 @@ const handleExportToPDF = () => {
               <tbody>
                 ${filteredData.slice(0, 20).map(item => `
                   <tr>
-                    ${showDivisionColumn ? `<td>${item.division || selectedDivision || 'N/A'}</td>` : ''}
+                    ${showDivisionColumn ? `<td>${item.division || selectedDivision || '-'}</td>` : ''}
                     <td><span class="badge ${item.status ? 'badge-afforested' : 'badge-degraded'}">${item.status ? t.afforested : t.degraded}</span></td>
-                   <td>${item.NDVI_change && !isNaN(parseFloat(item.NDVI_change)) ? parseFloat(item.NDVI_change).toFixed(4) : 'N/A'}</td>
+                   <td>${item.NDVI_change && !isNaN(parseFloat(item.NDVI_change)) ? parseFloat(item.NDVI_change).toFixed(4) : '-'}</td>
                     <td>${item.change_category || (item.status ? t.afforested : t.degraded)}</td>
-                    <td>${item.latitude?.toFixed(6) || 'N/A'}</td>
-                    <td>${item.longitude?.toFixed(6) || 'N/A'}</td>
-                    <td>${item.area_sq_km?.toFixed(6) || '0.000000'}</td>
+                    <td>${item.latitude?.toFixed(6) || '-'}</td>
+                    <td>${item.longitude?.toFixed(6) || '-'}</td>
                     <td>${item.has_note ? 
                       '<span class="badge badge-note">✓ Note</span>' : 
                       '<span style="color: #94a3b8;">—</span>'
@@ -2290,11 +2720,11 @@ const handleExportToPDF = () => {
               <thead>
                 <tr>
                   <th>Month</th>
-                  <th>${t.degraded} (km²)</th>
-                  <th>${t.afforested} (km²)</th>
+                  <th>${t.degraded} (ha)</th>
+                  <th>${t.afforested} (ha)</th>
                   <th>${t.degraded} %</th>
                   <th>${t.afforested} %</th>
-                  <th>${t.netChange} (km²)</th>
+                  <th>${t.netChange} (ha)</th>
                   <th>${t.records_count}</th>
                 </tr>
               </thead>
@@ -2331,7 +2761,7 @@ const handleExportToPDF = () => {
             
             <!-- Footer -->
             <div class="footer">
-              <p style="margin: 5px 0; font-size: 14px; font-weight: 600;">FOREST PATROLLING & MONITORING SYSTEM</p>
+              <p style="margin: 5px 0; font-size: 14px; font-weight: 600;">FOREST MONITORING AND PATROLLING SYSTEM</p>
               <p style="margin: 5px 0;">© ${new Date().getFullYear()} Gujarat Forest Department | All Rights Reserved</p>
               <p style="margin: 5px 0;">Data Source: Sentinel-2 NDVI Satellite Analysis | Report Generated Automatically</p>
             </div>
@@ -2357,6 +2787,10 @@ const handleExportToPDF = () => {
   } catch (error) {
     console.error('Error generating PDF report:', error);
     alert('Failed to generate PDF report. Please try again.');
+  } finally {
+    if (exportLoaderStarted) {
+      window.dispatchEvent(new Event('global-data-loading-end'));
+    }
   }
 };
 
@@ -2365,6 +2799,43 @@ const handleExportToPDF = () => {
     if (tableNames.length > 0) {
       fetchFilteredData(tableNames);
     }
+  };
+
+  // Clear all filters and reset the dashboard to its initial state
+  const handleClearAll = () => {
+    // Reset date range
+    setStartDate(null);
+    setEndDate(null);
+
+    // Reset hierarchy
+    setSelectedDivision(null);
+    setSelectedRange(null);
+    setSelectedRound(null);
+    setSelectedBeat(null);
+    setHierarchyCoupeName(null);
+    _pendingCoupeName.current = null;
+    _pendingRange.current     = null;
+    _pendingRound.current     = null;
+    _pendingBeat.current      = null;
+
+    // Reset all fetched data
+    setMonthlyData({});
+    setCurrentTableData([]);
+    setSelectedMonth('');
+    setSummaryStats(null);
+    setTotalArea(0);
+    setTableNames([]);
+    setError(null);
+
+    // Reset table-level filters
+    setSearchTerm('');
+    setStatusFilter('');
+    setShowOnlyWithNotes(false);
+    setShowOnlyWithImages(false);
+    setPage(0);
+
+    // Force the hierarchy dropdown to remount so it visually resets
+    setDropdownResetKey(prev => prev + 1);
   };
 
   return (
@@ -2413,7 +2884,7 @@ const handleExportToPDF = () => {
           titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
           avatar={<Forest />}
         />
-        <NDVIMyCoups_dropdown onHierarchyChange={handleHierarchyChange} />
+        <NDVIMyCoups_dropdown key={dropdownResetKey} onHierarchyChange={handleHierarchyChange} />
       </Card>
 
       {/* Main Filters */}
@@ -2437,11 +2908,14 @@ const handleExportToPDF = () => {
       label={t.startDate}
       value={startDate}
       onChange={handleStartDateChange}
-      minDate={new Date(2020, 0, 1)}
-      maxDate={endDate ? new Date(Math.min(
-        new Date(2030, 11, 31).getTime(),
-        new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 2 : 11), 1).getTime()
-      )) : new Date(2030, 11, 31)}
+      shouldDisableDate={(date) => !isMonthAvailable(date)}
+      shouldDisableMonth={(date) => !isMonthAvailable(date)}
+      shouldDisableYear={(date) => !isYearAvailable(date.getFullYear())}
+      minDate={endDate ? new Date(Math.max(
+        new Date(2020, 0, 1).getTime(),
+        startOfMonth(new Date(endDate.getFullYear(), endDate.getMonth() - (selectedDivision === 'all' ? 3 : 12), 1)).getTime()
+      )) : new Date(2020, 0, 1)}
+      maxDate={endDate ? endOfMonth(endDate) : new Date(2030, 11, 31)}
       slotProps={{
         textField: {
           fullWidth: true,
@@ -2462,10 +2936,13 @@ const handleExportToPDF = () => {
       label={t.endDate}
       value={endDate}
       onChange={handleEndDateChange}
-      minDate={startDate || new Date(2020, 0, 1)}
+      shouldDisableDate={(date) => !isMonthAvailable(date)}
+      shouldDisableMonth={(date) => !isMonthAvailable(date)}
+      shouldDisableYear={(date) => !isYearAvailable(date.getFullYear())}
+      minDate={startDate ? startOfMonth(startDate) : new Date(2020, 0, 1)}
       maxDate={startDate ? new Date(Math.min(
         new Date(2030, 11, 31).getTime(),
-        new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 2 : 11), 1).getTime()
+        endOfMonth(new Date(startDate.getFullYear(), startDate.getMonth() + (selectedDivision === 'all' ? 3 : 12), 1)).getTime()
       )) : new Date(2030, 11, 31)}
       slotProps={{
         textField: {
@@ -2480,24 +2957,36 @@ const handleExportToPDF = () => {
   </LocalizationProvider>
 </Grid>
 
-<Grid item xs={12} md={2}>
-  <Button
-    variant="contained"
-    color="primary"
-    fullWidth
-    startIcon={<Send />}
-    onClick={handleSubmit}
-    disabled={!startDate || !endDate || (() => {
-      if (!startDate || !endDate) return true;
-      const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                        (endDate.getMonth() - startDate.getMonth());
-      const maxAllowed = selectedDivision === 'all' ? 3 : 12;
-      return monthsDiff > maxAllowed;
-    })()}
-    sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
-  >
-    {t.submit}
-  </Button>
+<Grid item xs={12} md={3}>
+  <Box display="flex" gap={1}>
+    <Button
+      variant="contained"
+      color="primary"
+      fullWidth
+      startIcon={<Send />}
+      onClick={handleSubmit}
+      disabled={!startDate || !endDate || (() => {
+        if (!startDate || !endDate) return true;
+        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                          (endDate.getMonth() - startDate.getMonth());
+        const maxAllowed = selectedDivision === 'all' ? 3 : 12;
+        return monthsDiff > maxAllowed;
+      })()}
+      sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', height: '40px' }}
+    >
+      {t.submit}
+    </Button>
+    <Button
+      variant="outlined"
+      color="error"
+      fullWidth
+      startIcon={<FilterList />}
+      onClick={handleClearAll}
+      sx={{ borderRadius: 2, height: '40px', whiteSpace: 'nowrap' }}
+    >
+      {t.clearAll}
+    </Button>
+  </Box>
 </Grid>
 
 {/* Error message for range exceeding limits */}
@@ -2598,7 +3087,7 @@ const handleExportToPDF = () => {
                         {t.totalArea}
                       </Typography>
                       <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                        {totalArea.toFixed(2)} km²
+                        {totalArea.toFixed(2)} ha
                       </Typography>
                     </Box>
                   </Grid>
@@ -2610,7 +3099,7 @@ const handleExportToPDF = () => {
                             {t.afforestedArea} {t.latest}
                           </Typography>
                           <Typography variant="h5" sx={{ fontWeight: 800, color: '#22c55e' }}>
-                            {summaryStats.afforestedArea.toFixed(2)} km²
+                            {summaryStats.afforestedArea.toFixed(2)} ha
                           </Typography>
                         </Box>
                       </Grid>
@@ -2620,7 +3109,7 @@ const handleExportToPDF = () => {
                             {t.degradedArea} {t.latest}
                           </Typography>
                           <Typography variant="h5" sx={{ fontWeight: 800, color: '#ef4444' }}>
-                            {summaryStats.degradedArea.toFixed(2)} km²
+                            {summaryStats.degradedArea.toFixed(2)} ha
                           </Typography>
                         </Box>
                       </Grid>
@@ -2648,7 +3137,7 @@ const handleExportToPDF = () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#14532d' }}>
                       {totalArea.toFixed(2)}
                       <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
-                        km²
+                        ha
                       </Typography>
                     </Typography>
                   </Box>
@@ -2668,7 +3157,7 @@ const handleExportToPDF = () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#ef4444' }}>
                       {summaryStats.degradedArea.toFixed(2)}
                       <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
-                        km²
+                        ha
                       </Typography>
                     </Typography>
                     
@@ -2690,7 +3179,7 @@ const handleExportToPDF = () => {
                     <Typography variant="h4" sx={{ fontWeight: 800, color: '#22c55e' }}>
                       {summaryStats.afforestedArea.toFixed(2)}
                       <Typography component="span" variant="body1" sx={{ ml: 0.5, color: 'text.secondary' }}>
-                        km²
+                        ha
                       </Typography>
                     </Typography>
                     
@@ -2759,10 +3248,10 @@ const handleExportToPDF = () => {
                       </Typography>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
-                          {t.degradedArea}: {stats.degradedArea.toFixed(2)} km²
+                          {t.degradedArea}: {stats.degradedArea.toFixed(2)} ha
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 , paddingLeft: '20px' }}>
-                          {t.afforestedArea}: {stats.afforestedArea.toFixed(2)} km²
+                          {t.afforestedArea}: {stats.afforestedArea.toFixed(2)} ha
                         </Typography>
                       </Box>
                       {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -2814,7 +3303,21 @@ const handleExportToPDF = () => {
               <Card sx={{ mb: 3, borderRadius: 2, bgcolor: 'transparent' }}>
                 <CardContent>
                   <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} md={4}>
+                      <FormControl fullWidth size="small">
+                        <Select
+                          displayEmpty
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          sx={{ borderRadius: 2 }}
+                        >
+                          <MenuItem value="">{t.allStatuses}</MenuItem>
+                          <MenuItem value="Degradation">{t.degradation}</MenuItem>
+                          <MenuItem value="Afforestation">{t.afforestation}</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
                       <TextField
                         fullWidth
                         placeholder={t.searchPlaceholder}
@@ -2828,7 +3331,7 @@ const handleExportToPDF = () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} md={4}>
 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
   <FormGroup row>
     {selectedDivision === 'all' && (
@@ -2876,6 +3379,7 @@ const handleExportToPDF = () => {
     startIcon={<FilterList />}
     onClick={() => {
       setSearchTerm('');
+      setStatusFilter('');
       setShowOnlyWithNotes(false);
       setShowOnlyWithImages(false);
       setShowDivisionColumn(false);
@@ -2913,7 +3417,6 @@ const handleExportToPDF = () => {
                         <TableCell><strong>{t.ndviChange}</strong></TableCell>
                         <TableCell><strong>{t.category}</strong></TableCell>
                         <TableCell><strong>{t.location}</strong></TableCell>
-                        <TableCell><strong>{t.areaKm}</strong></TableCell>
                         <TableCell onClick={() => handleSort('has_note')} sx={{ cursor: 'pointer' }}>
                           <Box display="flex" alignItems="center">
                             <strong>{t.hasNote}</strong>
@@ -2930,16 +3433,27 @@ const handleExportToPDF = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {paginatedData.length === 0 ? (
+                      {loading ? (
                         <TableRow>
-                          <TableCell colSpan={showDivisionColumn ? 10 : 9} align="center" sx={{ py: 6 }}>
+                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <CircularProgress size={36} />
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                                {t.loadingData}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ) : paginatedData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={showDivisionColumn ? 7 : 6} align="center" sx={{ py: 6 }}>
                             <Box sx={{ textAlign: 'center' }}>
                               <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                               <Typography variant="h6" color="text.secondary" gutterBottom>
                                 {t.noRecordsFound}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                {searchTerm || showOnlyWithNotes || showOnlyWithImages 
+                                {searchTerm || statusFilter || showOnlyWithNotes || showOnlyWithImages
                                   ? t.adjustFilters
                                   : t.noDataAvailable}
                               </Typography>
@@ -2952,7 +3466,7 @@ const handleExportToPDF = () => {
                             {showDivisionColumn && (
                               <TableCell>
                                 <Typography variant="body2" fontWeight={600} color="primary">
-                                  {row.division || 'N/A'}
+                                  {row.division || '-'}
                                 </Typography>
                               </TableCell>
                             )}
@@ -2968,7 +3482,7 @@ const handleExportToPDF = () => {
                               <Chip
   label={row.NDVI_change !== null && row.NDVI_change !== undefined && !isNaN(parseFloat(row.NDVI_change)) 
     ? parseFloat(row.NDVI_change).toFixed(4) 
-    : 'N/A'}
+    : '-'}
   color={!isNaN(parseFloat(row.NDVI_change)) && parseFloat(row.NDVI_change) < 0 ? 'error' : 'success'}
   size="small"
   variant="outlined"
@@ -2986,17 +3500,22 @@ const handleExportToPDF = () => {
                             <TableCell>
                               <Box>
                                 <Typography variant="caption" display="block" color="text.secondary">
-                                  {t.lat}: {row.latitude?.toFixed(6) || 'N/A'}
+                                  {t.lat}: {row.latitude?.toFixed(6) || '-'}
                                 </Typography>
                                 <Typography variant="caption" display="block" color="text.secondary">
-                                  {t.lon}: {row.longitude?.toFixed(6) || 'N/A'}
+                                  {t.lon}: {row.longitude?.toFixed(6) || '-'}
                                 </Typography>
+                                {row.latitude && row.longitude && (
+                                  <Button
+                                    size="small"
+                                    startIcon={<DirectionIcon />}
+                                    onClick={() => openCoordinatesInMap(row.latitude, row.longitude)}
+                                    sx={{ mt: 0.5, textTransform: 'none', fontSize: 11 }}
+                                  >
+                                    {language === 'gu' ? 'દિશા મેળવો' : 'Get Directions'}
+                                  </Button>
+                                )}
                               </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                {row.area_sq_km?.toFixed(6) || '0.000000'}
-                              </Typography>
                             </TableCell>
                             <TableCell>
                               {row.has_note ? (
@@ -3133,15 +3652,15 @@ const handleExportToPDF = () => {
                           <>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                               <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
-                                {t.degradedAreaValue}: {data.stats.degradedArea?.toFixed(2)} km²
+                                {t.degradedAreaValue}: {data.stats.degradedArea?.toFixed(2)} ha
                               </Typography>
                               <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600, paddingLeft: '20px' }}>
-                                {t.afforestedAreaValue}: {data.stats.afforestedArea?.toFixed(2)} km²
+                                {t.afforestedAreaValue}: {data.stats.afforestedArea?.toFixed(2)} ha
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                               <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>
-                                {t.netChange}: {(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} km²
+                                {t.netChange}: {(data.stats.afforestedArea - data.stats.degradedArea).toFixed(2)} ha
                               </Typography>
                               <Typography variant="caption" sx={{ 
                                 color: data.stats.afforestedArea > data.stats.degradedArea ? '#22c55e' : '#ef4444',
@@ -3207,17 +3726,17 @@ const handleExportToPDF = () => {
                       </Grid> */}
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>{t.category}:</strong> {selectedRecord.change_category || 'N/A'}
+                          <strong>{t.category}:</strong> {selectedRecord.change_category || '-'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>{t.ndviChange}:</strong> {selectedRecord.NDVI_change?.toFixed(4) || 'N/A'}
+                          <strong>{t.ndviChange}:</strong> {selectedRecord.NDVI_change?.toFixed(4) || '-'}
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="body2">
-                          <strong>{t.areaKm}:</strong> {selectedRecord.area_sq_km?.toFixed(6) || 'N/A'} km²
+                          <strong>{t.areaKm}:</strong> {selectedRecord.area_sq_km?.toFixed(6) || '-'} ha
                         </Typography>
                       </Grid>
                     </Grid>
@@ -3241,8 +3760,33 @@ const handleExportToPDF = () => {
                           primary={t.coordinates}
                           secondary={
                             <>
-                              <Typography variant="body2">{t.lat}: {selectedRecord.latitude?.toFixed(6) || 'N/A'}</Typography>
-                              <Typography variant="body2">{t.lon}: {selectedRecord.longitude?.toFixed(6) || 'N/A'}</Typography>
+                              <Typography
+                                variant="body2"
+                                component="button"
+                                onClick={() => openCoordinatesInMap(selectedRecord.latitude, selectedRecord.longitude)}
+                                style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer', color: '#1976d2', textDecoration: 'underline' }}
+                              >
+                                {t.lat}: {selectedRecord.latitude?.toFixed(6) || '-'}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                component="button"
+                                onClick={() => openCoordinatesInMap(selectedRecord.latitude, selectedRecord.longitude)}
+                                style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer', color: '#1976d2', textDecoration: 'underline', display: 'block' }}
+                              >
+                                {t.lon}: {selectedRecord.longitude?.toFixed(6) || '-'}
+                              </Typography>
+                              {selectedRecord.latitude && selectedRecord.longitude && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<DirectionIcon />}
+                                  onClick={() => openCoordinatesInMap(selectedRecord.latitude, selectedRecord.longitude)}
+                                  sx={{ mt: 1, textTransform: 'none' }}
+                                >
+                                  {language === 'gu' ? 'દિશા મેળવો' : 'Get Directions'}
+                                </Button>
+                              )}
                             </>
                           }
                         />
@@ -3277,9 +3821,27 @@ const handleExportToPDF = () => {
                           <ListItemText
                             primary={t.imageAvailable}
                             secondary={
-                              <Typography color="primary" sx={{ cursor: 'pointer' }} onClick={() => setImageModalOpen(true)}>
-                                {t.clickToView}
-                              </Typography>
+                              <>
+                                <Box
+                                  component="img"
+                                  src={resolveImageSrc(selectedRecord.image_data)}
+                                  alt={`NDVI - ${selectedRecord.pixle_id || 'image'}`}
+                                  onClick={() => setImageModalOpen(true)}
+                                  sx={{
+                                    mt: 1,
+                                    width: 140,
+                                    height: 100,
+                                    objectFit: 'cover',
+                                    borderRadius: 1,
+                                    border: '1px solid #e2e8f0',
+                                    cursor: 'pointer',
+                                    display: 'block'
+                                  }}
+                                />
+                                <Typography color="primary" sx={{ cursor: 'pointer', mt: 0.5 }} onClick={() => setImageModalOpen(true)}>
+                                  {t.clickToView}
+                                </Typography>
+                              </>
                             }
                           />
                         </ListItem>
@@ -3311,7 +3873,7 @@ const handleExportToPDF = () => {
             <Box display="flex" justifyContent="center" sx={{ minHeight: '60vh' }}>
               <Box
                 component="img"
-                src={`data:image/jpeg;base64,${selectedRecord.image_data}`}
+                src={resolveImageSrc(selectedRecord.image_data)}
                 alt={`NDVI Image - Pixel ${selectedRecord.pixle_id}`}
                 sx={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
               />
@@ -3324,6 +3886,18 @@ const handleExportToPDF = () => {
           )}
         </DialogContent>
         <DialogActions>
+          {selectedRecord?.image_data && (
+            <Button
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = resolveImageSrc(selectedRecord.image_data);
+                link.download = `ndvi_${selectedRecord.pixle_id || 'image'}.jpg`;
+                link.click();
+              }}
+            >
+              {t.download}
+            </Button>
+          )}
           <Button onClick={() => setImageModalOpen(false)}>{t.close}</Button>
         </DialogActions>
       </Dialog>
@@ -3331,7 +3905,7 @@ const handleExportToPDF = () => {
       {/* Footer */}
       <Box sx={{ mt: 6, pt: 4, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          <strong>FOREST PATROLLING & MONITORING SYSTEM</strong> © {new Date().getFullYear()} | 
+          <strong>FOREST MONITORING AND PATROLLING SYSTEM</strong> © {new Date().getFullYear()} | 
           Data Source: Sentinel-2 Satellite NDVI Analysis
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block">

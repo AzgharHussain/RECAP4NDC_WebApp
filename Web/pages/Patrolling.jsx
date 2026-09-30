@@ -4,8 +4,9 @@ import {
   Card, Row, Col, Statistic, Progress, Typography, Pagination, 
   Space, Spin, Alert, message 
 } from "antd";
-import { 
-  SearchOutlined, EyeOutlined, FilterOutlined, ReloadOutlined
+import {
+  SearchOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, DownloadOutlined,
+  LeftOutlined, RightOutlined
 } from "@ant-design/icons";
 import { FaCalendarCheck, FaRoute, FaUsers, FaSun, FaMoon, FaShieldAlt, FaUserTie, FaTrophy, FaMapMarkedAlt } from "react-icons/fa";
 import "./PatrolIncidentLogs.css";
@@ -15,7 +16,8 @@ import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
 import { API_BASE_URL } from "../config";
 import axios from "axios";
-import { getAuthToken, getAuthHeaders, handleUnauthorized } from "../utils/authUtils";
+import { getAuthToken, getAuthHeaders, handleUnauthorized, getUserDivision, getUserRange, getUserRound, getUserBeat, matchesDivision } from "../utils/authUtils";
+import { capitalizeFirst } from "../utils/textFormat";
 
 import startIconImg from "../assets/marker-icon.png";
 import endIconImg from "../assets/marker-icon-end.png";
@@ -65,6 +67,79 @@ const stripHtmlTags = (htmlString) => {
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+const parsePatrolTimestamp = (datetime) => {
+  if (!datetime) return null;
+  if (datetime instanceof Date) return Number.isNaN(datetime.getTime()) ? null : datetime;
+  if (typeof datetime === "string") {
+    const match = datetime.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [, day, month, year, hour, minute] = match;
+      return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    }
+  }
+  const date = new Date(datetime);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getPatrolDateTimeParts = (datetime) => {
+  if (!datetime) return null;
+  if (typeof datetime === "string") {
+    const match = datetime.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [, day, month, year, hour, minute] = match;
+      return { date: `${day}-${month}-${year}`, time: `${hour}:${minute}` };
+    }
+  }
+  const date = parsePatrolTimestamp(datetime);
+  if (!date) return null;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return {
+    date: `${parts.day}-${parts.month}-${parts.year}`,
+    time: `${parts.hour}:${parts.minute}`,
+  };
+};
+
+// Display patrol code without the leading "PAT-" prefix
+const formatPatrolId = (code, id) => {
+  if (code) return String(code).replace(/^PAT-/i, '');
+  return id != null && id !== '' ? String(id) : '-';
+};
+
+// Resolve base64 image data into a usable src — handles both raw base64
+// and already-prefixed "data:..." / "http..." strings.
+const resolveImgSrc = (img) => {
+  if (!img?.image_data) return '';
+  const s = String(img.image_data).trim();
+  if (s.startsWith('data:') || s.startsWith('http')) return s;
+  return `data:${img.image_type || 'image/jpeg'};base64,${s}`;
+};
+
+const getPatrolDateForFilter = (datetime) => {
+  const parts = getPatrolDateTimeParts(datetime);
+  if (!parts) return null;
+  const [day, month, year] = parts.date.split("-");
+  return `${year}-${month}-${day}`;
+};
+
+const getPatrolHours = (startTime, endTime) => {
+  const start = parsePatrolTimestamp(startTime);
+  const end = parsePatrolTimestamp(endTime);
+  if (!start || !end) return 0;
+  const hours = (end - start) / (1000 * 60 * 60);
+  return Number.isFinite(hours) && hours >= 0 ? hours : 0;
+};
 
 const startIcon = new L.Icon({
   iconUrl: startIconImg,
@@ -116,8 +191,8 @@ function PatrolMap({ patrol }) {
     >
       <ResizeMapOnShow coords={routeCoords} />
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+        attribution='&copy; <a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by EOX'
+        url="https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
       />
       <Marker position={start} icon={startIcon}>
         <Popup>Start</Popup>
@@ -205,12 +280,7 @@ const PatrolAnalysisDashboard = ({
     const avgStaff = totalStaff / totalPatrols;
 
     // Calculate total hours
-    const totalHours = filtered.reduce((sum, item) => {
-      const start = new Date(item.start_time);
-      const end = new Date(item.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
-      return sum + hours;
-    }, 0);
+    const totalHours = filtered.reduce((sum, item) => sum + getPatrolHours(item.start_time, item.end_time), 0);
     const avgHours = totalHours / totalPatrols;
 
     // Get top officer for this type
@@ -228,7 +298,7 @@ const PatrolAnalysisDashboard = ({
       avgDistance: avgDistance.toFixed(1),
       avgHours: avgHours.toFixed(1),
       avgStaff: avgStaff.toFixed(1),
-      topOfficer: topOfficer ? `${topOfficer[0]} (${topOfficer[1]} patrols)` : 'N/A'
+      topOfficer: topOfficer ? `${topOfficer[0]} (${topOfficer[1]} patrols)` : '-'
     };
   };
 
@@ -242,12 +312,7 @@ const PatrolAnalysisDashboard = ({
   const avgDistanceOverall = totalPatrols > 0 ? (totalDistance / totalPatrols).toFixed(1) : 0;
   
   // Calculate total hours
-  const totalHours = patrolData.reduce((sum, item) => {
-    const start = new Date(item.start_time);
-    const end = new Date(item.end_time);
-    const hours = (end - start) / (1000 * 60 * 60);
-    return sum + hours;
-  }, 0);
+  const totalHours = patrolData.reduce((sum, item) => sum + getPatrolHours(item.start_time, item.end_time), 0);
   
   // Get unique officers
   const uniqueOfficers = [...new Set(patrolData.map(item => item.patrol_officer_name))];
@@ -553,7 +618,7 @@ const PatrolAnalysisDashboard = ({
                     <div className="patrol-top-officer">
                       <FaUserTie />
                       <span>{language === "gu" ? "શ્રેષ્ઠ અધિકારી:" : "Top Officer:"}</span>
-                      <strong>{hasData && stats.topOfficer ? stats.topOfficer : 'N/A'}</strong>
+                      <strong>{hasData && stats.topOfficer ? stats.topOfficer : '-'}</strong>
                     </div>
                   </div>
                 </div>
@@ -638,21 +703,38 @@ const PatrolIncidentLogs = () => {
   const [dashboardData, setDashboardData] = useState([]);
   const [selectedPatrol, setSelectedPatrol] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  // Image viewer: { open, index } — index into selectedPatrol.images
+  const [imageViewer, setImageViewer] = useState({ open: false, index: 0 });
+  const [isExportConfirmVisible, setIsExportConfirmVisible] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const { language } = useLanguage();
   const [showmaproute, setShowMapRoute] = useState(false);
   
   // Filter states
+  // Initialise hierarchy filters *eagerly* from localStorage so the very first
+  // fetchAllData call (in the useEffect below) already has the correct values.
+  // getUserDivision/Range/Beat are synchronous reads — safe to call at render time.
+  const _initDiv = getUserDivision();
+  const _initRng = _initDiv ? getUserRange() : null;
+  const _initBts = _initDiv ? getUserBeat() : null;
+  const _initRnd = _initDiv ? (getUserRound() || "") : "";
+
+  const [_lockedDivision, _setLockedDivision] = useState(_initDiv);
+  const [_lockedRange, _setLockedRange] = useState(_initRng);
+  const [_lockedBeat, _setLockedBeat] = useState(_initBts);
   const [searchText, setSearchText] = useState("");
   const [startFilter, setStartFilter] = useState(null);
   const [endFilter, setEndFilter] = useState(null);
   const [typeFilter, setTypeFilter] = useState("");
-  const [divisionFilter, setDivisionFilter] = useState("");
-  const [rangeFilter, setRangeFilter] = useState("");
-  const [beatFilter, setBeatFilter] = useState("");
+  const [divisionFilter, setDivisionFilter] = useState(_initDiv || "");
+  const [rangeFilter, setRangeFilter] = useState(_initRng || "");
+  const [beatFilter, setBeatFilter] = useState(_initBts || "");
   const [forestId, setForestId] = useState("");
-  const [roundFilter, setRoundFilter] = useState("");
+  const [roundFilter, setRoundFilter] = useState(_initRnd);
+  const [patrolLocationFilter, setPatrolLocationFilter] = useState("");
+  const [patrolLocations, setPatrolLocations] = useState([]);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -681,6 +763,11 @@ const PatrolIncidentLogs = () => {
   const [coupeFilter, setCoupeFilter] = useState("");
   
   const filterTimeoutRef = useRef(null);
+  // Keep latest pageSize in a ref so pagination changes don't invalidate
+  // memoized callbacks — otherwise the debounced search effect refires and
+  // races/resets the page the user clicked (shows "no data" on page 2+).
+  const pageSizeRef = useRef(pageSize);
+  pageSizeRef.current = pageSize;
 
   // In your buildFilters function in PatrolIncidentLogs.js
 const buildFilters = useCallback(() => {
@@ -704,9 +791,10 @@ const buildFilters = useCallback(() => {
   if (roundFilter) filters.round = roundFilter;
   if (beatFilter) filters.beat = beatFilter;
   if (forestId) filters.forest_id = forestId;
+  if (patrolLocationFilter) filters.patrolling_location = patrolLocationFilter;
   
   return filters;
-}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
+}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId, patrolLocationFilter]);
 
 const applyPatrolFilters = useCallback((records) => {
   const search = searchText?.trim().toLowerCase();
@@ -718,19 +806,23 @@ const applyPatrolFilters = useCallback((records) => {
 
     if (search) {
       const officer = (item.patrol_officer_name || '').toLowerCase();
-      if (!officer.includes(search)) return false;
+      const code = (item.patrol_code || '').toLowerCase();
+      if (!officer.includes(search) && !code.includes(search)) return false;
     }
 
     if (typeFilter && item.type_name !== typeFilter) return false;
-    if (divisionFilter && item.division !== divisionFilter) return false;
+    if (divisionFilter && !matchesDivision(item.division || '', divisionFilter)) return false;
     if (rangeFilter && item.range !== rangeFilter) return false;
     if (roundFilter && item.round !== roundFilter) return false;
     if (beatFilter && item.beat !== beatFilter) return false;
     if (forestId && String(item.forest_id || '') !== String(forestId)) return false;
+    if (patrolLocationFilter && (item.patrolling_location || '').trim().toLowerCase() !== patrolLocationFilter.trim().toLowerCase()) return false;
 
     if (startDate || endDate) {
-      const start = item.start_time ? dayjs(item.start_time) : null;
-      const end = item.end_time ? dayjs(item.end_time) : start;
+      const parsedStart = parsePatrolTimestamp(item.start_time);
+      const parsedEnd = parsePatrolTimestamp(item.end_time) || parsedStart;
+      const start = parsedStart ? dayjs(parsedStart) : null;
+      const end = parsedEnd ? dayjs(parsedEnd) : start;
       if (!start?.isValid()) return false;
       if (startDate && end.isBefore(startDate)) return false;
       if (endDate && start.isAfter(endDate)) return false;
@@ -738,7 +830,7 @@ const applyPatrolFilters = useCallback((records) => {
 
     return true;
   });
-}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId]);
+}, [searchText, startFilter, endFilter, typeFilter, divisionFilter, rangeFilter, roundFilter, beatFilter, forestId, patrolLocationFilter]);
 
   // Fetch filtered data for dashboard (all records without pagination)
   // In fetchDashboardData function, add the same filtering logic
@@ -752,8 +844,9 @@ const fetchDashboardData = useCallback(async () => {
     if (!token) return;
     
     if (!hasActiveFilters) {
-      // Fetch all patrol data without filters
-      const response = await fetch(`${API_BASE_URL}/api/patrol-info-all`, {
+      // Fetch all patrol data without filters — skip geom and images to
+      // keep the dashboard payload small (analysis only needs metadata).
+      const response = await fetch(`${API_BASE_URL}/api/patrol-info-all?include_images=false&include_geom=false`, {
         method: "GET",
         headers: getAuthHeaders({ "Content-Type": "application/json" }),
       });
@@ -762,7 +855,7 @@ const fetchDashboardData = useCallback(async () => {
       if (handleUnauthorized(response.status)) return;
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      
+
       let formattedData = Array.isArray(data.data) ? data.data : [];
       formattedData = formattedData
         .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
@@ -770,30 +863,35 @@ const fetchDashboardData = useCallback(async () => {
           key: item.patrol_id || `patrol-${index}`,
           ...item,
           patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-          division: stripHtmlTags(item.division),
-          range: stripHtmlTags(item.range),
-          beat: stripHtmlTags(item.beat),
+          division: stripHtmlTags(item.division || item.Division),
+          range: stripHtmlTags(item.range || item.Range),
+          beat: stripHtmlTags(item.beat || item.Beat),
+          patrolling_location: stripHtmlTags(item.patrolling_location || item.patrolling_Location || item.patrollingLocation),
+          current_location_distict: stripHtmlTags(item.current_location_distict || item.current_location_district || item.currentLocationDistrict),
+          current_location_village: stripHtmlTags(item.current_location_village || item.currentLocationVillage),
           start_location: stripHtmlTags(item.start_location),
           end_location: stripHtmlTags(item.end_location)
         }));
-      
+
       // ========== ADD SAME DATE FILTER HERE ==========
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
         const selectedDate = startFilter.format('YYYY-MM-DD');
         formattedData = formattedData.filter(item => {
-          const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
-          const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+          const itemStartDate = getPatrolDateForFilter(item.start_time);
+          const itemEndDate = getPatrolDateForFilter(item.end_time);
           return itemStartDate === selectedDate || itemEndDate === selectedDate;
         });
       }
       // ========== END OF ADDED CODE ==========
-      
+
       setDashboardData(applyPatrolFilters(formattedData));
     } else {
       // Similar filtering for filtered data
       const queryParams = new URLSearchParams({
         page: '1',
         limit: '10000',
+        include_images: 'false',
+        include_geom: 'false',
         ...filters
       });
 
@@ -807,7 +905,7 @@ const fetchDashboardData = useCallback(async () => {
       if (handleUnauthorized(response.status)) return;
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      
+
       let formattedData = Array.isArray(data.data) ? data.data : [];
       formattedData = formattedData
         .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
@@ -815,19 +913,22 @@ const fetchDashboardData = useCallback(async () => {
           key: item.patrol_id || `patrol-filtered-${index}`,
           ...item,
           patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-          division: stripHtmlTags(item.division),
-          range: stripHtmlTags(item.range),
-          beat: stripHtmlTags(item.beat),
+          division: stripHtmlTags(item.division || item.Division),
+          range: stripHtmlTags(item.range || item.Range),
+          beat: stripHtmlTags(item.beat || item.Beat),
+          patrolling_location: stripHtmlTags(item.patrolling_location || item.patrolling_Location || item.patrollingLocation),
+          current_location_distict: stripHtmlTags(item.current_location_distict || item.current_location_district || item.currentLocationDistrict),
+          current_location_village: stripHtmlTags(item.current_location_village || item.currentLocationVillage),
           start_location: stripHtmlTags(item.start_location),
           end_location: stripHtmlTags(item.end_location)
         }));
-      
+
       // ========== ADD SAME DATE FILTER HERE ==========
       if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
         const selectedDate = startFilter.format('YYYY-MM-DD');
         formattedData = formattedData.filter(item => {
-          const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
-          const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+          const itemStartDate = getPatrolDateForFilter(item.start_time);
+          const itemEndDate = getPatrolDateForFilter(item.end_time);
           return itemStartDate === selectedDate || itemEndDate === selectedDate;
         });
       }
@@ -871,7 +972,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     if (handleUnauthorized(response.status)) return;
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
-    
+
     let formattedData = Array.isArray(data.data) ? data.data : [];
     formattedData = formattedData
       .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
@@ -879,13 +980,16 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
         key: item.patrol_id || `patrol-${index}`,
         ...item,
         patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
-        division: stripHtmlTags(item.division),
-        range: stripHtmlTags(item.range),
-        beat: stripHtmlTags(item.beat),
+        division: stripHtmlTags(item.division || item.Division),
+        range: stripHtmlTags(item.range || item.Range),
+        beat: stripHtmlTags(item.beat || item.Beat),
+        patrolling_location: stripHtmlTags(item.patrolling_location || item.patrolling_Location || item.patrollingLocation),
+        current_location_distict: stripHtmlTags(item.current_location_distict || item.current_location_district || item.currentLocationDistrict),
+        current_location_village: stripHtmlTags(item.current_location_village || item.currentLocationVillage),
         start_location: stripHtmlTags(item.start_location),
         end_location: stripHtmlTags(item.end_location)
       }));
-    
+
     // ========== ADD THE DATE FILTER HERE ==========
     // Filter for same date selection
     if (startFilter && endFilter && startFilter.format('YYYY-MM-DD') === endFilter.format('YYYY-MM-DD')) {
@@ -893,8 +997,8 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       const originalLength = formattedData.length;
       
       formattedData = formattedData.filter(item => {
-        const itemStartDate = new Date(item.start_time).toISOString().split('T')[0];
-        const itemEndDate = new Date(item.end_time).toISOString().split('T')[0];
+        const itemStartDate = getPatrolDateForFilter(item.start_time);
+        const itemEndDate = getPatrolDateForFilter(item.end_time);
         return itemStartDate === selectedDate || itemEndDate === selectedDate;
       });
       
@@ -902,7 +1006,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       // Update pagination counts based on filtered data
       if (data.pagination) {
         setTotalItems(formattedData.length);
-        setTotalPages(Math.ceil(formattedData.length / pageSize));
+        setTotalPages(Math.ceil(formattedData.length / pageSizeRef.current));
       }
     } else {
       // Use original pagination from backend for date ranges
@@ -929,7 +1033,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     setPaginationLoading(false);
     setIsFiltering(false);
   }
-}, [buildFilters, startFilter, endFilter, pageSize]); // IMPORTANT: Add startFilter and endFilter to dependencies
+}, [buildFilters, startFilter, endFilter]); // IMPORTANT: Add startFilter and endFilter to dependencies
 
   // Combined fetch function that updates both table and dashboard
   const fetchAllData = useCallback(async (page = 1, limit = 5) => {
@@ -942,8 +1046,8 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
   // Handle search with debounce
   const handleSearch = useCallback(() => {
     setCurrentPage(1);
-    fetchAllData(1, pageSize);
-  }, [fetchAllData, pageSize]);
+    fetchAllData(1, pageSizeRef.current);
+  }, [fetchAllData]);
 
   // Debounced search effect
   useEffect(() => {
@@ -999,11 +1103,12 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     setEndFilter(null);
     setTypeFilter("");
     setForestId("");
-    setDivisionFilter("");
-    setRangeFilter("");
-    setRoundFilter("");
-    setBeatFilter("");
+    setDivisionFilter(_lockedDivision || "");
+    setRangeFilter(_lockedRange || "");
+    setRoundFilter(_lockedDivision ? (getUserRound() || "") : "");
+    setBeatFilter(_lockedBeat || "");
     setCoupeFilter("");
+    setPatrolLocationFilter("");
     setFilteredRanges([]);
     setFilteredBeats([]);
     setSelectedBeatForCoverage(null);
@@ -1020,11 +1125,32 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     fetchPatrolData(page, newPageSize);
   };
 
-  // Initial load
+  // Load ALL distinct patrol locations once (Inside/Outside Forest etc.) —
+  // not just the ones on the current table page.
+  useEffect(() => {
+    axios.get(`${API_BASE_URL}/api/patrolling-locations`)
+      .then((res) => {
+        const data = res.data;
+        if (Array.isArray(data?.data)) setPatrolLocations(data.data);
+        else if (Array.isArray(data)) setPatrolLocations(data);
+      })
+      .catch((err) => {
+        console.error("Error fetching patrol locations:", err);
+        // Fallback: build from loaded page data
+        const locations = [...new Set(
+          patrolData.map(item => item.patrolling_location).filter(Boolean)
+        )].sort();
+        setPatrolLocations(locations);
+      });
+  }, []);
+
+  // Initial load — runs after hierarchy filter states are already set from localStorage.
+  // fetchAllData is called here so it uses the correct division/range/beat filters
+  // on the very first fetch (beat officer sees only their own data immediately).
   useEffect(() => {
     fetchAllData(1, pageSize);
     
-    // Fetch hierarchy data
+    // Fetch hierarchy dropdown data
     axios.get(`${API_BASE_URL}/api/forest-types`).then((res) => setForestTypes(res.data)).catch((err) => console.error(err));
     axios.get(`${API_BASE_URL}/api/patrolling-division`).then((res) => {
       const data = res.data;
@@ -1046,7 +1172,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       else if (data && data.data && Array.isArray(data.data)) setBeats1(data.data);
       else setBeats1([]);
     }).catch((err) => console.error("Error fetching beats:", err));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDivisionFilterChange = (value) => {
     setDivisionFilter(value);
@@ -1139,15 +1265,9 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
   };
 
   const formatDateTime = (datetime) => {
-  const date = new Date(datetime);
-  // Use UTC methods to display the date exactly as stored in the database
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const year = date.getUTCFullYear();
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
-};
+    if (!datetime) return { date: "-", time: "-" };
+    return getPatrolDateTimeParts(datetime) || { date: "-", time: "-" };
+  };
 
   // Fetch beat coverage data using existing startFilter and endFilter
   const fetchBeatCoverageData = async () => {
@@ -1224,15 +1344,18 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     ]);
 
     const formatDateTime = (dateTime) => {
-      if (!dateTime) return "N/A";
-      return new Date(dateTime).toLocaleString();
+      if (!dateTime) return "-";
+      const parts = getPatrolDateTimeParts(dateTime);
+      return parts ? `${parts.date} ${parts.time}` : "-";
     };
 
     const formatDuration = (startTime, endTime) => {
-      if (!startTime || !endTime) return "N/A";
-      const start = new Date(startTime);
-      const end = new Date(endTime);
+      if (!startTime || !endTime) return "-";
+      const start = parsePatrolTimestamp(startTime);
+      const end = parsePatrolTimestamp(endTime);
+      if (!start || !end) return "-";
       const durationMs = end - start;
+      if (!Number.isFinite(durationMs) || durationMs < 0) return "-";
       const hours = Math.floor(durationMs / (1000 * 60 * 60));
       const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
       return `${hours}h ${minutes}m`;
@@ -1246,15 +1369,18 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       "Area (sq m)": coverageData.coupe_area_sq_m,
       "Patrol Covered Area (sq m)": coverageData.patrol_area_sq_m,
       "Coverage %": coverageData.coverage_percentage,
-      "Date Range": `${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}`
+      "Date Range": `${startFilter ? startFilter.format('YYYY-MM-DD') : '-'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : '-'}`
     }];
 
     const patrolsData = coveragePatrols.map((patrol) => ({
-      "Patrol ID": patrol.patrol_id,
+      "Patrol ID": formatPatrolId(patrol.patrol_code, patrol.patrol_id),
       "Start Time": formatDateTime(patrol.start_time),
       "End Time": formatDateTime(patrol.end_time),
       "Duration": formatDuration(patrol.start_time, patrol.end_time),
       "Patrol Officer": patrol.patrol_officer_name,
+      "Patrol Location": patrol.patrolling_location || "-",
+      "District": patrol.current_location_distict || "-",
+      "Village": patrol.current_location_village || "-",
       "Distance (kms)": patrol.distance_kms,
       "Start Location": patrol.start_location,
       "End Location": patrol.end_location,
@@ -1270,7 +1396,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     }
 
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
-    const fileName = `${filterValue}_patrol_coverage_${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'}_to_${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}.xlsx`;
+    const fileName = `${filterValue}_patrol_coverage_${startFilter ? startFilter.format('YYYY-MM-DD') : '-'}_to_${endFilter ? endFilter.format('YYYY-MM-DD') : '-'}.xlsx`;
     saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
   };
 
@@ -1295,6 +1421,24 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
     }
   };
 
+  const getResolvedPatrolLocation = (record) => {
+    const location = record.patrolling_location || record.patrolling_Location || record.patrollingLocation;
+    if (location) return location;
+    if (record.division || record.range || record.beat) return "Inside Forest";
+    if (record.current_location_distict || record.current_location_district || record.currentLocationDistrict || record.current_location_village || record.currentLocationVillage) return "Outside Forest";
+    return "";
+  };
+
+  const isInsideForestPatrol = (record) => {
+    const loc = getResolvedPatrolLocation(record).toLowerCase();
+    return loc.includes("inside") || loc.includes("forest") || (!loc && (record.division || record.range || record.beat));
+  };
+
+  const isOutsideForestPatrol = (record) => {
+    const loc = getResolvedPatrolLocation(record).toLowerCase();
+    return loc.includes("outside") || loc.includes("village") || loc.includes("city") || (!isInsideForestPatrol(record) && (record.current_location_distict || record.current_location_district || record.currentLocationDistrict || record.current_location_village || record.currentLocationVillage));
+  };
+
   const columns = [
     {
       title: language === "gu" ? "ક્રમાંક" : "Sr. No.",
@@ -1302,6 +1446,14 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       align: "center",
       width: 80,
       render: (text, record, index) => (currentPage - 1) * pageSize + index + 1,
+    },
+    {
+      title: language === "gu" ? "પેટ્રોલ ID" : "Patrol ID",
+      dataIndex: "patrol_code",
+      key: "patrol_code",
+      align: "center",
+      width: 180,
+      render: (value, record) => formatPatrolId(value, record.patrol_id),
     },
     {
       title: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type",
@@ -1321,44 +1473,68 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       dataIndex: "division",
       key: "division",
       align: "center",
+      render: (value, record) => isInsideForestPatrol(record) ? (value || record.Division || "-") : "-",
     },
     {
       title: language === "gu" ? "રેન્જ" : "Range",
       dataIndex: "range",
       key: "range",
       align: "center",
+      render: (value, record) => isInsideForestPatrol(record) ? (value || record.Range || "-") : "-",
     },
     {
       title: language === "gu" ? "બીટ" : "Beat",
       dataIndex: "beat",
       key: "beat",
       align: "center",
+      render: (value, record) => isInsideForestPatrol(record) ? (value || record.Beat || "-") : "-",
+    },
+    {
+      title: language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location",
+      dataIndex: "patrolling_location",
+      key: "patrolling_location",
+      align: "center",
+      render: (value, record) => value || getResolvedPatrolLocation(record) || "-",
+    },
+    {
+      title: language === "gu" ? "જિલ્લો" : "District",
+      dataIndex: "current_location_distict",
+      key: "current_location_distict",
+      align: "center",
+      render: (value, record) => isOutsideForestPatrol(record) ? (value || record.current_location_district || record.currentLocationDistrict || "-") : "-",
+    },
+    {
+      title: language === "gu" ? "ગામ" : "Village",
+      dataIndex: "current_location_village",
+      key: "current_location_village",
+      align: "center",
+      render: (value, record) => isOutsideForestPatrol(record) ? (value || record.currentLocationVillage || "-") : "-",
     },
     {
       title: language === "gu" ? "શરૂઆતની તારીખ" : "Search by Start Date",
       key: "start_date",
       align: "center",
-      render: (record) => formatDateTime(record.start_time).date,
-      sorter: (a, b) => new Date(a.start_time) - new Date(b.start_time),
+      render: (_, record) => formatDateTime(record.start_time).date,
+      sorter: (a, b) => (parsePatrolTimestamp(a.start_time)?.getTime() || 0) - (parsePatrolTimestamp(b.start_time)?.getTime() || 0),
     },
     {
       title: language === "gu" ? "શરૂઆતનો સમય" : "Start Time",
       key: "start_time",
       align: "center",
-      render: (record) => formatDateTime(record.start_time).time,
+      render: (_, record) => formatDateTime(record.start_time).time,
     },
     {
       title: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date",
       key: "end_date",
       align: "center",
-      render: (record) => formatDateTime(record.end_time).date,
-      sorter: (a, b) => new Date(a.end_time) - new Date(b.end_time),
+      render: (_, record) => formatDateTime(record.end_time).date,
+      sorter: (a, b) => (parsePatrolTimestamp(a.end_time)?.getTime() || 0) - (parsePatrolTimestamp(b.end_time)?.getTime() || 0),
     },
     {
       title: language === "gu" ? "સમાપ્તિ સમય" : "End Time",
       key: "end_time",
       align: "center",
-      render: (record) => formatDateTime(record.end_time).time,
+      render: (_, record) => formatDateTime(record.end_time).time,
     },
     {
       title: language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location",
@@ -1383,7 +1559,7 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       title: language === "gu" ? "રસ્તો" : "Route",
       key: "route",
       align: "center",
-      render: (record) => (
+      render: (_, record) => (
         <Button
           style={{
             borderRadius: "4.618px",
@@ -1402,6 +1578,107 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
       ),
     },
   ];
+
+  const downloadBase64Image = (image, fallbackName) => {
+    if (!image?.image_data) {
+      message.warning(language === "gu" ? "છબી ઉપલબ્ધ નથી" : "Image is not available");
+      return;
+    }
+
+    const mimeType = image.image_type || "image/jpeg";
+    const extension = mimeType.includes("png") ? "png" : mimeType.includes("gif") ? "gif" : mimeType.includes("heic") ? "heic" : "jpg";
+    const link = document.createElement("a");
+    link.href = `data:${mimeType};base64,${image.image_data}`;
+    link.download = `${fallbackName}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // ── Image viewer with Prev/Next navigation ──────────────────────────
+  const patrolImages = selectedPatrol?.images || [];
+  const viewerImage = patrolImages[imageViewer.index] || null;
+
+  const openImageViewer = (index) => setImageViewer({ open: true, index });
+  const closeImageViewer = () => setImageViewer((v) => ({ ...v, open: false }));
+  const showPrevImage = () =>
+    setImageViewer((v) => ({ ...v, index: Math.max(0, v.index - 1) }));
+  const showNextImage = () =>
+    setImageViewer((v) => ({ ...v, index: Math.min(patrolImages.length - 1, v.index + 1) }));
+
+  // Arrow keys / Escape while the viewer is open
+  useEffect(() => {
+    if (!imageViewer.open) return;
+    const onKey = (e) => {
+      if (e.key === 'ArrowLeft') {
+        setImageViewer((v) => ({ ...v, index: Math.max(0, v.index - 1) }));
+      } else if (e.key === 'ArrowRight') {
+        setImageViewer((v) => ({
+          ...v,
+          index: Math.min((selectedPatrol?.images?.length || 1) - 1, v.index + 1),
+        }));
+      } else if (e.key === 'Escape') {
+        setImageViewer((v) => ({ ...v, open: false }));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [imageViewer.open, selectedPatrol]);
+
+  const getPatrolImageLabel = (image, index) => {
+    if (language === "gu") {
+      switch (image.image_category) {
+        case 'start_image': return 'શરૂઆતની છબી';
+        case 'end_image': return 'અંતિમ છબી';
+        default:
+          if (image.image_category && image.image_category.startsWith('image_')) {
+            return `છબી ${image.image_category.replace('image_', '')}`;
+          }
+          return `છબી ${index + 1}`;
+      }
+    }
+    switch (image.image_category) {
+      case 'start_image': return 'Start Image';
+      case 'end_image': return 'End Image';
+      default:
+        if (image.image_category && image.image_category.startsWith('image_')) {
+          return `Image ${image.image_category.replace('image_', '')}`;
+        }
+        return `Image ${index + 1}`;
+    }
+  };
+
+  const getExportFilterSummary = () => [
+    `${language === "gu" ? "અધિકારીનું નામ" : "Officer Name"}: ${searchText || "All"}`,
+    `${language === "gu" ? "વિભાગ" : "Division"}: ${divisionFilter || "All"}`,
+    `${language === "gu" ? "રેન્જ" : "Range"}: ${rangeFilter || "All"}`,
+    `${language === "gu" ? "બીટ" : "Beat"}: ${beatFilter || "All"}`,
+    `${language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location"}: ${patrolLocationFilter || "All"}`,
+    `${language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"}: ${typeFilter ? getTypeDisplayName(typeFilter) : "All"}`,
+    `${language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"}: ${startFilter ? startFilter.format('YYYY-MM-DD') : "All"}`,
+    `${language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"}: ${endFilter ? endFilter.format('YYYY-MM-DD') : "All"}`,
+    `${language === "gu" ? "કુલ રેકોર્ડ" : "Total Records"}: ${totalItems}`,
+  ];
+
+  const confirmExportTableToExcel = () => {
+    setIsExportConfirmVisible(true);
+  };
+
+  const handleExportConfirm = async () => {
+    setIsExportConfirmVisible(false);
+    setIsExporting(true);
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await exportTableToExcel();
+    } catch (err) {
+      console.error("Export error:", err);
+      message.error(language === "gu" ? "નિકાસ નિષ્ફળ" : "Export failed");
+    } finally {
+      setIsExporting(false);
+      window.dispatchEvent(new Event('global-data-loading-end'));
+    }
+  };
 
   const CustomPagination = () => (
     <div style={{ 
@@ -1444,50 +1721,110 @@ const fetchPatrolData = useCallback(async (page = 1, limit = 5) => {
 
   // Add this function after your existing exportCoverageToExcel function
 // Add this function after your existing exportCoverageToExcel function
+const fetchExportPatrolData = async () => {
+  const filters = buildFilters();
+  const params = new URLSearchParams({
+    page: "1",
+    limit: String(Math.max(totalItems || filteredData.length || 0, 1)),
+    include_geom: "false",
+    ...filters
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/patrol-info-page?${params.toString()}`, {
+    method: "GET",
+    headers: getAuthHeaders({ "Content-Type": "application/json" }),
+  });
+
+  if (handleUnauthorized(response.status)) return [];
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+  const data = await response.json();
+  return (Array.isArray(data.data) ? data.data : [])
+    .filter(item => item && (item.patrol_id || item.start_time || item.patrol_officer_name || item.type_name))
+    .map((item, index) => ({
+      key: item.patrol_id || `patrol-export-${index}`,
+      ...item,
+      patrol_officer_name: stripHtmlTags(item.patrol_officer_name),
+      division: stripHtmlTags(item.division || item.Division),
+      range: stripHtmlTags(item.range || item.Range),
+      beat: stripHtmlTags(item.beat || item.Beat),
+      patrolling_location: stripHtmlTags(item.patrolling_location || item.patrolling_Location || item.patrollingLocation),
+      current_location_distict: stripHtmlTags(item.current_location_distict || item.current_location_district || item.currentLocationDistrict),
+      current_location_village: stripHtmlTags(item.current_location_village || item.currentLocationVillage),
+      start_location: stripHtmlTags(item.start_location),
+      end_location: stripHtmlTags(item.end_location)
+    }));
+};
+
 const exportTableToExcel = async () => {
-  if (!filteredData || filteredData.length === 0) {
+  const exportData = await fetchExportPatrolData();
+
+  if (!exportData || exportData.length === 0) {
     message.warning(language === "gu" ? "કોઈ ડેટા નિકાસ કરવા માટે ઉપલબ્ધ નથી" : "No data available to export");
     return;
   }
 
-  const [XLSX, { saveAs }] = await Promise.all([
-    import("xlsx"),
+  const [ExcelJSModule, { saveAs }] = await Promise.all([
+    import("exceljs/dist/exceljs.min.js"),
     import("file-saver"),
   ]);
+  const ExcelJS = ExcelJSModule.default || ExcelJSModule;
 
   const formatDateForExport = (datetime) => {
-    if (!datetime) return "N/A";
-    const date = new Date(datetime);
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const year = date.getUTCFullYear();
-    return `${day}-${month}-${year}`;
+    if (!datetime) return "-";
+    return getPatrolDateTimeParts(datetime)?.date || "-";
   };
 
   const formatTimeForExport = (datetime) => {
-    if (!datetime) return "N/A";
-    const date = new Date(datetime);
-    const hours = String(date.getUTCHours()).padStart(2, "0");
-    const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
+    if (!datetime) return "-";
+    return getPatrolDateTimeParts(datetime)?.time || "-";
   };
 
+  const maxPatrolImages = Math.max(0, ...exportData.map((item) => (item.images || []).filter((img) => img.image_data).length));
+  const patrolImageHeaders = Array.from({ length: maxPatrolImages }, (_, index) => language === "gu" ? `છબી ${index + 1}` : `Image ${index + 1}`);
+
   // Sheet 1: Patrol Logs Data (with separate date and time columns)
-  const patrolLogsData = filteredData.map((item, index) => ({
+  const patrolLogsData = exportData.map((item, index) => {
+    // Collect notes from all images
+    const allNotes = (item.images || [])
+      .filter(img => img.note)
+      .map((img, imgIndex) => `${img.image_category || `Image ${imgIndex + 1}`}: ${img.note}`)
+      .join('; ') || "-";
+
+    // Count images
+    const imageCount = (item.images || []).length;
+    const imageCategories = (item.images || [])
+      .map(img => img.image_category || 'image')
+      .join(', ') || "-";
+    const imageColumns = patrolImageHeaders.reduce((acc, header, imgIndex) => {
+      const img = (item.images || []).filter((image) => image.image_data)[imgIndex];
+      acc[header] = img ? (img.image_category || `${language === "gu" ? "છબી" : "Image"} ${imgIndex + 1}`) : "-";
+      return acc;
+    }, {});
+
+    return {
     [language === "gu" ? "ક્રમાંક" : "Sr. No."]: index + 1,
     [language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type"]: getTypeDisplayName(item.type_name),
-    [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "N/A",
-    [language === "gu" ? "વિભાગ" : "Division"]: item.division || "N/A",
-    [language === "gu" ? "રેન્જ" : "Range"]: item.range || "N/A",
-    [language === "gu" ? "બીટ" : "Beat"]: item.beat || "N/A",
+    [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: item.patrol_officer_name || "-",
+    [language === "gu" ? "વિભાગ" : "Division"]: item.division || "-",
+    [language === "gu" ? "રેન્જ" : "Range"]: item.range || "-",
+    [language === "gu" ? "બીટ" : "Beat"]: item.beat || "-",
+    [language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location"]: item.patrolling_location || "-",
+    [language === "gu" ? "જિલ્લો" : "District"]: item.current_location_distict || "-",
+    [language === "gu" ? "ગામ" : "Village"]: item.current_location_village || "-",
     [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExport(item.start_time),
     [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExport(item.start_time),
     [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExport(item.end_time),
     [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExport(item.end_time),
-    [language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location"]: item.start_location || "N/A",
-    [language === "gu" ? "અંતિમ સ્થાન" : "End Location"]: item.end_location || "N/A",
+    [language === "gu" ? "શરૂઆતનું સ્થાન" : "Start Location"]: item.start_location || "-",
+    [language === "gu" ? "અંતિમ સ્થાન" : "End Location"]: item.end_location || "-",
     [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: item.distance_kms || "0",
-  }));
+    [language === "gu" ? "નોંધો" : "Notes"]: allNotes,
+    [language === "gu" ? "છબીઓની સંખ્યા" : "Image Count"]: imageCount,
+    [language === "gu" ? "છબી પ્રકાર" : "Image Categories"]: imageCategories,
+    ...imageColumns,
+    };
+  });
 
   // Sheet 2: Patrol Analysis Dashboard Summary
   const calculateTypeStatsForExport = (type) => {
@@ -1499,12 +1836,7 @@ const exportTableToExcel = async () => {
     const totalStaff = filtered.reduce((sum, item) => sum + (item.number_of_staff || 1), 0);
     const avgDistance = totalDistance / totalPatrols;
     
-    const totalHours = filtered.reduce((sum, item) => {
-      const start = new Date(item.start_time);
-      const end = new Date(item.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
-      return sum + hours;
-    }, 0);
+    const totalHours = filtered.reduce((sum, item) => sum + getPatrolHours(item.start_time, item.end_time), 0);
     const avgHours = totalHours / totalPatrols;
     
     return {
@@ -1577,12 +1909,7 @@ const exportTableToExcel = async () => {
     }
 
     const totalStaff = matched.reduce((sum, r) => sum + (parseInt(r.number_of_staff) || 0), 0);
-    const totalHours = matched.reduce((sum, r) => {
-      const start = new Date(r.start_time);
-      const end = new Date(r.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
-      return sum + (isNaN(hours) || hours < 0 ? 0 : hours);
-    }, 0);
+    const totalHours = matched.reduce((sum, r) => sum + getPatrolHours(r.start_time, r.end_time), 0);
     const totalDist = matched.reduce((sum, r) => sum + parseFloat(r.distance_kms || 0), 0);
 
     return {
@@ -1594,7 +1921,7 @@ const exportTableToExcel = async () => {
   };
 
   const officerMap = {};
-  filteredData.forEach((item) => {
+  exportData.forEach((item) => {
     const name = item.patrol_officer_name || "Unknown";
     if (!officerMap[name]) officerMap[name] = [];
     officerMap[name].push(item);
@@ -1641,9 +1968,9 @@ const exportTableToExcel = async () => {
     ]);
   });
 
-  const dayTotal = computeTypeStats(filteredData, "Day patrolling");
-  const nightTotal = computeTypeStats(filteredData, "Night patrolling");
-  const beatTotal = computeTypeStats(filteredData, "Beat checking");
+  const dayTotal = computeTypeStats(exportData, "Day patrolling");
+  const nightTotal = computeTypeStats(exportData, "Night patrolling");
+  const beatTotal = computeTypeStats(exportData, "Beat checking");
 
   summaryData.push([
     language === "gu" ? "કુલ" : "TOTAL",
@@ -1659,31 +1986,27 @@ const exportTableToExcel = async () => {
     "", "", "", "", "", "", "", "", "", "", "",
   ]);
 
-  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-  summarySheet["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
-    { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
-    { s: { r: 1, c: 1 }, e: { r: 1, c: 4 } },
-    { s: { r: 1, c: 5 }, e: { r: 1, c: 8 } },
-    { s: { r: 1, c: 9 }, e: { r: 1, c: 12 } },
-    { s: { r: summaryData.length - 1, c: 1 }, e: { r: summaryData.length - 1, c: 12 } },
+  const summaryMerges = [
+    'A1:M1',
+    'A2:A3',
+    'B2:E2',
+    'F2:I2',
+    'J2:M2',
+    `B${summaryData.length}:M${summaryData.length}`,
   ];
-  summarySheet["!cols"] = [
-    { wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-    { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-  ];
+  const summaryColumnWidths = [24, 14, 12, 12, 12, 14, 12, 12, 12, 14, 12, 12, 12];
 
   // Sheet 4: Filter Criteria Applied
   const filterCriteria = [
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "અધિકારીનું નામ" : "Officer Name", [language === "gu" ? "મૂલ્ય" : "Value"]: searchText || "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "વિભાગ" : "Division", [language === "gu" ? "મૂલ્ય" : "Value"]: divisionFilter || "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "રેન્જ" : "Range", [language === "gu" ? "મૂલ્ય" : "Value"]: rangeFilter || "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "બીટ" : "Beat", [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type", [language === "gu" ? "મૂલ્ય" : "Value"]: typeFilter ? getTypeDisplayName(typeFilter) : "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date", [language === "gu" ? "મૂલ્ય" : "Value"]: startFilter ? startFilter.format('YYYY-MM-DD') : "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date", [language === "gu" ? "મૂલ્ય" : "Value"]: endFilter ? endFilter.format('YYYY-MM-DD') : "N/A" },
-    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "કુલ રેકોર્ડ" : "Total Records", [language === "gu" ? "મૂલ્ય" : "Value"]: filteredData.length },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "અધિકારીનું નામ" : "Officer Name", [language === "gu" ? "મૂલ્ય" : "Value"]: searchText || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "વિભાગ" : "Division", [language === "gu" ? "મૂલ્ય" : "Value"]: divisionFilter || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "રેન્જ" : "Range", [language === "gu" ? "મૂલ્ય" : "Value"]: rangeFilter || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "બીટ" : "Beat", [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location", [language === "gu" ? "મૂલ્ય" : "Value"]: patrolLocationFilter || "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "પેટ્રોલિંગ પ્રકાર" : "Patrol Type", [language === "gu" ? "મૂલ્ય" : "Value"]: typeFilter ? getTypeDisplayName(typeFilter) : "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "શરૂઆતની તારીખ" : "Start Date", [language === "gu" ? "મૂલ્ય" : "Value"]: startFilter ? startFilter.format('YYYY-MM-DD') : "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "સમાપ્તિ તારીખ" : "End Date", [language === "gu" ? "મૂલ્ય" : "Value"]: endFilter ? endFilter.format('YYYY-MM-DD') : "-" },
+    { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "કુલ રેકોર્ડ" : "Total Records", [language === "gu" ? "મૂલ્ય" : "Value"]: totalItems || exportData.length },
     { [language === "gu" ? "ફિલ્ટર" : "Filter"]: language === "gu" ? "નિકાસ તારીખ" : "Export Date", [language === "gu" ? "મૂલ્ય" : "Value"]: new Date().toLocaleString() },
   ];
 
@@ -1693,119 +2016,182 @@ const exportTableToExcel = async () => {
     coverageDataSheet = [
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: beatFilter ? (language === "gu" ? "બીટ" : "Beat") : (rangeFilter ? (language === "gu" ? "રેન્જ" : "Range") : (language === "gu" ? "વિભાગ" : "Division")),
-        [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || rangeFilter || divisionFilter || "N/A",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: beatFilter || rangeFilter || divisionFilter || "-",
       },
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "વિસ્તાર (ચો.મી.)" : "Area (sq m)",
-        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coupe_area_sq_m ? Number(coverageData.coupe_area_sq_m).toLocaleString() : "N/A",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coupe_area_sq_m ? Number(coverageData.coupe_area_sq_m).toLocaleString() : "-",
       },
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કવરેજ વિસ્તાર (ચો.મી.)" : "Covered Area (sq m)",
-        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.patrol_area_sq_m ? Number(coverageData.patrol_area_sq_m).toLocaleString() : "N/A",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.patrol_area_sq_m ? Number(coverageData.patrol_area_sq_m).toLocaleString() : "-",
       },
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "કવરેજ ટકાવારી" : "Coverage Percentage",
-        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coverage_percentage ? `${Number(coverageData.coverage_percentage).toFixed(2)}%` : "N/A",
+        [language === "gu" ? "મૂલ્ય" : "Value"]: coverageData.coverage_percentage ? `${Number(coverageData.coverage_percentage).toFixed(2)}%` : "-",
       },
       {
         [language === "gu" ? "મેટ્રિક" : "Metric"]: language === "gu" ? "તારીખ શ્રેણી" : "Date Range",
-        [language === "gu" ? "મૂલ્ય" : "Value"]: `${startFilter ? startFilter.format('YYYY-MM-DD') : 'N/A'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : 'N/A'}`,
+        [language === "gu" ? "મૂલ્ય" : "Value"]: `${startFilter ? startFilter.format('YYYY-MM-DD') : '-'} to ${endFilter ? endFilter.format('YYYY-MM-DD') : '-'}`,
       },
     ];
   }
 
-  // Create workbook with multiple sheets
-  const workbook = XLSX.utils.book_new();
+  const hasImageNotes = exportData.some(item => (item.images || []).length > 0);
 
-  // Sheet 1: Officer Patrol Summary Report (multi-level grouped headers)
-  workbook.SheetNames.unshift("Officer Patrol Summary Report");
-  workbook.Sheets["Officer Patrol Summary Report"] = summarySheet;
-  
-  // Sheet 2: Patrol Logs (with separate date and time columns)
-  const patrolSheet = XLSX.utils.json_to_sheet(patrolLogsData);
-  XLSX.utils.book_append_sheet(workbook, patrolSheet, "Patrol Logs");
-  
-  // Sheet 2: Analysis Summary
-  const analysisSheet = XLSX.utils.json_to_sheet(analysisSummary);
-  XLSX.utils.book_append_sheet(workbook, analysisSheet, "Analysis Summary");
-  
-  // Sheet 3: Type Breakdown
-  if (typeBreakdownData.length > 0) {
-    const typeSheet = XLSX.utils.json_to_sheet(typeBreakdownData);
-    XLSX.utils.book_append_sheet(workbook, typeSheet, "Patrol Type Breakdown");
-  }
-  
-  // Sheet 4: Filter Criteria
-  const filterSheet = XLSX.utils.json_to_sheet(filterCriteria);
-  XLSX.utils.book_append_sheet(workbook, filterSheet, "Filter Criteria");
-  
-  // Sheet 5: Coverage Analysis (if available)
-  if (coverageDataSheet.length > 0) {
-    const coverageSheet = XLSX.utils.json_to_sheet(coverageDataSheet);
-    XLSX.utils.book_append_sheet(workbook, coverageSheet, "Coverage Analysis");
-    
-    // Sheet 6: Covering Patrols (if available)
-    if (coveragePatrols && coveragePatrols.length > 0) {
-      const formatDateForExportCoverage = (datetime) => {
-        if (!datetime) return "N/A";
-        const date = new Date(datetime);
-        const day = String(date.getUTCDate()).padStart(2, "0");
-        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-        const year = date.getUTCFullYear();
-        return `${day}-${month}-${year}`;
-      };
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'RECAP4NDC';
+  wb.created = new Date();
+  wb.modified = new Date();
 
-      const formatTimeForExportCoverage = (datetime) => {
-        if (!datetime) return "N/A";
-        const date = new Date(datetime);
-        const hours = String(date.getUTCHours()).padStart(2, "0");
-        const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-        return `${hours}:${minutes}`;
-      };
+  const styleHeaderRow = (row) => {
+    row.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E7D32' } };
+    row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  };
 
-      const coveringPatrolsData = coveragePatrols.map((patrol, idx) => ({
-        [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
-        [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: patrol.patrol_id || "N/A",
-        [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "N/A",
-        [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExportCoverage(patrol.start_time),
-        [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExportCoverage(patrol.start_time),
-        [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExportCoverage(patrol.end_time),
-        [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExportCoverage(patrol.end_time),
-        [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: patrol.distance_kms || "0",
-      }));
-      const coveringSheet = XLSX.utils.json_to_sheet(coveringPatrolsData);
-      XLSX.utils.book_append_sheet(workbook, coveringSheet, "Covering Patrols");
-    }
-  }
-  
-  // Auto-size columns for all sheets
-  const sheets = ['Officer Patrol Summary Report', 'Patrol Logs', 'Analysis Summary', 'Patrol Type Breakdown', 'Filter Criteria', 'Coverage Analysis', 'Covering Patrols'];
-  sheets.forEach(sheetName => {
-    const sheet = workbook.Sheets[sheetName];
-    if (sheet) {
-      const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
-      const colWidths = {};
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          const cell = sheet[cellAddress];
-          if (cell && cell.v) {
-            const value = cell.v.toString();
-            const width = Math.min(value.length, 50);
-            if (!colWidths[C] || width > colWidths[C]) {
-              colWidths[C] = width;
-            }
-          }
+  const appendObjectSheet = (name, rows) => {
+    if (!rows || rows.length === 0) return null;
+    const ws = wb.addWorksheet(name.substring(0, 31));
+    const headers = Object.keys(rows[0]);
+    ws.addRow(headers);
+    styleHeaderRow(ws.getRow(1));
+    rows.forEach((row) => ws.addRow(headers.map((header) => row[header] ?? '')));
+    ws.columns = headers.map((header, idx) => {
+      const maxContent = Math.max(header.length, ...rows.map((row) => String(row[header] ?? '').length));
+      return { key: `col_${idx}`, width: Math.max(12, Math.min(50, maxContent + 2)) };
+    });
+    ws.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.alignment = { vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        };
+      });
+    });
+    return ws;
+  };
+
+  const addBase64ImageToCell = (worksheet, img, rowNumber, colNumber) => {
+    if (!img?.image_data) return false;
+    const mimeType = img.image_type || 'image/jpeg';
+    const extension = mimeType.includes('png') ? 'png' : mimeType.includes('gif') ? 'gif' : 'jpeg';
+    if (extension === 'gif' || mimeType.includes('heic') || mimeType.includes('heif')) return false;
+    const base64 = img.image_data.includes(',') ? img.image_data.split(',').pop() : img.image_data;
+    const imageId = wb.addImage({ base64, extension });
+    worksheet.addImage(imageId, {
+      tl: { col: colNumber - 1 + 0.1, row: rowNumber - 1 + 0.15 },
+      ext: { width: 95, height: 70 },
+      editAs: 'oneCell',
+    });
+    return true;
+  };
+
+  const imageCategoriesHeader = language === "gu" ? "છબી પ્રકાર" : "Image Categories";
+  const patrolLogHeaders = patrolLogsData[0] ? Object.keys(patrolLogsData[0]) : [];
+
+  const summarySheet = wb.addWorksheet('Officer Patrol Summary Report');
+  summaryData.forEach((row) => summarySheet.addRow(row));
+  summaryMerges.forEach((range) => summarySheet.mergeCells(range));
+  summarySheet.columns = summaryColumnWidths.map((width) => ({ width }));
+  styleHeaderRow(summarySheet.getRow(1));
+  styleHeaderRow(summarySheet.getRow(2));
+  styleHeaderRow(summarySheet.getRow(3));
+
+  const patrolLogsSheet = appendObjectSheet('Patrol Logs', patrolLogsData);
+  if (patrolLogsSheet) {
+    const imageCategoriesColumnNumber = patrolLogHeaders.indexOf(imageCategoriesHeader) + 1;
+    if (imageCategoriesColumnNumber > 0) patrolLogsSheet.getColumn(imageCategoriesColumnNumber).width = 24;
+    const patrolImageColumnNumbers = patrolImageHeaders
+      .map((header) => patrolLogHeaders.indexOf(header) + 1)
+      .filter((columnNumber) => columnNumber > 0);
+    patrolImageColumnNumbers.forEach((columnNumber) => {
+      patrolLogsSheet.getColumn(columnNumber).width = 18;
+    });
+    exportData.forEach((item, index) => {
+      const rowNumber = index + 2;
+      const images = (item.images || []).filter((img) => img.image_data);
+      images.forEach((img, imgIndex) => {
+        const columnNumber = patrolImageColumnNumbers[imgIndex];
+        if (columnNumber && addBase64ImageToCell(patrolLogsSheet, img, rowNumber, columnNumber)) {
+          patrolLogsSheet.getRow(rowNumber).height = 58;
         }
-      }
-      sheet['!cols'] = Object.keys(colWidths).map(c => ({ wch: Math.max(colWidths[c] + 2, 12) }));
-    }
-  });
+      });
+    });
+  }
 
-  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  appendObjectSheet('Analysis Summary', analysisSummary);
+  appendObjectSheet('Patrol Type Breakdown', typeBreakdownData);
+
+  if (hasImageNotes) {
+    const imageSheet = wb.addWorksheet('Images');
+    const headers = [
+      language === "gu" ? "ક્રમાંક" : "Sr. No.",
+      language === "gu" ? "પેટ્રોલ ID" : "Patrol ID",
+      language === "gu" ? "અધિકારીનું નામ" : "Officer Name",
+      language === "gu" ? "છબી પ્રકાર" : "Image Category",
+      language === "gu" ? "નોંધ" : "Note",
+      language === "gu" ? "છબી" : "Image",
+    ];
+    imageSheet.addRow(headers);
+    styleHeaderRow(imageSheet.getRow(1));
+    imageSheet.columns = [
+      { width: 10 }, { width: 14 }, { width: 28 }, { width: 24 }, { width: 40 }, { width: 24 }
+    ];
+    let rowNumber = 2;
+    exportData.forEach((item, itemIndex) => {
+      (item.images || []).forEach((img, imgIndex) => {
+        imageSheet.addRow([
+          `${itemIndex + 1}.${imgIndex + 1}`,
+          formatPatrolId(item.patrol_code, item.patrol_id),
+          item.patrol_officer_name || "-",
+          img.image_category || `Image ${imgIndex + 1}`,
+          img.note || "-",
+          img.image_data ? (language === "gu" ? "છબી જોડાયેલ" : "Image embedded") : "-",
+        ]);
+        if (addBase64ImageToCell(imageSheet, img, rowNumber, 6)) {
+          imageSheet.getRow(rowNumber).height = 58;
+        }
+        rowNumber += 1;
+      });
+    });
+  }
+
+  appendObjectSheet('Filter Criteria', filterCriteria);
+  if (coverageDataSheet.length > 0) {
+    appendObjectSheet('Coverage Analysis', coverageDataSheet);
+  }
+
+  if (coverageDataSheet.length > 0 && coveragePatrols && coveragePatrols.length > 0) {
+    const formatDateForExportCoverage = (datetime) => {
+      if (!datetime) return "-";
+      return getPatrolDateTimeParts(datetime)?.date || "-";
+    };
+
+    const formatTimeForExportCoverage = (datetime) => {
+      if (!datetime) return "-";
+      return getPatrolDateTimeParts(datetime)?.time || "-";
+    };
+
+    appendObjectSheet('Covering Patrols', coveragePatrols.map((patrol, idx) => ({
+      [language === "gu" ? "ક્રમાંક" : "Sr. No."]: idx + 1,
+      [language === "gu" ? "પેટ્રોલ ID" : "Patrol ID"]: formatPatrolId(patrol.patrol_code, patrol.patrol_id),
+      [language === "gu" ? "અધિકારીનું નામ" : "Officer Name"]: patrol.patrol_officer_name || "-",
+      [language === "gu" ? "શરૂઆતની તારીખ" : "Start Date"]: formatDateForExportCoverage(patrol.start_time),
+      [language === "gu" ? "શરૂઆતનો સમય" : "Start Time"]: formatTimeForExportCoverage(patrol.start_time),
+      [language === "gu" ? "સમાપ્તિ તારીખ" : "End Date"]: formatDateForExportCoverage(patrol.end_time),
+      [language === "gu" ? "સમાપ્તિ સમય" : "End Time"]: formatTimeForExportCoverage(patrol.end_time),
+      [language === "gu" ? "અંતર (કિ.મી.)" : "Distance (km)"]: patrol.distance_kms || "0",
+    })));
+  }
+
+  const excelBuffer = await wb.xlsx.writeBuffer();
   const fileName = `patrol_complete_report_${new Date().toISOString().split('T')[0]}.xlsx`;
-  saveAs(new Blob([excelBuffer], { type: "application/octet-stream" }), fileName);
-  
+  saveAs(new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), fileName);
+
   message.success(language === "gu" ? "સંપૂર્ણ રિપોર્ટ સફળતાપૂર્વક નિકાસ થયો" : "Complete report exported successfully");
 };
 
@@ -1824,7 +2210,7 @@ const exportTableToExcel = async () => {
     : "Select the start and end dates for the division to perform coverage analysis"}
         </div>
 
-        <div className="heading-container patrol-filter-card" style={{height:"50px"}}>
+        <div className="heading-container patrol-filter-card">
           <Input
             placeholder={language === "gu" ? "અધિકારીના નામ પ્રમાણે શોધો" : "Search by Officer Name"}
             style={{ width: "180px", background: "#fff", border: "1px solid #d9d9d9", borderRadius: "4px" }}
@@ -1841,6 +2227,7 @@ const exportTableToExcel = async () => {
             allowClear
             showSearch
             optionFilterProp="children"
+            disabled={!!_lockedDivision}
           >
             <Option value="">{language === "gu" ? "બધા વિભાગો" : "All Divisions"}</Option>
             {Array.isArray(divisions1) && divisions1.length > 0 ? (
@@ -1856,7 +2243,7 @@ const exportTableToExcel = async () => {
                 }
                 return divisionValue ? (
                   <Option key={`div-${index}`} value={divisionValue}>
-                    {divisionLabel}
+                    {capitalizeFirst(divisionLabel)}
                   </Option>
                 ) : null;
               })
@@ -1875,7 +2262,7 @@ const exportTableToExcel = async () => {
             allowClear
             showSearch
             optionFilterProp="children"
-            disabled={!divisionFilter}
+            disabled={!divisionFilter || !!_lockedRange}
           >
             <Option value="">{language === "gu" ? "બધી રેંજ" : "All Ranges"}</Option>
             {(filteredRanges.length > 0 ? filteredRanges : ranges1).map((range, index) => {
@@ -1890,7 +2277,7 @@ const exportTableToExcel = async () => {
               }
               return rangeValue ? (
                 <Option key={`range-${index}`} value={rangeValue}>
-                  {rangeLabel}
+                  {capitalizeFirst(rangeLabel)}
                 </Option>
               ) : null;
             })}
@@ -1904,7 +2291,7 @@ const exportTableToExcel = async () => {
             allowClear
             showSearch
             optionFilterProp="children"
-            disabled={!rangeFilter}
+            disabled={!rangeFilter || !!_lockedBeat}
           >
             <Option value="">{language === "gu" ? "બધી બીટ" : "All Beats"}</Option>
             {(filteredBeats.length > 0 ? filteredBeats : beats1).map((beat, index) => {
@@ -1919,10 +2306,25 @@ const exportTableToExcel = async () => {
               }
               return beatValue ? (
                 <Option key={`beat-${index}`} value={beatValue}>
-                  {beatLabel}
+                  {capitalizeFirst(beatLabel)}
                 </Option>
               ) : null;
             })}
+          </Select>
+
+          <Select
+            placeholder={language === "gu" ? "પેટ્રોલિંગ સ્થાન" : "Patrol Location"}
+            style={{ width: "180px", borderRadius: "4px", background: "#fff" }}
+            value={patrolLocationFilter}
+            onChange={(value) => setPatrolLocationFilter(value || "")}
+            allowClear
+            showSearch
+            optionFilterProp="children"
+          >
+            <Option value="">{language === "gu" ? "બધા સ્થાનો" : "All Locations"}</Option>
+            {patrolLocations.map((loc) => (
+              <Option key={loc} value={loc}>{capitalizeFirst(loc)}</Option>
+            ))}
           </Select>
 
           <DatePicker
@@ -1963,7 +2365,7 @@ const exportTableToExcel = async () => {
           </Button>
 
           <Button 
-    onClick={exportTableToExcel}
+    onClick={confirmExportTableToExcel}
     style={{ 
       background: "linear-gradient(135deg, #28a745 0%, #218838 100%)", 
       borderColor: "#28a745", 
@@ -1989,7 +2391,14 @@ const exportTableToExcel = async () => {
           scroll={{ x: 'max-content' }}
           loading={isLoading || paginationLoading}
           locale={{
-            emptyText: (
+            emptyText: isLoading || paginationLoading ? (
+              <div style={{ textAlign: "center", padding: "50px 0" }}>
+                <Spin />
+                <div style={{ fontSize: 16, color: "#000", fontWeight: 500, marginTop: 12 }}>
+                  {language === "gu" ? "લોડ થઈ રહ્યું છે..." : "Loading data..."}
+                </div>
+              </div>
+            ) : (
               <div style={{ textAlign: "center", padding: "50px 0" }}>
                 <img src={noDataImage} alt="No Data" style={{ width: 60, marginBottom: 16 }} />
                 <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>
@@ -2023,7 +2432,10 @@ const exportTableToExcel = async () => {
       
       <Modal
         open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={() => {
+          setIsModalVisible(false);
+          setImageViewer({ open: false, index: 0 });
+        }}
         footer={null}
         width={800}
         title={
@@ -2043,6 +2455,106 @@ const exportTableToExcel = async () => {
             <div style={{ marginBottom: 16 }}>
               {selectedPatrol.images && selectedPatrol.images.length > 0 ? (
                 <>
+                  {/* Images with notes — shown separately for easier review */}
+                  {selectedPatrol.images.some(img => img.note) && (
+                    <>
+                      <h4 style={{ marginBottom: 12, color: '#0066cc', borderTop: '1px solid #e0e0e0', paddingTop: 12 }}>
+                        {language === "gu" ? "નોંધ સાથેની છબીઓ" : "Images with Notes"} ({selectedPatrol.images.filter(img => img.note).length})
+                      </h4>
+                      <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
+                        {selectedPatrol.images.map((image, index) => {
+                          if (!image.note) return null;
+                          const getImageLabel = () => {
+                            if (language === "gu") {
+                              switch(image.image_category) {
+                                case 'start_image': return 'શરૂઆતની છબી';
+                                case 'end_image': return 'અંતિમ છબી';
+                                default:
+                                  if (image.image_category && image.image_category.startsWith('image_')) {
+                                    const num = image.image_category.replace('image_', '');
+                                    return `છબી ${num}`;
+                                  }
+                                  return `છબી ${index + 1}`;
+                              }
+                            } else {
+                              switch(image.image_category) {
+                                case 'start_image': return 'Start Image';
+                                case 'end_image': return 'End Image';
+                                default:
+                                  if (image.image_category && image.image_category.startsWith('image_')) {
+                                    const num = image.image_category.replace('image_', '');
+                                    return `Image ${num}`;
+                                  }
+                                  return `Image ${index + 1}`;
+                              }
+                            }
+                          };
+
+                          return (
+                            <Col xs={12} sm={8} md={6} key={`note_image_${index}`}>
+                              <div style={{
+                                border: '1px solid #0066cc',
+                                borderRadius: 4,
+                                padding: 4,
+                                height: '100%',
+                                background: '#f0f6ff'
+                              }}>
+                                <div className="patrol-thumb" onClick={() => openImageViewer(index)}>
+                                  <Image
+                                    src={resolveImgSrc(image)}
+                                    alt={getImageLabel()}
+                                    preview={false}
+                                    style={{
+                                      width: 170,
+                                      height: 150,
+                                      objectFit: 'cover',
+                                      borderRadius: 2,
+                                      display: 'block'
+                                    }}
+                                  />
+                                  <div className="patrol-thumb__mask">
+                                    {language === "gu" ? "જૂઓ" : "View"}
+                                  </div>
+                                </div>
+                                <div style={{
+                                  fontSize: 10,
+                                  color: '#666',
+                                  marginTop: 4,
+                                  padding: '0 2px',
+                                  textAlign: 'center'
+                                }}>
+                                  {getImageLabel()}
+                                  <div style={{
+                                    fontSize: 10,
+                                    color: '#0066cc',
+                                    fontWeight: 600,
+                                    marginTop: 2,
+                                    padding: '2px 4px',
+                                    background: '#e6f0ff',
+                                    borderRadius: 2,
+                                    whiteSpace: 'normal',
+                                    wordBreak: 'break-word'
+                                  }}>
+                                    {language === "gu" ? "નોંધ" : "Note"}: {image.note}
+                                  </div>
+                                  <Button
+                                    size="small"
+                                    icon={<DownloadOutlined />}
+                                    style={{ marginTop: 6, width: '100%' }}
+                                    onClick={() => downloadBase64Image(image, `patrol_${selectedPatrol.patrol_id || 'image'}_${image.image_category || index + 1}_with_note`)}
+                                  >
+                                    {language === "gu" ? "ડાઉનલોડ" : "Download"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </Col>
+                          );
+                        })}
+                      </Row>
+                    </>
+                  )}
+
+                  {/* All images */}
                   <h4 style={{ marginBottom: 12 }}>
                     {language === "gu" ? "પેટ્રોલ છબીઓ" : "Patrol Images"} ({selectedPatrol.images.length})
                   </h4>
@@ -2054,7 +2566,7 @@ const exportTableToExcel = async () => {
                             case 'start_image': return 'શરૂઆતની છબી';
                             case 'end_image': return 'અંતિમ છબી';
                             default:
-                              if (image.image_category.startsWith('image_')) {
+                              if (image.image_category && image.image_category.startsWith('image_')) {
                                 const num = image.image_category.replace('image_', '');
                                 return `છબી ${num}`;
                               }
@@ -2065,7 +2577,7 @@ const exportTableToExcel = async () => {
                             case 'start_image': return 'Start Image';
                             case 'end_image': return 'End Image';
                             default:
-                              if (image.image_category.startsWith('image_')) {
+                              if (image.image_category && image.image_category.startsWith('image_')) {
                                 const num = image.image_category.replace('image_', '');
                                 return `Image ${num}`;
                               }
@@ -2076,37 +2588,30 @@ const exportTableToExcel = async () => {
 
                       return (
                         <Col xs={12} sm={8} md={6} key={`image_${index}`}>
-                          <div style={{ 
-                            border: '1px solid #d9d9d9', 
+                          <div style={{
+                            border: '1px solid #d9d9d9',
                             borderRadius: 4,
                             padding: 4,
                             height: '100%'
                           }}>
-                            <Image
-                              src={`data:${image.image_type};base64,${image.image_data}`}
-                              alt={getImageLabel()}
-                              style={{ 
-                                width: 170,
-                                height: 150,
-                                objectFit: 'cover',
-                                borderRadius: 2
-                              }}
-                              preview={{
-                                mask: (
-                                  <div style={{ 
-                                    color: '#fff',
-                                    fontSize: 12,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%'
-                                  }}>
-                                    {language === "gu" ? "જૂઓ" : "View"}
-                                  </div>
-                                )
-                              }}
-                            />
-                            <div style={{ 
+                            <div className="patrol-thumb" onClick={() => openImageViewer(index)}>
+                              <Image
+                                src={resolveImgSrc(image)}
+                                alt={getImageLabel()}
+                                preview={false}
+                                style={{
+                                  width: 170,
+                                  height: 150,
+                                  objectFit: 'cover',
+                                  borderRadius: 2,
+                                  display: 'block'
+                                }}
+                              />
+                              <div className="patrol-thumb__mask">
+                                {language === "gu" ? "જૂઓ" : "View"}
+                              </div>
+                            </div>
+                            <div style={{
                               fontSize: 10,
                               color: '#666',
                               marginTop: 4,
@@ -2114,18 +2619,30 @@ const exportTableToExcel = async () => {
                               textAlign: 'center'
                             }}>
                               {getImageLabel()}
-                              {image.note && (
+                              {(image.note) && (
                                 <div style={{
-                                  fontSize: 9,
-                                  color: '#999',
-                                  marginTop: 2,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
+                                  fontSize: 10,
+                                  color: '#0066cc',
+                                  fontWeight: 600,
+                                  marginTop: 4,
+                                  padding: '2px 4px',
+                                  background: '#e6f0ff',
+                                  borderRadius: 2,
+                                  whiteSpace: 'normal',
+                                  wordBreak: 'break-word',
+                                  textAlign: 'left'
                                 }}>
-                                  {image.note}
+                                  {language === "gu" ? "નોંધ" : "Note"}: {image.note}
                                 </div>
                               )}
+                              <Button
+                                size="small"
+                                icon={<DownloadOutlined />}
+                                style={{ marginTop: 6, width: '100%' }}
+                                onClick={() => downloadBase64Image(image, `patrol_${selectedPatrol.patrol_id || 'image'}_${image.image_category || index + 1}`)}
+                              >
+                                {language === "gu" ? "ડાઉનલોડ" : "Download"}
+                              </Button>
                             </div>
                           </div>
                         </Col>
@@ -2134,8 +2651,8 @@ const exportTableToExcel = async () => {
                   </Row>
                 </>
               ) : (
-                <div style={{ 
-                  textAlign: 'center', 
+                <div style={{
+                  textAlign: 'center',
                   padding: 20,
                   color: '#999'
                 }}>
@@ -2151,6 +2668,84 @@ const exportTableToExcel = async () => {
               <PatrolMap patrol={selectedPatrol} />
             </div>
           </>
+        )}
+      </Modal>
+
+      {/* ── Image viewer with Previous / Next navigation ── */}
+      <Modal
+        open={imageViewer.open && patrolImages.length > 0}
+        onCancel={closeImageViewer}
+        footer={null}
+        centered
+        width={760}
+        zIndex={2000}
+        title={
+          viewerImage
+            ? `${getPatrolImageLabel(viewerImage, imageViewer.index)} (${imageViewer.index + 1} / ${patrolImages.length})`
+            : ''
+        }
+      >
+        {viewerImage && (
+          <div>
+            <div style={{
+              position: 'relative',
+              textAlign: 'center',
+              background: '#111',
+              borderRadius: 4,
+              padding: '12px 64px'
+            }}>
+              <img
+                src={(() => {
+                  const d = viewerImage.image_data;
+                  if (!d) return '';
+                  const s = String(d).trim();
+                  if (s.startsWith('data:') || s.startsWith('http')) return s;
+                  return `data:${viewerImage.image_type || 'image/jpeg'};base64,${s}`;
+                })()}
+                alt={getPatrolImageLabel(viewerImage, imageViewer.index)}
+                style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }}
+              />
+              <Button
+                shape="circle"
+                size="large"
+                icon={<LeftOutlined />}
+                disabled={imageViewer.index === 0}
+                onClick={showPrevImage}
+                style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }}
+              />
+              <Button
+                shape="circle"
+                size="large"
+                icon={<RightOutlined />}
+                disabled={imageViewer.index >= patrolImages.length - 1}
+                onClick={showNextImage}
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}
+              />
+            </div>
+
+            {viewerImage.note && (
+              <div style={{
+                marginTop: 12,
+                padding: '8px 12px',
+                background: '#e6f0ff',
+                borderRadius: 4,
+                color: '#0066cc',
+                fontWeight: 600,
+                wordBreak: 'break-word'
+              }}>
+                {language === "gu" ? "નોંધ" : "Note"}: {viewerImage.note}
+              </div>
+            )}
+
+            <div style={{ marginTop: 12, textAlign: 'right' }}>
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={() => downloadBase64Image(viewerImage, `patrol_${selectedPatrol?.patrol_id || 'image'}_${viewerImage.image_category || imageViewer.index + 1}`)}
+              >
+                {language === "gu" ? "ડાઉનલોડ" : "Download"}
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
       
@@ -2182,6 +2777,31 @@ const exportTableToExcel = async () => {
           </a>
         </div>
       </footer>
+
+      {/* Export Confirmation Modal */}
+      <Modal
+        title={language === "gu" ? "ફિલ્ટર સાથે નિકાસ કરો" : "Export with current filters?"}
+        open={isExportConfirmVisible}
+        onOk={handleExportConfirm}
+        onCancel={() => setIsExportConfirmVisible(false)}
+        okText={language === "gu" ? "નિકાસ કરો" : "Export"}
+        cancelText={language === "gu" ? "રદ કરો" : "Cancel"}
+        okButtonProps={{ loading: isExporting }}
+        zIndex={10000}
+      >
+        <div>
+          <p>{language === "gu" ? "નીચેના ફિલ્ટર લાગુ થશે:" : "The following filters will be applied:"}</p>
+          <ul style={{ paddingLeft: 18, marginBottom: 0 }}>
+            {getExportFilterSummary().map((item) => <li key={item}>{item}</li>)}
+          </ul>
+          {totalItems === 0 && (
+            <p style={{ color: "#faad14", marginTop: 8 }}>
+              {language === "gu" ? "કોઈ ડેટા ઉપલબ્ધ નથી. નિકાસ ખાલી રહેશે." : "No data available. Export will be empty."}
+            </p>
+          )}
+        </div>
+      </Modal>
+
     </div>
     </div>
   );

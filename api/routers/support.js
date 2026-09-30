@@ -16,8 +16,8 @@ const SUPPORT_RATE_LIMIT = require('express-rate-limit')({
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ISSUE_TYPES = ['login', 'mobile_app', 'web_app', 'ndvi', 'patrolling', 'coupe', 'data_sync', 'other'];
 
-// ── Auto-create support_tickets table on module load ─────────────────────────
-(async () => {
+// ── Auto-create support_tickets table on module load (primary worker only) ──
+if (require('../utils/isPrimaryWorker')) (async () => {
   try {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS support_tickets (
@@ -32,7 +32,6 @@ const ISSUE_TYPES = ['login', 'mobile_app', 'web_app', 'ndvi', 'patrolling', 'co
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    console.log('[Support] support_tickets table ready');
   } catch (err) {
     console.error('[Support] Failed to create support_tickets table:', err.message);
   }
@@ -80,7 +79,6 @@ router.post('/support/submit', SUPPORT_RATE_LIMIT, async (req, res) => {
       console.error('Support ticket DB insert failed:', dbErr.message);
     }
 
-    console.log(`[Support] Ticket ${ticketId} from ${email}: ${subject}`);
 
     res.json({
       success: true,

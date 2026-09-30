@@ -20,3 +20,18 @@
   background: rgba(0, 0, 0, 0.5);
   z-index: 99999;
 }
+
+/* === iPad Pro Responsive — Router Map Modal === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .router-map-container {
+    width: 92%;
+    height: 75vh;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .router-map-container {
+    width: 85%;
+    height: 78vh;
+  }
+}

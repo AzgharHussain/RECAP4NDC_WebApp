@@ -10,3 +10,8 @@ geoserver/
 # Google service account key files (contain private keys - never commit)
 recapfixxing/giz-gujarat-*.json
 api/recap4ndc-*.json
+
+# Firebase service account credentials
+api/routers/recap4ndc-*.json
+api/routers/*firebase-adminsdk*.json
+api/routers/*firebase-adminsdk*.txt

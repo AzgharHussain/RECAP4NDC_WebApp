@@ -11,6 +11,36 @@ const { clean } = require("../middlewares/sanitize");
 const { logFromRequest } = require("../utils/auditLogger");
 const { body, param, validationResult } = require('express-validator');
 
+// ── Schema migration cache ───────────────────────────────────────────────────
+// Tracks which NDVI tables have already had the required columns added during
+// this process lifetime. ALTER TABLE runs at most ONCE per table — never on
+// every HTTP request (which caused 200–500 ms schema-lock delays).
+const _alteredTables = new Set();
+
+async function ensureNdviColumns(tableName) {
+  if (_alteredTables.has(tableName)) return; // fast-path: already done
+  const alterSql = `
+    ALTER TABLE public."${tableName}"
+    ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
+    ADD COLUMN IF NOT EXISTS note TEXT,
+    ADD COLUMN IF NOT EXISTS image_data TEXT,
+    ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `;
+  try {
+    await sequelize.query(alterSql);
+    _alteredTables.add(tableName);
+  } catch (err) {
+    // If columns already exist Sequelize may throw — still mark as done to avoid retrying
+    if (err.message && err.message.includes('already exists')) {
+      _alteredTables.add(tableName);
+    } else {
+      throw err;
+    }
+  }
+}
+
 // POST: Create new NDVI record (with auto-generated ID)
 router.post('/ndvi-change', verifyJwt, async (req, res) => {
 
@@ -34,17 +64,7 @@ router.post('/ndvi-change', verifyJwt, async (req, res) => {
 
  try {
 
-   const alterTableQuery = `
-     ALTER TABLE public."${coupename}"
-     ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
-     ADD COLUMN IF NOT EXISTS note TEXT,
-     ADD COLUMN IF NOT EXISTS image_data TEXT,
-     ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT true,
-     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-     ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-   `;
-
-   await sequelize.query(alterTableQuery);
+   await ensureNdviColumns(coupename);
 
    const selectQuery = `
      SELECT pixle_id, longitude, latitude
@@ -128,6 +148,51 @@ const transformTableName = (tableName, division) => {
   return tableName;
 };
 
+const getHyphenDateTableCandidate = (tableName) => tableName.replace(/^(\d{4}-\d{2}-\d{2})_/, '$1-');
+
+const resolveExistingNdviTableName = async (tableName, division) => {
+  const candidates = [...new Set([tableName, getHyphenDateTableCandidate(tableName)])];
+
+  for (const candidate of candidates) {
+    const [tableExistsResult] = await sequelize.query(
+      `SELECT to_regclass(:tableRegclass) AS regclass;`,
+      { replacements: { tableRegclass: `public."${candidate}"` } }
+    );
+
+    if (tableExistsResult[0] && tableExistsResult[0].regclass) {
+      return candidate;
+    }
+  }
+
+  const dateMatch = tableName.match(/^(\d{4})[-_](\d{2})[-_](\d{2})/);
+  if (!dateMatch || !division) return null;
+
+  const normalizedDivision = division
+    .replace(/ Forest Division$/i, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLowerCase();
+  const divisionOverrides = {
+    bharuch: 'bharuchsubdivision',
+    bharuchsubdivision: 'bharuchsubdivision',
+  };
+  const divisionKey = divisionOverrides[normalizedDivision] || normalizedDivision;
+  const datePattern = `^${dateMatch[1]}[-_]${dateMatch[2]}[-_]${dateMatch[3]}[-_]`;
+  const [matchingTables] = await sequelize.query(
+    `SELECT tablename
+     FROM pg_tables
+     WHERE schemaname = 'public'
+       AND tablename ~* :datePattern
+       AND tablename ~* 'ndvi[-_]change$'
+     ORDER BY tablename;`,
+    { replacements: { datePattern } }
+  );
+
+  const match = matchingTables.find(({ tablename }) =>
+    tablename.toLowerCase().replace(/[^a-z0-9]/g, '').includes(divisionKey)
+  );
+  return match?.tablename || null;
+};
+
 const getRecordIdCandidates = (recordId) => {
   const candidates = [];
   if (recordId !== undefined && recordId !== null && recordId !== '') {
@@ -154,18 +219,14 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
 
     try {
         // Transform table name if needed based on division
-        const actualTableName = transformTableName(tableName, division);
+        const transformedTableName = transformTableName(tableName, division);
+        const actualTableName = await resolveExistingNdviTableName(transformedTableName, division);
         
 
         // Check if the table exists before doing anything else.
         // NDVI change tables are only generated for divisions/dates that have
         // processed data, so a missing table simply means there is no data yet.
-        const [tableExistsResult] = await sequelize.query(
-            `SELECT to_regclass('public."${actualTableName}"') AS regclass;`
-        );
-        const tableExists = tableExistsResult[0] && tableExistsResult[0].regclass;
-
-        if (!tableExists) {
+        if (!actualTableName) {
             return res.json({
                 success: true,
                 data: []
@@ -190,18 +251,8 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
             whereClause = 'WHERE ' + conditions.join(' AND ');
         }
 
-        // First ensure columns exist
-        const alterTableQuery = `
-            ALTER TABLE public."${actualTableName}"
-            ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
-            ADD COLUMN IF NOT EXISTS note TEXT,
-            ADD COLUMN IF NOT EXISTS image_data TEXT,
-            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
-            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-        `;
-
-        await sequelize.query(alterTableQuery);
+        // First ensure columns exist (runs once per table per process)
+        await ensureNdviColumns(actualTableName);
 
         // Fetch filtered data (image_data fetched separately from MongoDB)
         const selectQuery = `
@@ -261,7 +312,16 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
 
     try {
         // Transform table name if needed based on division
-        const actualTableName = transformTableName(tableName, division);
+        const transformedTableName = transformTableName(tableName, division);
+        const actualTableName = await resolveExistingNdviTableName(transformedTableName, division);
+
+        if (!actualTableName) {
+            return res.json({
+                success: true,
+                message: 'Filtered area fetched successfully',
+                data: [{ total_area_sq_km: 0 }]
+            });
+        }
         
 
         // Build WHERE clause based on hierarchy filters
@@ -305,7 +365,16 @@ router.post('/ndvi-change-degraded-area', verifyJwt, async (req, res) => {
         // If the first approach fails, try with ST_Transform
         try {
             const { tableName, range, round, beat, division } = req.body;
-            const actualTableName = transformTableName(tableName, division);
+            const transformedTableName = transformTableName(tableName, division);
+            const actualTableName = await resolveExistingNdviTableName(transformedTableName, division);
+
+            if (!actualTableName) {
+                return res.json({
+                    success: true,
+                    message: 'Filtered area fetched successfully (with transform)',
+                    data: [{ total_area_sq_km: 0 }]
+                });
+            }
             
             let whereClause = '';
             const conditions = [];
@@ -500,18 +569,8 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
     }
 
     try {
-        // 1️⃣ Create columns if NOT EXISTS
-        const alterTableQuery = `
-            ALTER TABLE public."${NdvicoupeName}"
-            ADD COLUMN IF NOT EXISTS pixle_id SERIAL PRIMARY KEY,
-            ADD COLUMN IF NOT EXISTS note TEXT,
-            ADD COLUMN IF NOT EXISTS image_data TEXT,
-            ADD COLUMN IF NOT EXISTS status BOOLEAN DEFAULT false,
-            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-        `;
-
-        await sequelize.query(alterTableQuery);
+        // Ensure columns exist (once per table per process)
+        await ensureNdviColumns(NdvicoupeName);
 
         // 2️⃣ Fetch all data (image_data fetched separately from MongoDB)
         const selectQuery = `
@@ -560,8 +619,8 @@ router.post('/ndvi-change-get', verifyJwt, async (req, res) => {
 
 // GET: Get single NDVI record by ID
 router.get('/ndvi-change', verifyJwt, async (req, res) => {
-    const { NdvicoupeName } = req.body;
-    const { id } = req.body;
+    const { NdvicoupeName } = req.query;
+    const { id } = req.query;
 
     if (!NdvicoupeName) {
         return res.status(400).json({
@@ -587,32 +646,88 @@ router.get('/ndvi-change', verifyJwt, async (req, res) => {
     }
 
     try {
-        const selectQuery = `
-           SELECT * EXCLUDE (image_data)
-            FROM public."${NdvicoupeName}"
-            WHERE pixle_id::text = :id;
-        `;
+        // Build column list dynamically, excluding image_data (images are in MongoDB)
+        const colInfo = await sequelize.query(`
+          SELECT column_name
+          FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = :tableName
+          ORDER BY ordinal_position
+        `, { replacements: { tableName: NdvicoupeName }, type: sequelize.QueryTypes.SELECT });
 
-        const [results] = await sequelize.query(selectQuery, {
-          replacements: { id: String(id) }
-        });
+        const colNames = colInfo.map(c => c.column_name);
+        const hasPixleId = colNames.includes('pixle_id');
+        const hasId = colNames.includes('id');
+        const cols = colNames
+          .filter(c => c !== 'image_data')
+          .map(c => `"${c}"`)
+          .join(', ');
+
+        // Determine the ID column: prefer pixle_id, fall back to id
+        const idColumn = hasPixleId ? 'pixle_id' : (hasId ? 'id' : null);
+
+        let results = [];
+
+        if (idColumn) {
+            const selectQuery = `
+                SELECT ${cols}
+                FROM public."${NdvicoupeName}"
+                WHERE "${idColumn}"::text = :id;
+            `;
+
+            [results] = await sequelize.query(selectQuery, {
+              replacements: { id: String(id) }
+            });
+
+            // Fallback: if pixle_id query returned nothing and id column also exists, try id
+            if ((!results || results.length === 0) && hasPixleId && hasId) {
+                const fallbackQuery = `
+                    SELECT ${cols}
+                    FROM public."${NdvicoupeName}"
+                    WHERE "id"::text = :id;
+                `;
+                [results] = await sequelize.query(fallbackQuery, {
+                  replacements: { id: String(id) }
+                });
+            }
+        }
+
+        // Fetch image from MongoDB regardless of whether PG record was found
+        // (the image may exist even if the PG row was deleted or ID mismatch)
+        const candidates = getRecordIdCandidates(id);
+
+        const mongoImage = await MongoImage.findOne({
+          sourceType: 'ndvi',
+          coupeName: NdvicoupeName,
+          recordId: { $in: candidates }
+        }).lean();
+
+        const imageData = mongoImage ? mongoImage.imageData : null;
+        const imageType = mongoImage ? mongoImage.imageType : null;
 
         if (!results || results.length === 0) {
+            // No PG record found, but return image data if available from MongoDB
+            if (imageData) {
+                return res.json({
+                    success: true,
+                    message: 'Image fetched from MongoDB (no PG record)',
+                    data: [{
+                        image_data: imageData,
+                        image_type: imageType,
+                        note: null,
+                        latitude: null,
+                        longitude: null,
+                        status: null,
+                    }]
+                });
+            }
             return res.status(404).json({
                 success: false,
                 message: 'Bad Request - Invalid syntax'
             });
         }
 
-        // Fetch image from MongoDB
-        const mongoImage = await MongoImage.findOne({
-          sourceType: 'ndvi',
-          coupeName: NdvicoupeName,
-          recordId: { $in: getRecordIdCandidates(id) }
-        }).lean();
-
-        results[0].image_data = mongoImage ? mongoImage.imageData : null;
-        results[0].image_type = mongoImage ? mongoImage.imageType : null;
+        results[0].image_data = imageData;
+        results[0].image_type = imageType;
 
         res.json({
             success: true,
@@ -669,6 +784,51 @@ router.get('/ndvi-change-tables', async (req, res) => {
             message: 'Server encountered an unexpected condition',
            
         });
+    }
+});
+
+router.get('/ndvi-available-months', verifyJwt, async (req, res) => {
+    try {
+        const { division } = req.query;
+        const normalizedDivision = division && division !== 'all'
+            ? division.replace(/ Forest Division$/i, '').replace(/\s+/g, '_').toLowerCase()
+            : null;
+        const overrides = {
+            bharuch: 'bharuchsubdivision',
+            bharuch_sub_division: 'bharuchsubdivision'
+        };
+        const coupeName = normalizedDivision ? (overrides[normalizedDivision] || normalizedDivision) : null;
+        // Division key with all separators removed — matched against a
+        // fully-normalized table name so "dahod_sf" / "dahod-sf" / "dahodsf"
+        // table names all match the same division.
+        const coupeKey = coupeName ? coupeName.replace(/[^a-z0-9]/g, '') : null;
+
+        // Match ANY date-prefixed NDVI change table — both
+        // "..._coupe_NDVI_Change" and "..._view_ndvi_change" (any case,
+        // hyphen or underscore separators) so newer years (e.g. 2026) are
+        // included even when their table naming differs.
+        const getTablesQuery = `
+            SELECT tablename
+            FROM pg_tables
+            WHERE schemaname = 'public'
+              AND tablename ~* '^\\d{4}[-_]\\d{2}[-_]\\d{2}[-_].*ndvi[-_]change$'
+              ${coupeKey ? "AND REGEXP_REPLACE(LOWER(tablename), '[^a-z0-9]', '', 'g') LIKE :coupePattern" : ""}
+            ORDER BY tablename DESC;
+        `;
+
+        const [results] = await sequelize.query(getTablesQuery, {
+            replacements: coupeKey ? { coupePattern: `%${coupeKey}%` } : {}
+        });
+
+        const months = [...new Set((results || []).map(row => {
+            const match = row.tablename.match(/^(\d{4})[-_](\d{2})[-_]\d{2}[-_]/);
+            return match ? `${match[1]}-${match[2]}` : null;
+        }).filter(Boolean))].sort();
+
+        res.json({ success: true, data: months, count: months.length });
+    } catch (error) {
+        console.error('Error fetching NDVI available months:', error);
+        res.status(500).json({ success: false, message: 'Server encountered an unexpected condition', data: [] });
     }
 });
 
@@ -1325,9 +1485,9 @@ router.get('/ndvi-change-layer-bounds/:layerName', async (req, res) => {
       },
       featureCount: parseInt(results[0].feature_count),
       metadata: {
-        range: results[0].range || 'N/A',
-        division: results[0].division || 'N/A',
-        circle: results[0].circle || 'N/A'
+        range: results[0].range || '-',
+        division: results[0].division || '-',
+        circle: results[0].circle || '-'
       }
     };
     

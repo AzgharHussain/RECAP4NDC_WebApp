@@ -109,7 +109,7 @@ function Login() {
 
   const text = {
     en: {
-      appTitle: "FOREST MONITORING & PATROLLING SYSTEM",
+      appTitle: "FOREST MONITORING AND PATROLLING SYSTEM",
       welcome: "WELCOME BACK",
       title: "Sign In",
       subtitle: "Access your patrol dashboard",
@@ -230,21 +230,7 @@ function Login() {
     }
   };
 
-  const saveUser = async (username, password) => {
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/api/saveuser`,
-        { username, password },
-        { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'x-temp-token': 'RECAP4NDC_TEMP_TOKEN' }, timeout: 10000 }
-      );
-      const { token } = response.data;
-      if (token) {
-        localStorage.setItem("token", token);
-        Cookies.set("authToken", token, { expires: 1, sameSite: 'lax' });
-      }
-      return response.data;
-    } catch { return null; }
-  };
+
 
   const handleLogin = async () => {
     if (!userId || !password) { setError(text[language].errorRequired); return; }
@@ -287,21 +273,10 @@ function Login() {
 
       createSession(userData, false);
       localStorage.setItem("authToken", "forest_authenticated");
-      await saveUser(userId, password);
 
-      // Fire-and-forget: trigger pending notifications from previous month
-      // The backend also does this automatically on login, but this is a
-      // backup in case the automatic trigger didn't find a firebase token yet.
-      try {
-        const storedToken = localStorage.getItem("token");
-        if (storedToken) {
-          axios.post(
-            `${API_BASE_URL}/api/send-pending-notifications`,
-            { user_id: userId },
-            { headers: { Authorization: `Bearer ${storedToken}` }, timeout: 5000 }
-          ).catch(() => { /* ignore — non-critical */ });
-        }
-      } catch { /* ignore */ }
+      // Per-pixel pending notifications on login REMOVED.
+      // Notifications are now sent only as a daily summary (3x/day) by the
+      // NDVI scheduler, which also runs once on server startup.
 
       if (validateSession()) navigate("/geo");
       else throw new Error("SESSION_CREATION_FAILED");
@@ -363,9 +338,9 @@ function Login() {
                   ગુજ
                 </button>
               </div>
-              <div className="l_1">
+              {/* <div className="l_1">
                 <img src={Moef} alt="Ministry of Environment, Forest and Climate Change" style={{ width: '120px' }} />
-              </div>
+              </div> */}
               <div className="l_2">
                 <img src={giz} alt="GIZ logo" style={{ width: '160px' }} />
               </div>
@@ -522,7 +497,7 @@ function Login() {
 
             {/* Privacy Notice */}
             <div className="login-links">
-              <NavLink to="/privacy-policy">{text[language].privacyTerms}</NavLink>
+              <a href="/privacy-policy.html">{text[language].privacyTerms}</a>
             </div>
 
           </div>{/* end .login-card */}

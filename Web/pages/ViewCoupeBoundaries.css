@@ -65,7 +65,7 @@
   margin-right: 8px;
 }
 
-/* 📱 Mobile Responsive */
+/* Mobile Responsive */
 @media (max-width: 768px) {
   .view-coupe-boundaries-container {
     padding: 10px;
@@ -84,5 +84,27 @@
     right: 10px;
     bottom: 10px;
     font-size: 12px;
+  }
+}
+
+/* === iPad Pro Responsive — View Coupe Boundaries === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .view-coupe-boundaries-container {
+    padding: 16px;
+  }
+
+  .map-container {
+    height: 500px;
+  }
+
+  .header {
+    font-size: 20px;
+    padding: 10px 14px;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .map-container {
+    height: 560px;
   }
 }

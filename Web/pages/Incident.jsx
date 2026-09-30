@@ -5,6 +5,7 @@ import "./PatrolIncidentLogs.css"; // Import the CSS for styling
 import exportIcon from "../assets/excel.png";
 import noDataImage from "../assets/no-data.png";
 import { useLanguage } from "../context/LanguageContext";
+import { matchesUserHierarchy } from "../utils/authUtils";
 
 const { Option } = Select;
 
@@ -75,6 +76,10 @@ const PatrolIncidentLogs = () => {
         key: item.p_incident_id || index,
         ...item,
       }));
+
+      // Filter by the logged-in user's hierarchy (beat → round → range → division → circle)
+      formatted = formatted.filter(item => matchesUserHierarchy(item));
+
       setIncidentData(formatted);
     } catch (error) {
       console.error("Error fetching incident data:", error);
@@ -83,7 +88,9 @@ const PatrolIncidentLogs = () => {
   };
 
   useEffect(() => {
-    fetchIncidentData();
+    // Small delay to ensure localStorage is populated after login navigation
+    const timer = setTimeout(() => fetchIncidentData(), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const formatDateTime = (datetime) => {
@@ -126,34 +133,40 @@ const PatrolIncidentLogs = () => {
       return;
     }
 
-    const [XLSX, { saveAs }] = await Promise.all([
-      import("xlsx"),
-      import("file-saver"),
-    ]);
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const [XLSX, { saveAs }] = await Promise.all([
+        import("xlsx"),
+        import("file-saver"),
+      ]);
 
-    const exportData = filteredData.map((item) => ({
-      [text[language].incidentId]: item.p_incident_id,
-      [text[language].patrolId]: item.p_patrol_id,
-      [text[language].officerName]: item.p_incident_reported_by,
-      [text[language].category]: item.p_category_name,
-      [text[language].incidentDate]: formatDateTime(item.p_incident_time).date,
-      [text[language].incidentTime]: formatDateTime(item.p_incident_time).time,
-      [text[language].location]: item.p_location_gps?.coordinates
-        ? `${item.p_location_gps.coordinates[1]}, ${item.p_location_gps.coordinates[0]}`
-        : "N/A",
-      [text[language].description]: item.p_incident_description,
-      [text[language].images]: item.p_image_urls?.length || 0,
-    }));
+      const exportData = filteredData.map((item) => ({
+        [text[language].incidentId]: item.p_incident_id,
+        [text[language].patrolId]: item.p_patrol_id,
+        [text[language].officerName]: item.p_incident_reported_by,
+        [text[language].category]: item.p_category_name,
+        [text[language].incidentDate]: formatDateTime(item.p_incident_time).date,
+        [text[language].incidentTime]: formatDateTime(item.p_incident_time).time,
+        [text[language].location]: item.p_location_gps?.coordinates
+          ? `${item.p_location_gps.coordinates[1]}, ${item.p_location_gps.coordinates[0]}`
+          : "-",
+        [text[language].description]: item.p_incident_description,
+        [text[language].images]: item.p_image_urls?.length || 0,
+      }));
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Incident Logs");
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Incident Logs");
 
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    saveAs(
-      new Blob([wbout], { type: "application/octet-stream" }),
-      "Incident_Logs.xlsx"
-    );
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([wbout], { type: "application/octet-stream" }),
+        "Incident_Logs.xlsx"
+      );
+    } finally {
+      window.dispatchEvent(new Event('global-data-loading-end'));
+    }
   };
 
   const columns = [
@@ -216,7 +229,7 @@ const PatrolIncidentLogs = () => {
           const formattedLon = Math.abs(lon).toFixed(4);
           return `${formattedLat}°${latDirection}, ${formattedLon}°${lonDirection}`;
         }
-        return "N/A";
+        return "-";
       },
       align: "center",
     },

@@ -46,10 +46,10 @@ function inferAction(method, path) {
   if (path.includes('update-notification-user')) {
     return 'NOTIFICATION_UPDATE';
   }
-  if (method === 'POST') return 'RECORD_CREATE';
-  if (method === 'PUT') return 'RECORD_UPDATE';
-  if (method === 'DELETE') return 'RECORD_DELETE';
-  return 'API_ACCESS';
+  // Unrecognised endpoint: don't log. Previously every POST/PUT/DELETE fell
+  // through to RECORD_CREATE/UPDATE/DELETE, which flooded the audit log with
+  // every API call in the system.
+  return null;
 }
 
 function inferResourceType(path) {
@@ -64,6 +64,7 @@ function inferResourceType(path) {
 }
 
 function auditMiddleware(req, res, next) {
+  // Fast path: skip wrapping for GET requests (most traffic)
   if (shouldSkip(req.method, req.path)) {
     return next();
   }
@@ -86,14 +87,20 @@ function auditMiddleware(req, res, next) {
         }
       }
 
-      logFromRequest(req, {
-        action: status === 'FAILED' && action === 'LOGIN' ? 'LOGIN_FAILED' : action,
-        status,
-        statusCode: res.statusCode,
-        resourceType,
-        resourceId: req.params?.id || null,
-        errorMessage,
-        retentionCategory: 'SYSTEM_EVENT',
+      // Fire-and-forget — don't block the response.
+      // Skip if the route handler already wrote its own (richer) audit entry
+      // via logFromRequest — otherwise every such action is logged twice.
+      setImmediate(() => {
+        if (req.auditLogged) return;
+        logFromRequest(req, {
+          action: status === 'FAILED' && action === 'LOGIN' ? 'LOGIN_FAILED' : action,
+          status,
+          statusCode: res.statusCode,
+          resourceType,
+          resourceId: req.params?.id || null,
+          errorMessage,
+          retentionCategory: 'SYSTEM_EVENT',
+        });
       });
     }
 

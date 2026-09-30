@@ -1,15 +1,42 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { FaChevronDown, FaChevronUp, FaLayerGroup, FaCircle, FaFolder, FaFolderOpen, FaLeaf } from "react-icons/fa";
-import { BsGraphDownArrow, BsShieldFill, BsInfoCircle } from "react-icons/bs";
-import { MdForest, MdLocationOn, MdBusiness, MdTerrain, MdClose } from "react-icons/md";
-import { FiX, FiMapPin, FiLayers, FiTrendingUp, FiTrendingDown, FiCompass, FiMap, FiInfo, FiArrowLeft, FiSearch, FiMinimize2, FiTrash2 } from "react-icons/fi";
+import {
+  MdForest, MdLocationOn, MdBusiness, MdTerrain, MdClose,
+  MdExpandMore, MdExpandLess, MdLayers, MdEco, MdShield,
+  MdTrendingUp, MdTrendingDown, MdExplore, MdMap, MdInfo,
+  MdSearch, MdFullscreenExit, MdDelete
+} from "react-icons/md";
 import "./LayerTogglePanel.css";
 import { useLanguage } from "../context/LanguageContext";
 import L from "leaflet";
 import { debounce, min } from 'lodash';
 import { API_BASE_URL } from "../config";
+import { getUserDivision, matchesDivision, matchesUserHierarchyString, getMostSpecificLevel } from "../utils/authUtils";
 import "leaflet.nontiledlayer";
+
+// Zoom to bounds and resolve when the zoom animation finishes — with a hard
+// timeout so callers awaiting this can never hang (loader stuck forever) when
+// 'zoomend' doesn't fire (already at bounds, animation skipped, etc.)
+const zoomToBounds = (map, bounds) => new Promise((resolve) => {
+  if (!map || !bounds) return resolve();
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timer);
+    map.off('zoomend', onZoomEnd);
+    resolve();
+  };
+  const onZoomEnd = () => setTimeout(finish, 300);
+  const timer = setTimeout(finish, 6000);
+  map.on('zoomend', onZoomEnd);
+  try {
+    map.fitBounds(bounds, { padding: [50, 50], animate: true, duration: 1 });
+  } catch {
+    finish();
+  }
+});
+
 const Loader = () => {
   return (
     <div className="map-loader">
@@ -167,11 +194,12 @@ const MonthRangeSelector = ({ onMonthSelect, selectedMonth, selectedYear, langua
 // Nested Layer Group Component - UPDATED to remove coupe layer items
 const getGroupIcon = (title) => {
   const t = (title || "").toLowerCase();
-  if (t.includes('forest')) return <MdForest style={{ marginRight: "8px", color: '#2e7d32', fontSize: '18px' }} />;
-  if (t.includes('circle') || t.includes('division')) return <BsShieldFill style={{ marginRight: "8px", color: '#2e7d32', fontSize: '16px' }} />;
-  if (t.includes('range')) return <MdTerrain style={{ marginRight: "8px", color: '#2e7d32', fontSize: '18px' }} />;
-  if (t.includes('gujarat')) return <FiMap style={{ marginRight: "8px", color: '#2e7d32', fontSize: '16px' }} />;
-  return <FaLayerGroup style={{ marginRight: "8px", color: '#2e7d32' }} />;
+  const iconStyle = { marginRight: "8px", color: '#2e7d32', fontSize: '18px' };
+  if (t.includes('forest')) return <MdForest style={iconStyle} />;
+  if (t.includes('circle') || t.includes('division')) return <MdShield style={iconStyle} />;
+  if (t.includes('range')) return <MdTerrain style={iconStyle} />;
+  if (t.includes('gujarat')) return <MdMap style={iconStyle} />;
+  return <MdLayers style={iconStyle} />;
 };
 
 const NestedLayerGroup = React.memo(({
@@ -208,7 +236,7 @@ const NestedLayerGroup = React.memo(({
           )}
         </span>
         <span className="arrow-icon">
-          {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+          {isExpanded ? <MdExpandLess /> : <MdExpandMore />}
         </span>
       </button>
 
@@ -352,7 +380,7 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
   };
 
   const formatValue = (value) => {
-    if (value === null || value === undefined) return 'N/A';
+    if (value === null || value === undefined) return '-';
     if (typeof value === 'number') {
       return value % 1 === 0 ? value.toString() : value.toFixed(2);
     }
@@ -408,17 +436,18 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
 
   const getIconForKey = (keyStr, value) => {
     const k = keyStr.toLowerCase();
+    const iconStyle = { fontSize: '16px' };
     if (k.includes('ndvi')) {
       const num = parseFloat(value);
-      if (!isNaN(num) && num < 0) return <FiTrendingDown style={{ color: '#2e7d32' }} />;
-      return <FiTrendingUp style={{ color: '#2e7d32' }} />;
+      if (!isNaN(num) && num < 0) return <MdTrendingDown style={{ ...iconStyle, color: '#e74c3c' }} />;
+      return <MdTrendingUp style={{ ...iconStyle, color: '#2e7d32' }} />;
     }
-    if (k.includes('category') || k.includes('change')) return <FaLeaf style={{ color: '#4caf50' }} />;
-    if (k.includes('lat')) return <FiCompass style={{ color: '#555' }} />;
-    if (k.includes('lon') || k.includes('lng')) return <FiCompass style={{ color: '#555' }} />;
-    if (k.includes('div')) return <MdBusiness style={{ color: '#555' }} />;
-    if (k.includes('range')) return <MdTerrain style={{ color: '#555' }} />;
-    return <FiInfo style={{ color: '#555' }} />;
+    if (k.includes('category') || k.includes('change')) return <MdEco style={{ ...iconStyle, color: '#4caf50' }} />;
+    if (k.includes('lat')) return <MdExplore style={{ ...iconStyle, color: '#555' }} />;
+    if (k.includes('lon') || k.includes('lng')) return <MdExplore style={{ ...iconStyle, color: '#555' }} />;
+    if (k.includes('div')) return <MdBusiness style={{ ...iconStyle, color: '#555' }} />;
+    if (k.includes('range')) return <MdTerrain style={{ ...iconStyle, color: '#555' }} />;
+    return <MdInfo style={{ ...iconStyle, color: '#555' }} />;
   };
 
   // --- Boundary-aware positioning (kept inside the map) ---
@@ -550,7 +579,7 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
             borderRadius: '8px',
             border: '1px solid #d6eaf8'
           }}>
-            <FiLayers style={{ fontSize: '20px', color: '#1976d2', marginRight: '12px' }} />
+            <MdLayers style={{ fontSize: '20px', color: '#1976d2', marginRight: '12px' }} />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '11px', color: '#1976d2', fontWeight: '600', textTransform: 'uppercase' }}>Layer</span>
               <strong style={{ fontSize: '15px', color: '#0d47a1', marginTop: '2px' }}>
@@ -571,7 +600,7 @@ const AttributePopup = React.memo(({ position, data, onClose, setIsInfoToolActiv
               const formattedKey = formatKeyName(key);
               const formattedValue = formatValue(value);
               
-              if (!formattedValue || formattedValue === 'N/A') {
+              if (!formattedValue || formattedValue === '-') {
                 return null;
               }
 
@@ -1980,7 +2009,11 @@ const CoupeGroupWithoutCheckbox = ({
 // Handle checkbox toggle - with NDVI change layer bounds
 const handleGroupCheckbox = useCallback(async (e) => {
   e.stopPropagation();
-  
+
+  console.log(`[handleGroupCheckbox] CLICKED — groupId="${groupId}", isChecked=${isChecked}, currentLayerName="${currentLayerName}"`);
+  console.log(`[handleGroupCheckbox] group.title="${group.title}", validSelection=`, validSelection);
+  console.log(`[handleGroupCheckbox] availableMonths=`, availableMonths);
+
   if (isChecked) {
     // Remove all layers from this group
     const keysToRemove = Object.keys(addedLayers).filter(key => key.includes(`-${groupId}-`));
@@ -2012,19 +2045,25 @@ const handleGroupCheckbox = useCallback(async (e) => {
     }));
   } else {
     // Add the current layer
-    if (!currentLayerName) return;
-    
+    if (!currentLayerName) {
+      console.warn(`[handleGroupCheckbox] ⚠️ No currentLayerName — cannot add layer. validSelection=`, validSelection, 'availableMonths=', availableMonths);
+      return;
+    }
+
+    console.log(`[handleGroupCheckbox] Adding layer "${currentLayerName}"...`);
     // Set loading to true BEFORE adding layer
     setIsLayerLoading(true);
-    
+
     try {
       const layer = await layerManager.addLayer(
-        currentLayerName, 
+        currentLayerName,
         `${group.title} (${months[validSelection.month]} ${validSelection.year})`
       );
-      
+      console.log(`[handleGroupCheckbox] addLayer returned:`, layer);
+
       if (layer) {
         const newKey = `${currentLayerName}-${groupId}-0`;
+        console.log(`[handleGroupCheckbox] ✅ Layer added with key "${newKey}"`);
         setAddedLayers((prev) => ({ ...prev, [newKey]: layer }));
         setOpacity((prev) => ({ ...prev, [newKey]: 1 }));
         layer.setOpacity(1);
@@ -2042,25 +2081,10 @@ const handleGroupCheckbox = useCallback(async (e) => {
             const sw = L.latLng(bounds.minY, bounds.minX);
             const ne = L.latLng(bounds.maxY, bounds.maxX);
             const layerBounds = L.latLngBounds(sw, ne);
-            
-            // Create a promise that resolves when zoom animation completes
-            await new Promise((resolve) => {
-              const onZoomEnd = () => {
-                mapRef.current.off('zoomend', onZoomEnd);
-                // Add a small delay to ensure everything is rendered
-                setTimeout(resolve, 300);
-              };
-              
-              mapRef.current.on('zoomend', onZoomEnd);
-              
-              // Start the initial fitBounds animation
-              mapRef.current.fitBounds(layerBounds, {
-                padding: [50, 50],
-                animate: true,
-                duration: 1
-              });
-            });
-            
+
+            // Resolves when zoom animation completes (6s hard cap inside)
+            await zoomToBounds(mapRef.current, layerBounds);
+
           }
         } catch (error) {
           console.error('Error zooming to layer:', error);
@@ -2094,7 +2118,7 @@ const handleGroupCheckbox = useCallback(async (e) => {
             onMouseDown={(e) => e.preventDefault()}
             style={{ marginRight: "8px", cursor: 'pointer' }}
           />
-          {/* <FaLayerGroup style={{ marginRight: "8px" }} /> */}
+          {/* <MdLayers style={{ marginRight: "8px" }} /> */}
           {group.title}
           {isChecked && activeInfo && (
             <span className="active-indicator" style={{
@@ -2107,7 +2131,7 @@ const handleGroupCheckbox = useCallback(async (e) => {
           )}
         </span>
         <span className="arrow-icon">
-          {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+          {isExpanded ? <MdExpandLess /> : <MdExpandMore />}
         </span>
       </button>
       
@@ -2130,6 +2154,15 @@ const handleGroupCheckbox = useCallback(async (e) => {
 
 const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolSidebar, isInfoToolActive, setIsInfoToolActive   }) => {
   const { language } = useLanguage();
+  // Hierarchy lock state — read from localStorage in useEffect to avoid
+  // stale reads when the component mounts before userData is set (after login).
+  // undefined = not yet resolved, null = no lock (PCCF), string = locked level (most specific)
+  const [lockedDivision, setLockedDivision] = useState(undefined);
+
+  useEffect(() => {
+    // Use the most specific hierarchy level (beat → round → range → division → circle)
+    setLockedDivision(getMostSpecificLevel());
+  }, []);
   const [addedLayers, setAddedLayers] = useState({});
   const [opacity, setOpacity] = useState({});
   const [openGroups, setOpenGroups] = useState({});
@@ -2156,6 +2189,8 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
 
   // Fetch available NDVI change layers from API
   useEffect(() => {
+    if (lockedDivision === undefined) return; // Wait until division is resolved
+
     const fetchNDVIChangeLayers = async () => {
       setIsLoadingCoupes(true);
       try {
@@ -2164,10 +2199,17 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         
         const result = await response.json();
         if (result.success && result.data) {
-          setAvailableCoupeLayers(result.data);
+          // Filter layers by the logged-in user's hierarchy (beat → round → range → division → circle)
+          let layers = result.data;
+          if (lockedDivision) {
+            layers = result.data.filter(layerName =>
+              matchesUserHierarchyString(layerName)
+            );
+          }
+          setAvailableCoupeLayers(layers);
           
           // Generate coupe groups from the available layers
-          generateCoupeGroups(result.data);
+          generateCoupeGroups(layers);
         }
       } catch (error) {
         console.error('Error fetching NDVI change layers:', error);
@@ -2177,9 +2219,11 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
     };
 
     fetchNDVIChangeLayers();
-  }, []);
+  }, [lockedDivision]);
 
   useEffect(() => {
+    if (lockedDivision === undefined) return; // Wait until division is resolved
+
     const fetchAdminCoupeBoundaries = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -2192,6 +2236,11 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
         const dynamicLayers = (result.data || [])
           .map((item) => item.coupe_name)
           .filter(Boolean)
+          // Filter by user's hierarchy if they have one
+          .filter((tableName) => {
+            if (!lockedDivision) return true;
+            return matchesUserHierarchyString(tableName);
+          })
           .map((tableName) => {
             const cleanName = tableName.replace(/^Recap4NDC:/, '');
             const label = cleanName
@@ -2214,17 +2263,27 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
     };
 
     fetchAdminCoupeBoundaries();
-  }, []);
+  }, [lockedDivision]);
 
   // Merge dynamic admin-uploaded coupe boundary layers into the static "Coupe Boundaries" group
+  // Also filter both static and dynamic coupe boundaries by the user's division
   const mergedGroups = useMemo(() => {
-    if (!adminCoupeBoundaryLayers.length) return layersData.groups;
+    if (lockedDivision === undefined) return layersData.groups; // Not resolved yet
 
     return layersData.groups.map((group) => {
       if (group.title !== "Coupe Boundaries") return group;
 
+      // Filter static children by hierarchy
+      let staticChildren = group.children || [];
+      if (lockedDivision) {
+        staticChildren = staticChildren.filter((child) =>
+          matchesUserHierarchyString(child.Name || '') ||
+          matchesUserHierarchyString(child.Layer || '')
+        );
+      }
+
       const existingNames = new Set(
-        (group.children || []).map((c) => (c.Name || "").toLowerCase())
+        staticChildren.map((c) => (c.Name || "").toLowerCase())
       );
 
       const dynamicChildren = adminCoupeBoundaryLayers.filter(
@@ -2233,10 +2292,10 @@ const LayerTogglePanel = ({ mapRef, activeBasemap, setActiveBasemap, activeToolS
 
       return {
         ...group,
-        children: [...(group.children || []), ...dynamicChildren],
+        children: [...staticChildren, ...dynamicChildren],
       };
     });
-  }, [adminCoupeBoundaryLayers]);
+  }, [adminCoupeBoundaryLayers, lockedDivision]);
 
   // Initialize open groups for nested structure
   useEffect(() => {
@@ -2383,9 +2442,12 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
 }, [availableCoupeLayers]);
 
   const getLegendUrl = (layerName) => {
-    // Clean the layer name for the legend request
-    const cleanLayerName = layerName.replace(/^cite:/, '');
-    return `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${cleanLayerName}`;
+    // Determine the correct workspace for the legend request
+    let legendLayer = layerName;
+    if (!layerName.includes(':')) {
+      legendLayer = `Recap4NDC:${layerName}`;
+    }
+    return `${GEOSERVER_WMS}?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=${legendLayer}`;
   };
 
   const getFeatureInfo = useCallback(async (latlng, layerName) => {
@@ -2403,18 +2465,24 @@ const getAvailableMonthsForCoupe = useCallback((baseName) => {
       const bounds = map.getBounds();
       const size = map.getSize();
       const point = map.latLngToContainerPoint(latlng);
-      
+
+      // Determine the correct WMS layer name with workspace prefix
+      let wmsLayerName = layerName;
+      if (!layerName.includes(':')) {
+        wmsLayerName = `Recap4NDC:${layerName}`;
+      }
+
       const params = new URLSearchParams({
         REQUEST: 'GetFeatureInfo',
         SERVICE: 'WMS',
         VERSION: '1.1.1',
-        LAYERS: layerName,
+        LAYERS: wmsLayerName,
         STYLES: '',
         SRS: 'EPSG:4326',
         BBOX: `${bounds.getSouthWest().lng},${bounds.getSouthWest().lat},${bounds.getNorthEast().lng},${bounds.getNorthEast().lat}`,
         WIDTH: size.x,
         HEIGHT: size.y,
-        QUERY_LAYERS: layerName,
+        QUERY_LAYERS: wmsLayerName,
         INFO_FORMAT: 'application/json',
         X: Math.round(point.x),
         Y: Math.round(point.y),
@@ -2638,15 +2706,36 @@ const handleMapClick = useCallback(async (e) => {
 
   const createLayer = (layerName, layerLabel, zIndex, wmsLayerName) => {
     try {
-     
-return L.nonTiledLayer.wms(GEOSERVER_WMS, {
-  layers: wmsLayerName || layerName,
-  format: "image/png",
-  transparent: true,
-  version: "1.3.0"
-});
+      // Determine the correct WMS layer name with workspace prefix
+      let wmsLayers = wmsLayerName || layerName;
+
+      // If no explicit wmsLayerName, add the appropriate workspace prefix
+      if (!wmsLayerName) {
+        wmsLayers = `Recap4NDC:${layerName}`;
+      }
+
+      console.log(`[createLayer] layerName="${layerName}", wmsLayers="${wmsLayers}", GEOSERVER_WMS="${GEOSERVER_WMS}", zIndex=${zIndex}`);
+
+      // Use standard Leaflet tileLayer.wms (built-in, reliable, used by GeoDashboard)
+      // instead of nonTiledLayer which makes a single large image request that can fail
+      const layer = L.tileLayer.wms(GEOSERVER_WMS, {
+        layers: wmsLayers,
+        format: "image/png",
+        transparent: true,
+        version: "1.1.0",
+        tileSize: 512,
+        zIndex: zIndex || 1000,
+        // Log every tile URL so we can see exactly what's being requested
+        detectRetina: false
+      });
+
+      // Log the full WMS URL template that Leaflet will use for tiles
+      console.log(`[createLayer] WMS base URL: ${GEOSERVER_WMS}`);
+      console.log(`[createLayer] Full layer config:`, { layers: wmsLayers, format: "image/png", transparent: true, version: "1.1.0", tileSize: 512 });
+
+      return layer;
     } catch (error) {
-      console.error(`Error creating layer ${layerName}:`, error);
+      console.error(`[createLayer] Error creating layer ${layerName}:`, error);
       return null;
     }
   };
@@ -2660,10 +2749,13 @@ const layerManager = {
 
     try {
       const zIndex = calculateZIndex();
+      console.log(`[addLayer] START — layerName="${layerName}", label="${layerLabel}", wmsLayerName="${wmsLayerName}", zIndex=${zIndex}`);
       const newLayer = createLayer(layerName, layerLabel, zIndex, wmsLayerName);
       if (!newLayer) throw new Error("Layer creation failed");
 
+      console.log(`[addLayer] Layer object created, adding to map...`);
       newLayer.addTo(mapRef.current);
+      console.log(`[addLayer] Layer added to map. Map has layer: ${mapRef.current.hasLayer(newLayer)}`);
 
       newLayer._metadata = {
         name: layerName,
@@ -2672,19 +2764,33 @@ const layerManager = {
       
       return new Promise((resolve) => {
         const timeout = setTimeout(() => {
-          console.warn(`[addLayer] Timeout while loading "${layerName}" (15s)`);
+          console.warn(`[addLayer] ⚠️ Timeout while loading "${layerName}" (15s) — layer may not have rendered`);
           resolve(newLayer);
         }, 15000);
 
         newLayer.on("load", () => {
+          console.log(`[addLayer] ✅ Layer "${layerName}" loaded successfully`);
           clearTimeout(timeout);
           resolve(newLayer);
         });
 
+        newLayer.on("tileload", (e) => {
+          console.log(`[addLayer] 🟢 tileload "${layerName}" — tile URL:`, e?.coords, e?.url || '(no url)');
+        });
+
         newLayer.on("tileerror", (error) => {
-          console.warn(`[addLayer] Tile error in "${layerName}"`, error);
+          console.error(`[addLayer] 🔴 tileerror in "${layerName}":`, {
+            error: error?.error || error,
+            tile: error?.tile,
+            coords: error?.coords,
+            url: error?.url || error?.tile?.src || '(no url)'
+          });
           clearTimeout(timeout);
           resolve(newLayer);
+        });
+
+        newLayer.on("tileabort", (error) => {
+          console.warn(`[addLayer] 🟡 tileabort in "${layerName}":`, error);
         });
       });
     } catch (error) {
@@ -2782,7 +2888,7 @@ const clearAllLayers = useCallback(async () => {
 // Add this function to LayerTogglePanel.js - FIXED to handle your API response format
 const getLayerBoundsFromAPI = useCallback(async (layerName, isNdviChangeLayer = false) => {
   try {
-    const cleanLayerName = layerName.replace(/^cite:/, '');
+    const cleanLayerName = layerName.replace(/^(cite|Recap4NDC):/, '');
     
     // Use different API endpoint for NDVI change layers
     const apiEndpoint = isNdviChangeLayer 
@@ -2820,10 +2926,14 @@ const getLayerBoundsFromAPI = useCallback(async (layerName, isNdviChangeLayer = 
 const toggleLayer = useCallback(
   async (layerConfig, groupId) => {
     const uniqueKey = `${layerConfig.Name}-${groupId}`;
+    console.log(`[toggleLayer] CLICKED — Name="${layerConfig.Name}", Layer="${layerConfig.Layer}", wmsLayer="${layerConfig.wmsLayer}", groupId="${groupId}", uniqueKey="${uniqueKey}"`);
+    console.log(`[toggleLayer] layerConfig:`, layerConfig);
+    console.log(`[toggleLayer] Already added? ${!!addedLayers[uniqueKey]}`);
 
     try {
       if (addedLayers[uniqueKey]) {
         // Remove the layer
+        console.log(`[toggleLayer] Removing layer "${layerConfig.Name}"...`);
         await layerManager.removeLayer(layerConfig.Name);
         setAddedLayers((prev) => {
           const { [uniqueKey]: removedLayer, ...rest } = prev;
@@ -2835,6 +2945,7 @@ const toggleLayer = useCallback(
         });
       } else {
         // Set loading to true BEFORE adding layer
+        console.log(`[toggleLayer] Adding new layer...`);
         setIsLayerLoading(true);
 
         // Add the new layer
@@ -2852,33 +2963,21 @@ const toggleLayer = useCallback(
         // Determine if this is an NDVI change layer
         const isNdviChangeLayer = layerConfig.Name.includes('NDVI_Change') ||
                                   layerConfig.Name.includes('coupe_NDVI_Change');
+        console.log(`[toggleLayer] isNdviChangeLayer=${isNdviChangeLayer} for "${layerConfig.Name}"`);
 
         // Get bounds from API and zoom
         try {
+          console.log(`[toggleLayer] Fetching bounds for "${layerConfig.Name}"...`);
           const bounds = await getLayerBoundsFromAPI(layerConfig.Name, isNdviChangeLayer);
+          console.log(`[toggleLayer] Bounds received:`, bounds);
 
           if (bounds && mapRef.current) {
             const sw = L.latLng(bounds.minY, bounds.minX);
             const ne = L.latLng(bounds.maxY, bounds.maxX);
             const layerBounds = L.latLngBounds(sw, ne);
 
-            // Create a promise that resolves when zoom animation completes
-            await new Promise((resolve) => {
-              const onZoomEnd = () => {
-                mapRef.current.off('zoomend', onZoomEnd);
-                // Add a small delay to ensure everything is rendered
-                setTimeout(resolve, 300);
-              };
-
-              mapRef.current.on('zoomend', onZoomEnd);
-
-              // Start the initial fitBounds animation
-              mapRef.current.fitBounds(layerBounds, {
-                padding: [50, 50],
-                animate: true,
-                duration: 1
-              });
-            });
+            // Resolves when zoom animation completes (6s hard cap inside)
+            await zoomToBounds(mapRef.current, layerBounds);
 
           }
         } catch (error) {
@@ -2996,23 +3095,8 @@ const handleGroupMonthChange = useCallback(async (groupId, month, year) => {
             const ne = L.latLng(bounds.maxY, bounds.maxX);
             const layerBounds = L.latLngBounds(sw, ne);
 
-            // Create a promise that resolves when zoom animation completes
-            await new Promise((resolve) => {
-              const onZoomEnd = () => {
-                mapRef.current.off('zoomend', onZoomEnd);
-                // Add a small delay to ensure everything is rendered
-                setTimeout(resolve, 300);
-              };
-
-              mapRef.current.on('zoomend', onZoomEnd);
-
-              // Start the initial fitBounds animation
-              mapRef.current.fitBounds(layerBounds, {
-                padding: [50, 50],
-                animate: true,
-                duration: 1
-              });
-            });
+            // Resolves when zoom animation completes (6s hard cap inside)
+            await zoomToBounds(mapRef.current, layerBounds);
 
           }
         } catch (error) {
@@ -3100,7 +3184,7 @@ const renderGroup = (group, index, section = "layers") => {
             )}
           </span>
           <span className="arrow-icon">
-            {openGroups[groupId] ? <FaChevronUp /> : <FaChevronDown />}
+            {openGroups[groupId] ? <MdExpandLess /> : <MdExpandMore />}
           </span>
         </div>
         
@@ -3214,14 +3298,14 @@ const renderGroup = (group, index, section = "layers") => {
     <aside className="leftpanel">
         <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '10px', marginBottom: '10px' }}>
           <h3 className="sidebar-title" style={{ margin: 0, display: 'flex', alignItems: 'center', fontSize: '18px', color: '#111' }}>
-            <FiLayers style={{ marginRight: "10px", fontSize: '20px', color: '#2e7d32' }} />
+            <MdLayers style={{ marginRight: "10px", fontSize: '20px', color: '#2e7d32' }} />
             Layer Explorer
           </h3>
       
         </div>
 
         <div className="search-container" style={{ position: 'relative', marginBottom: '15px' }}>
-          <FiSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+          <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#888', fontSize: '18px' }} />
           <input 
             type="text" 
             placeholder="Search layers..." 
@@ -3237,7 +3321,7 @@ const renderGroup = (group, index, section = "layers") => {
             onClick={() => setOpenGroups({})}
             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', border: '1px solid #4CAF50', color: '#2e7d32', background: '#e8f5e9', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
           >
-            <FiMinimize2 /> Collapse all
+            <MdFullscreenExit style={{ fontSize: '16px' }} /> Collapse all
           </button>
           <button 
             className="action-btn clear-btn"
@@ -3245,7 +3329,7 @@ const renderGroup = (group, index, section = "layers") => {
             disabled={Object.keys(addedLayers).length === 0}
             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', border: '1px solid #e74c3c', color: '#e74c3c', background: '#ffebee', cursor: 'pointer', fontWeight: 600, fontSize: '13px', opacity: Object.keys(addedLayers).length === 0 ? 0.5 : 1 }}
           >
-            <FiTrash2 /> Clear
+            <MdDelete style={{ fontSize: '16px' }} /> Clear
           </button>
         </div>
         
@@ -3259,11 +3343,11 @@ const renderGroup = (group, index, section = "layers") => {
         <div className="coupe-section">
           <div className="coupe-header" onClick={() => setIsCoupesDataOpen(!isCoupesDataOpen)}>
             <h3 style={{ cursor: 'pointer', fontSize: "14px", marginLeft: "5px", fontWeight: 600 }}>
-              <BsGraphDownArrow style={{ marginLeft: "8px", fontSize: "14px" }} />
+              <MdTrendingDown style={{ marginLeft: "8px", fontSize: "16px" }} />
               <span style={{ marginLeft: "8px" }}>{text[language].coupesData}</span>
             </h3>
             <span style={{ cursor: 'pointer', marginRight: "15px" }}>
-              {isCoupesDataOpen ? <FaChevronUp /> : <FaChevronDown />}
+              {isCoupesDataOpen ? <MdExpandLess /> : <MdExpandMore />}
             </span>
           </div>
 
@@ -3287,7 +3371,7 @@ const renderGroup = (group, index, section = "layers") => {
         
         <div style={{ position: 'sticky', bottom: '-10px', left: 0, right: 0, padding: '12px', background: 'rgba(232, 245, 233, 0.95)', borderTop: '1px solid #c8e6c9', borderRadius: '0 0 12px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#1b5e20', fontSize: '13px', fontWeight: 500, backdropFilter: 'blur(5px)', marginTop: 'auto', zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <FiLayers style={{ fontSize: '16px' }} /> 
+            <MdLayers style={{ fontSize: '16px' }} /> 
             <span>{Object.keys(addedLayers).length} active {Object.keys(addedLayers).length === 1 ? 'layer' : 'layers'}</span>
           </div>
           <button 
@@ -3295,7 +3379,7 @@ const renderGroup = (group, index, section = "layers") => {
             style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #c8e6c9', borderRadius: '20px', padding: '4px 12px', color: '#2e7d32', cursor: 'pointer', fontWeight: 600, fontSize: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
             title="Toggle Legend"
           >
-            <FiMap /> {isLegendVisible ? "Hide Legend" : "Show Legend"}
+            <MdMap style={{ fontSize: '16px' }} /> {isLegendVisible ? "Hide Legend" : "Show Legend"}
           </button>
         </div>
 

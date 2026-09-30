@@ -192,3 +192,36 @@
 .transparent-table .ant-table {
   min-width: 900px; /* ensures readability */
 }
+
+/* === iPad Pro Responsive — Coupe Observation === */
+@media only screen and (min-width: 834px) and (max-width: 1024px) {
+  .filters-section {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .filters-section input,
+  .filters-section .ant-select,
+  .filters-section .ant-picker,
+  .filters-section .btn-Export {
+    flex: 1 1 45%;
+  }
+
+  .transparent-table .ant-table {
+    min-width: 800px;
+  }
+}
+
+@media only screen and (min-width: 1025px) and (max-width: 1366px) {
+  .filters-section {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .filters-section input,
+  .filters-section .ant-select,
+  .filters-section .ant-picker {
+    flex: 1 1 auto;
+    width: 180px;
+  }
+}

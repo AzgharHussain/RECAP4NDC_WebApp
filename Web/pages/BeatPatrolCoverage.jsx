@@ -13,12 +13,14 @@ import {
   ZoomOutOutlined,
   UndoOutlined,
   CloseCircleOutlined,
+  TableOutlined,
 } from "@ant-design/icons";
-import { Table, Tag, Image as AntImage, Modal, Button, message, Row, Col, Pagination } from "antd";
+import { Table, Tag, Image as AntImage, Modal, Button, Input, DatePicker, message, Row, Col, Pagination } from "antd";
 import axios from "axios";
 import "./RouterMap.css";
 import "./BeatPatrolCoverage.css";
 import { API_BASE_URL } from "../config";
+import { getUserDivision, getUserRange, getUserBeat, matchesDivision, matchesRange, matchesBeat } from "../utils/authUtils";
 import Select from 'react-select';
 import vector from '../assets/Vector.png';
 import gisfylogo from "../assets/Gisfylogo.png";
@@ -39,22 +41,53 @@ import {
 } from "react-leaflet";
 
 // Helper to format date/time
-const formatDateTime = (dateTime, language = 'en') => {
-  if (!dateTime) return "N/A";
+const parsePatrolTimestamp = (dateTime) => {
+  if (!dateTime) return null;
+  if (dateTime instanceof Date) return Number.isNaN(dateTime.getTime()) ? null : dateTime;
+  if (typeof dateTime === "string") {
+    const match = dateTime.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [, day, month, year, hour, minute] = match;
+      return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    }
+  }
   const date = new Date(dateTime);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return { date: `${day}-${month}-${year}`, time: `${hours}:${minutes}` };
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatDateTime = (dateTime, language = 'en') => {
+  if (!dateTime) return "-";
+  if (typeof dateTime === "string") {
+    const match = dateTime.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [, day, month, year, hour, minute] = match;
+      return { date: `${day}-${month}-${year}`, time: `${hour}:${minute}` };
+    }
+  }
+  const date = parsePatrolTimestamp(dateTime);
+  if (!date) return { date: "-", time: "-" };
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return { date: `${parts.day}-${parts.month}-${parts.year}`, time: `${parts.hour}:${parts.minute}` };
 };
 
 const formatDuration = (startTime, endTime, language = 'en') => {
-  if (!startTime || !endTime) return "N/A";
-  const start = new Date(startTime);
-  const end = new Date(endTime);
+  if (!startTime || !endTime) return "-";
+  const start = parsePatrolTimestamp(startTime);
+  const end = parsePatrolTimestamp(endTime);
+  if (!start || !end) return "-";
   const durationMs = end - start;
+  if (!Number.isFinite(durationMs) || durationMs < 0) return "-";
   const hours = Math.floor(durationMs / (1000 * 60 * 60));
   const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
   
@@ -67,6 +100,30 @@ const formatDuration = (startTime, endTime, language = 'en') => {
 const getImageUrl = (imageData) => {
   if (!imageData) return null;
   return `data:image/jpeg;base64,${imageData}`;
+};
+
+// Normalize the many date shapes the API can return ("2026-09-14",
+// "14-SEP-26 00:00:00", ISO timestamps) into "YYYY-MM-DD" for comparison.
+const MONTHS_3 = {
+  JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
+  JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12',
+};
+
+const parseBoundaryDate = (v) => {
+  if (!v) return "";
+  const s = String(v).trim();
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const dmy = s.match(/^(\d{1,2})[-\s]([A-Za-z]{3})[-\s](\d{2,4})/);
+  if (dmy) {
+    const mm = MONTHS_3[dmy[2].toUpperCase()];
+    if (mm) {
+      const y = dmy[3].length === 2 ? (Number(dmy[3]) < 50 ? `20${dmy[3]}` : `19${dmy[3]}`) : dmy[3];
+      return `${y}-${mm}-${dmy[1].padStart(2, '0')}`;
+    }
+  }
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 };
 
 const startIcon = new L.Icon({
@@ -119,8 +176,8 @@ function PatrolMap({ patrol }) {
     >
       <ResizeMapOnShow coords={routeCoords} />
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-        url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+        attribution='&copy; <a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by EOX'
+        url="https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
       />
       <Marker position={start} icon={startIcon}>
         <Popup>Start</Popup>
@@ -226,8 +283,15 @@ const BeatPatrolCoverage = () => {
       noImagesFound: "No images found",
       details: "Details",
       route: "Route",
-      images: "Images",
-      photos: "Photos"
+      photos: "Photos",
+      boundaryList: "Plantation Boundaries",
+      searchBoundary: "Search by name, layer, table...",
+      tableName: "Table Name",
+      layerName: "Layer Name",
+      workspace: "Workspace",
+      color: "Color",
+      boundaryDate: "Boundary Date",
+      createdOn: "Created On"
     },
     gu: {
       title: "પેટ્રોલ કવરેજ વિશ્લેષણ",
@@ -308,14 +372,33 @@ const BeatPatrolCoverage = () => {
       noImagesFound: "કોઈ છબીઓ મળી નથી",
       details: "વિગતો",
       route: "રસ્તો",
-      images: "છબીઓ",
-      photos: "ફોટા"
+      photos: "ફોટા",
+      boundaryList: "પ્લાન્ટેશન બાઉન્ડ્રીઓ",
+      searchBoundary: "નામ, લેયર, ટેબલ દ્વારા શોધો...",
+      tableName: "ટેબલ નામ",
+      layerName: "લેયર નામ",
+      workspace: "વર્કસ્પેસ",
+      color: "રંગ",
+      boundaryDate: "બાઉન્ડ્રી તારીખ",
+      createdOn: "બનાવેલ તારીખ"
     }
   };
 
   const t = translations[language] || translations.en;
 
   // Selection states
+  // ── Eagerly read the full hierarchy from localStorage at render time
+  // (synchronous, same pattern as Patrolling.jsx). This ensures the correct
+  // filters are applied on the very first fetch without an extra render cycle.
+  const _initDiv   = getUserDivision();
+  const _initRng   = _initDiv ? getUserRange()  : null;
+  const _initBt    = _initDiv ? getUserBeat()   : null;
+
+  // lockedDivision, lockedRange, lockedBeat are used for client-side hierarchy
+  // filter guards. Initialise eagerly so fetch calls can use them on first render.
+  const [lockedDivision, setLockedDivision] = useState(_initDiv);
+  const [lockedRange, setLockedRange] = useState(_initRng);
+  const [lockedBeat, setLockedBeat] = useState(_initBt);
   const [selectedDivision, setSelectedDivision] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
   const [selectedBeat, setSelectedBeat] = useState(null);
@@ -329,6 +412,8 @@ const BeatPatrolCoverage = () => {
   const [ranges, setRanges] = useState([]);
   const [beats, setBeats] = useState([]);
   const [boundaries, setBoundaries] = useState([]);
+  const [boundarySearch, setBoundarySearch] = useState("");
+  const [boundaryDateRange, setBoundaryDateRange] = useState(null);
   
   const [loading, setLoading] = useState({
     divisions: false,
@@ -497,7 +582,7 @@ const BeatPatrolCoverage = () => {
       key: "start_date",
       align: "center",
       render: (record) => formatDateTime(record.start_time, language).date,
-      sorter: (a, b) => new Date(a.start_time) - new Date(b.start_time),
+      sorter: (a, b) => (parsePatrolTimestamp(a.start_time)?.getTime() || 0) - (parsePatrolTimestamp(b.start_time)?.getTime() || 0),
     },
     {
       title: t.startTimeCol,
@@ -510,7 +595,7 @@ const BeatPatrolCoverage = () => {
       key: "end_date",
       align: "center",
       render: (record) => formatDateTime(record.end_time, language).date,
-      sorter: (a, b) => new Date(a.end_time) - new Date(b.end_time),
+      sorter: (a, b) => (parsePatrolTimestamp(a.end_time)?.getTime() || 0) - (parsePatrolTimestamp(b.end_time)?.getTime() || 0),
     },
     {
       title: t.endTimeCol,
@@ -535,7 +620,7 @@ const BeatPatrolCoverage = () => {
       dataIndex: "distance_kms",
       key: "distance_kms",
       align: "center",
-      render: (distance) => distance ? `${Number(distance).toFixed(2)}` : "N/A",
+      render: (distance) => distance ? `${Number(distance).toFixed(2)}` : "-",
       sorter: (a, b) => parseFloat(a.distance_kms) - parseFloat(b.distance_kms),
     },
     {
@@ -604,6 +689,54 @@ const BeatPatrolCoverage = () => {
     return patrols.slice(startIndex, endIndex);
   };
 
+  // ── Plantation boundaries list (searchable / filterable / sortable) ──
+  const boundaryRows = boundaries
+    .map((b) => b.data || {})
+    .filter((b) => {
+      if (boundarySearch.trim()) {
+        const q = boundarySearch.trim().toLowerCase();
+        const hit = [b.name, b.table_name, b.layer_name, b.workspace]
+          .some((v) => String(v || "").toLowerCase().includes(q));
+        if (!hit) return false;
+      }
+      if (boundaryDateRange && boundaryDateRange[0] && boundaryDateRange[1]) {
+        const start = boundaryDateRange[0].format("YYYY-MM-DD");
+        const end = boundaryDateRange[1].format("YYYY-MM-DD");
+        const d = parseBoundaryDate(b.boundary_date || b.created_at);
+        if (!d || d < start || d > end) return false;
+      }
+      return true;
+    });
+
+  const boundaryColumns = [
+    {
+      title: t.srNo,
+      key: "sr",
+      align: "center",
+      width: 90,
+      render: (_, __, index) => index + 1,
+    },
+    {
+      title: t.boundary,
+      dataIndex: "name",
+      key: "name",
+      sorter: (a, b) => String(a.name || "").localeCompare(String(b.name || "")),
+      render: (v) => v || "-",
+    },
+    {
+      title: t.boundaryDate,
+      dataIndex: "boundary_date",
+      key: "boundary_date",
+      sorter: (a, b) => parseBoundaryDate(a.boundary_date || a.created_at).localeCompare(parseBoundaryDate(b.boundary_date || b.created_at)),
+      render: (v, row) => {
+        const iso = parseBoundaryDate(v || row.created_at);
+        if (!iso) return "-";
+        const [y, m, d] = iso.split("-");
+        return `${d}-${m}-${y}`;
+      },
+    },
+  ];
+
   // Fetch boundaries
   const fetchPatrolBoundaries = async () => {
     setLoading(prev => ({ ...prev, boundaries: true }));
@@ -649,6 +782,16 @@ const BeatPatrolCoverage = () => {
         label: item.division
       }));
       setDivisions(divisionList);
+
+      // Auto-select the user's locked division if they have one
+      if (lockedDivision) {
+        const matched = divisionList.find(d =>
+          matchesDivision(d.value, lockedDivision)
+        );
+        if (matched) {
+          handleDivisionChange(matched);
+        }
+      }
     } catch (error) {
       console.error("Error fetching divisions:", error);
       message.error(t.failedToLoadDivisions);
@@ -693,6 +836,14 @@ const BeatPatrolCoverage = () => {
         label: item.range
       }));
       setRanges(rangeList);
+      // Auto-select the user's locked range and cascade to beats
+      if (lockedRange) {
+        const matchedRange = rangeList.find(r => matchesRange(r.value, lockedRange));
+        if (matchedRange) {
+          setSelectedRange(matchedRange);
+          fetchBeats(division, matchedRange);
+        }
+      }
     } catch (error) {
       console.error("Error fetching ranges:", error);
       message.error(t.failedToLoadRanges);
@@ -738,6 +889,11 @@ const BeatPatrolCoverage = () => {
         label: item.beat
       }));
       setBeats(beatList);
+      // Auto-select the user's locked beat
+      if (lockedBeat) {
+        const matchedBeat = beatList.find(b => matchesBeat(b.value, lockedBeat));
+        if (matchedBeat) setSelectedBeat(matchedBeat);
+      }
     } catch (error) {
       console.error("Error fetching beats:", error);
       message.error(t.failedToLoadBeats);
@@ -764,7 +920,7 @@ const BeatPatrolCoverage = () => {
       window.removeEventListener('focus', refetchInitialDropdowns);
       document.removeEventListener('visibilitychange', refetchInitialDropdowns);
     };
-  }, []);
+  }, [lockedDivision]);
 
   const handleDivisionChange = (selectedOption) => {
     setSelectedDivision(selectedOption);
@@ -798,9 +954,9 @@ const BeatPatrolCoverage = () => {
   const handleBoundaryChange = (selectedOption) => {
     setSelectedBoundary(selectedOption);
     if (selectedOption) {
-      setSelectedDivision(null);
-      setSelectedRange(null);
-      setSelectedBeat(null);
+      if (!lockedDivision) setSelectedDivision(null);
+      if (!lockedRange) setSelectedRange(null);
+      if (!lockedBeat) setSelectedBeat(null);
       setSelectionMode('boundary');
       setValidationError(false);
     }
@@ -918,55 +1074,61 @@ const BeatPatrolCoverage = () => {
   const exportToExcel = async () => {
     if (!coverageData) return;
 
-    const [XLSX, { saveAs }] = await Promise.all([
-      import("xlsx"),
-      import("file-saver"),
-    ]);
+    window.dispatchEvent(new CustomEvent('global-data-loading-start', { detail: { message: 'Data is exporting...' } }));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const [XLSX, { saveAs }] = await Promise.all([
+        import("xlsx"),
+        import("file-saver"),
+      ]);
 
-    const summaryData = [{
-      [selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel]:
-        selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
-      "Area (km²)": (Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2),
-      "Patrol Covered Area (km²)": (Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2),
-      "Coverage %": Number(coverageData.coverage_percentage).toFixed(2),
-      "Month": selectedMonth
-    }];
+      const summaryData = [{
+        [selectionMode === 'beat' ? t.beatLabel : t.boundaryLabel]:
+          selectionMode === 'beat' ? selectedBeat.label : selectedBoundary.label,
+        "Area (km²)": (Number(coverageData.coupe_area_sq_m) / 1000000).toFixed(2),
+        "Patrol Covered Area (km²)": (Number(coverageData.patrol_area_sq_m) / 1000000).toFixed(2),
+        "Coverage %": Number(coverageData.coverage_percentage).toFixed(2),
+        "Month": selectedMonth
+      }];
 
-    const patrolData = patrols.map((patrol, idx) => ({
-      [t.srNo]: idx + 1,
-      [t.patrolType]: patrol.type_name,
-      [t.patrolOfficer]: patrol.patrol_officer_name,
-      [t.division]: patrol.division,
-      [t.range]: patrol.range,
-      [t.beat]: patrol.beat,
-      [t.startDateTime]: formatDateTime(patrol.start_time, language).date,
-      [t.startTimeCol]: formatDateTime(patrol.start_time, language).time,
-      [t.endDateTime]: formatDateTime(patrol.end_time, language).date,
-      [t.endTimeCol]: formatDateTime(patrol.end_time, language).time,
-      [t.startLocation]: patrol.start_location,
-      [t.endLocation]: patrol.end_location,
-      [t.distance]: patrol.distance_kms,
-      [t.staff]: patrol.number_of_staff,
-    }));
+      const patrolData = patrols.map((patrol, idx) => ({
+        [t.srNo]: idx + 1,
+        [t.patrolType]: patrol.type_name,
+        [t.patrolOfficer]: patrol.patrol_officer_name,
+        [t.division]: patrol.division,
+        [t.range]: patrol.range,
+        [t.beat]: patrol.beat,
+        [t.startDateTime]: formatDateTime(patrol.start_time, language).date,
+        [t.startTimeCol]: formatDateTime(patrol.start_time, language).time,
+        [t.endDateTime]: formatDateTime(patrol.end_time, language).date,
+        [t.endTimeCol]: formatDateTime(patrol.end_time, language).time,
+        [t.startLocation]: patrol.start_location,
+        [t.endLocation]: patrol.end_location,
+        [t.distance]: patrol.distance_kms,
+        [t.staff]: patrol.number_of_staff,
+      }));
 
-    const wb = XLSX.utils.book_new();
-    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, summarySheet, "Coverage Summary");
+      const wb = XLSX.utils.book_new();
+      const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summarySheet, "Coverage Summary");
 
-    if (patrolData.length > 0) {
-      const patrolSheet = XLSX.utils.json_to_sheet(patrolData);
-      XLSX.utils.book_append_sheet(wb, patrolSheet, "Patrols");
+      if (patrolData.length > 0) {
+        const patrolSheet = XLSX.utils.json_to_sheet(patrolData);
+        XLSX.utils.book_append_sheet(wb, patrolSheet, "Patrols");
+      }
+
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
+      const fileName = selectionMode === 'beat'
+        ? `${selectedBeat.value}_patrol_coverage_${selectedMonth}.xlsx`
+        : `${selectedBoundary.label}_patrol_coverage_${selectedMonth}.xlsx`;
+      
+      saveAs(
+        new Blob([excelBuffer], { type: "application/octet-stream" }),
+        fileName
+      );
+    } finally {
+      window.dispatchEvent(new Event('global-data-loading-end'));
     }
-
-    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array", cellStyles: true });
-    const fileName = selectionMode === 'beat'
-      ? `${selectedBeat.value}_patrol_coverage_${selectedMonth}.xlsx`
-      : `${selectedBoundary.label}_patrol_coverage_${selectedMonth}.xlsx`;
-    
-    saveAs(
-      new Blob([excelBuffer], { type: "application/octet-stream" }),
-      fileName
-    );
   };
 
   const customSelectStyles = {
@@ -1399,15 +1561,15 @@ const BeatPatrolCoverage = () => {
                 <>
                   <div className="coverage-field">
                     <label>{t.division}</label>
-                    <Select value={selectedDivision} onChange={handleDivisionChange} options={divisions} isClearable placeholder={t.selectDivision} styles={customSelectStyles} />
+                    <Select value={selectedDivision} onChange={handleDivisionChange} options={divisions} isClearable placeholder={t.selectDivision} styles={customSelectStyles} isDisabled={!!lockedDivision} />
                   </div>
                   <div className="coverage-field">
                     <label>{t.range}</label>
-                    <Select value={selectedRange} onChange={handleRangeChange} options={ranges} isClearable placeholder={t.selectRange} styles={customSelectStyles} isDisabled={!selectedDivision} />
+                    <Select value={selectedRange} onChange={handleRangeChange} options={ranges} isClearable placeholder={t.selectRange} styles={customSelectStyles} isDisabled={!selectedDivision || !!lockedRange} />
                   </div>
                   <div className="coverage-field">
                     <label>{t.beat}</label>
-                    <Select value={selectedBeat} onChange={handleBeatChange} options={beats} isClearable placeholder={t.selectBeat} styles={customSelectStyles} isDisabled={!selectedRange} />
+                    <Select value={selectedBeat} onChange={handleBeatChange} options={beats} isClearable placeholder={t.selectBeat} styles={customSelectStyles} isDisabled={!selectedRange || !!lockedBeat} />
                   </div>
                 </>
               ) : (
@@ -1520,6 +1682,49 @@ const BeatPatrolCoverage = () => {
             </button>
           </div>
         )}
+
+        {/* Plantation Boundaries List */}
+        <div className="coverage-table-card" style={{ marginBottom: 24 }}>
+          <div className="coverage-section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="coverage-section-icon"><TableOutlined /></div>
+              <h3>{t.boundaryList} ({boundaryRows.length})</h3>
+            </div>
+            <DatePicker.RangePicker
+              allowClear
+              value={boundaryDateRange}
+              onChange={(dates) => setBoundaryDateRange(dates)}
+              placeholder={[t.startDateTime, t.endDateTime]}
+              style={{ maxWidth: 280 }}
+            />
+            <Input
+              allowClear
+              prefix={<SearchOutlined />}
+              placeholder={t.searchBoundary}
+              value={boundarySearch}
+              onChange={(e) => setBoundarySearch(e.target.value)}
+              style={{ maxWidth: 300 }}
+            />
+          </div>
+          <Table
+            className="transparent-table coverage-modern-table"
+            columns={boundaryColumns}
+            dataSource={boundaryRows}
+            loading={loading.boundaries}
+            rowKey={(r) => r.id || r.table_name}
+            bordered
+            scroll={{ x: "max-content" }}
+            pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
+            locale={{
+              emptyText: (
+                <div style={{ textAlign: "center", padding: "50px 0" }}>
+                  <img src={noDataImage} alt="No Data" style={{ width: 60, marginBottom: 16 }} />
+                  <div style={{ fontSize: 16, color: "#000", fontWeight: 500 }}>{t.noBoundaries}</div>
+                </div>
+              ),
+            }}
+          />
+        </div>
       </div>
 
       {/* Footer */}

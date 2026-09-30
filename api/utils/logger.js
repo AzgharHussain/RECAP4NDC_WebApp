@@ -68,7 +68,6 @@ function writeToFile(stream, line) {
 // Log levels
 function log(...args) {
   const line = formatLine('INFO', args);
-  console.log(line);
   writeToFile(appLogStream, line);
 }
 
@@ -88,7 +87,6 @@ function error(...args) {
 function debug(...args) {
   if (process.env.NODE_ENV === 'development') {
     const line = formatLine('DEBUG', args);
-    console.debug(line);
     writeToFile(appLogStream, line);
   }
 }

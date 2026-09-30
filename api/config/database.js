@@ -22,17 +22,37 @@ const sequelize = new Sequelize(
     host:    process.env.DB_HOST,
     port:    Number(process.env.DB_PORT),
     dialect: 'postgres',
-    logging: isProduction ? false : console.log,
+    logging: false,
     pool: {
-      max:     Number(process.env.DB_POOL_MAX     || 50),
-      min:     Number(process.env.DB_POOL_MIN     || 5),
+      max:     Number(process.env.DB_POOL_MAX     || 10),
+      min:     Number(process.env.DB_POOL_MIN     || 2),
       acquire: Number(process.env.DB_POOL_ACQUIRE || 60000),
-      idle:    Number(process.env.DB_POOL_IDLE    || 30000),
-      evict:   Number(process.env.DB_POOL_EVICT   || 10000),
+      idle:    Number(process.env.DB_POOL_IDLE    || 10000),
+      evict:   Number(process.env.DB_POOL_EVICT   || 1000),
     },
     // Keep idle connections alive so remote DBs / firewalls don't drop them.
     // Without this, idle pooled connections silently die and the next query
     // gets an ECONNRESET.
+    // Transparently retry a query when the underlying connection fails
+    // (ETIMEDOUT / ECONNRESET / connection terminated). The GSDC network
+    // path drops idle TCP sessions intermittently; without this a single
+    // dead pooled connection surfaces as a 500 to the user.
+    retry: {
+      max: Number(process.env.DB_QUERY_RETRY_MAX || 3),
+      match: [
+        /ETIMEDOUT/,
+        /ECONNRESET/,
+        /ECONNREFUSED/,
+        /EHOSTUNREACH/,
+        /EPIPE/,
+        /Connection terminated/i,
+        /server closed the connection unexpectedly/i,
+        /SequelizeConnectionError/,
+        /SequelizeConnectionRefusedError/,
+        /SequelizeHostNotReachableError/,
+        /SequelizeConnectionAcquireTimeoutError/,
+      ],
+    },
     dialectOptions: sslEnabled
       ? {
           ssl: {
@@ -40,18 +60,30 @@ const sequelize = new Sequelize(
             rejectUnauthorized:
               String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'true').toLowerCase() !== 'false',
           },
-          // TCP keepalive: probe every 30s after 30s idle
+          // TCP keepalive + PostgreSQL session options
           keepAlive: true,
-          keepAliveInitialDelayMillis: 30000,
+          keepAliveInitialDelayMillis: Number(process.env.DB_KEEPALIVE_MS || 30000),
+          // Abort connection attempts that take longer than 10s instead of
+          // hanging for the full OS TCP timeout (which can be minutes).
+          connect_timeout: Number(process.env.DB_CONNECT_TIMEOUT || 10),
+          statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT || 30000),
+          idle_in_transaction_session_timeout: Number(process.env.DB_IDLE_TX_TIMEOUT || 60000),
+          application_name: process.env.DB_APPLICATION_NAME || 'recap4ndc_api',
         }
       : {
           keepAlive: true,
-          keepAliveInitialDelayMillis: 30000,
+          keepAliveInitialDelayMillis: Number(process.env.DB_KEEPALIVE_MS || 30000),
+          connect_timeout: Number(process.env.DB_CONNECT_TIMEOUT || 10),
+          statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT || 30000),
+          idle_in_transaction_session_timeout: Number(process.env.DB_IDLE_TX_TIMEOUT || 60000),
+          application_name: process.env.DB_APPLICATION_NAME || 'recap4ndc_api',
         },
     // Query timeout: abort any query that takes longer than 30 seconds.
     // This prevents slow spatial/geo queries from blocking the event loop.
     queryTimeout: 30000,
-    benchmark: !isProduction,
+    // Disable query benchmark logging always — it adds I/O overhead
+    // to every single query. Use DEBUG_DB_BENCHMARK=true to enable.
+    benchmark: String(process.env.DEBUG_DB_BENCHMARK || '').toLowerCase() === 'true',
   }
 );
 

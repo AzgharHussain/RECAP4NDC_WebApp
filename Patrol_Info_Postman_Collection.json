@@ -1,0 +1,382 @@
+{
+  "info": {
+    "name": "Patrol Info - By User ID",
+    "_postman_id": "d4e5f6a7-b8c9-0123-defa-234567890123",
+    "description": "Postman collection for GET /api/patrol-info-user/:user_id\n\nReturns patrols for a SPECIFIC user_id with pagination and optional filters.\nResponse shape:\n{\n  \"message\": \"Patrols fetched successfully\",\n  \"data\": [ { ...patrol, type_name, images: [...] } ],\n  \"pagination\": {\n    \"currentPage\": 1,\n    \"pageSize\": 5,\n    \"totalItems\": 23,\n    \"totalPages\": 5,\n    \"hasNextPage\": true,\n    \"hasPreviousPage\": false\n  }\n}\n\nAuth: Bearer JWT token in Authorization header (or authToken cookie).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "description": "API base URL. Set to your running server (e.g. http://localhost:3000 or your deployed host)."
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "description": "The user_id of the patrol officer (references government_department_users.user_id)."
+    },
+    {
+      "key": "jwt_token",
+      "value": "PASTE_YOUR_JWT_TOKEN_HERE",
+      "description": "JWT token obtained from login. Used in the Authorization: Bearer <token> header."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Get Patrols by User ID - Paginated",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-info-user/{{user_id}}?page=1&limit=5",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "patrol-info-user",
+            "{{user_id}}"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number (default 1)"
+            },
+            {
+              "key": "limit",
+              "value": "5",
+              "description": "Records per page (default 5)"
+            }
+          ]
+        },
+        "description": "Fetch a paginated list of patrols for a SPECIFIC user_id.\n\nPath params:\n  - user_id (integer, required): ID of the user in government_department_users.\n\nQuery params:\n  - page  (default 1)\n  - limit (default 5)\n\nReturns 200 with { message, data, pagination }.\nReturns 401 if JWT is missing/invalid/blacklisted.\nReturns 500 on server error."
+      },
+      "response": [
+        {
+          "name": "200 - Success",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/patrol-info-user/{{user_id}}?page=1&limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patrol-info-user",
+                "{{user_id}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"message\": \"Patrols fetched successfully\",\n  \"data\": [\n    {\n      \"patrol_id\": 123,\n      \"patrol_officer_name\": \"Ramesh Patel\",\n      \"user_id\": 1,\n      \"start_time\": \"2026-09-01 08:30:00\",\n      \"end_time\": \"2026-09-01 11:45:00\",\n      \"start_location\": \"Range Office\",\n      \"end_location\": \"Beat 4 Junction\",\n      \"distance_kms\": 12.5,\n      \"type_name\": \"Foot Patrol\",\n      \"patrolling_type_id\": 2,\n      \"number_of_staff\": 3,\n      \"beat\": \"Beat 4\",\n      \"range\": \"Range 1\",\n      \"division\": \"Division A\",\n      \"round\": \"Round 1\",\n      \"forest_id\": 101,\n      \"patrolling_location\": \"Forest Zone B\",\n      \"images\": [\n        {\n          \"image_id\": 55,\n          \"image_data\": \"<base64 string or null>\",\n          \"image_type\": \"image/jpeg\",\n          \"image_category\": \"evidence\",\n          \"note\": \"Suspicious activity spotted\"\n        }\n      ]\n    }\n  ],\n  \"pagination\": {\n    \"currentPage\": 1,\n    \"pageSize\": 5,\n    \"totalItems\": 23,\n    \"totalPages\": 5,\n    \"hasNextPage\": true,\n    \"hasPreviousPage\": false\n  }\n}"
+        },
+        {
+          "name": "200 - No Patrols for User",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/patrol-info-user/{{user_id}}?page=1&limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patrol-info-user",
+                "{{user_id}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"message\": \"Patrols fetched successfully\",\n  \"data\": [],\n  \"pagination\": {\n    \"currentPage\": 1,\n    \"pageSize\": 5,\n    \"totalItems\": 0,\n    \"totalPages\": 0,\n    \"hasNextPage\": false,\n    \"hasPreviousPage\": false\n  }\n}"
+        },
+        {
+          "name": "401 - Missing/Invalid JWT",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/patrol-info-user/{{user_id}}?page=1&limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patrol-info-user",
+                "{{user_id}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": false,\n  \"message\": \"JWT token missing\"\n}"
+        },
+        {
+          "name": "500 - Server Error",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/patrol-info-user/{{user_id}}?page=1&limit=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "patrol-info-user",
+                "{{user_id}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"error\": \"Failed to fetch patrols\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Patrols by User ID - With Filters",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-info-user/{{user_id}}?page=1&limit=10&officer_name=Ramesh&start_date=2026-09-01%2000:00:00&end_date=2026-09-03%2023:59:59&type_name=Foot%20Patrol&division=Division%20A&range=Range%201&beat=Beat%204&patrolling_location=Forest%20Zone%20B",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "patrol-info-user",
+            "{{user_id}}"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "officer_name",
+              "value": "Ramesh",
+              "description": "ILIKE match (letters, spaces, dot, hyphen only)"
+            },
+            {
+              "key": "start_date",
+              "value": "2026-09-01 00:00:00",
+              "description": "Format: YYYY-MM-DD HH:mm:ss"
+            },
+            {
+              "key": "end_date",
+              "value": "2026-09-03 23:59:59",
+              "description": "Format: YYYY-MM-DD HH:mm:ss"
+            },
+            {
+              "key": "type_name",
+              "value": "Foot Patrol"
+            },
+            {
+              "key": "division",
+              "value": "Division A"
+            },
+            {
+              "key": "range",
+              "value": "Range 1"
+            },
+            {
+              "key": "round",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "beat",
+              "value": "Beat 4"
+            },
+            {
+              "key": "forest_id",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "patrolling_location",
+              "value": "Forest Zone B"
+            }
+          ]
+        },
+        "description": "Paginated fetch for a SPECIFIC user with all optional filters applied."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Patrols by User ID - Page 2",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patrol-info-user/{{user_id}}?page=2&limit=5",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "patrol-info-user",
+            "{{user_id}}"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "2"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Fetch the second page of patrols for a specific user."
+      },
+      "response": []
+    }
+  ]
+}
