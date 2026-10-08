@@ -1,4 +1,8 @@
 // app.js or index.js
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 // ==================== GLOBAL CRASH PROTECTION ==================== //
 // Without these handlers, a single unhandled error/rejection in ANY
@@ -513,8 +517,23 @@ try {
       : googleHosts;
     process.env.no_proxy = process.env.NO_PROXY;
 
+    // Optional: route Firebase (OAuth token + FCM) through an HTTP proxy.
+    // Set FIREBASE_PROXY=http://172.16.32.1:80 in .env on servers that can't
+    // reach Google directly. Leave unset to connect directly (as before).
+    let firebaseHttpAgent;
+    if (process.env.FIREBASE_PROXY) {
+      try {
+        const { HttpsProxyAgent } = require('https-proxy-agent');
+        firebaseHttpAgent = new HttpsProxyAgent(process.env.FIREBASE_PROXY);
+        console.log(`[firebase] Using proxy for Firebase: ${process.env.FIREBASE_PROXY}`);
+      } catch (agentErr) {
+        console.error(`[firebase] FIREBASE_PROXY set but https-proxy-agent unavailable (${agentErr.message}). Run: npm i https-proxy-agent`);
+      }
+    }
+
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+      credential: admin.credential.cert(serviceAccount, firebaseHttpAgent),
+      ...(firebaseHttpAgent ? { httpAgent: firebaseHttpAgent } : {})
     });
 
     // Restore proxy env vars after Firebase init

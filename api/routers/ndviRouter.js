@@ -268,11 +268,19 @@ router.post('/ndvi-change-get-filtered', verifyJwt, async (req, res) => {
         if (results && results.length > 0) {
           const recordIds = [...new Set(results.flatMap(r => getRecordIdCandidates(r.pixle_id)))];
           if (recordIds.length > 0) {
-            const mongoImages = await MongoImage.find({
-              sourceType: 'ndvi',
-              coupeName: actualTableName,
-              recordId: { $in: recordIds }
-            }).lean();
+            // Query in batches: a single $in with every pixle_id (long strings
+            // like "<table>_<id>_<lat>_<lon>") can exceed MongoDB's 16 MB BSON
+            // command limit and throw ERR_OUT_OF_RANGE.
+            const MONGO_IN_BATCH = 5000;
+            const mongoImages = [];
+            for (let i = 0; i < recordIds.length; i += MONGO_IN_BATCH) {
+              const batch = await MongoImage.find({
+                sourceType: 'ndvi',
+                coupeName: actualTableName,
+                recordId: { $in: recordIds.slice(i, i + MONGO_IN_BATCH) }
+              }).select('recordId imageData imageType').lean();
+              mongoImages.push(...batch);
+            }
             const imgMap = {};
             mongoImages.forEach(img => { imgMap[String(img.recordId)] = img; });
             results.forEach(row => {

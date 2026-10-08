@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 const { logFromRequest } = require('../utils/auditLogger');
 const { sequelize } = require('../config/database');
 const bcrypt = require('bcrypt');
+const admin = require('firebase-admin');
+const { sendNdviNotificationsForUser } = require('../scheduler/ndviNotificationScheduler');
 
 const SECRET_KEY = process.env.JWT_SECRET;
 
@@ -221,9 +223,12 @@ router.post('/forest-login', async (req, res) => {
       });
     }
 
-    // Per-pixel pending notifications on login REMOVED.
-    // Notifications are now sent only as a daily summary (3x/day) by the
-    // NDVI scheduler, which also runs once on server startup.
+    // On login, send this user's last-3-months NDVI summary notifications
+    // (uses the token/village saved in ndvi_notification_users). Debounced, so
+    // if the app re-subscribes right after login only one batch goes out.
+    if (dbUser && dbUser.user_id != null) {
+      sendNdviNotificationsForUser(admin, dbUser.user_id, 'login');
+    }
 
     return res.json({
       success: true,

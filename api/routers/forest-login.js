@@ -6,6 +6,8 @@ const rateLimit = require("express-rate-limit");
 const router = express.Router();
 const { sequelize } = require('../config/database');
 const { logFromRequest } = require('../utils/auditLogger');
+const admin = require('firebase-admin');
+const { sendNdviNotificationsForUser } = require('../scheduler/ndviNotificationScheduler');
 
 const SECRET_KEY = process.env.JWT_SECRET;
 
@@ -196,6 +198,10 @@ router.post("/saveuser", saveUserLimiter, async (req, res) => {
       resourceType: 'user_session',
       details: { name: userData.NAME, division: userData.DivisionName, isNewUser },
     });
+
+    // On login, send this user's last-3-months NDVI summary notifications
+    // (debounced with any follow-up /send-notifications subscribe call).
+    sendNdviNotificationsForUser(admin, user.user_id, 'login');
 
     return res.json({
       success: true,

@@ -1,3 +1,8 @@
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 const path = require('path');
 const fs = require('fs');
 
@@ -26,7 +31,9 @@ const DB_KEEPALIVE_PING_EVERY = 50;   // ping the DB every N rows to keep connec
 // The @google/earthengine client makes its own HTTPS requests and does NOT
 // respect https.globalAgent. We use global-agent which patches Node's HTTP/HTTPS
 // stack at the lowest level so ALL outbound connections go through the proxy.
-const PROXY_URL = 'http://172.16.32.1:80';
+// Disabled by default — GSDC opened direct outbound access (Oct 2026) and asked
+// for the proxy to be removed. Set NDVI_PROXY_URL=http://host:port to re-enable.
+const PROXY_URL = process.env.NDVI_PROXY_URL || '';
 if (PROXY_URL) {
   try {
     process.env.GLOBAL_AGENT_HTTP_PROXY = PROXY_URL;

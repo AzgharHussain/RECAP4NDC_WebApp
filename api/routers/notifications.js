@@ -8,6 +8,7 @@ const { verifyJwt } = require("../middlewares/verifyJwt");
 const blacklistedTokens = require("../middlewares/tokenBlacklist");
 const { logFromRequest } = require("../utils/auditLogger");
 const { ensurePixleIdColumn } = require("../utils/ensurePixleId");
+const { sendNdviNotificationsForUser } = require("../scheduler/ndviNotificationScheduler");
 
 // ─────────────────────────────────────────────────────────
 // Use a thin adapter that delegates to Sequelize so ALL queries share the
@@ -370,6 +371,10 @@ router.post("/send-notifications", verifyJwt, upload.none(), async (req, res) =>
       details: { village_name, coupe_name },
     });
 
+    // Subscription / village / coupe / token saved -> send the last 3 months'
+    // NDVI notifications to this user right away (debounced, non-blocking).
+    sendNdviNotificationsForUser(admin, user_id, 'subscribe');
+
     res.json({
       success: true,
       message: "Notification subscription saved successfully"
@@ -436,6 +441,9 @@ router.put("/update-notification-user", verifyJwt, upload.none(), async (req, re
       userId: user_id,
       resourceType: 'notification',
     });
+
+    // Village / coupe / token updated -> resend for the new subscription.
+    sendNdviNotificationsForUser(admin, user_id, 'village-update');
 
     res.json({
       success: true,
